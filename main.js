@@ -19,13 +19,13 @@ var d100IsRolling = false;
 function rollD100() {
     if (d100IsRolling) return;
     d100IsRolling = true;
-    var dice = document.getElementById('d100Dice');
+    var sphere = document.getElementById('d100Sphere');
     var result = document.getElementById('d100Result');
     var degree = document.getElementById('d100Degree');
     // Перезапуск анимации
-    dice.classList.remove('rolling');
+    sphere.classList.remove('rolling');
     void dice.offsetWidth;
-    dice.classList.add('rolling');
+    sphere.classList.add('rolling');
     result.textContent = '?';
     degree.textContent = 'Бросаем…';
     setTimeout(function() {
@@ -38,7 +38,7 @@ function rollD100() {
         result.textContent = roll;
         degree.textContent = deg + ' (выпало ' + roll + ' из 100)';
         degree.style.color = (cls === 'crit' || cls === 'special') ? '#e0c078' : (cls === 'fail' ? '#c44' : '');
-        dice.classList.remove('rolling');
+        sphere.classList.remove('rolling');
         d100IsRolling = false;
     }, 700);
 }

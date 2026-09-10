@@ -34,7 +34,25 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
 </div>
 
     <!-- ШАПКА -->
-    <header class="header">
+    
+<!-- СБОР СРЕДСТВ -->
+<div class="fund-bar" onclick="document.getElementById('fundPopup').classList.add('open')">
+    💰 Сбор средств на развитие проекта — нажмите, чтобы поддержать!
+</div>
+<div class="fund-popup" id="fundPopup" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="fund-popup-content">
+        <button class="fund-popup-close" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
+        <h3>Поддержите «Летописи Руси»</h3>
+        <p>Средства пойдут на оборудование для тестирования ИИ, наполнение баз знаний и разработку. Выберите удобный способ:</p>
+        <div class="support-buttons">
+            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#ff8a00;color:#fff;text-decoration:none;">Boosty (подписка)</a>
+            <a href="https://yoomoney.ru/to/4100119624440650" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;">ЮMoney (перевод)</a>
+            <a href="https://vk.ru/club241165941" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#0077ff;color:#fff;text-decoration:none;">ВКонтакте</a>
+        </div>
+    </div>
+</div>
+
+<header class="header">
         <div class="container header-inner">
             <a href="#" class="logo">
                 <span class="logo-icon">⚔️</span> Летописи Руси XV
@@ -67,6 +85,11 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
             <img src="assets/images/title.jpg" alt="Летописи Руси XV века — титульная картинка" class="hero-image">
         </div>
     </section>
+
+<!-- АЛЬФА-ВЕРСИЯ -->
+<div style="background:#8B2C1A;color:#E8DCC4;text-align:center;padding:1rem 1rem;font-size:1.1rem;font-weight:bold;letter-spacing:0.03em;font-family:'Marcellus',serif;">
+    ⚔️ Игра находится на стадии Альфа-версии. Дата релиза неизвестна.
+</div>
 
     <!-- ОБ ИГРЕ -->
     <section class="section" id="about">
@@ -122,7 +145,71 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
         </div>
     </section>
 
-    <!-- РОЛЕВАЯ СИСТЕМА BRP -->
+    
+
+    <!-- ИСТОРИЯ -->
+    <section class="section" id="history">
+        <div class="container">
+            <div class="section-label">Исторический контекст</div>
+            <h2>Русь XV века — эпоха перемен</h2>
+            <p style="text-align: center; color: var(--text-dim); max-width: 700px; margin: 0 auto 2rem;">
+                Время «Собирания земли русской» вокруг Московского княжества, феодальных войн и сбрасывания Ордынского ига.
+                Три великих князя определяют эпоху.
+            </p>
+            <div class="epoch-grid">
+                <div class="epoch-card">
+                    <div class="epoch-year">1400–1425</div>
+                    <div class="epoch-name">Василий I Дмитриевич</div>
+                    <div class="epoch-desc">Великий князь Московский. Укрепление Московского княжества, борьба с Литвой и Ордой.</div>
+                </div>
+                <div class="epoch-card">
+                    <div class="epoch-year">1425–1462</div>
+                    <div class="epoch-name">Василий II «Тёмный»</div>
+                    <div class="epoch-desc">Эпоха феодальных войн, ослепление князя, борьба за московский престол.</div>
+                </div>
+                <div class="epoch-card">
+                    <div class="epoch-year">1462–1505</div>
+                    <div class="epoch-name">Иван III «Великий»</div>
+                    <div class="epoch-desc">Свержение Ордынского ига (1480), объединение русских земель, строительство Кремля.</div>
+                </div>
+            </div>
+            <div style="margin-top: 2rem; text-align: center; color: var(--text-muted); font-size: 0.95rem;">
+                <p>
+                    В игре учитываются <strong class="highlight">реальные исторические события</strong> Руси XV века
+                    и всех крупных мировых событий. Слухи от купцов, рассказы иностранных гостей, политические изменения —
+                    всё это отражается в игровом мире и его невозможно пропустить.
+                </p>
+            </div>
+        </div>
+    </section>
+
+<!-- Исторические карты -->
+<section id="maps" style="padding:4rem 0;background:#1a1410;">
+    <div class="container" style="max-width:1180px;margin:0 auto;padding:0 24px;">
+        <h2 style="text-align:center;font-family:'Marcellus',serif;color:#c9a961;margin-bottom:1rem;">Исторические карты Руси</h2>
+        <p style="text-align:center;color:#a89878;max-width:700px;margin:0 auto 2rem;">Игра использует реалистичные исторические карты местности Руси XIV–XVI веков.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:2rem;">
+            <div style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
+                <img src="assets/images/maps/vida_lyatsky_1542.jpg" alt="Карта России Антония Вида и Ивана Лятского, 1542-1555" style="width:100%;display:block;" loading="lazy">
+                <div style="padding:1.5rem;">
+                    <h3 style="color:#c9a961;font-family:'Marcellus',serif;margin-bottom:0.5rem;">Карта России Антония Вида и Ивана Лятского</h3>
+                    <p style="color:#c9a961;font-size:0.9rem;margin-bottom:0.8rem;">1542–1555 гг.</p>
+                    <p style="color:#a89878;font-size:0.95rem;line-height:1.6;">Первая подробная карта Московского государства, созданная по заказу Сигизмунда II Августа.</p>
+                </div>
+            </div>
+            <div style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
+                <img src="assets/images/maps/herberstein_1550.jpg" alt="Карта России Сигизмунда фон Герберштейна, 1550" style="width:100%;display:block;" loading="lazy">
+                <div style="padding:1.5rem;">
+                    <h3 style="color:#c9a961;font-family:'Marcellus',serif;margin-bottom:0.5rem;">Карта России Сигизмунда фон Герберштейна</h3>
+                    <p style="color:#c9a961;font-size:0.9rem;margin-bottom:0.8rem;">1550 г.</p>
+                    <p style="color:#a89878;font-size:0.95rem;line-height:1.6;">Карта из книги «Записки о московитских делах» австрийского дипломата Сигизмунда фон Герберштейна.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- РОЛЕВАЯ СИСТЕМА BRP -->
     <section class="section section-alt" id="brp">
         <div class="container">
             <div class="section-label">Ролевая система</div>
@@ -179,18 +266,36 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
                 </div>
             </div>
 
-            <!-- Интерактивный кубик d100 -->
-            <div style="text-align:center;padding:2rem 0;">
-                <h3 style="color:var(--gold);font-family:'Marcellus',serif;margin-bottom:1.5rem;">Интерактивный бросок d100</h3>
-                <div class="d100-dice" id="d100Dice" onclick="rollD100()" style="width:120px;height:120px;background:linear-gradient(135deg,#c9a961 0%,#a88b4e 50%,#8b6914 100%);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.4);user-select:none;">
-                    <span class="d100-result" id="d100Result" style="font-size:2.5rem;font-weight:bold;color:#1a1410;font-family:'PT Serif',serif;">d100</span>
-                </div>
-                <p id="d100Degree" style="margin-top:1rem;color:var(--text-dim);font-size:1.1rem;">Нажми на кубик</p>
-            </div>
+            
+<!-- Интерактивный 3D дайс d100 -->
+<div style="text-align:center;padding:2rem 0;perspective:800px;">
+    <h3 style="color:var(--gold);font-family:'Marcellus',serif;margin-bottom:1.5rem;">Интерактивный бросок d100</h3>
+    <div id="d100Dice" onclick="rollD100()" style="width:120px;height:120px;margin:0 auto;cursor:pointer;user-select:none;transform-style:preserve-3d;transition:transform 0.1s;">
+        <div id="d100Sphere" style="width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#E0C078,#C9A961,#8B6914);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 36px rgba(0,0,0,0.5),inset 0 -6px 12px rgba(0,0,0,0.3),inset 0 6px 12px rgba(255,255,255,0.15);border:2px solid #5A4015;">
+            <span id="d100Result" style="font-size:2.5rem;font-weight:bold;color:#1A1410;font-family:'PT Serif',serif;text-shadow:0 2px 4px rgba(0,0,0,0.2);">d100</span>
         </div>
+    </div>
+    <p id="d100Degree" style="margin-top:1rem;color:var(--text-dim);font-size:1.1rem;">Нажми на дайс</p>
+</div>
     </section>
 
-    <!-- ТЕХНОЛОГИИ -->
+<section class="section" style="text-align:center;">
+    <div class="container">
+<div style="margin-top:2rem;padding-top:2rem;border-top:1px solid rgba(201,169,97,0.2);text-align:center;">
+        <h4 style="color:#c9a961;margin-bottom:1rem;font-family:'Marcellus',serif;">Поддержите проект</h4>
+        <div style="margin-bottom:1.5rem;">
+            <h4 style="color:#c9a961;margin-bottom:0.5rem;font-family:'Marcellus',serif;font-size:1rem;">Поделиться</h4>
+            <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
+                <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0077ff;color:#fff;text-decoration:none;font-size:0.85rem;">ВК</a>
+                <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=Летописи Руси XV века — AI-narrative RPG" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0088cc;color:#fff;text-decoration:none;font-size:0.85rem;">Telegram</a>
+                <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#ee8208;color:#fff;text-decoration:none;font-size:0.85rem;">Одноклассники</a>
+                <a href="javascript:navigator.clipboard.writeText('https://sosnowda.github.io').then(()=>{alert('Ссылка скопирована!')})" style="padding:0.5rem 1.2rem;border-radius:8px;background:#333;color:#fff;text-decoration:none;font-size:0.85rem;cursor:pointer;">Копировать</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ТЕХНОЛОГИИ -->
     <section class="section section-alt" id="tech">
         <div class="container">
             <div class="section-label">Технический фундамент</div>
@@ -239,41 +344,7 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
         </div>
     </section>
 
-    <!-- ИСТОРИЯ -->
-    <section class="section" id="history">
-        <div class="container">
-            <div class="section-label">Исторический контекст</div>
-            <h2>Русь XV века — эпоха перемен</h2>
-            <p style="text-align: center; color: var(--text-dim); max-width: 700px; margin: 0 auto 2rem;">
-                Время «Собирания земли русской» вокруг Московского княжества, феодальных войн и сбрасывания Ордынского ига.
-                Три великих князя определяют эпоху.
-            </p>
-            <div class="epoch-grid">
-                <div class="epoch-card">
-                    <div class="epoch-year">1400–1425</div>
-                    <div class="epoch-name">Василий I Дмитриевич</div>
-                    <div class="epoch-desc">Великий князь Московский. Укрепление Московского княжества, борьба с Литвой и Ордой.</div>
-                </div>
-                <div class="epoch-card">
-                    <div class="epoch-year">1425–1462</div>
-                    <div class="epoch-name">Василий II «Тёмный»</div>
-                    <div class="epoch-desc">Эпоха феодальных войн, ослепление князя, борьба за московский престол.</div>
-                </div>
-                <div class="epoch-card">
-                    <div class="epoch-year">1462–1505</div>
-                    <div class="epoch-name">Иван III «Великий»</div>
-                    <div class="epoch-desc">Свержение Ордынского ига (1480), объединение русских земель, строительство Кремля.</div>
-                </div>
-            </div>
-            <div style="margin-top: 2rem; text-align: center; color: var(--text-muted); font-size: 0.95rem;">
-                <p>
-                    В игре учитываются <strong class="highlight">реальные исторические события</strong> Руси XV века
-                    и всех крупных мировых событий. Слухи от купцов, рассказы иностранных гостей, политические изменения —
-                    всё это отражается в игровом мире и его невозможно пропустить.
-                </p>
-            </div>
-        </div>
-    </section>
+    
 
     <!-- СИСТЕМЫ И ОСОБЕННОСТИ -->
     <section class="section section-alt" id="systems">
@@ -445,31 +516,7 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
 
     <!-- ПОДВАЛ -->
     
-<!-- Исторические карты -->
-<section id="maps" style="padding:4rem 0;background:#1a1410;">
-    <div class="container" style="max-width:1180px;margin:0 auto;padding:0 24px;">
-        <h2 style="text-align:center;font-family:'Marcellus',serif;color:#c9a961;margin-bottom:1rem;">Исторические карты Руси</h2>
-        <p style="text-align:center;color:#a89878;max-width:700px;margin:0 auto 2rem;">Игра использует реалистичные исторические карты местности Руси XIV–XVI веков.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:2rem;">
-            <div style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
-                <img src="assets/images/maps/vida_lyatsky_1542.jpg" alt="Карта России Антония Вида и Ивана Лятского, 1542-1555" style="width:100%;display:block;" loading="lazy">
-                <div style="padding:1.5rem;">
-                    <h3 style="color:#c9a961;font-family:'Marcellus',serif;margin-bottom:0.5rem;">Карта России Антония Вида и Ивана Лятского</h3>
-                    <p style="color:#c9a961;font-size:0.9rem;margin-bottom:0.8rem;">1542–1555 гг.</p>
-                    <p style="color:#a89878;font-size:0.95rem;line-height:1.6;">Первая подробная карта Московского государства, созданная по заказу Сигизмунда II Августа.</p>
-                </div>
-            </div>
-            <div style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
-                <img src="assets/images/maps/herberstein_1550.jpg" alt="Карта России Сигизмунда фон Герберштейна, 1550" style="width:100%;display:block;" loading="lazy">
-                <div style="padding:1.5rem;">
-                    <h3 style="color:#c9a961;font-family:'Marcellus',serif;margin-bottom:0.5rem;">Карта России Сигизмунда фон Герберштейна</h3>
-                    <p style="color:#c9a961;font-size:0.9rem;margin-bottom:0.8rem;">1550 г.</p>
-                    <p style="color:#a89878;font-size:0.95rem;line-height:1.6;">Карта из книги «Записки о московитских делах» австрийского дипломата Сигизмунда фон Герберштейна.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+
 
 <footer class="footer">
         <div class="container">
@@ -499,23 +546,13 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
             </p>
         </div>
     
-    <div style="margin-top:2rem;padding-top:2rem;border-top:1px solid rgba(201,169,97,0.2);text-align:center;">
-        <h4 style="color:#c9a961;margin-bottom:1rem;font-family:'Marcellus',serif;">Поддержите проект</h4>
-        <div style="margin-bottom:1.5rem;">
-            <h4 style="color:#c9a961;margin-bottom:0.5rem;font-family:'Marcellus',serif;font-size:1rem;">Поделиться</h4>
-            <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
-                <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0077ff;color:#fff;text-decoration:none;font-size:0.85rem;">ВК</a>
-                <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=Летописи Руси XV века — AI-narrative RPG" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0088cc;color:#fff;text-decoration:none;font-size:0.85rem;">Telegram</a>
-                <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#ee8208;color:#fff;text-decoration:none;font-size:0.85rem;">Одноклассники</a>
-                <a href="javascript:navigator.clipboard.writeText('https://sosnowda.github.io').then(()=>{alert('Ссылка скопирована!')})" style="padding:0.5rem 1.2rem;border-radius:8px;background:#333;color:#fff;text-decoration:none;font-size:0.85rem;cursor:pointer;">Копировать</a>
-            </div>
-        </div>
+    
         <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
             <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#ff8a00;color:#fff;text-decoration:none;font-size:0.9rem;">Boosty</a>
             <a href="https://yoomoney.ru/to/4100119624440650" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:0.9rem;">ЮMoney</a>
             <a href="https://vk.ru/club241165941" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#0077ff;color:#fff;text-decoration:none;font-size:0.9rem;">ВК игры</a>
             <a href="https://vk.ru/id521470239" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#4a76a8;color:#fff;text-decoration:none;font-size:0.9rem;">Автор ВК</a>
-            <a href="https://github.com/sosnowda/ChroniclesRuthenia" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#333;color:#fff;text-decoration:none;font-size:0.9rem;">GitHub</a>
+            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#333;color:#C9A961;text-decoration:none;font-size:0.9rem;border:1px solid #C9A961;">🔒 Код закрыт — доступ для бета-тестеров</a>
         </div>
     </div>
 </footer>
