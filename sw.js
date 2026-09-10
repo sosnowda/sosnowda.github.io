@@ -1,7 +1,8 @@
-/* Service Worker — Летописи Руси XV века (Chronicles of Ruthenia)
-   Network-first: сначала сеть, при ошибке — кеш. */
+/* Service Worker — Летописи Руси XV века
+   Network-first, но ТОЛЬКО для same-origin (своих файлов).
+   Внешние CDN (unpkg, jsdelivr) — пропускаем напрямую, не перехватываем. */
 
-var CACHE_NAME = 'chronicles-ruthenia-v2';
+var CACHE_NAME = 'chronicles-ruthenia-v3';
 
 self.addEventListener('install', function (event) {
     self.skipWaiting();
@@ -24,10 +25,17 @@ self.addEventListener('activate', function (event) {
 self.addEventListener('fetch', function (event) {
     if (event.request.method !== 'GET') return;
 
+    var url = new URL(event.request.url);
+
+    // ВНЕШНИЕ запросы (CDN, другие домены) — пропускаем напрямую, НЕ перехватываем
+    if (url.origin !== self.location.origin) {
+        return;
+    }
+
+    // Same-origin — network-first
     event.respondWith(
         fetch(event.request).then(function (response) {
-            // Успешный ответ — кешируем и отдаём
-            if (response && response.status === 200 && response.type === 'basic') {
+            if (response && response.status === 200) {
                 var clone = response.clone();
                 caches.open(CACHE_NAME).then(function (cache) {
                     cache.put(event.request, clone).catch(function () {});
@@ -35,7 +43,6 @@ self.addEventListener('fetch', function (event) {
             }
             return response;
         }).catch(function () {
-            // Оффлайн — отдаём из кеша
             return caches.match(event.request).then(function (cached) {
                 return cached || caches.match('/index.html');
             });
