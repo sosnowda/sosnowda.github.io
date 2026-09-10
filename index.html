@@ -66,14 +66,6 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
         <div class="hero-image-wrap">
             <img src="assets/images/title.jpg" alt="Летописи Руси XV века — титульная картинка" class="hero-image">
         </div>
-        <div class="container hero-text">
-            <h1>Летописи Руси XV века</h1>
-            <p class="hero-subtitle">The Chronicles of Ruthenia</p>
-        </div>
-        <div class="container hero-buttons">
-            <a href="#about" class="btn btn-primary">Узнать больше</a>
-            <a href="https://github.com/sosnowda/ChroniclesRuthenia" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">GitHub</a>
-        </div>
     </section>
 
     <!-- ОБ ИГРЕ -->
@@ -150,7 +142,7 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
                 <div class="feature-card" style="text-align:center;">
                     <h3 style="color:var(--gold);margin-bottom:1rem;">Степени успеха d100</h3>
                     <ul style="list-style:none;padding:0;color:var(--text-dim);font-size:0.95rem;line-height:2;">
-                        <li><strong style="color:var(--gold-bright);">Критический</strong> — 1/20 от навыка</li>
+                        <li><strong style="color:var(--gold-bright);">Удача</strong> — 1/20 от навыка</li>
                         <li><strong style="color:var(--gold-bright);">Особый</strong> — 1/5 от навыка</li>
                         <li><strong style="color:var(--gold-bright);">Успех</strong> — ≤ навык</li>
                         <li><strong style="color:var(--gold-bright);">Провал</strong> — &gt; навыка</li>
@@ -190,7 +182,7 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
             <!-- Интерактивный кубик d100 -->
             <div style="text-align:center;padding:2rem 0;">
                 <h3 style="color:var(--gold);font-family:'Marcellus',serif;margin-bottom:1.5rem;">Интерактивный бросок d100</h3>
-                <div class="d100-dice" id="d100Dice" onclick="rollD100()" style="width:120px;height:120px;background:linear-gradient(135deg,#c9a961 0%,#a88b4e 50%,#8b6914 100%);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+                <div class="d100-dice" id="d100Dice" onclick="rollD100()" style="width:120px;height:120px;background:linear-gradient(135deg,#c9a961 0%,#a88b4e 50%,#8b6914 100%);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.4);user-select:none;">
                     <span class="d100-result" id="d100Result" style="font-size:2.5rem;font-weight:bold;color:#1a1410;font-family:'PT Serif',serif;">d100</span>
                 </div>
                 <p id="d100Degree" style="margin-top:1rem;color:var(--text-dim);font-size:1.1rem;">Нажми на кубик</p>
@@ -509,6 +501,15 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
     
     <div style="margin-top:2rem;padding-top:2rem;border-top:1px solid rgba(201,169,97,0.2);text-align:center;">
         <h4 style="color:#c9a961;margin-bottom:1rem;font-family:'Marcellus',serif;">Поддержите проект</h4>
+        <div style="margin-bottom:1.5rem;">
+            <h4 style="color:#c9a961;margin-bottom:0.5rem;font-family:'Marcellus',serif;font-size:1rem;">Поделиться</h4>
+            <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
+                <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0077ff;color:#fff;text-decoration:none;font-size:0.85rem;">ВК</a>
+                <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=Летописи Руси XV века — AI-narrative RPG" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0088cc;color:#fff;text-decoration:none;font-size:0.85rem;">Telegram</a>
+                <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#ee8208;color:#fff;text-decoration:none;font-size:0.85rem;">Одноклассники</a>
+                <a href="javascript:navigator.clipboard.writeText('https://sosnowda.github.io').then(()=>{alert('Ссылка скопирована!')})" style="padding:0.5rem 1.2rem;border-radius:8px;background:#333;color:#fff;text-decoration:none;font-size:0.85rem;cursor:pointer;">Копировать</a>
+            </div>
+        </div>
         <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
             <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#ff8a00;color:#fff;text-decoration:none;font-size:0.9rem;">Boosty</a>
             <a href="https://yoomoney.ru/to/4100119624440650" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:0.9rem;">ЮMoney</a>
