@@ -15,9 +15,11 @@ body{background:#1b2a1f;font-family:Arial,sans-serif}
 </head>
 <body>
 <div id="game-container"><div class="loading">Загрузка игры…</div></div>
+<!-- Phaser -->
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.min.js"></script>
+<!-- RexUI Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/phaser3-rex-plugins@1.1.65/dist/rexuiplugin.min.js"></script>
 <script>
-// Ждём загрузки Phaser
 window.addEventListener('load', function() {
     if (typeof Phaser === 'undefined') {
         document.getElementById('game-container').innerHTML = '<div class="error">Не удалось загрузить движок Phaser. Проверьте подключение к интернету.</div>';
@@ -27,28 +29,7 @@ window.addEventListener('load', function() {
     var container = document.getElementById('game-container');
     container.innerHTML = '';
 
-    // Конфигурация игры
-    var config = {
-        type: Phaser.AUTO,
-        title: 'Летописи Руси',
-        parent: 'game-container',
-        width: 1280,
-        height: 720,
-        backgroundColor: '#1b2a1f',
-        pixelArt: false,
-        physics: {
-            default: 'arcade',
-            arcade: { gravity: { x: 0, y: 0 }, debug: false }
-        },
-        scale: {
-            mode: Phaser.Scale.FIT,
-            autoCenter: Phaser.Scale.CENTER_BOTH,
-        },
-        scene: []
-    };
-
-    // Попытка загрузить сцены через dynamic import
-    // Если не выйдет — покажем заглушку
+    // Загружаем сцены через dynamic import
     Promise.all([
         import('./src/scenes/BootScene.js'),
         import('./src/scenes/TitleScene.js'),
@@ -56,15 +37,41 @@ window.addEventListener('load', function() {
         import('./src/scenes/CombatScene.js'),
         import('./src/scenes/CharacterScene.js'),
     ]).then(function(modules) {
-        config.scene = modules.map(function(m) {
-            // Получаем экспортированный класс
+        var scenes = modules.map(function(m) {
             var keys = Object.keys(m);
             return m[keys[0]];
         });
+
+        var config = {
+            type: Phaser.AUTO,
+            title: 'Летописи Руси',
+            parent: 'game-container',
+            width: 1280,
+            height: 720,
+            backgroundColor: '#1b2a1f',
+            pixelArt: false,
+            physics: {
+                default: 'arcade',
+                arcade: { gravity: { x: 0, y: 0 }, debug: false }
+            },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+            },
+            scene: scenes,
+            plugins: {
+                scene: [{
+                    key: 'rexUI',
+                    plugin: RexUIPlugin,
+                    mapping: 'rexUI'
+                }]
+            }
+        };
+
         new Phaser.Game(config);
     }).catch(function(err) {
         console.error('Ошибка загрузки игры:', err);
-        container.innerHTML = '<div class="error"><h2 style="color:#c9a961;margin-bottom:1rem;">Игра не загрузилась</h2><p>Возможно, браузер блокирует ES-модули.</p><p style="margin-top:1rem;">Попробуйте открыть игру напрямую:<br><a href="src/main.js" style="color:#c9a961;">main.js</a></p><p style="margin-top:1rem;color:#666;">Ошибка: ' + err.message + '</p></div>';
+        container.innerHTML = '<div class="error"><h2 style="color:#c9a961;margin-bottom:1rem;">Игра не загрузилась</h2><p>Ошибка: ' + err.message + '</p><p style="margin-top:1rem;">Откройте консоль (F12) для деталей.</p></div>';
     });
 });
 </script>
