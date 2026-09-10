@@ -863,3 +863,16 @@
 .timeline-item{display:flex;gap:1rem;padding:.7rem 0;border-bottom:1px solid var(--border-soft);align-items:baseline}
 .timeline-year{font-weight:bold;color:var(--gold);min-width:60px;font-family:var(--serif)}
 .timeline-event{color:var(--text-dim);font-size:.95rem}
+
+/* ===================== ИСТОРИЧЕСКИЕ КАРТЫ ===================== */
+.maps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:2rem;margin-top:2rem}
+.map-card{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-soft);transition:transform .3s,box-shadow .3s}
+.map-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-card)}
+.map-card img{width:100%;display:block;cursor:zoom-in;transition:opacity .3s}
+.map-card img:hover{opacity:.9}
+.map-info{padding:1.5rem}
+.map-info h3{color:var(--gold);font-size:1.2rem;margin-bottom:.5rem}
+.map-date{color:var(--gold-dim);font-family:var(--serif);font-size:.9rem;margin-bottom:.8rem}
+.map-desc{color:var(--text-dim);font-size:.95rem;line-height:1.6}
+@media(max-width:680px){.maps-grid{grid-template-columns:1fr}}
+
