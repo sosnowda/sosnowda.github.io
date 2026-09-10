@@ -15,64 +15,104 @@ body{background:#1b2a1f;font-family:Arial,sans-serif}
 </head>
 <body>
 <div id="game-container"><div class="loading">Загрузка игры…</div></div>
+
 <!-- Phaser -->
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.min.js"></script>
-<!-- RexUI Plugin -->
-<script src="https://cdn.jsdelivr.net/npm/phaser3-rex-plugins@1.1.65/dist/rexuiplugin.min.js"></script>
+
+<!-- Загрузчик RexUI — пробуем несколько CDN -->
 <script>
+function loadScript(src) {
+    return new Promise(function(resolve, reject) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+    });
+}
+
 window.addEventListener('load', function() {
     if (typeof Phaser === 'undefined') {
-        document.getElementById('game-container').innerHTML = '<div class="error">Не удалось загрузить движок Phaser. Проверьте подключение к интернету.</div>';
+        document.getElementById('game-container').innerHTML = '<div class="error">Не удалось загрузить движок Phaser.</div>';
         return;
     }
 
-    var container = document.getElementById('game-container');
-    container.innerHTML = '';
+    // Пробуем загрузить RexUI с нескольких CDN
+    var rexCDNs = [
+        'https://unpkg.com/phaser3-rex-plugins@1.1.65/dist/rexuiplugin.min.js',
+        'https://cdn.jsdelivr.net/npm/phaser3-rex-plugins@1.1.65/dist/rexuiplugin.min.js',
+        'https://cdn.jsdelivr.net/npm/phaser3-rex-plugins@1.80.3/dist/rexuiplugin.min.js'
+    ];
 
-    // Загружаем сцены через dynamic import
-    Promise.all([
-        import('./src/scenes/BootScene.js'),
-        import('./src/scenes/TitleScene.js'),
-        import('./src/scenes/VillageScene.js'),
-        import('./src/scenes/CombatScene.js'),
-        import('./src/scenes/CharacterScene.js'),
-    ]).then(function(modules) {
-        var scenes = modules.map(function(m) {
-            var keys = Object.keys(m);
-            return m[keys[0]];
+    function tryLoadRex(idx) {
+        if (idx >= rexCDNs.length) {
+            // RexUI не загрузился — запускаем без плагина, игра покажет заголовок
+            console.warn('RexUI не загрузился — запускаю без UI-плагина');
+            startGame(false);
+            return;
+        }
+        loadScript(rexCDNs[idx]).then(function() {
+            startGame(true);
+        }).catch(function() {
+            tryLoadRex(idx + 1);
         });
+    }
 
-        var config = {
-            type: Phaser.AUTO,
-            title: 'Летописи Руси',
-            parent: 'game-container',
-            width: 1280,
-            height: 720,
-            backgroundColor: '#1b2a1f',
-            pixelArt: false,
-            physics: {
-                default: 'arcade',
-                arcade: { gravity: { x: 0, y: 0 }, debug: false }
-            },
-            scale: {
-                mode: Phaser.Scale.FIT,
-                autoCenter: Phaser.Scale.CENTER_BOTH,
-            },
-            scene: scenes,
-            plugins: {
-                scene: [{
+    function startGame(hasRexUI) {
+        var container = document.getElementById('game-container');
+        container.innerHTML = '';
+
+        Promise.all([
+            import('./src/scenes/BootScene.js'),
+            import('./src/scenes/TitleScene.js'),
+            import('./src/scenes/VillageScene.js'),
+            import('./src/scenes/CombatScene.js'),
+            import('./src/scenes/CharacterScene.js'),
+        ]).then(function(modules) {
+            var scenes = modules.map(function(m) {
+                var keys = Object.keys(m);
+                return m[keys[0]];
+            });
+
+            var config = {
+                type: Phaser.AUTO,
+                title: 'Летописи Руси',
+                parent: 'game-container',
+                width: 1280,
+                height: 720,
+                backgroundColor: '#1b2a1f',
+                pixelArt: false,
+                physics: {
+                    default: 'arcade',
+                    arcade: { gravity: { x: 0, y: 0 }, debug: false }
+                },
+                scale: {
+                    mode: Phaser.Scale.FIT,
+                    autoCenter: Phaser.Scale.CENTER_BOTH,
+                },
+                scene: scenes,
+                plugins: {}
+            };
+
+            // Добавляем RexUI только если он загрузился
+            if (hasRexUI && (typeof RexUIPlugin !== 'undefined' || window.RexUIPlugin)) {
+                var rexPlugin = window.RexUIPlugin || RexUIPlugin;
+                config.plugins.scene = [{
                     key: 'rexUI',
-                    plugin: RexUIPlugin,
+                    plugin: rexPlugin,
                     mapping: 'rexUI'
-                }]
+                }];
             }
-        };
 
-        new Phaser.Game(config);
-    }).catch(function(err) {
-        console.error('Ошибка загрузки игры:', err);
-        container.innerHTML = '<div class="error"><h2 style="color:#c9a961;margin-bottom:1rem;">Игра не загрузилась</h2><p>Ошибка: ' + err.message + '</p><p style="margin-top:1rem;">Откройте консоль (F12) для деталей.</p></div>';
-    });
+            new Phaser.Game(config);
+        }).catch(function(err) {
+            console.error('Ошибка загрузки игры:', err);
+            container.innerHTML = '<div class="error"><h2 style="color:#c9a961;margin-bottom:1rem;">Игра не загрузилась</h2><p>Ошибка: ' + err.message + '</p><p style="margin-top:1rem;">Откройте консоль (F12) для деталей.</p></div>';
+        });
+    }
+
+    // Стартуем загрузку RexUI
+    tryLoadRex(0);
 });
 </script>
 </body>
