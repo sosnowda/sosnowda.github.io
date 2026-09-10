@@ -140,6 +140,8 @@
   .btn-ghost{background:transparent;color:var(--accent);border-color:var(--gold-dim)}
   .btn-ghost:hover{background:var(--accent-soft);border-color:var(--gold);color:var(--gold-bright);transform:translateY(-2px)}
   :root[data-theme="light"] .btn-ghost:hover{color:var(--red);border-color:var(--red)}
+  .btn-accent{background:var(--red);color:var(--text-dark);border-color:var(--red)}
+  .btn-accent:hover{background:var(--red-light);border-color:var(--red-light);transform:translateY(-2px);color:#fff}
 
   /* ===================== HERO + АНИМАЦИЯ ФОНА («свечи») ===================== */
   .hero{
