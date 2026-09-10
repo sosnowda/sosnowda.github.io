@@ -1,0 +1,221 @@
+// Пошаговый бой по системе BRP. Игрок и враг по очереди совершают действия.
+import Phaser from 'phaser';
+import { RUS } from '../config/RusTheme.js';
+import { WEAPONS } from '../config/GameConfig.js';
+import { skillCheck, rollDamage, ROLL_RESULT } from '../systems/BRPEngine.js';
+import { spawnEnemy } from '../data/characters.js';
+import { createButton, createFloatingText } from '../utils/ui.js';
+import AudioManager from '../systems/AudioManager.js';
+import SaveManager from '../systems/SaveManager.js';
+
+export class CombatScene extends Phaser.Scene {
+    constructor() {
+        super('Combat');
+    }
+
+    init(data) {
+        this.enemyKeys = (data && data.enemyKeys) || ['bandit'];
+        this.npcId = (data && data.npcId) || null;
+    }
+
+    create() {
+        const { width, height } = this.scale;
+        this.cameras.main.setBackgroundColor(0x140d0a);
+        this.audioManager = new AudioManager(this);
+        this.saveManager = new SaveManager(this);
+
+        this.player = this.registry.get('player');
+        this.enemies = this.enemyKeys.map(k => spawnEnemy(k));
+        this.busy = false;
+        this.playerDodging = false;
+        this.logLines = [];
+        this.barGfx = this.add.graphics().setDepth(50);
+
+        // Игрок
+        this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, 'player').setScale(1.6);
+        this.add.text(this.playerSprite.x, this.playerSprite.y + 56, this.player.name, {
+            fontSize: '16px', color: RUS.text,
+        }).setOrigin(0.5);
+
+        // Враги
+        this.enemySprites = [];
+        const n = this.enemies.length;
+        this.enemies.forEach((e, i) => {
+            const y = height * 0.35 + (n > 1 ? i * (height * 0.3) : height * 0.18);
+            const sp = this.add.sprite(width * 0.72, y, e.spriteKey).setScale(1.4);
+            const nm = this.add.text(sp.x, sp.y + 46, e.name, {
+                fontSize: '15px', color: '#ffb3a0',
+            }).setOrigin(0.5);
+            this.enemySprites.push({ sprite: sp, combatant: e, label: nm });
+        });
+
+        // Журнал боя
+        this.logText = this.add.text(width / 2, 20, '', {
+            fontSize: '16px', color: RUS.text, backgroundColor: '#00000099',
+            padding: { x: 10, y: 8 }, align: 'center', wordWrap: { width: width - 80 },
+        }).setOrigin(0.5, 0).setDepth(60);
+
+        this.createActions();
+        this.drawBars();
+        this.pushLog('Бой начинается! Приготовься, путник.');
+    }
+
+    createActions() {
+        const { width, height } = this.scale;
+        const mk = (x, y, label, cb, bg, hover) => createButton(
+            this, x, y, label, () => { if (this.busy) return; cb(); },
+            { backgroundColor: bg, hoverColor: hover, textColor: RUS.text, fontSize: 18, padding: { left: 18, right: 18, top: 12, bottom: 12 } },
+        );
+        const y = height - 50;
+        mk(width / 2 - 280, y, 'Мечом', () => this.playerAttack('sword'), RUS.accent, RUS.accentLight);
+        mk(width / 2 - 95, y, 'Луком', () => this.playerAttack('bow'), 0x3a6b8c, 0x4a7b9c);
+        mk(width / 2 + 95, y, 'Уклониться', () => this.dodge(), 0x4a6a4a, 0x5a7a5a);
+        mk(width / 2 + 280, y, 'Трава', () => this.useHerb(), 0x6a5a2a, 0x7a6a3a);
+    }
+
+    pushLog(msg) {
+        this.logLines.push(msg);
+        if (this.logLines.length > 5) this.logLines.shift();
+        this.logText.setText(this.logLines.join('\n'));
+    }
+
+    drawBars() {
+        const g = this.barGfx;
+        g.clear();
+        const bar = (x, y, w, ratio, col) => {
+            g.fillStyle(0x000000, 0.6);
+            g.fillRect(x, y, w, 10);
+            g.fillStyle(col, 1);
+            g.fillRect(x, y, w * Phaser.Math.Clamp(ratio, 0, 1), 10);
+        };
+        bar(this.playerSprite.x - 40, this.playerSprite.y - 64, 80, this.player.HP / this.player.HPmax, 0x4caf50);
+        this.enemySprites.forEach(e => {
+            if (e.combatant.HP > 0) bar(e.sprite.x - 40, e.sprite.y - 64, 80, e.combatant.HP / e.combatant.HPmax, 0xc0492f);
+        });
+    }
+
+    firstAlive() {
+        const e = this.enemySprites.find(x => x.combatant.HP > 0);
+        return e ? e.combatant : null;
+    }
+
+    playerAttack(weaponKey) {
+        const w = WEAPONS[weaponKey];
+        const skill = this.player.skills[w.skill];
+        const res = skillCheck(skill);
+        const target = this.firstAlive();
+        if (!target) { this.endCombatVictory(); return; }
+
+        if (res.result === ROLL_RESULT.FAIL || res.result === ROLL_RESULT.FUMBLE) {
+            this.pushLog(`${w.name}: ${res.roll} — промах!`);
+            this.audioManager.playButtonClick();
+        } else {
+            const tw = this.enemySprites.find(x => x.combatant === target);
+            const dodgeRes = skillCheck(target.dodge);
+            if (dodgeRes.result === ROLL_RESULT.SUCCESS || dodgeRes.result === ROLL_RESULT.CRITICAL) {
+                this.pushLog(`${target.name} уклонился от удара (${dodgeRes.roll}).`);
+            } else {
+                let dmg = rollDamage(w.dice, this.player.DB) + (w.bonus || 0);
+                if (res.result === ROLL_RESULT.CRITICAL) dmg = Math.ceil(dmg * 1.5);
+                target.HP = Math.max(0, target.HP - dmg);
+                createFloatingText(this, tw.sprite.x, tw.sprite.y - 24, `-${dmg}`, '#ff6b5a');
+                this.pushLog(`${w.name}: попадание! Урон ${dmg} (бросок ${res.roll}).`);
+                this.audioManager.playExplosion();
+                this.cameras.main.shake(120, 0.004);
+                if (target.HP <= 0) { this.pushLog(`${target.name} повержен!`); tw.sprite.setAlpha(0.3); }
+            }
+        }
+        this.drawBars();
+        if (this.allDead()) { this.time.delayedCall(500, () => this.endCombatVictory()); return; }
+        this.busy = true;
+        this.time.delayedCall(750, () => this.enemyTurn());
+    }
+
+    dodge() {
+        this.playerDodging = true;
+        this.pushLog('Ты занимаешь оборонительную стойку, готовясь уклониться.');
+        this.busy = true;
+        this.time.delayedCall(500, () => this.enemyTurn());
+    }
+
+    useHerb() {
+        const q = this.registry.get('quest');
+        if (!q.hasHerb) { this.pushLog('У тебя нет целебной травы.'); return; }
+        q.hasHerb = false;
+        const heal = 3 + Math.floor(Math.random() * 4) + Math.floor(this.player.CON / 10);
+        this.player.HP = Math.min(this.player.HPmax, this.player.HP + heal);
+        createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 24, `+${heal}`, '#7CFC00');
+        this.pushLog(`Ты принял траву и восстановил ${heal} здоровья.`);
+        this.drawBars();
+        this.autosave();
+        this.busy = true;
+        this.time.delayedCall(600, () => this.enemyTurn());
+    }
+
+    enemyTurn() {
+        this.playerDodging = false;
+        const alive = this.enemySprites.filter(e => e.combatant.HP > 0);
+        if (alive.length === 0) { this.endCombatVictory(); return; }
+
+        alive.forEach((e, idx) => {
+            this.time.delayedCall(idx * 700 + 200, () => {
+                if (this.player.HP <= 0) return;
+                const en = e.combatant;
+                const res = skillCheck(en.attackSkill);
+                if (res.result === ROLL_RESULT.FAIL || res.result === ROLL_RESULT.FUMBLE) {
+                    this.pushLog(`${en.name}: ${res.roll} — промах.`);
+                } else {
+                    if (this.playerDodging) {
+                        const dr = skillCheck(this.player.skills.dodge);
+                        if (dr.result === ROLL_RESULT.SUCCESS || dr.result === ROLL_RESULT.CRITICAL) {
+                            this.pushLog(`Ты уклонился от ${en.name} (${dr.roll})!`);
+                            this.audioManager.playButtonClick();
+                            this.drawBars();
+                            if (idx === alive.length - 1) this.afterEnemy();
+                            return;
+                        }
+                    }
+                    const dmg = rollDamage(en.weapon.dice, en.DB);
+                    this.player.HP = Math.max(0, this.player.HP - dmg);
+                    createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 24, `-${dmg}`, '#ff6b5a');
+                    this.pushLog(`${en.name} бьёт ${en.weapon.name}: урон ${dmg} (${res.roll}).`);
+                    this.audioManager.playExplosion();
+                    this.cameras.main.shake(120, 0.004);
+                    this.drawBars();
+                    if (this.player.HP <= 0) { this.time.delayedCall(400, () => this.endCombatDefeat()); return; }
+                }
+                if (idx === alive.length - 1) this.afterEnemy();
+            });
+        });
+    }
+
+    afterEnemy() {
+        this.busy = false;
+        this.playerDodging = false;
+        this.pushLog('Твой ход.');
+    }
+
+    allDead() {
+        return this.enemySprites.every(e => e.combatant.HP <= 0);
+    }
+
+    autosave() {
+        const q = this.registry.get('quest');
+        this.saveManager.saveGame(0, { player: this.player, quest: q }, 'Поход');
+    }
+
+    endCombatVictory() {
+        const q = this.registry.get('quest');
+        if (this.npcId === 'bandit') q.banditDefeated = true;
+        this.autosave();
+        this.busy = true;
+        this.pushLog('Враг повержен! Ты одержал победу.');
+        this.time.delayedCall(900, () => this.scene.start('Village'));
+    }
+
+    endCombatDefeat() {
+        this.busy = true;
+        this.pushLog('Ты пал в бою...');
+        this.time.delayedCall(900, () => this.scene.start('Title'));
+    }
+}

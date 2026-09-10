@@ -610,7 +610,7 @@
 .hero-buttons{display:flex;gap:1rem;justify-content:center;padding:0 24px 4rem;flex-wrap:wrap}
 .hero-buttons .btn{position:relative;z-index:auto}
 
-.hero{padding:0!important;background:none!important}.hero-image-wrap{width:100%;max-width:100%!important;margin:0;padding:0}.hero-image{width:100%;height:auto;max-height:none!important;object-fit:contain;display:block;border-radius:0;box-shadow:none}
+
 
 .fund-bar{background:linear-gradient(90deg,#8B2C1A,#5A1A0E);color:#C9A961;text-align:center;padding:0.6rem;font-size:0.9rem;cursor:pointer;position:sticky;top:0;z-index:1000;font-family:'PT Sans',sans-serif}
 .fund-bar:hover{background:linear-gradient(90deg,#B53925,#8B2C1A)}
@@ -625,3 +625,123 @@
 #d100Sphere.rolling{animation:d100-3d-roll 0.8s ease-out}
 @keyframes d100-3d-roll{0%{transform:rotateX(0) rotateY(0) rotateZ(0) scale(1)}30%{transform:rotateX(360deg) rotateY(180deg) rotateZ(90deg) scale(1.15)}60%{transform:rotateX(720deg) rotateY(360deg) rotateZ(180deg) scale(1.1)}100%{transform:rotateX(1080deg) rotateY(540deg) rotateZ(270deg) scale(1)}}
 #d100Dice:hover #d100Sphere{transform:scale(1.05);box-shadow:0 16px 48px rgba(0,0,0,0.6)}
+
+/* HERO — титульная картинка */
+.hero{padding:0;margin:0;background:none;overflow:visible}
+.hero-image-wrap{width:100%;margin:0;padding:0;position:relative;z-index:1}
+.hero-image{width:100%;height:auto;display:block;border-radius:0;box-shadow:0 4px 24px rgba(0,0,0,0.4);position:relative;z-index:1}
+
+/* ===================== СРЕДНЕВЕКОВЫЙ СТИЛЬ ===================== */
+
+/* Потёртый пергаментный фон через SVG-шум */
+body{
+  background-color:#1A1410;
+  background-image:
+    radial-gradient(ellipse at 15% 10%, rgba(139,44,26,0.12) 0%, transparent 40%),
+    radial-gradient(ellipse at 85% 25%, rgba(201,169,97,0.05) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 90%, rgba(139,44,26,0.08) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.015' numOctaves='3' seed='5'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.06 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-attachment:fixed;
+}
+
+/* Карточки — потёртая поверхность */
+.feature-card, .epoch-card, .tech-panel, .detailed-item, .map-card, .video-card{
+  background:linear-gradient(135deg, rgba(36,27,21,0.95) 0%, rgba(42,32,26,0.9) 100%) !important;
+  border:1px solid rgba(201,169,97,0.25) !important;
+  border-radius:8px !important;
+  position:relative;
+  box-shadow:0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(201,169,97,0.1) !important;
+}
+/* Тёмные углы — эффект потёртости */
+.feature-card::after, .epoch-card::after, .tech-panel::after, .map-card::after{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  background:
+    radial-gradient(ellipse at top left, rgba(0,0,0,0.15) 0%, transparent 30%),
+    radial-gradient(ellipse at bottom right, rgba(0,0,0,0.2) 0%, transparent 30%);
+  pointer-events:none;
+  border-radius:inherit;
+}
+
+/* Заголовки — золотая надпись, выгравированный эффект */
+h1, h2, h3{
+  text-shadow:0 1px 0 rgba(0,0,0,0.5), 0 0 8px rgba(201,169,97,0.15) !important;
+}
+h2::before, h2::after{
+  content:'❦';
+  color:rgba(201,169,97,0.4);
+  margin:0 0.8rem;
+  font-size:0.7em;
+  vertical-align:middle;
+}
+
+/* Кнопки — металл/кожа */
+.btn{
+  border:1px solid rgba(201,169,97,0.3) !important;
+  box-shadow:0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+  text-shadow:0 1px 1px rgba(0,0,0,0.4) !important;
+}
+.btn:hover{
+  border-color:rgba(201,169,97,0.6) !important;
+  box-shadow:0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+
+/* Шапка — тёмное дерево */
+header, .header{
+  background:linear-gradient(180deg, rgba(26,20,16,0.98) 0%, rgba(36,27,21,0.95) 100%) !important;
+  border-bottom:1px solid rgba(201,169,97,0.2) !important;
+  box-shadow:0 2px 12px rgba(0,0,0,0.4) !important;
+}
+
+/* Подвал — камень */
+footer{
+  background:linear-gradient(180deg, rgba(26,20,16,0.98) 0%, rgba(18,14,10,1) 100%) !important;
+  border-top:2px solid rgba(201,169,97,0.2) !important;
+}
+
+/* Секционные разделители — декоративная линия */
+.section::before{
+  content:'';
+  display:block;
+  width:120px;
+  height:2px;
+  margin:0 auto 2rem;
+  background:linear-gradient(90deg, transparent, rgba(201,169,97,0.4), transparent);
+}
+
+/* Таймлайн — вертикальная линия */
+.timeline-item{
+  border-left:2px solid rgba(201,169,97,0.3) !important;
+  padding-left:1.2rem !important;
+  margin-left:0.5rem !important;
+  position:relative;
+}
+.timeline-item::before{
+  content:'◆';
+  position:absolute;
+  left:-7px;
+  top:0.5rem;
+  color:rgba(201,169,97,0.5);
+  font-size:0.7rem;
+}
+
+/* Скроллбар — тёмное дерево */
+::-webkit-scrollbar{width:10px}
+::-webkit-scrollbar-track{background:#1a1410}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#3d2f22,#2a2018);border-radius:5px;border:1px solid rgba(201,169,97,0.15)}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#4a3a2c,#3d2f22)}
+
+/* Дайс — металлический блеск */
+#d100Sphere{
+  background:radial-gradient(circle at 35% 30%, #E0C078 0%, #C9A961 35%, #8B6914 80%, #5A4015 100%) !important;
+  border:2px solid #3a2a1a !important;
+  box-shadow:0 12px 36px rgba(0,0,0,0.6), inset 0 -6px 12px rgba(0,0,0,0.3), inset 0 6px 12px rgba(255,255,255,0.12) !important;
+}
+
+/* Плашка альфа-версии — выгравированный камень */
+.fund-bar{
+  background:linear-gradient(90deg, #6B1F15, #8B2C1A, #6B1F15) !important;
+  border-bottom:1px solid rgba(201,169,97,0.2) !important;
+  text-shadow:0 1px 1px rgba(0,0,0,0.5) !important;
+}

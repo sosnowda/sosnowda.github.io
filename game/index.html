@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Летописи Руси — Демо</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden}
+body{background:#1b2a1f;font-family:Arial,sans-serif}
+#game-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.loading{color:#c9a961;font-size:1.2rem;text-align:center;padding:2rem}
+</style>
+</head>
+<body>
+<div id="game-container"><div class="loading">Загрузка игры…</div></div>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/phaser3-rex-plugins@1.1.65/dist/rexuicontainer.min.js"></script>
+<script type="module">
+import { BootScene } from './src/scenes/BootScene.js';
+import { TitleScene } from './src/scenes/TitleScene.js';
+import { VillageScene } from './src/scenes/VillageScene.js';
+import { CombatScene } from './src/scenes/CombatScene.js';
+import { CharacterScene } from './src/scenes/CharacterScene.js';
+
+const config = {
+    type: Phaser.AUTO,
+    title: 'Летописи Руси',
+    parent: 'game-container',
+    width: 1280,
+    height: 720,
+    backgroundColor: '#1b2a1f',
+    physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: false } },
+    scene: [BootScene, TitleScene, VillageScene, CombatScene, CharacterScene],
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+};
+new Phaser.Game(config);
+</script>
+</body>
+</html>
