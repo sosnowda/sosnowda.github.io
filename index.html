@@ -69,10 +69,10 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
         <div class="container hero-text">
             <h1>Летописи Руси XV века</h1>
             <p class="hero-subtitle">The Chronicles of Ruthenia</p>
-            <div class="hero-cta">
-                <a href="#about" class="btn btn-primary">Узнать больше</a>
-                <a href="https://github.com/sosnowda/ChroniclesRuthenia" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">GitHub</a>
-            </div>
+        </div>
+        <div class="container hero-buttons">
+            <a href="#about" class="btn btn-primary">Узнать больше</a>
+            <a href="https://github.com/sosnowda/ChroniclesRuthenia" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">GitHub</a>
         </div>
     </section>
 
@@ -126,6 +126,74 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
                     <h3>Умное управление памятью</h3>
                     <p>Rolling Summary + State Injection вокруг контекстного окна модели. Нет переполнения контекста — нейросеть всегда помнит ключевые события вашей истории.</p>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- РОЛЕВАЯ СИСТЕМА BRP -->
+    <section class="section section-alt" id="brp">
+        <div class="container">
+            <div class="section-label">Ролевая система</div>
+            <h2>Basic Roleplaying Universal Game Engine SRD (d100)</h2>
+            <p style="text-align:center;color:var(--text-dim);max-width:700px;margin:0 auto 2rem;">
+                Математически выверенная ролевая система BRP (d100). Все броски, урон, навыки и проверки считает движок Godot. Нейросеть только описывает результат.
+            </p>
+
+            <div class="brp-brand" style="text-align:center;margin-bottom:2rem;">
+                <a href="https://brp.chaosium.com/" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:1rem;text-decoration:none;">
+                    <svg viewBox="0 0 100 100" width="50" height="50"><circle cx="50" cy="50" r="45" fill="#8B2C1A" stroke="#5A1A0E" stroke-width="3"/><circle cx="50" cy="50" r="38" fill="none" stroke="#C9A961" stroke-width="1.5"/><text x="50" y="58" text-anchor="middle" font-size="24" font-style="italic" fill="#E8DCC4" font-family="serif" font-weight="bold">BRP</text></svg>
+                    <span style="color:var(--gold);font-family:'Marcellus',serif;">Basic Roleplaying Universal Game Engine SRD<br><small style="color:var(--text-muted);font-size:0.75rem;">Red BRP ™ — ORC License</small></span>
+                </a>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-bottom:3rem;">
+                <div class="feature-card" style="text-align:center;">
+                    <h3 style="color:var(--gold);margin-bottom:1rem;">Степени успеха d100</h3>
+                    <ul style="list-style:none;padding:0;color:var(--text-dim);font-size:0.95rem;line-height:2;">
+                        <li><strong style="color:var(--gold-bright);">Критический</strong> — 1/20 от навыка</li>
+                        <li><strong style="color:var(--gold-bright);">Особый</strong> — 1/5 от навыка</li>
+                        <li><strong style="color:var(--gold-bright);">Успех</strong> — ≤ навык</li>
+                        <li><strong style="color:var(--gold-bright);">Провал</strong> — &gt; навыка</li>
+                        <li><strong style="color:#c44;">Провал (критический)</strong> — 96–100</li>
+                    </ul>
+                </div>
+                <div class="feature-card" style="text-align:center;">
+                    <h3 style="color:var(--gold);margin-bottom:1rem;">Области попадания (d20)</h3>
+                    <ul style="list-style:none;padding:0;color:var(--text-dim);font-size:0.95rem;line-height:2;">
+                        <li>1–4: Правая нога</li>
+                        <li>5–8: Левая нога</li>
+                        <li>9–11: Живот</li>
+                        <li>12: Грудь</li>
+                        <li>13–15: Правая рука</li>
+                        <li>16–18: Левая рука</li>
+                        <li>19–20: Голова</li>
+                    </ul>
+                </div>
+                <div class="feature-card" style="text-align:center;">
+                    <h3 style="color:var(--gold);margin-bottom:1rem;">Бонус урону</h3>
+                    <ul style="list-style:none;padding:0;color:var(--text-dim);font-size:0.95rem;line-height:2;">
+                        <li>СИЛ+РАЗМ 2–12: −1D6</li>
+                        <li>СИЛ+РАЗМ 13–16: −1D4</li>
+                        <li>СИЛ+РАЗМ 17–24: нет</li>
+                        <li>СИЛ+РАЗМ 25–32: +1D4</li>
+                        <li>СИЛ+РАЗМ 33–40: +1D6</li>
+                        <li>СИЛ+РАЗМ 41–56: +2D6</li>
+                        <li>СИЛ+РАЗМ 57+: +3D6 и выше</li>
+                    </ul>
+                </div>
+                <div class="feature-card" style="text-align:center;">
+                    <h3 style="color:var(--gold);margin-bottom:1rem;">Тяжёлая рана (d100)</h3>
+                    <p style="color:var(--text-dim);font-size:0.95rem;line-height:1.7;">Урон ≥ половины HP → таблица d100 с потерей характеристик по зонам тела. Возможен нокаут «взять живым» — пленный даёт выкуп по Судебнику 1497.</p>
+                </div>
+            </div>
+
+            <!-- Интерактивный кубик d100 -->
+            <div style="text-align:center;padding:2rem 0;">
+                <h3 style="color:var(--gold);font-family:'Marcellus',serif;margin-bottom:1.5rem;">Интерактивный бросок d100</h3>
+                <div class="d100-dice" id="d100Dice" onclick="rollD100()" style="width:120px;height:120px;background:linear-gradient(135deg,#c9a961 0%,#a88b4e 50%,#8b6914 100%);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+                    <span class="d100-result" id="d100Result" style="font-size:2.5rem;font-weight:bold;color:#1a1410;font-family:'PT Serif',serif;">d100</span>
+                </div>
+                <p id="d100Degree" style="margin-top:1rem;color:var(--text-dim);font-size:1.1rem;">Нажми на кубик</p>
             </div>
         </div>
     </section>
