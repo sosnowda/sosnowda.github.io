@@ -9,26 +9,38 @@
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden}
 body{background:#1b2a1f;font-family:Arial,sans-serif}
-#game-container{width:100vw;height:100vh}
-.loading{color:#c9a961;font-size:1.2rem;text-align:center;padding:2rem;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
-.error{color:#c44;font-size:1rem;text-align:center;padding:2rem;max-width:600px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+#game-container{width:100vw;height:100vh;position:relative}
+#loading-text{color:#c9a961;font-size:1.2rem;text-align:center;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+#error-text{color:#c44;font-size:1rem;text-align:center;max-width:600px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:none}
 </style>
 </head>
 <body>
-<div id="game-container"><div class="loading">Загрузка игры…</div></div>
+<div id="game-container">
+    <div id="loading-text">Загрузка игры…</div>
+    <div id="error-text"></div>
+</div>
 
 <!-- Phaser (CDN) -->
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.min.js"></script>
 
-<!-- RexUI Plugin (CDN) — два источника для надёжности -->
+<!-- RexUI Plugin (CDN) -->
 <script src="https://unpkg.com/phaser3-rex-plugins@1.1.65/dist/rexuiplugin.min.js" onerror="this.remove()"></script>
 <script src="https://cdn.jsdelivr.net/npm/phaser3-rex-plugins@1.1.65/dist/rexuiplugin.min.js" onerror="this.remove()"></script>
 
 <script>
 window.addEventListener('load', function() {
+    var loadingEl = document.getElementById('loading-text');
+    var errorEl = document.getElementById('error-text');
+    var container = document.getElementById('game-container');
+
+    function showError(msg) {
+        loadingEl.style.display = 'none';
+        errorEl.innerHTML = '<h2 style="color:#c9a961;margin-bottom:1rem;">Игра не загрузилась</h2><p>' + msg + '</p>';
+        errorEl.style.display = 'block';
+    }
+
     if (typeof Phaser === 'undefined') {
-        document.querySelector('.loading').textContent = 'Ошибка: Phaser не загружен';
-        document.querySelector('.loading').className = 'error';
+        showError('Движок Phaser не загружен. Проверьте интернет.');
         return;
     }
 
@@ -75,14 +87,14 @@ window.addEventListener('load', function() {
             };
         }
 
-        // Очищаем loading перед запуском Phaser
-        document.getElementById('game-container').innerHTML = '';
+        // НЕ удаляем содержимое контейнера — Phaser сам заменит canvas
+        // Убираем только loading-текст
+        loadingEl.style.display = 'none';
+
         new Phaser.Game(config);
     }).catch(function(err) {
         console.error('Ошибка загрузки игры:', err);
-        var el = document.querySelector('.loading');
-        el.innerHTML = '<div class="error"><h2 style="color:#c9a961;margin-bottom:1rem;">Игра не загрузилась</h2><p>Ошибка: ' + err.message + '</p></div>';
-        el.className = 'error';
+        showError('Ошибка: ' + err.message + '<br><br>Откройте консоль (F12) для деталей.');
     });
 });
 </script>

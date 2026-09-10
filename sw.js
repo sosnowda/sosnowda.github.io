@@ -32,6 +32,11 @@ self.addEventListener('fetch', function (event) {
         return;
     }
 
+    // Папка /game/ — пропускаем напрямую (игра не кешируется SW)
+    if (url.pathname.startsWith('/game/')) {
+        return;
+    }
+
     // Same-origin — network-first
     event.respondWith(
         fetch(event.request).then(function (response) {
