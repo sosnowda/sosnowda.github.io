@@ -63,37 +63,15 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
 
     <!-- HERO -->
     <section class="hero">
-        <div class="container">
-            <div class="hero-badge">Текстовая повествовательная RPG • XV век</div>
-            <h1>Летописи Руси<br>XV века</h1>
+        <div class="hero-image-wrap">
+            <img src="assets/images/title.jpg" alt="Летописи Руси XV века — титульная картинка" class="hero-image">
+        </div>
+        <div class="container hero-text">
+            <h1>Летописи Руси XV века</h1>
             <p class="hero-subtitle">The Chronicles of Ruthenia</p>
-            <p class="hero-description">
-                <strong>Историческая Русь XV века</strong> — время собирания земель вокруг Москвы, феодальных войн
-                и свержения Ордынского ига. Погрузитесь в мир, где <strong>нейросеть-нарратор</strong>
-                ведёт бесконечную историю, опираясь на <strong>реальную базу исторических данных</strong>,
-                а математика ролевой системы BRP d100 просчитывает каждый удар, бросок и судьбу.
-            </p>
             <div class="hero-cta">
-                <a href="#about" class="btn btn-primary">⚔️ Узнать больше</a>
-                <a href="#tech" class="btn btn-secondary">Технические детали</a>
-            </div>
-            <div class="hero-stats">
-                <div class="hero-stat">
-                    <div class="hero-stat-number">1400–1505</div>
-                    <div class="hero-stat-label">Годы действия</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-number">d100</div>
-                    <div class="hero-stat-label">Ролевая система BRP</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-number">RAG</div>
-                    <div class="hero-stat-label">Историческая база</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-number">LLM</div>
-                    <div class="hero-stat-label">Локальная или облачная</div>
-                </div>
+                <a href="#about" class="btn btn-primary">Узнать больше</a>
+                <a href="https://github.com/sosnowda/ChroniclesRuthenia" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">GitHub</a>
             </div>
         </div>
     </section>
@@ -173,6 +151,13 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
                     <li>
 <strong>Rolling Summary + State Injection</strong> — интеллектуальное управление контекстным окном модели, предотвращающее переполнение и сохраняющее ключевые события.</li>
                 </ul>
+                    <li><strong>Полный список моделей Нейросетей:</strong>
+                    <ul style="margin:.5rem 0;padding-left:1.5rem;">
+                        <li><strong>Локальные:</strong> Saiga Llama 3 8B (Q2_K/Q4_K_M/Q8_0), Saiga Gemma 3 12B (Q3_K_M/Q4_K_M/Q6), Vikhr-Nemo 12B (Q4_K_M/Q5_K_M/Q6), Vikhr-YandexGPT 5 Lite 8B (Q4_K_M), Gemma-4 E4B-Uncensored (Q4_K_M)</li>
+                        <li><strong>Облачные:</strong> OpenAI, Mistral, DeepSeek, Google, z.ai — через OpenAI-совместимый API-ключ</li>
+                        <li><strong>Эмбеддер (база знаний):</strong> mxbai-embed-large-v1 · Q5_K_M · dim 1024 · косинусный поиск</li>
+                    </ul>
+                    </li>
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
                 <div class="feature-card" style="text-align: center;">

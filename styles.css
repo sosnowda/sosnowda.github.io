@@ -183,13 +183,13 @@
         }
 
         /* ===== HERO СЕКЦИЯ ===== */
-        .hero {
+        .hero {background:none;
             padding: 5rem 0 4rem;
             text-align: center;
             position: relative;
             overflow: hidden;
         }
-        .hero::before {
+        .hero-image-wrap {
             content: '';
             position: absolute;
             top: 0;
@@ -542,7 +542,7 @@
                 justify-content: center;
                 gap: 1.2rem;
             }
-            .hero {
+            .hero {background:none;
                 padding: 3rem 0 2.5rem;
             }
             .hero h1 {
@@ -593,3 +593,15 @@
     
 .img-placeholder{width:100%;border-radius:12px;overflow:hidden;margin:1rem 0}
 .img-placeholder svg{width:100%;height:auto;display:block}
+
+.hero-image-wrap{width:100%;max-width:1180px;margin:0 auto;padding:0}
+.hero-image{width:100%;height:auto;display:block;border-radius:0;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.hero-text{padding:3rem 24px 4rem;text-align:center}
+.hero-text h1{font-size:clamp(2.5rem,6vw,4rem);font-family:'Marcellus',serif;color:var(--gold);margin-bottom:0.5rem}
+
+.d100-dice{width:120px;height:120px;background:linear-gradient(135deg,#c9a961 0%,#a88b4e 50%,#8b6914 100%);border-radius:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin:0 auto;box-shadow:0 8px 24px rgba(0,0,0,0.4),inset 0 -4px 8px rgba(0,0,0,0.3),inset 0 4px 8px rgba(255,255,255,0.1);transition:transform .3s;perspective:600px}
+.d100-dice:hover{transform:scale(1.08) rotateX(10deg)}
+.d100-dice.rolling{animation:d100-roll .7s ease-out}
+@keyframes d100-roll{0%{transform:rotateX(0) rotateY(0) scale(1)}50%{transform:rotateX(360deg) rotateY(180deg) scale(1.2)}100%{transform:rotateX(720deg) rotateY(360deg) scale(1)}}
+.d100-dice-face{font-size:2rem;font-weight:bold;color:#1a1410;font-family:'PT Serif',serif;text-align:center;line-height:1}
+.d100-dice-face.placeholder{opacity:.4}
