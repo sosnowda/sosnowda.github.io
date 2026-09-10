@@ -1,5 +1,5 @@
 // Экран персонажа: характеристики и навыки по BRP.
-import Phaser from 'phaser';
+// Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { createButton } from '../utils/ui.js';
 import { CHARACTER_KEYS, SKILLS } from '../systems/Character.js';

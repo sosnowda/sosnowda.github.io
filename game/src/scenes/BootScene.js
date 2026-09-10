@@ -1,6 +1,6 @@
 // Сцена загрузки: генерирует все текстуры процедурно (без внешних файлов)
 // и создаёт персонажа/квест при первом запуске.
-import Phaser from 'phaser';
+// Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { createCharacter } from '../systems/Character.js';
 

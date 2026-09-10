@@ -1,5 +1,5 @@
 // Деревня-оверхорлд: перемещение, взаимодействие с NPC, переход в бой.
-import Phaser from 'phaser';
+// Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { buildMap, SOLID, TILE_KEY, NPCS, PLAYER_START, LOCATION_NAME, MAP_W, MAP_H } from '../data/world.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';

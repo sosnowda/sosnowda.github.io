@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+// Phaser загружен глобально через CDN
 
 /**
  * SettingsManager — система сохранения и управления настройками

@@ -1,5 +1,5 @@
 // Пошаговый бой по системе BRP. Игрок и враг по очереди совершают действия.
-import Phaser from 'phaser';
+// Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { WEAPONS } from '../config/GameConfig.js';
 import { skillCheck, rollDamage, ROLL_RESULT } from '../systems/BRPEngine.js';

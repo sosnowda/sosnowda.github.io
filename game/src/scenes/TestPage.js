@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+// Phaser загружен глобально через CDN
 import { createButton, createDialog, createStoryTextBox, createScrollableList, bindRegistryKeys } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import ScoreManager from '../systems/ScoreManager.js';

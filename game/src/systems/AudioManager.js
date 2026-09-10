@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+// Phaser загружен глобально через CDN
 import { AudioEffects } from '../utils/audio.js';
 
 /**

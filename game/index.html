@@ -3,38 +3,70 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Летописи Руси — Демо</title>
+<title>Летописи Руси — Браузерное демо</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden}
 body{background:#1b2a1f;font-family:Arial,sans-serif}
-#game-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+#game-container{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
 .loading{color:#c9a961;font-size:1.2rem;text-align:center;padding:2rem}
+.error{color:#c44;font-size:1rem;text-align:center;padding:2rem;max-width:600px}
 </style>
 </head>
 <body>
 <div id="game-container"><div class="loading">Загрузка игры…</div></div>
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/phaser3-rex-plugins@1.1.65/dist/rexuicontainer.min.js"></script>
-<script type="module">
-import { BootScene } from './src/scenes/BootScene.js';
-import { TitleScene } from './src/scenes/TitleScene.js';
-import { VillageScene } from './src/scenes/VillageScene.js';
-import { CombatScene } from './src/scenes/CombatScene.js';
-import { CharacterScene } from './src/scenes/CharacterScene.js';
+<script>
+// Ждём загрузки Phaser
+window.addEventListener('load', function() {
+    if (typeof Phaser === 'undefined') {
+        document.getElementById('game-container').innerHTML = '<div class="error">Не удалось загрузить движок Phaser. Проверьте подключение к интернету.</div>';
+        return;
+    }
 
-const config = {
-    type: Phaser.AUTO,
-    title: 'Летописи Руси',
-    parent: 'game-container',
-    width: 1280,
-    height: 720,
-    backgroundColor: '#1b2a1f',
-    physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: false } },
-    scene: [BootScene, TitleScene, VillageScene, CombatScene, CharacterScene],
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-};
-new Phaser.Game(config);
+    var container = document.getElementById('game-container');
+    container.innerHTML = '';
+
+    // Конфигурация игры
+    var config = {
+        type: Phaser.AUTO,
+        title: 'Летописи Руси',
+        parent: 'game-container',
+        width: 1280,
+        height: 720,
+        backgroundColor: '#1b2a1f',
+        pixelArt: false,
+        physics: {
+            default: 'arcade',
+            arcade: { gravity: { x: 0, y: 0 }, debug: false }
+        },
+        scale: {
+            mode: Phaser.Scale.FIT,
+            autoCenter: Phaser.Scale.CENTER_BOTH,
+        },
+        scene: []
+    };
+
+    // Попытка загрузить сцены через dynamic import
+    // Если не выйдет — покажем заглушку
+    Promise.all([
+        import('./src/scenes/BootScene.js'),
+        import('./src/scenes/TitleScene.js'),
+        import('./src/scenes/VillageScene.js'),
+        import('./src/scenes/CombatScene.js'),
+        import('./src/scenes/CharacterScene.js'),
+    ]).then(function(modules) {
+        config.scene = modules.map(function(m) {
+            // Получаем экспортированный класс
+            var keys = Object.keys(m);
+            return m[keys[0]];
+        });
+        new Phaser.Game(config);
+    }).catch(function(err) {
+        console.error('Ошибка загрузки игры:', err);
+        container.innerHTML = '<div class="error"><h2 style="color:#c9a961;margin-bottom:1rem;">Игра не загрузилась</h2><p>Возможно, браузер блокирует ES-модули.</p><p style="margin-top:1rem;">Попробуйте открыть игру напрямую:<br><a href="src/main.js" style="color:#c9a961;">main.js</a></p><p style="margin-top:1rem;color:#666;">Ошибка: ' + err.message + '</p></div>';
+    });
+});
 </script>
 </body>
 </html>

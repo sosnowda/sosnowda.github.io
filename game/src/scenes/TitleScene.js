@@ -1,5 +1,5 @@
 // Главное меню игры.
-import Phaser from 'phaser';
+// Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { createButton, createDialog } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';

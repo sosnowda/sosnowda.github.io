@@ -1,5 +1,5 @@
-import Phaser from 'phaser';
-import UIPlugin from 'phaser3-rex-plugins/templates/ui/ui-plugin.js';
+// Phaser загружен глобально через CDN
+// UIPlugin загружен глобально
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { VillageScene } from './scenes/VillageScene.js';

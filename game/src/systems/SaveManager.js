@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+// Phaser загружен глобально через CDN
 
 /**
  * SaveManager — система управления сохранениями
