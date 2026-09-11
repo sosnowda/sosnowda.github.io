@@ -9,6 +9,7 @@ import { DialogueRunner } from '../systems/DialogueRunner.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { Tutorial } from '../systems/Tutorial.js';
+import { VirtualControls } from '../systems/VirtualControls.js';
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -209,9 +210,13 @@ export class VillageScene extends Phaser.Scene {
         this.tutorial = new Tutorial(this);
         this.tutorial.maybeStart();
 
-        // При выходе из сцены — очистить туториал
+        // ----- Мобильное управление (показывается только на touch-устройствах) -----
+        this.virtualControls = new VirtualControls(this);
+
+        // При выходе из сцены — очистить туториал и контролы
         this.events.once('shutdown', () => {
             if (this.tutorial) this.tutorial.destroyAll();
+            if (this.virtualControls) this.virtualControls.destroy();
         });
     }
 
@@ -265,15 +270,28 @@ export class VillageScene extends Phaser.Scene {
     update() {
         if (this.busyDialog) {
             this.playerObj.setVelocity(0, 0);
+            // Скрываем мобильные контролы во время диалога
+            if (this.virtualControls) this.virtualControls.setVisible(false);
             return;
         }
+        // Показываем мобильные контролы
+        if (this.virtualControls) this.virtualControls.setVisible(true);
 
         const speed = 160;
         let vx = 0, vy = 0;
-        if (this.cursors.left.isDown || this.wasd.A.isDown) vx = -1;
-        else if (this.cursors.right.isDown || this.wasd.D.isDown) vx = 1;
-        if (this.cursors.up.isDown || this.wasd.W.isDown) vy = -1;
-        else if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
+
+        // Сначала проверяем мобильный джойстик
+        const joyMove = this.virtualControls ? this.virtualControls.getMovement() : null;
+        if (joyMove) {
+            vx = joyMove.x;
+            vy = joyMove.y;
+        } else {
+            // Клавиатура
+            if (this.cursors.left.isDown || this.wasd.A.isDown) vx = -1;
+            else if (this.cursors.right.isDown || this.wasd.D.isDown) vx = 1;
+            if (this.cursors.up.isDown || this.wasd.W.isDown) vy = -1;
+            else if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
+        }
 
         const v = new Phaser.Math.Vector2(vx, vy);
         if (v.length() > 0) {

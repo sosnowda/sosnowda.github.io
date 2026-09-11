@@ -1,6 +1,8 @@
 // Дерево диалогов. Каждый узел: speaker, text, choices[].
 // choice: { text, next?, end?, action? } — action(scene) выполняется при выборе.
 // Действия обращаются к сцене (VillageScene) через scene.registry и scene.autosave().
+//
+// Также action обновляет quest.currentObjective для трекера квеста в HUD.
 
 export const DIALOGUES = {
     elder: {
@@ -24,6 +26,7 @@ export const DIALOGUES = {
                         action: (scene) => {
                             const q = scene.registry.get('quest');
                             q.elderTalked = true;
+                            q.currentObjective = 'Перейди через мост и срази разбойника';
                             scene.autosave();
                         },
                     },
@@ -37,8 +40,21 @@ export const DIALOGUES = {
                     const p = scene.registry.get('player');
                     p.HP = p.HPmax;
                     p.MP = p.MPmax;
+                    const q = scene.registry.get('quest');
+                    q.currentObjective = 'Перейди через мост и срази разбойника';
                 },
                 choices: [{ text: 'Благодарю.', end: true }],
+            },
+            // Финальный диалог после победы над разбойником
+            d: {
+                speaker: 'Старейшина',
+                text: 'Ты вернул нашу святыню! Примите благодарность всей деревни. Да пребудет с тобой Господь!',
+                action: (scene) => {
+                    const q = scene.registry.get('quest');
+                    q.currentObjective = 'Поход окончен. Спасибо за игру!';
+                    scene.autosave();
+                },
+                choices: [{ text: 'Слава Богу.', end: true }],
             },
         },
     },
