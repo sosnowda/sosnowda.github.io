@@ -10,6 +10,7 @@ import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd, askMoneyForHelp, askElderAdvance } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
 import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion } from '../data/questGenerator.js';
+import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 
 export class InteriorScene extends Phaser.Scene {
     constructor() {
@@ -82,11 +83,30 @@ export class InteriorScene extends Phaser.Scene {
         // ----- Декорации в зависимости от типа интерьера -----
         this.addDecorations(interior);
 
+        // ----- Overlay дня/ночи (п.5) -----
+        const timeState = getTime(this.registry);
+        if (timeState) {
+            const overlay = getDayNightOverlay(timeState);
+            this.add.rectangle(0, 0, width, height, overlay.color, overlay.alpha)
+                .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY);
+        }
+
         // ----- HUD -----
         this.hud = this.add.text(16, height - 60, '', {
             fontSize: '14px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
         }).setDepth(100);
+
+        // Дата и время сверху (п.13)
+        if (timeState) {
+            this.add.text(width / 2, 55, `📅 ${formatDateTime(timeState)}`, {
+                fontSize: '11px', color: '#8ab4f8',
+                fontFamily: 'Georgia, serif',
+                stroke: '#000', strokeThickness: 1,
+                backgroundColor: '#00000088', padding: { x: 6, y: 3 },
+            }).setOrigin(0.5, 0).setDepth(100);
+        }
+
         this.updateHUD();
 
         // ----- Кнопка "Поговорить" -----

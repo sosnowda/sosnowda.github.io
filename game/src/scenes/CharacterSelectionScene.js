@@ -13,6 +13,7 @@ import {
 import { ActionLog } from '../data/actionLog.js';
 import { initThiefHunt } from '../data/thief.js';
 import { resetVillageName, getVillageName } from '../data/world.js';
+import { initTime, createRandomStartDate } from '../systems/TimeSystem.js';
 import AudioManager from '../systems/AudioManager.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
@@ -373,6 +374,9 @@ export class CharacterSelectionScene extends Phaser.Scene {
         resetVillageName();
         const villageName = getVillageName();
 
+        // Случайная дата начала игры в пределах 15 века (п.12)
+        const startDate = createRandomStartDate();
+
         const q = {
             elderTalked: false,
             merchantTalked: false,
@@ -390,7 +394,9 @@ export class CharacterSelectionScene extends Phaser.Scene {
         this.registry.set('quest', q);
         initThiefHunt(this.registry);
         ActionLog.init(this.registry);
-        ActionLog.add(this.registry, `Игра началась. Герой: ${hero.name} (${hero.archetype}). Деревня: ${villageName}.`);
+        // Инициализируем игровое время (п.4,12,14)
+        initTime(this.registry, startDate);
+        ActionLog.add(this.registry, `Игра началась. Герой: ${hero.name} (${hero.archetype}). Деревня: ${villageName}. Дата: ${startDate.day}.${startDate.month + 1}.${startDate.yearFromChrist}`);
         this.scene.start('Village');
     }
 }

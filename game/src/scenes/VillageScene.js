@@ -1,4 +1,4 @@
-// Деревня-оверхорлд: хаб с 5 зданиями и воротами на выход.
+// Деревня-оверхорлд: хаб с зданиями, воротами, сменой дня/ночи.
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import {
@@ -15,6 +15,7 @@ import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd } from '../data/thief.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton } from '../utils/ui.js';
+import { tickTime, getTime, getDayNightOverlay, formatDateTime } from '../systems/TimeSystem.js';
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -161,14 +162,20 @@ export class VillageScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 2,
         }).setScrollFactor(0).setDepth(100);
 
-        // Под HUD — текущая цель квеста (правее)
-        this.objectiveText = this.add.text(8, 30, '', {
+        // Под HUD — дата и время (п.13,14)
+        this.dateTimeText = this.add.text(8, 30, '', {
+            fontSize: '12px', color: '#8ab4f8', backgroundColor: '#000000cc', padding: { x: 6, y: 3 },
+            stroke: '#000', strokeThickness: 2,
+        }).setScrollFactor(0).setDepth(100);
+
+        // Текущая цель квеста
+        this.objectiveText = this.add.text(8, 52, '', {
             fontSize: '12px', color: '#c9a14a', backgroundColor: '#000000cc', padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
         }).setScrollFactor(0).setDepth(100);
 
         // Счётчик ходов (ещё ниже)
-        this.turnsText = this.add.text(8, 52, '', {
+        this.turnsText = this.add.text(8, 74, '', {
             fontSize: '12px', color: '#ff8060', backgroundColor: '#000000cc', padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
         }).setScrollFactor(0).setDepth(100);
@@ -179,6 +186,13 @@ export class VillageScene extends Phaser.Scene {
             fontSize: '16px', color: RUS.textDim, backgroundColor: '#000000cc', padding: { x: 8, y: 4 },
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+
+        // ----- Overlay для смены дня/ночи (п.5,11) -----
+        this.dayNightOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0)
+            .setOrigin(0)
+            .setScrollFactor(0)
+            .setDepth(90)
+            .setBlendMode(Phaser.BlendModes.MULTIPLY);
 
         // ----- Кнопки меню сверху (Пункт 9) -----
         this.createTopMenu();
@@ -294,6 +308,8 @@ export class VillageScene extends Phaser.Scene {
             if (now - this.lastStepTime > this.stepInterval) {
                 this.audioManager.playStep();
                 this.lastStepTime = now;
+                // Продвигаем время (1 шаг = ~5 игровых минут, п.4)
+                tickTime(this.registry, 5);
             }
         } else {
             this.playerObj.anims.pause();
@@ -354,6 +370,18 @@ export class VillageScene extends Phaser.Scene {
         // Используем реальные деньги Руси
         const moneyStr = formatMoney(p.dengas || 0);
         this.hud.setText(`❤ ${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  ⚔${p.skills.sword}%  💰${moneyStr}`);
+        
+        // Дата и время (п.13,14)
+        const timeState = getTime(this.registry);
+        if (timeState) {
+            this.dateTimeText.setText(`📅 ${formatDateTime(timeState)}`);
+            // Обновляем overlay дня/ночи
+            const overlay = getDayNightOverlay(timeState);
+            if (this.dayNightOverlay) {
+                this.dayNightOverlay.setFillStyle(overlay.color, overlay.alpha);
+            }
+        }
+        
         if (q.currentObjective) {
             this.objectiveText.setText(`◆ ${q.currentObjective}`);
         }
