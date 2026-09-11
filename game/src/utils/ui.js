@@ -439,6 +439,11 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
 /**
  * Создать модальное диалоговое окно на чистом Phaser (без RexUI).
  *
+ * Поддерживает:
+ *   - портрет говорящего (options.portraitKey — ключ текстуры)
+ *   - эффект печатной машинки (options.typing = true, options.typingSpeed = 30 мс/символ)
+ *   - пергаментный фон (использует текстуру 'ui_panel_parchment' если доступна)
+ *
  * @param {Phaser.Scene} scene
  * @param {string} title
  * @param {string} content — текст (поддерживает \n)
@@ -449,12 +454,18 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
  *   - closeOnBlocker: boolean (по умолчанию false — клик по подложке НЕ закрывает)
  *   - coverColor, coverAlpha
  *   - baseDepth
+ *   - portraitKey: string — ключ текстуры портрета (например 'portrait_elder')
+ *   - typing: boolean — включить эффект печатной машинки
+ *   - typingSpeed: number — мс/символ (по умолчанию 30)
  * @returns {Phaser.GameObjects.Container}
  */
 export function createDialog(scene, title, content, buttons = [], options = {}) {
     const opts = options || {};
     const singleton = opts.singleton !== false;
     const singletonKey = opts.singletonKey || `dialog:${title}`;
+    const portraitKey = opts.portraitKey || null;
+    const useTyping = !!opts.typing;
+    const typingSpeed = Math.max(10, Number(opts.typingSpeed) || 30);
 
     const getSceneMaxDepth = () => {
         const list = scene?.children?.list || [];
@@ -481,7 +492,6 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     const coverAlpha = (typeof opts.coverAlpha === 'number') ? opts.coverAlpha : DIALOG_STYLES.modal.coverAlpha;
     const closeOnBlocker = opts.closeOnBlocker !== undefined ? !!opts.closeOnBlocker : false;
 
-    // Сбрасываем визуал нижних кнопок при открытии модалки
     const resetSceneButtonVisuals = () => {
         const list = scene?.children?.list || [];
         for (let i = 0; i < list.length; i++) {
@@ -489,7 +499,6 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             if (go && typeof go.__uiResetVisual === 'function') {
                 go.__uiResetVisual();
             }
-            // Рекурсивно для контейнеров
             if (go && Array.isArray(go.list)) {
                 for (let j = 0; j < go.list.length; j++) {
                     const child = go.list[j];
@@ -501,7 +510,6 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         }
     };
 
-    // Singleton — если окно уже открыто, просто поднимаем его наверх
     if (singleton) {
         if (!scene.__uiSingletonDialogs) scene.__uiSingletonDialogs = new Map();
         const existing = scene.__uiSingletonDialogs.get(singletonKey);
@@ -529,26 +537,49 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     dialog.setDepth(dialogDepth);
     dialog.setScrollFactor(0);
 
-    // Размеры панели — адаптируются к контенту
-    const dialogWidth = DIALOG_STYLES.width;
+    // Ширина диалога — увеличена, чтобы помещался портрет + текст
+    const dialogWidth = portraitKey ? 560 : DIALOG_STYLES.width;
     const pad = DIALOG_STYLES.padding;
+
+    // Пергаментный фон — если доступна текстура 'ui_panel_parchment', используем её
+    let panelBg;
+    const hasParchmentTexture = scene.textures.exists('ui_panel_parchment');
+    if (hasParchmentTexture) {
+        // Используем 9-slice image — Phaser 3.88+ поддерживает через scene.add.nineslice
+        // Но мы используем простой способ: рисуем Graphics + overlay с текстурой
+        panelBg = scene.add.graphics();
+    } else {
+        panelBg = scene.add.graphics();
+    }
 
     // Заголовок
     const titleText = scene.add.text(0, 0, title, {
-        fontSize: DIALOG_STYLES.title.fontSize,
-        fontStyle: DIALOG_STYLES.title.fontWeight,
-        color: TYPOGRAPHY.textColor.primary,
-        fontFamily: TYPOGRAPHY.fontFamily.default
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color: '#3a2818',  // тёмно-коричневый текст на пергаменте
+        fontFamily: 'Georgia, serif',
+        stroke: '#c9a14a',
+        strokeThickness: 2,
     }).setOrigin(0.5, 0);
 
-    // Контент
+    // Контент (текст реплики)
     const contentText = scene.add.text(0, 0, content, {
-        fontSize: DIALOG_STYLES.content.fontSize,
-        color: TYPOGRAPHY.textColor.primary,
-        fontFamily: TYPOGRAPHY.fontFamily.default,
-        align: 'center',
-        wordWrap: { width: DIALOG_STYLES.content.wrapWidth }
-    }).setOrigin(0.5, 0);
+        fontSize: '18px',
+        color: '#3a2818',
+        fontFamily: 'Georgia, serif',
+        align: 'left',
+        wordWrap: { width: portraitKey ? 380 : DIALOG_STYLES.content.wrapWidth }
+    }).setOrigin(0, 0);  // выравнивание по левому краю — текст идёт справа от портрета
+
+    // Портрет (если задан)
+    let portraitImg = null;
+    let portraitFrame = null;
+    if (portraitKey && scene.textures.exists(portraitKey)) {
+        // Рамка портрета — золотая
+        portraitFrame = scene.add.graphics();
+        portraitImg = scene.add.image(0, 0, portraitKey);
+        portraitImg.setDisplaySize(96, 96);
+    }
 
     // Кнопки
     const actionButtons = [];
@@ -557,6 +588,11 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         const shouldCloseDialog = btnConfig.closeDialog !== false;
 
         const wrappedCallback = () => {
+            // Если сейчас идёт эффект печатной машинки — пропускаем анимацию, не закрываем
+            if (typingActive) {
+                skipTyping();
+                return;
+            }
             if (btnConfig.callback && typeof btnConfig.callback === 'function') {
                 btnConfig.callback(dialog);
             }
@@ -566,27 +602,25 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         };
 
         const btn = createButton(scene, 0, 0, btnConfig.text, wrappedCallback, {
-            backgroundColor: isPrimary ? COLORS.primary : COLORS.secondary,
-            hoverColor: isPrimary ? COLORS.light : COLORS.secondaryLight,
-            pressColor: isPrimary ? COLORS.dark : COLORS.secondaryDark,
+            // Тёмно-красный/коричневый фон под пергамент
+            backgroundColor: isPrimary ? 0x8B2C1A : 0x5a4030,
+            hoverColor: isPrimary ? 0xB53925 : 0x6a5040,
+            pressColor: isPrimary ? 0x6a1f12 : 0x4a3020,
             fontSize: DIALOG_STYLES.button.fontSize,
             cornerRadius: DIALOG_STYLES.button.cornerRadius,
             autoPlayAnim: false,
-            clickCooldown: 0
+            clickCooldown: 0,
+            textColor: '#f3e9d2',
         });
         btn.setDepth(buttonDepth);
         actionButtons.push(btn);
         return btn;
     });
 
-    // Добавляем элементы в контейнер
-    dialog.add(blocker); // не добавляем — blocker уже на сцене с глубиной coverDepth
-    // Внимание: blocker не должен быть внутри контейнера, т.к. у него свой depth и scrollFactor
-    // Убираем его из контейнера (если попал) и используем как отдельный объект
-    dialog.remove(blocker);
-
     dialog.add(titleText);
     dialog.add(contentText);
+    if (portraitImg) dialog.add(portraitFrame);
+    if (portraitImg) dialog.add(portraitImg);
     actionContainers.forEach((btn) => dialog.add(btn));
 
     // ----- Раскладка содержимого -----
@@ -596,26 +630,50 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
 
         let totalH = pad.top + titleH + pad.title + contentH + pad.content;
         if (actionContainers.length > 0) {
-            totalH += pad.action + 50; // высота кнопки ~50
+            totalH += pad.action + 50;
         }
         totalH += pad.bottom;
 
-        // Перерисовываем фон панели
+        // Пергаментный фон панели
         panelBg.clear();
-        panelBg.fillStyle(COLORS.dialogBg, 1);
+        // Основная заливка пергамента
+        panelBg.fillStyle(0xe8d7a8, 1);
         panelBg.fillRoundedRect(-dialogWidth / 2, -totalH / 2, dialogWidth, totalH, DIALOG_STYLES.cornerRadius);
-        panelBg.lineStyle(DIALOG_STYLES.strokeWidth, COLORS.dialogStroke, 1);
+        // Тёмная золотая окантовка
+        panelBg.lineStyle(3, 0x8c6a30, 1);
         panelBg.strokeRoundedRect(-dialogWidth / 2, -totalH / 2, dialogWidth, totalH, DIALOG_STYLES.cornerRadius);
+        // Внутренняя тонкая окантовка
+        panelBg.lineStyle(1, 0xc9a14a, 1);
+        panelBg.strokeRoundedRect(-dialogWidth / 2 + 4, -totalH / 2 + 4, dialogWidth - 8, totalH - 8, DIALOG_STYLES.cornerRadius - 2);
         panelBg.setDepth(dialogDepth - 1);
         dialog.panelHeight = totalH;
 
-        // Заголовок
+        // Заголовок — сверху по центру
         titleText.setPosition(0, -totalH / 2 + pad.top);
 
-        // Контент
-        contentText.setPosition(0, -totalH / 2 + pad.top + titleH + pad.title);
+        // Портрет — слева сверху (после заголовка)
+        const contentTop = -totalH / 2 + pad.top + titleH + pad.title;
+        if (portraitImg) {
+            const px = -dialogWidth / 2 + pad.left + 48;
+            const py = contentTop + 48;
+            portraitImg.setPosition(px, py);
+            // Рамка портрета
+            portraitFrame.clear();
+            portraitFrame.fillStyle(0x8c6a30, 1);
+            portraitFrame.fillRoundedRect(px - 50, py - 50, 100, 100, 6);
+            portraitFrame.lineStyle(2, 0xc9a14a, 1);
+            portraitFrame.strokeRoundedRect(px - 50, py - 50, 100, 100, 6);
+            portraitFrame.setDepth(dialogDepth);
 
-        // Кнопки — в один ряд
+            // Контент — правее портрета
+            const contentX = -dialogWidth / 2 + pad.left + 110;
+            contentText.setPosition(contentX, contentTop);
+        } else {
+            // Без портрета — контент по центру
+            contentText.setPosition(-contentText.width / 2, contentTop);
+        }
+
+        // Кнопки — в один ряд внизу
         const n = actionContainers.length;
         const btnY = totalH / 2 - pad.bottom - 25;
         if (n === 1) {
@@ -629,22 +687,66 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         }
     };
 
-    // Фон панели (graphics) — должен быть добавлен ПЕРВЫМ в контейнер, чтобы быть позади
-    const panelBg = scene.add.graphics();
     panelBg.setDepth(dialogDepth - 1);
     panelBg.setScrollFactor(0);
-    // Вставляем panelBg первым в контейнер
     dialog.addAt(panelBg, 0);
 
     layout();
+
+    // ----- Эффект печатной машинки -----
+    let typingActive = false;
+    let typeIndex = 0;
+    let typeTimer = null;
+    const fullContent = content;
+
+    const skipTyping = () => {
+        if (typeTimer) {
+            typeTimer.remove();
+            typeTimer = null;
+        }
+        typingActive = false;
+        contentText.setText(fullContent);
+        layout();
+    };
+
+    const startTyping = () => {
+        typingActive = true;
+        typeIndex = 0;
+        contentText.setText('');
+        typeTimer = scene.time.addEvent({
+            delay: typingSpeed,
+            callback: () => {
+                if (typeIndex >= fullContent.length) {
+                    typeTimer.remove();
+                    typeTimer = null;
+                    typingActive = false;
+                    return;
+                }
+                typeIndex++;
+                contentText.setText(fullContent.substring(0, typeIndex));
+                // Звук печатной машинки — если AudioManager поддерживает
+                if (scene.audioManager && typeof scene.audioManager.playTypewriter === 'function' && typeIndex % 3 === 0) {
+                    scene.audioManager.playTypewriter();
+                }
+            },
+            loop: true,
+        });
+    };
+
+    // Клик по подложке во время печати — пропускает анимацию
+    blocker.on('pointerup', () => {
+        if (typingActive) {
+            skipTyping();
+        }
+    });
 
     // ----- Закрытие диалога -----
     let isClosing = false;
     const closeDialog = () => {
         if (isClosing) return;
         isClosing = true;
+        if (typeTimer) typeTimer.remove();
 
-        // Блокируем кнопки
         actionButtons.forEach((btn) => {
             if (typeof btn.disableInteractive === 'function') btn.disableInteractive();
             if (scene?.tweens && typeof scene.tweens.killTweensOf === 'function') {
@@ -653,7 +755,6 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             btn.setScale(1);
         });
 
-        // Анимация исчезновения
         scene.tweens.add({
             targets: dialog,
             scaleX: 0.1,
@@ -662,14 +763,11 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             duration: DIALOG_STYLES.modal.durationOut,
             ease: DIALOG_STYLES.animation.transitOutEase,
             onComplete: () => {
-                // Уничтожаем blocker
                 if (blocker && blocker.scene) blocker.destroy();
-                // Уничтожаем диалог
                 dialog.destroy();
             }
         });
 
-        // Также гасим подложку
         scene.tweens.add({
             targets: blocker,
             alpha: 0,
@@ -680,16 +778,15 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         });
     };
 
-    // Если клик по подложке должен закрывать
-    if (closeOnBlocker) {
+    if (closeOnBlocker && !useTyping) {
         blocker.on('pointerup', () => closeDialog());
     }
 
-    // ----- API совместимости с RexUI Dialog -----
+    // ----- API -----
     dialog.active = true;
     dialog.__uiModalBlocker = blocker;
     dialog.closeDialog = closeDialog;
-    dialog.modalClose = closeDialog; // алиас для совместимости
+    dialog.modalClose = closeDialog;
     dialog.setContentText = (text) => {
         contentText.setText(text);
         layout();
@@ -700,10 +797,10 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         if (key === 'content') return contentText;
         if (key === 'actions') return actionContainers;
         if (key === 'background') return panelBg;
+        if (key === 'portrait') return portraitImg;
         return null;
     };
 
-    // Singleton registry
     if (singleton) {
         scene.__uiSingletonDialogs.set(singletonKey, dialog);
         dialog.once('destroy', () => {
@@ -724,7 +821,11 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         scaleY: 1,
         alpha: 1,
         duration: DIALOG_STYLES.modal.durationIn,
-        ease: DIALOG_STYLES.animation.transitInEase
+        ease: DIALOG_STYLES.animation.transitInEase,
+        onComplete: () => {
+            // Запускаем печатную машинку после появления
+            if (useTyping) startTyping();
+        }
     });
     scene.tweens.add({
         targets: blocker,

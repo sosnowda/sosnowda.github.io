@@ -1,10 +1,12 @@
 // Запуск диалоговых деревьев через готовый модальный диалог из ui.js.
+// Поддерживает портреты NPC и эффект печатной машинки.
 import { createDialog } from '../utils/ui.js';
 import { DIALOGUES } from '../data/dialogue.js';
 
 export class DialogueRunner {
     constructor(scene) {
         this.scene = scene;
+        this._currentDialog = null;
     }
 
     run(id, onDone) {
@@ -14,13 +16,16 @@ export class DialogueRunner {
             if (onDone) onDone();
             return;
         }
-        this._node(d, d.start, onDone);
+        this._onDone = onDone;
+        this._dialogId = id;
+        this._dialogData = d;
+        this._node(d, d.start);
     }
 
-    _node(d, nodeId, onDone) {
+    _node(d, nodeId) {
         const node = d.nodes[nodeId];
         if (!node) {
-            if (onDone) onDone();
+            this._finish();
             return;
         }
         if (node.action && typeof node.action === 'function') {
@@ -32,21 +37,55 @@ export class DialogueRunner {
             callback: () => {
                 if (c.action && typeof c.action === 'function') c.action(this.scene);
                 if (c.end) {
-                    if (onDone) onDone();
+                    this._finish();
                 } else if (c.next) {
-                    this._node(d, c.next, onDone);
+                    this._node(d, c.next);
                 } else {
-                    if (onDone) onDone();
+                    this._finish();
                 }
             },
         }));
 
-        createDialog(
+        // Найти портрет по NPC, с которым идёт диалог
+        const portraitKey = this._resolvePortraitKey();
+
+        // Уничтожаем предыдущий диалог если был
+        if (this._currentDialog && this._currentDialog.scene) {
+            this._currentDialog.destroy();
+        }
+
+        this._currentDialog = createDialog(
             this.scene,
             node.speaker || '...',
             node.text,
-            choices.length ? choices : [{ text: 'Закрыть', callback: () => { if (onDone) onDone(); } }],
-            { singleton: false }
+            choices.length ? choices : [{ text: 'Закрыть', callback: () => this._finish() }],
+            {
+                singleton: false,
+                portraitKey: portraitKey,
+                typing: true,         // эффект печатной машинки
+                typingSpeed: 30,      // мс/символ
+            }
         );
+    }
+
+    _resolvePortraitKey() {
+        // Извлекаем ключ портрета из активного NPC
+        if (this.scene.activeNpc && this.scene.activeNpc.portrait) {
+            return this.scene.activeNpc.portrait;
+        }
+        // Для диалогов без NPC (например, рассказчик) — используем narrator
+        return 'portrait_narrator';
+    }
+
+    _finish() {
+        if (this._currentDialog && this._currentDialog.scene) {
+            this._currentDialog.destroy();
+        }
+        this._currentDialog = null;
+        if (this._onDone) {
+            const cb = this._onDone;
+            this._onDone = null;
+            cb();
+        }
     }
 }
