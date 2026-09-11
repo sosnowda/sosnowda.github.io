@@ -15,6 +15,7 @@ import { initThiefHunt } from '../data/thief.js';
 import { resetVillageName, getVillageName } from '../data/world.js';
 import { initTime, createRandomStartDate } from '../systems/TimeSystem.js';
 import { initNpcNames } from '../data/npcNames.js';
+import { initReputation } from '../data/reputation.js';
 import AudioManager from '../systems/AudioManager.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
@@ -408,6 +409,8 @@ export class CharacterSelectionScene extends Phaser.Scene {
         initTime(this.registry, startDate);
         // Инициализируем NPC со случайными историческими именами (п.6)
         initNpcNames(this.registry);
+        // Инициализируем систему репутации
+        initReputation(this.registry);
         
         ActionLog.add(this.registry, 
             `Игра началась. ${hero.name} (${hero.archetype}) — беженец из разорённой врагами деревни. ` +

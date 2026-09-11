@@ -16,6 +16,7 @@ import { checkGameEnd } from '../data/thief.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, formatDateTime } from '../systems/TimeSystem.js';
+import { getVillageRep, getReputationLevel, checkExpulsion } from '../data/reputation.js';
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -192,6 +193,12 @@ export class VillageScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 2,
         }).setScrollFactor(0).setDepth(100);
 
+        // Репутация в деревне (п.1)
+        this.repText = this.add.text(8, 96, '', {
+            fontSize: '12px', color: '#c0c0c0', backgroundColor: '#000000cc', padding: { x: 6, y: 3 },
+            stroke: '#000', strokeThickness: 2,
+        }).setScrollFactor(0).setDepth(100);
+
         // Название деревни — справа сверху
         const villageName = getVillageName();
         this.add.text(this.scale.width - 8, 6, villageName, {
@@ -350,6 +357,18 @@ export class VillageScene extends Phaser.Scene {
             this.scene.start('End');
             return;
         }
+        
+        // Пункт 12: Проверка изгнания из деревни при низкой репутации
+        const expulsion = checkExpulsion(this.registry);
+        if (expulsion.expelled) {
+            ActionLog.add(this.registry, `ПОРАЖЕНИЕ: ${expulsion.message}`);
+            const q = this.registry.get('quest');
+            q.heroDead = true; // используем как общий флаг конца
+            q.currentObjective = 'Изгнан из деревни за дурную славу.';
+            this.registry.set('quest', q);
+            this.scene.start('End');
+            return;
+        }
 
         if (this.busyDialog) {
             this.playerObj.setVelocity(0, 0);
@@ -476,6 +495,12 @@ export class VillageScene extends Phaser.Scene {
         } else {
             this.turnsText.setVisible(false);
         }
+        
+        // Репутация в деревне (п.1)
+        const villageRep = getVillageRep(this.registry);
+        const repLevel = getReputationLevel(villageRep);
+        this.repText.setText(`⭐ Репутация: ${villageRep > 0 ? '+' : ''}${villageRep} (${repLevel.name})`);
+        this.repText.setColor(repLevel.color);
     }
 
     tryInteract() {

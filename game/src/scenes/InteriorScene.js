@@ -12,6 +12,13 @@ import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../system
 import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion } from '../data/questGenerator.js';
 import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
+import {
+    checkNpcWillingToTalk, getNpcRep, getReputationLevel,
+    applyGiftBonus, applyCompliment, applyTreatEveryoneBonus,
+    applyQuestCompleteBonus, willNpcAttack, willNpcRefuseTrade,
+    getPriceModifier, getRewardModifier,
+} from '../data/reputation.js';
+import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 
 export class InteriorScene extends Phaser.Scene {
     constructor() {
@@ -118,6 +125,33 @@ export class InteriorScene extends Phaser.Scene {
 
         // ----- Кнопка "Поговорить" -----
         createButton(this, width / 2 - 200, height - 50, 'Поговорить', () => {
+            // Проверка готовности NPC говорить (п.2,3,4,5)
+            const timeState = getTime(this.registry);
+            const hour = timeState ? timeState.hour : 12;
+            const npcBusy = false; // В интерьере NPC всегда доступен, занятость проверяется по расписанию
+            const talkCheck = checkNpcWillingToTalk(this.registry, interior.npcId, { npcBusy });
+            
+            // Пункт 4: При крайней вражде — NPC нападает
+            if (talkCheck.willAttack) {
+                createDialog(this, 'Нападение!',
+                    `${getNpcDisplayName(this.registry, interior.npcId)} бросается на тебя с кулаками!`,
+                    [{ text: 'Драться!', callback: () => {
+                        this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
+                    }}],
+                    { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait }
+                );
+                return;
+            }
+            
+            // Пункт 3: Отказ говорить при низкой репутации
+            if (!talkCheck.canTalk) {
+                createDialog(this, 'Отказ', talkCheck.message,
+                    [{ text: 'Понятно', callback: () => {} }],
+                    { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait }
+                );
+                return;
+            }
+            
             const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
             ActionLog.add(this.registry, `Поговорил с ${npcName} в «${interior.name}».`);
 
@@ -125,7 +159,6 @@ export class InteriorScene extends Phaser.Scene {
             if (this.npcData && !this.npcData.met) {
                 meetNpc(this.registry, interior.npcId);
                 ActionLog.add(this.registry, `Познакомился с ${this.npcData.knownDescription}.`);
-                // Обновляем имя над NPC
                 const newName = getNpcDisplayName(this.registry, interior.npcId);
                 this.npcNameText.setText(newName);
             }
@@ -164,6 +197,35 @@ export class InteriorScene extends Phaser.Scene {
             fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
             cornerRadius: 8,
         });
+
+        // ----- Кнопка "Подарить" (п.10) -----
+        createButton(this, width / 2 + 220, height - 50, '🎁 Подарить', () => {
+            this.showGiftMenu(interior);
+        }, {
+            backgroundColor: 0x5a2a5a, hoverColor: 0x6a3a6a, textColor: RUS.text,
+            fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
+            cornerRadius: 8,
+        });
+
+        // ----- Кнопка "Похвалить" (п.11) -----
+        createButton(this, width / 2 + 360, height - 50, '💬 Похвалить', () => {
+            this.complimentNpc(interior);
+        }, {
+            backgroundColor: 0x2a5a5a, hoverColor: 0x3a6a6a, textColor: RUS.text,
+            fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
+            cornerRadius: 8,
+        });
+
+        // ----- Кнопка "Угостить всех" — только в таверне (п.9) -----
+        if (interior.id === 'tavern') {
+            createButton(this, width / 2 - 200, height - 90, '🍺 Угостить всех выпивкой (20 д.)', () => {
+                this.treatEveryone(interior);
+            }, {
+                backgroundColor: 0x6a5a2a, hoverColor: 0x7a6a3a, textColor: RUS.text,
+                fontSize: 14, padding: { left: 14, right: 14, top: 8, bottom: 8 },
+                cornerRadius: 8,
+            });
+        }
 
         // ----- Кнопка "Торговля" (только для таверны и кузницы) -----
         if (interior.id === 'tavern') {
@@ -294,17 +356,168 @@ export class InteriorScene extends Phaser.Scene {
         });
     }
 
+    // === Пункт 10: Подарить NPC вещь или деньги ===
+    showGiftMenu(interior) {
+        const player = this.registry.get('player');
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        const { width, height } = this.scale;
+        
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
+            .setOrigin(0).setInteractive().setDepth(200);
+        const panelW = 500, panelH = 400;
+        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
+            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+
+        this.add.text(width / 2, height / 2 - panelH / 2 + 30, `Подарить ${npcName}`, {
+            fontSize: '20px', color: '#C9A961', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif',
+            stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(202);
+
+        let y = height / 2 - panelH / 2 + 80;
+
+        // Подарить деньги (10 д.)
+        createButton(this, width / 2, y, '💸 Подарить 10 денег', () => {
+            if ((player.dengas || 0) < 10) {
+                createDialog(this, 'Подарок', 'Не хватает денег!', [{ text: 'Понятно', callback: () => {} }],
+                    { singleton: false, portraitKey: interior.portrait });
+                return;
+            }
+            player.dengas -= 10;
+            this.registry.set('player', player);
+            const result = applyGiftBonus(this.registry, interior.npcId, 10);
+            const msg = result.success
+                ? `${npcName}: «Спасибо тебе! Доброе дело сделал.» (+${result.bonus} репутации)`
+                : `${npcName}: «Не нужно мне твоих подачек!» (${result.bonus} репутации)`;
+            createDialog(this, 'Подарок', msg, [{ text: 'Понятно', callback: () => {} }],
+                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait });
+            overlay.destroy();
+            panel.destroy();
+            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+        }, {
+            backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
+            fontSize: 14, padding: { left: 14, right: 14, top: 8, bottom: 8 },
+        }).setDepth(202);
+        y += 40;
+
+        // Подарить деньги (50 д.)
+        createButton(this, width / 2, y, '💸 Подарить 50 денег', () => {
+            if ((player.dengas || 0) < 50) {
+                createDialog(this, 'Подарок', 'Не хватает денег!', [{ text: 'Понятно', callback: () => {} }],
+                    { singleton: false, portraitKey: interior.portrait });
+                return;
+            }
+            player.dengas -= 50;
+            this.registry.set('player', player);
+            const result = applyGiftBonus(this.registry, interior.npcId, 50);
+            const msg = result.success
+                ? `${npcName}: «Ох, какая щедрость! Благодарю от сердца!» (+${result.bonus} репутации)`
+                : `${npcName}: «Что-то ты уж слишком щедр... Чего хочешь?» (${result.bonus} репутации)`;
+            createDialog(this, 'Подарок', msg, [{ text: 'Понятно', callback: () => {} }],
+                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait });
+            overlay.destroy();
+            panel.destroy();
+            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+        }, {
+            backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
+            fontSize: 14, padding: { left: 14, right: 14, top: 8, bottom: 8 },
+        }).setDepth(202);
+        y += 40;
+
+        // Подарить целебную траву
+        if (player.inventory && player.inventory.some(i => i.id === 'herb')) {
+            createButton(this, width / 2, y, '🌿 Подарить целебную траву', () => {
+                const herb = player.inventory.find(i => i.id === 'herb');
+                if (herb) {
+                    herb.count--;
+                    if (herb.count <= 0) {
+                        player.inventory = player.inventory.filter(i => i.id !== 'herb');
+                    }
+                    this.registry.set('player', player);
+                    const result = applyGiftBonus(this.registry, interior.npcId, 15);
+                    const msg = result.success
+                        ? `${npcName}: «Ох, травка добрая! Спасибо, пригодится.» (+${result.bonus} репутации)`
+                        : `${npcName}: «Не нужна мне трава.» (${result.bonus} репутации)`;
+                    createDialog(this, 'Подарок', msg, [{ text: 'Понятно', callback: () => {} }],
+                        { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait });
+                    overlay.destroy();
+                    panel.destroy();
+                    this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+                }
+            }, {
+                backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
+                fontSize: 14, padding: { left: 14, right: 14, top: 8, bottom: 8 },
+            }).setDepth(202);
+            y += 40;
+        }
+
+        // Закрыть
+        createButton(this, width / 2, height / 2 + panelH / 2 - 30, 'Закрыть', () => {
+            overlay.destroy();
+            panel.destroy();
+            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+        }, {
+            backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
+            fontSize: 16, padding: { left: 20, right: 20, top: 10, bottom: 10 },
+        }).setDepth(202);
+    }
+
+    // === Пункт 11: Похвалить NPC ===
+    complimentNpc(interior) {
+        const player = this.registry.get('player');
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        const oratorySkill = player.skills.oratory || 15;
+        const result = applyCompliment(this.registry, interior.npcId, oratorySkill);
+        
+        createDialog(this, 'Похвала', `${npcName}: ${result.message} (бросок ${result.roll}, ${result.bonus > 0 ? '+' : ''}${result.bonus} репутации)`, [
+            { text: 'Понятно', callback: () => {} },
+        ], {
+            singleton: false,
+            portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+            typing: true, typingSpeed: 30,
+        });
+    }
+
+    // === Пункт 9: Угостить всех выпивкой в таверне ===
+    treatEveryone(interior) {
+        const player = this.registry.get('player');
+        const cost = 20;
+        if ((player.dengas || 0) < cost) {
+            createDialog(this, 'Таверна', 'Не хватает денег на выпивку для всех!', [
+                { text: 'Понятно', callback: () => {} },
+            ], { singleton: false, portraitKey: interior.portrait });
+            return;
+        }
+        player.dengas -= cost;
+        this.registry.set('player', player);
+        const totalBonus = applyTreatEveryoneBonus(this.registry);
+        ActionLog.add(this.registry, `Угостил всех выпивкой в таверне за ${cost} д. (+${totalBonus} к репутации).`);
+        createDialog(this, '🎉 Выпивка для всех',
+            `Ты заказал бочку медовуги на всех! Гости радостно поднимают кубки. ` +
+            `«За гостеприимного гостя!» — раздаётся по залу. ` +
+            `(Репутация у всех NPC +3, в деревне +5)`, [
+            { text: '🎉 За нас!', callback: () => {} },
+        ], {
+            singleton: false,
+            portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+            typing: true, typingSpeed: 30,
+        });
+        this.updateHUD();
+    }
+
     /**
      * Меню торговли в таверне — покупка еды и питья (п.14).
      */
     showTavernShop() {
         const player = this.registry.get('player');
+        // Список товаров с учётом репутации (п.13.2: скидки при высокой репутации)
+        const priceMod = getPriceModifier(this.registry, 'tavernkeeper');
         const items = [
-            { id: 'bread', name: 'Хлеб', price: 2, effect: '+2 HP', heal: 2, mpHeal: 0 },
-            { id: 'kasha', name: 'Каша', price: 5, effect: '+3 HP', heal: 3, mpHeal: 0 },
-            { id: 'mead', name: 'Медовуха', price: 4, effect: '+2 MP', heal: 0, mpHeal: 2 },
-            { id: 'kvass', name: 'Квас', price: 3, effect: '+1 MP', heal: 0, mpHeal: 1 },
-            { id: 'rest', name: 'Ночлег', price: 15, effect: 'Полное восстановление', heal: 999, mpHeal: 999 },
+            { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: '+2 HP', heal: 2, mpHeal: 0 },
+            { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: '+3 HP', heal: 3, mpHeal: 0 },
+            { id: 'mead', name: 'Медовуха', price: Math.max(1, Math.round(4 * priceMod)), effect: '+2 MP', heal: 0, mpHeal: 2 },
+            { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: '+1 MP', heal: 0, mpHeal: 1 },
+            { id: 'rest', name: 'Ночлег', price: Math.max(1, Math.round(15 * priceMod)), effect: 'Полное восстановление', heal: 999, mpHeal: 999 },
         ];
 
         const { width, height } = this.scale;

@@ -5,6 +5,7 @@
 
 import { skillCheck } from '../systems/BRPEngine.js';
 import { ActionLog } from './actionLog.js';
+import { applyBeggingPenalty } from './reputation.js';
 
 // Локации, куда может бежать вор
 export const THIEF_LOCATIONS = [
@@ -298,6 +299,14 @@ export function askMoneyForHelp(registry, npcId, npcName) {
         player.dengas = (player.dengas || 0) + amount;
         registry.set('player', player);
     }
+    
+    // Пункт 6: Штраф за попрошайничество (падение репутации)
+    // applyBeggingPenalty уже учитывает модификатор высокой репутации внутри
+    const repPenalty = applyBeggingPenalty(registry, npcId);
+    if (repPenalty < 0) {
+        message += ` (репутация упала на ${Math.abs(repPenalty)})`;
+    }
+    
     registry.set('quest', q);
 
     // Проверка на побег вора
