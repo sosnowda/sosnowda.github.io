@@ -36,22 +36,8 @@ export function tileTexture(t, x, y) {
     }
 }
 
-// П.7: Уникальный стиль крыши/стены для каждого здания
-const BUILDING_STYLES = {
-    elder_house:      { roof: 'roof_tile',    wall: 'wall_log' },
-    tavern:           { roof: 'roof_wood',    wall: 'wall_plank' },
-    blacksmith:       { roof: 'roof_dark',    wall: 'wall_stone' },
-    church:           { roof: 'roof_tile',    wall: 'wall_log' },
-    villager_house_1: { roof: 'roof_thatch',  wall: 'wall_log' },
-    villager_house_2: { roof: 'roof_wood',    wall: 'wall_plank' },
-};
-
-// Возвращает текстуру с учётом уникального стиля здания
+// П.7: buildingTileTexture — упрощён, использует старые текстуры (точно загружены)
 export function buildingTileTexture(t, x, y, buildingId) {
-    const style = BUILDING_STYLES[buildingId];
-    if (!style) return tileTexture(t, x, y);
-    if (t === 'R') return style.roof;
-    if (t === 'H') return style.wall;
     return tileTexture(t, x, y);
 }
 

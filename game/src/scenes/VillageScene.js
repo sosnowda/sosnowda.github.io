@@ -232,6 +232,12 @@ export class VillageScene extends Phaser.Scene {
                 }
                 return;
             }
+
+            // П.4: Клик на ворота — выход из деревни
+            if (isGate(tx, ty)) {
+                this.scene.start('Fork');
+                return;
+            }
         });
 
         this.input.on('pointermove', (pointer) => {
@@ -717,33 +723,17 @@ export class VillageScene extends Phaser.Scene {
         }
     }
 
-    // П.16,23: Подойти к двери и войти
+    // П.16,23: Подойти к двери и войти (упрощённо — телепорт + вход)
     walkToAndEnter(interiorId, tx, ty) {
         const ts = this.tileSize;
-        const targetX = tx * ts + ts / 2;
-        const targetY = ty * ts + ts / 2;
-        const dist = Phaser.Math.Distance.Between(this.playerObj.x, this.playerObj.y, targetX, targetY);
-        
-        if (dist < ts * 1.5) {
-            // Уже рядом — входим
-            ActionLog.add(this.registry, `Игрок вошёл в здание.`);
-            this.scene.pause();
-            this.scene.launch('Interior', { interiorId: interiorId, from: 'Village' });
-        } else {
-            // Идём к двери
-            this.playerObj.setVelocity(0, 0);
-            const angle = Phaser.Math.Angle.Between(this.playerObj.x, this.playerObj.y, targetX, targetY);
-            const speed = 200;
-            this.playerObj.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-            
-            // Останавливаемся у двери
-            this.time.delayedCall(dist / speed * 1000, () => {
-                this.playerObj.setVelocity(0, 0);
-                ActionLog.add(this.registry, `Игрок подошёл к зданию и вошёл.`);
-                this.scene.pause();
-                this.scene.launch('Interior', { interiorId: interiorId, from: 'Village' });
-            });
-        }
+        // Телепортируем игрока к двери (встанем перед ней)
+        this.playerObj.setVelocity(0, 0);
+        this.playerObj.x = tx * ts + ts / 2;
+        this.playerObj.y = (ty + 1) * ts + ts / 2;  // на тайл ниже двери
+        if (this.playerObj.body) this.playerObj.body.reset(this.playerObj.x, this.playerObj.y);
+        ActionLog.add(this.registry, `Игрок вошёл в здание.`);
+        this.scene.pause();
+        this.scene.launch('Interior', { interiorId: interiorId, from: 'Village' });
     }
 
     // П.5: Поп-ап тултип при наведении курсора на здание

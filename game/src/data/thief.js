@@ -95,7 +95,8 @@ export function searchLocation(registry, locationId) {
 
     // Тратим ход
     const loc = THIEF_LOCATIONS.find(l => l.id === locationId);
-    const turnsLeft = spendTurn(registry, `Поиск следов в локации «${loc.name}»`);
+    const locName = loc ? loc.name : locationId;
+    const turnsLeft = spendTurn(registry, `Поиск следов в локации «${locName}»`);
 
     // Отмечаем, что обыскали
     if (!q.locationsSearched) q.locationsSearched = [];

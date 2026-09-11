@@ -155,29 +155,49 @@ export class LocationScene extends Phaser.Scene {
                 const y = 100 + Math.random() * (height - 150);
                 this.add.image(x, y, `tile_forest_${i % 2}`).setScale(3).setOrigin(0.5, 0.7).setDepth(2);
             }
-        } else if (locId === 'road') {
-            // Тракт — коричневый фон + тропы
-            gfx.fillStyle(0x6a4a2a, 1);
+        } else if (locId === 'road' || locId === 'road_south') {
+            // П.6: Тракт — трава по бокам, гравийная дорога горизонтально
+            // Фон — трава
+            gfx.fillStyle(0x4a7c3a, 1);
             gfx.fillRect(0, 80, width, height - 80);
             gfx.setDepth(0);
-            // Тёмные пятна
-            gfx.fillStyle(0x4a3a1a, 0.6);
-            for (let i = 0; i < 30; i++) {
+            // Текстура травы
+            gfx.fillStyle(0x5a8c4a, 0.5);
+            for (let i = 0; i < 60; i++) {
                 const x = Math.random() * width;
                 const y = 100 + Math.random() * (height - 120);
-                gfx.fillCircle(x, y, 3);
+                gfx.fillRect(x, y, 3, 3);
             }
-            // Камни
-            for (let i = 0; i < 12; i++) {
+            // Гравийная дорога — горизонтальная полоса через весь экран
+            const roadY = height * 0.5;
+            const roadH = 100;
+            gfx.fillStyle(0x9a8060, 1);
+            gfx.fillRect(0, roadY - roadH / 2, width, roadH);
+            gfx.setDepth(1);
+            // Текстура гравия
+            gfx.fillStyle(0x7a6040, 0.6);
+            for (let i = 0; i < 80; i++) {
                 const x = Math.random() * width;
-                const y = 100 + Math.random() * (height - 150);
-                this.add.image(x, y, `tile_rock_${i % 2}`).setScale(2).setDepth(2);
+                const y = roadY - roadH / 2 + Math.random() * roadH;
+                gfx.fillCircle(x, y, 2);
             }
-            // Деревья по бокам
-            for (let i = 0; i < 8; i++) {
-                const x = (i % 2 === 0) ? Math.random() * 200 : width - Math.random() * 200;
+            // Камни на дороге
+            for (let i = 0; i < 15; i++) {
+                const x = Math.random() * width;
+                const y = roadY - roadH / 2 + Math.random() * roadH;
+                this.add.image(x, y, `tile_rock_${i % 2}`).setScale(1.5).setDepth(2);
+            }
+            // Деревья по бокам дороги
+            for (let i = 0; i < 12; i++) {
+                const x = (i < 6) ? Math.random() * 180 : width - Math.random() * 180;
                 const y = 100 + Math.random() * (height - 150);
                 this.add.image(x, y, `tile_forest_${i % 2}`).setScale(3).setOrigin(0.5, 0.7).setDepth(3);
+            }
+            // Тропинки травы у дороги
+            for (let i = 0; i < 20; i++) {
+                const x = Math.random() * width;
+                const y = roadY - roadH / 2 - 10 - Math.random() * 20;
+                this.add.image(x, y, 'tile_grass_0').setScale(2).setDepth(1);
             }
         } else if (locId === 'river') {
             // Река — синий фон

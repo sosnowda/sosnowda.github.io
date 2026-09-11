@@ -279,19 +279,22 @@ export class InteriorScene extends Phaser.Scene {
         }
 
         // ----- Кнопка "Выйти" -----
-        createButton(this, width / 2 + 360, height - 50, 'Выйти', () => {
-            // Пункт 8: возобновляем Village вместо полного перехода
+        const exitAction = () => {
             this.scene.stop();
             if (this.scene.isPaused(this.from)) {
                 this.scene.resume(this.from);
             } else {
                 this.scene.start(this.from);
             }
-        }, {
+        };
+        createButton(this, width / 2 + 400, height - 50, 'Выйти', exitAction, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
             fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
             cornerRadius: 8,
         });
+
+        // П.5: ESC — выход из здания
+        this.input.keyboard.on('keydown-ESC', exitAction);
 
         this.busyDialog = false;
     }
