@@ -5,6 +5,7 @@ import { ActionLog } from '../data/actionLog.js';
 import { getHuntState, checkGameEnd } from '../data/thief.js';
 import { createButton } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
+import { getTime, formatDateTime } from '../systems/TimeSystem.js';
 
 export class EndScene extends Phaser.Scene {
     constructor() {
@@ -83,16 +84,21 @@ export class EndScene extends Phaser.Scene {
 
         // ----- Статистика -----
         const stats = rating.stats || {};
+        const timeState = getTime(this.registry);
+        const finalDate = timeState ? formatDateTime(timeState) : 'неизвестно';
         const statsText = [
             `Всего действий: ${stats.total || 0}`,
             `Поисков следов: ${stats.searches || 0}`,
             `Бесед с жителями: ${stats.talks || 0}`,
             `Провалов проверок: ${stats.failed || 0}`,
+            `Финальная дата: ${finalDate}`,
         ].join('   |   ');
         this.add.text(width / 2, panelY + 220, statsText, {
-            fontSize: '13px', color: '#c9a14a',
+            fontSize: '12px', color: '#c9a14a',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 1,
+            wordWrap: { width: panelW - 40 },
+            align: 'center',
         }).setOrigin(0.5, 0);
 
         // ----- Лог действий -----
