@@ -20,18 +20,14 @@ body{background:#1b2a1f;font-family:Arial,sans-serif}
     <div id="error-text"></div>
 </div>
 
-<!-- Phaser (CDN) -->
+<!-- Phaser (CDN) — единственный внешний скрипт -->
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.min.js"></script>
-
-<!-- RexUI Plugin (CDN) -->
-<script src="https://unpkg.com/phaser3-rex-plugins@1.1.65/dist/rexuiplugin.min.js" onerror="this.remove()"></script>
-<script src="https://cdn.jsdelivr.net/npm/phaser3-rex-plugins@1.1.65/dist/rexuiplugin.min.js" onerror="this.remove()"></script>
+<!-- RexUI полностью убран — кнопки на чистом Phaser -->
 
 <script>
 window.addEventListener('load', function() {
     var loadingEl = document.getElementById('loading-text');
     var errorEl = document.getElementById('error-text');
-    var container = document.getElementById('game-container');
 
     function showError(msg) {
         loadingEl.style.display = 'none';
@@ -43,8 +39,6 @@ window.addEventListener('load', function() {
         showError('Движок Phaser не загружен. Проверьте интернет.');
         return;
     }
-
-    var hasRexUI = 'RexUIPlugin' in window;
 
     Promise.all([
         import('./src/scenes/BootScene.js'),
@@ -75,26 +69,14 @@ window.addEventListener('load', function() {
                 autoCenter: Phaser.Scale.CENTER_BOTH,
             },
             scene: scenes
+            // RexUI плагин убран — не нужен
         };
 
-        if (hasRexUI) {
-            config.plugins = {
-                scene: [{
-                    key: 'rexUI',
-                    plugin: window['RexUIPlugin'],
-                    mapping: 'rexUI'
-                }]
-            };
-        }
-
-        // НЕ удаляем содержимое контейнера — Phaser сам заменит canvas
-        // Убираем только loading-текст
         loadingEl.style.display = 'none';
-
         new Phaser.Game(config);
     }).catch(function(err) {
         console.error('Ошибка загрузки игры:', err);
-        showError('Ошибка: ' + err.message + '<br><br>Откройте консоль (F12) для деталей.');
+        showError('Ошибка: ' + err.message);
     });
 });
 </script>
