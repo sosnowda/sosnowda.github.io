@@ -2,7 +2,7 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import {
-    buildMap, SOLID, tileTexture, doorInteriorId, isGate,
+    buildMap, SOLID, tileTexture, buildingTileTexture, doorInteriorId, isGate,
     PLAYER_START, MAP_W, MAP_H, getVillageName,
 } from '../data/world.js';
 import { BUILDINGS, VILLAGE_GATE, INTERIORS } from '../data/interiors.js';
@@ -45,12 +45,21 @@ export class VillageScene extends Phaser.Scene {
         this.solids = this.physics.add.staticGroup();
 
         // ----- Отрисовка тайлов карты -----
+        // П.7: Используем buildingTileTexture для уникальных стилей зданий
         for (let y = 0; y < MAP_H; y++) {
             for (let x = 0; x < MAP_W; x++) {
                 const t = this.map[y][x];
                 const px = x * ts + ts / 2;
                 const py = y * ts + ts / 2;
-                const texKey = tileTexture(t, x, y);
+                // Определяем, к какому зданию относится тайл
+                let buildingId = null;
+                for (const b of BUILDINGS) {
+                    if (x >= b.col && x < b.col + b.w && y >= b.row && y < b.row + b.h) {
+                        buildingId = b.interiorId;
+                        break;
+                    }
+                }
+                const texKey = buildingId ? buildingTileTexture(t, x, y, buildingId) : tileTexture(t, x, y);
                 const img = this.add.image(px, py, texKey);
                 img.setScale(ts / 32);
                 if (SOLID.has(t)) {

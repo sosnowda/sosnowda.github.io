@@ -104,6 +104,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Escape' && lightbox.style.display === 'flex') closeLightbox();
     });
 
+    // П.1: При повторном клике на увеличенную карту — возврат к прежнему размеру
+    lbImg.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (zoomLevel > 1) {
+            // Возврат к 1:1
+            zoomLevel = 1;
+            translateX = 0;
+            translateY = 0;
+            lbImg.style.transform = 'scale(1)';
+        } else {
+            // Увеличение
+            zoomLevel = 2;
+            lbImg.style.transform = 'scale(2)';
+        }
+    });
+
     // Зум колесом мыши
     lightbox.addEventListener('wheel', function(e) {
         e.preventDefault();

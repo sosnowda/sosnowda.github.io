@@ -85,6 +85,12 @@ export class BootScene extends Phaser.Scene {
         this.load.image('tile_fence_corner', 'assets/tiles/fence_corner.png');
         for (let v = 0; v < 3; v++) this.load.image(`tile_garden_${v}`, `assets/tiles/garden_bed_${v}.png`);
 
+        // ----- П.7: УНИКАЛЬНЫЕ ТАЙЛЫ КРЫШ И СТЕН (top-down) -----
+        ['roof_thatch', 'roof_wood', 'roof_tile', 'roof_dark',
+         'wall_log', 'wall_plank', 'wall_stone'].forEach((t) => {
+            this.load.image(t, `assets/tiles/${t}.png`);
+        });
+
         // ----- ТАЙЛЫ ЛОКАЦИЙ (для LocationScene) -----
         for (let v = 0; v < 2; v++) this.load.image(`tile_forest_dense_${v}`, `assets/tiles/forest_dense_${v}.png`);
         for (let v = 0; v < 2; v++) this.load.image(`tile_road_${v}`, `assets/tiles/road_${v}.png`);

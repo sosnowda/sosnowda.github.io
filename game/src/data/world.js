@@ -23,7 +23,7 @@ export const INTERACTIVE = new Set(['D', 'G']);
 export function tileTexture(t, x, y) {
     switch (t) {
         case '.': return `tile_grass_${(x * 7 + y * 13) % 4}`;
-        case 'S': return `tile_path_${((x + y) % 2 === 0) ? 0 : 1}`;  // песочная дорога
+        case 'S': return `tile_path_${((x + y) % 2 === 0) ? 0 : 1}`;
         case ',': return `tile_path_${((x + y) % 2 === 0) ? 0 : 1}`;
         case '~': return `tile_water_0`;
         case 'T': return `tile_forest_${(x * 3 + y * 5) % 2}`;
@@ -31,9 +31,28 @@ export function tileTexture(t, x, y) {
         case 'H': return `tile_house_wall_${(x + y) % 3}`;
         case 'R': return `tile_house_roof_${(x * 2 + y) % 2}`;
         case 'G': return `tile_gate`;
-        case 'W': return `tile_grass_0`;  // колодец рисуется отдельно
+        case 'W': return `tile_grass_0`;
         default: return 'tile_grass_0';
     }
+}
+
+// П.7: Уникальный стиль крыши/стены для каждого здания
+const BUILDING_STYLES = {
+    elder_house:      { roof: 'roof_tile',    wall: 'wall_log' },
+    tavern:           { roof: 'roof_wood',    wall: 'wall_plank' },
+    blacksmith:       { roof: 'roof_dark',    wall: 'wall_stone' },
+    church:           { roof: 'roof_tile',    wall: 'wall_log' },
+    villager_house_1: { roof: 'roof_thatch',  wall: 'wall_log' },
+    villager_house_2: { roof: 'roof_wood',    wall: 'wall_plank' },
+};
+
+// Возвращает текстуру с учётом уникального стиля здания
+export function buildingTileTexture(t, x, y, buildingId) {
+    const style = BUILDING_STYLES[buildingId];
+    if (!style) return tileTexture(t, x, y);
+    if (t === 'R') return style.roof;
+    if (t === 'H') return style.wall;
+    return tileTexture(t, x, y);
 }
 
 // Построение сетки карты с дорожной сетью, зданиями и деревьями.
