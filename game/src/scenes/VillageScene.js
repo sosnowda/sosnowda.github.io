@@ -3,7 +3,6 @@
 import { RUS } from '../config/RusTheme.js';
 import { buildMap, SOLID, TILE_KEY, NPCS, PLAYER_START, LOCATION_NAME, MAP_W, MAP_H } from '../data/world.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
-import { createButton } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 

@@ -1,6 +1,21 @@
 /**
- * Вспомогательные функции UI — расширение RexUI
- * Создание качественных UI-компонентов с помощью Phaser3-Rex-Plugins
+ * Вспомогательные функции UI — ЧИСТЫЙ PHASER (без RexUI)
+ *
+ * История:
+ *   Ранее модуль зависел от плагина Phaser3-Rex-Plugins (rexUI).
+ *   Плагин был удалён из index.html, но функции всё ещё обращались к scene.rexUI,
+ *   что приводило к падению VillageScene/CombatScene при открытии диалога.
+ *   В этой версии все компоненты построены на нативных Phaser.GameObjects.
+ *
+ * Экспортируемые функции:
+ *   - bindRegistryKeys
+ *   - createButton
+ *   - createDialog
+ *   - createFloatingText
+ *   - createScaledImage
+ *   - createParticleExplosion
+ *   - createStoryTextBox         (упрощённая реализация)
+ *   - createScrollableList       (упрощённая реализация)
  */
 
 import {
@@ -14,42 +29,38 @@ import {
     ROUND_RECTANGLE_DEFAULTS
 } from '../config/StyleConfig.js';
 
+// ============================================================
+// Внутренние хелперы
+// ============================================================
+
 /**
- * Создать фон со скруглёнными углами (требуется для RexUI Label)
- * @param {Phaser.Scene} scene
- * @param {number} color
- * @param {number} radius
- * @param {number} strokeColor
- * @param {number} strokeWidth
+ * Создать скруглённый прямоугольник-фон на чистом Phaser.
+ * Возвращает Phaser.GameObjects.Graphics, который можно перемещать/масштабировать.
  */
 function createRoundRectangle(
-    scene, 
-    color, 
-    radius = ROUND_RECTANGLE_DEFAULTS.cornerRadius, 
-    strokeColor = ROUND_RECTANGLE_DEFAULTS.strokeColor, 
+    scene,
+    color,
+    radius = ROUND_RECTANGLE_DEFAULTS.cornerRadius,
+    strokeColor = ROUND_RECTANGLE_DEFAULTS.strokeColor,
     strokeWidth = ROUND_RECTANGLE_DEFAULTS.strokeWidth
 ) {
-    if (!scene.rexUI) {
-        console.error('RexUI plugin not loaded!');
-        const { width, height } = ROUND_RECTANGLE_DEFAULTS.fallbackSize;
-        return scene.add.graphics().fillStyle(color).fillRoundedRect(0, 0, width, height, radius);
+    const { width, height } = ROUND_RECTANGLE_DEFAULTS.fallbackSize;
+    const g = scene.add.graphics();
+    g.fillStyle(color, 1);
+    g.fillRoundedRect(0, 0, width, height, radius);
+    if (strokeColor !== null && strokeWidth > 0) {
+        g.lineStyle(strokeWidth, strokeColor, 1);
+        g.strokeRoundedRect(0, 0, width, height, radius);
     }
-    
-    const bg = scene.rexUI.add.roundRectangle(0, 0, 0, 0, radius, color);
-    if (strokeColor !== null) {
-        bg.setStrokeStyle(strokeWidth, strokeColor);
-    }
-    return bg;
+    // Точка привязки — центр
+    g.setOrigin(0.5);
+    g.x = 0;
+    g.y = 0;
+    return g;
 }
 
-
 /**
- * Привязать событие changedata к scene.registry и автоматически отвязать при уничтожении target
- * @param {Phaser.Scene} scene
- * @param {any} target - обычно dialog/scrollable и т.п., достаточно наличия once('destroy')
- * @param {string[]} keys - список ключей registry, напр. ['score.current', 'settings.audio.sfxVolume']
- * @param {Function} onChange - вызывается при изменении любого ключа
- * @returns {Function} cleanup
+ * Привязать событие changedata к scene.registry и автоматически отвязать при уничтожении target.
  */
 export function bindRegistryKeys(scene, target, keys = [], onChange) {
     const registry = scene?.registry;
@@ -72,7 +83,6 @@ export function bindRegistryKeys(scene, target, keys = [], onChange) {
         eventNames.forEach((eventName) => emitter.off(eventName, handler));
     };
 
-    // Авто-отвязка: в первую очередь следуем жизненному циклу target
     if (target && typeof target.once === 'function') {
         target.once('destroy', cleanup);
     } else if (scene?.events && typeof scene.events.once === 'function') {
@@ -82,28 +92,36 @@ export function bindRegistryKeys(scene, target, keys = [], onChange) {
     return cleanup;
 }
 
+// ============================================================
+// createButton — кнопка на чистом Phaser
+// ============================================================
+
 /**
- * Создать кнопку RexUI (расширенная версия — поддерживает повторное использование в Dialog)
- * @param {Phaser.Scene} scene - текущая сцена
- * @param {number} x - координата X
- * @param {number} y - координата Y
- * @param {string} text - текст кнопки
- * @param {Function} onClick - колбэк клика
- * @param {Object} options - необязательная конфигурация
- * @returns {RexUI.Label}
+ * Создать кнопку на чистом Phaser (без RexUI).
+ *
+ * Возвращает Phaser.GameObjects.Container, который содержит:
+ *   - background (Rectangle или Graphics со скруглёнными углами)
+ *   - text (Phaser.GameObjects.Text)
+ *
+ * Контейнер поддерживает:
+ *   setInteractive / disableInteractive / setScale / setDepth / setVisible /
+ *   setPosition / setX / setY / setOrigin / on / once / destroy /
+ *   getElement('background'|'text') / layout / __uiResetVisual
+ *
+ * @param {Phaser.Scene} scene
+ * @param {number} x
+ * @param {number} y
+ * @param {string} text
+ * @param {Function} onClick
+ * @param {Object} options
+ * @returns {Phaser.GameObjects.Container}
  */
 export function createButton(scene, x, y, text, onClick, options = {}) {
-    if (!scene.rexUI) {
-        console.error('RexUI plugin not loaded! Cannot create button.');
-        return null;
-    }
-
     const config = {
         fontSize: options.fontSize || BUTTON_STYLES.fontSize,
         textColor: options.textColor || TYPOGRAPHY.textColor.primary,
         icon: options.icon || null,
 
-        // По умолчанию — однотонный скруглённый прямоугольник; если передан backgroundImageKey — используем фон-картинку
         backgroundImageKey: options.backgroundImageKey || null,
         backgroundImageFrame: options.backgroundImageFrame,
         backgroundImageTint: (typeof options.backgroundImageTint === 'number') ? options.backgroundImageTint : 0xffffff,
@@ -112,17 +130,13 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
         backgroundAlpha: (typeof options.backgroundAlpha === 'number') ? options.backgroundAlpha : 1,
         resizeBackgroundToLabel: options.resizeBackgroundToLabel !== false,
 
-        // Обводка/тень текста (фиксированные значения; авто-подбор контраста не выполняется)
         textStrokeThickness: options.textStrokeThickness,
-
-        // Ручная обводка/тень текста
         textStrokeColor: options.textStrokeColor,
         textShadowColor: options.textShadowColor,
         textShadowOffsetX: Number.isFinite(options.textShadowOffsetX) ? options.textShadowOffsetX : 1,
         textShadowOffsetY: Number.isFinite(options.textShadowOffsetY) ? options.textShadowOffsetY : 1,
         textShadowBlur: Number.isFinite(options.textShadowBlur) ? options.textShadowBlur : 2,
 
-        // Однотонный фон (запасной вариант, если картинка не настроена/не загружена)
         backgroundColor: options.backgroundColor || COLORS.primary,
         hoverColor: options.hoverColor || COLORS.light,
         pressColor: options.pressColor || COLORS.dark,
@@ -131,10 +145,7 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
         padding: options.padding || BUTTON_STYLES.padding,
         autoPlayAnim: options.autoPlayAnim !== undefined ? options.autoPlayAnim : true,
 
-        // Защита от многократного клика (мс). 0 — без ограничения
         clickCooldown: options.clickCooldown !== undefined ? options.clickCooldown : 350,
-
-        // Если onClick возвращает объект с once('destroy') (например dialog), по умолчанию блокируем до его уничтожения
         lockWhileReturnedAlive: options.lockWhileReturnedAlive !== undefined ? options.lockWhileReturnedAlive : true,
 
         ...options
@@ -142,64 +153,87 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
 
     const buttonText = config.icon ? `${config.icon} ${text}` : text;
 
-    // Фон: по умолчанию скруглённый прямоугольник; при backgroundImageKey — картинка
-    const backgroundGO = config.backgroundImageKey
-        ? scene.add.image(0, 0, config.backgroundImageKey, config.backgroundImageFrame)
-        : createRoundRectangle(
-            scene,
-            config.backgroundColor,
-            config.cornerRadius,
-            COLORS.white,
-            BUTTON_STYLES.strokeWidth
+    // Создаём текст — нужен, чтобы определить размер фоновой плашки
+    const textObj = scene.add.text(0, 0, buttonText, {
+        fontSize: `${config.fontSize}px`,
+        color: config.textColor,
+        fontFamily: TYPOGRAPHY.fontFamily.default,
+        fontStyle: TYPOGRAPHY.fontWeight.bold
+    }).setOrigin(0.5);
+
+    if (typeof textObj.setStroke === 'function' && (config.textStrokeColor != null || Number.isFinite(config.textStrokeThickness))) {
+        const strokeColor = (config.textStrokeColor != null) ? config.textStrokeColor : '#000000';
+        const strokeThickness = Number.isFinite(config.textStrokeThickness) ? config.textStrokeThickness : 3;
+        textObj.setStroke(strokeColor, strokeThickness);
+    }
+    if (typeof textObj.setShadow === 'function' && config.textShadowColor != null) {
+        textObj.setShadow(
+            config.textShadowOffsetX,
+            config.textShadowOffsetY,
+            config.textShadowColor,
+            config.textShadowBlur,
+            false,
+            true
         );
-
-    // Создаём компонент Label
-    const button = scene.rexUI.add.label({
-        background: backgroundGO,
-
-        text: scene.add.text(0, 0, buttonText, {
-            fontSize: `${config.fontSize}px`,
-            color: config.textColor,
-            fontFamily: TYPOGRAPHY.fontFamily.default,
-            fontWeight: TYPOGRAPHY.fontWeight.bold
-        }),
-
-        space: config.padding,
-
-        align: 'center',
-        name: text
-    });
-
-    button.setPosition(x, y);
-    button.layout();
-
-    // Текстовый эффект: через параметры добавляем обводку/тень для читаемости (авто-подбор контраста не выполняется)
-    const textElement = button.getElement('text');
-    if (textElement) {
-        if (typeof textElement.setStroke === 'function' && (config.textStrokeColor != null || Number.isFinite(config.textStrokeThickness))) {
-            const strokeColor = (config.textStrokeColor != null) ? config.textStrokeColor : '#000000';
-            const strokeThickness = Number.isFinite(config.textStrokeThickness) ? config.textStrokeThickness : 3;
-            textElement.setStroke(strokeColor, strokeThickness);
-        }
-
-        if (typeof textElement.setShadow === 'function' && config.textShadowColor != null) {
-            textElement.setShadow(
-                config.textShadowOffsetX,
-                config.textShadowOffsetY,
-                config.textShadowColor,
-                config.textShadowBlur,
-                false,
-                true
-            );
-        }
     }
 
-    const bgElement = button.getElement('background');
+    // Вычисляем размеры фона по размеру текста + padding
+    const pad = config.padding || { left: 0, right: 0, top: 0, bottom: 0 };
+    const bgWidth = Math.max(8, textObj.width + (pad.left || 0) + (pad.right || 0));
+    const bgHeight = Math.max(8, textObj.height + (pad.top || 0) + (pad.bottom || 0));
 
+    // Контейнер: фоновый rectangle + текст. Origin — центр.
+    const container = scene.add.container(x, y);
+    container.setDepth(0);
+
+    // Фон: либо image (если передан ключ), либо скруглённый rectangle
+    let bgElement;
+    if (config.backgroundImageKey) {
+        bgElement = scene.add.image(0, 0, config.backgroundImageKey, config.backgroundImageFrame);
+        if (config.resizeBackgroundToLabel && typeof bgElement.setDisplaySize === 'function') {
+            bgElement.setDisplaySize(bgWidth, bgHeight);
+        }
+        if (typeof bgElement.setTint === 'function') {
+            bgElement.setTint(config.backgroundImageTint);
+        }
+        if (typeof bgElement.setAlpha === 'function') {
+            bgElement.setAlpha(config.backgroundAlpha);
+        }
+    } else {
+        bgElement = scene.add.rectangle(0, 0, bgWidth, bgHeight, config.backgroundColor, 1);
+        if (config.cornerRadius > 0) {
+            // Если нужен скруглённый фон — рисуем graphics, заменяем rectangle
+            bgElement.destroy();
+            const g = scene.make.graphics({ add: false });
+            g.fillStyle(config.backgroundColor, 1);
+            g.fillRoundedRect(0, 0, bgWidth, bgHeight, config.cornerRadius);
+            g.lineStyle(BUTTON_STYLES.strokeWidth, COLORS.white, 1);
+            g.strokeRoundedRect(0, 0, bgWidth, bgHeight, config.cornerRadius);
+            g.generateTexture(`__btn_bg_${bgWidth}x${bgHeight}_${config.backgroundColor}_${config.cornerRadius}`, bgWidth, bgHeight);
+            g.destroy();
+            bgElement = scene.add.image(0, 0, `__btn_bg_${bgWidth}x${bgHeight}_${config.backgroundColor}_${config.cornerRadius}`);
+            bgElement.setOrigin(0.5);
+        }
+    }
+    bgElement.setOrigin(0.5);
+    container.add(bgElement);
+    container.add(textObj);
+
+    // Размеры контейнера для hit-area
+    container.width = bgWidth;
+    container.height = bgHeight;
+    container.setSize(bgWidth, bgHeight);
+    container.setInteractive({
+        useHandCursor: true,
+        hitArea: new Phaser.Geom.Rectangle(-bgWidth / 2, -bgHeight / 2, bgWidth, bgHeight),
+        callback: Phaser.Geom.Rectangle.Contains
+    });
+
+    // ---- Состояния фона ----
     const setBgNormal = () => {
         if (!bgElement) return;
         if (typeof bgElement.setFillStyle === 'function') {
-            bgElement.setFillStyle(config.backgroundColor);
+            bgElement.setFillStyle(config.backgroundColor, 1);
             return;
         }
         if (typeof bgElement.setTint === 'function') {
@@ -209,69 +243,43 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
             bgElement.setAlpha(config.backgroundAlpha);
         }
     };
-
     const setBgHover = () => {
         if (!bgElement) return;
         if (typeof bgElement.setFillStyle === 'function') {
-            bgElement.setFillStyle(config.hoverColor);
+            bgElement.setFillStyle(config.hoverColor, 1);
             return;
         }
         if (typeof bgElement.setTint === 'function') {
             const tint = (typeof config.hoverImageTint === 'number') ? config.hoverImageTint : config.backgroundImageTint;
             bgElement.setTint(tint);
         }
-        if (typeof bgElement.setAlpha === 'function') {
-            bgElement.setAlpha(config.backgroundAlpha);
-        }
     };
-
     const setBgPress = () => {
         if (!bgElement) return;
         if (typeof bgElement.setFillStyle === 'function') {
-            bgElement.setFillStyle(config.pressColor);
+            bgElement.setFillStyle(config.pressColor, 1);
             return;
         }
         if (typeof bgElement.setTint === 'function') {
             bgElement.setTint(config.pressImageTint);
         }
-        if (typeof bgElement.setAlpha === 'function') {
-            bgElement.setAlpha(config.backgroundAlpha);
-        }
     };
 
     const resetVisual = () => {
-        if (!button || !button.scene) return;
+        if (!container || !container.scene) return;
         if (scene?.tweens && typeof scene.tweens.killTweensOf === 'function') {
-            scene.tweens.killTweensOf(button);
+            scene.tweens.killTweensOf(container);
         }
         setBgNormal();
-        if (typeof button.setScale === 'function') {
-            button.setScale(BUTTON_STYLES.normal.scale);
-        }
+        container.setScale(BUTTON_STYLES.normal.scale);
     };
+    container.__uiResetVisual = resetVisual;
 
-    // Позволяет извне (например, при открытии модального окна) принудительно сбросить визуал кнопки,
-    // чтобы не застряло состояние hover/pressed
-    button.__uiResetVisual = resetVisual;
-
-    // Если фон — картинка: подгоняем под итоговый размер label
-    if (config.backgroundImageKey && config.resizeBackgroundToLabel && bgElement && typeof bgElement.setDisplaySize === 'function') {
-        const bounds = (typeof button.getBounds === 'function') ? button.getBounds() : null;
-        const w = bounds?.width || button.width;
-        const h = bounds?.height || button.height;
-        if (w && h) {
-            bgElement.setDisplaySize(w, h);
-        }
-        setBgNormal();
-    } else {
-        setBgNormal();
-    }
-
-
+    // ---- Защита от многократного клика ----
     const clickCooldownMs = Math.max(0, Number(config.clickCooldown) || 0);
     let lastClickAt = -Infinity;
-
     let unlockTimer = null;
+
     const clearUnlockTimer = () => {
         if (unlockTimer && typeof unlockTimer.remove === 'function') {
             unlockTimer.remove(false);
@@ -282,30 +290,29 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
     };
 
     const enableButtonInput = () => {
-        if (!button || !button.scene) return;
-        if (typeof button.setInteractive === 'function') {
-            button.setInteractive({ useHandCursor: true });
+        if (!container || !container.scene) return;
+        if (typeof container.setInteractive === 'function') {
+            container.setInteractive({
+                useHandCursor: true,
+                hitArea: new Phaser.Geom.Rectangle(-bgWidth / 2, -bgHeight / 2, bgWidth, bgHeight),
+                callback: Phaser.Geom.Rectangle.Contains
+            });
         }
     };
-
     const disableButtonInput = () => {
-        if (!button || !button.scene) return;
-        if (typeof button.disableInteractive === 'function') {
-            button.disableInteractive();
+        if (!container || !container.scene) return;
+        if (typeof container.disableInteractive === 'function') {
+            container.disableInteractive();
         }
     };
 
-    if (button && typeof button.once === 'function') {
-        button.once('destroy', clearUnlockTimer);
-    }
+    container.once('destroy', clearUnlockTimer);
 
-    button.setInteractive({ useHandCursor: true });
-
-    // Эффекты взаимодействия — используем анимационные параметры из конфигурации
-    button.on('pointerover', function () {
+    // ---- Hover / press / release ----
+    container.on('pointerover', () => {
         setBgHover();
         scene.tweens.add({
-            targets: button,
+            targets: container,
             scaleX: BUTTON_STYLES.hover.scale,
             scaleY: BUTTON_STYLES.hover.scale,
             duration: BUTTON_STYLES.hover.duration,
@@ -316,10 +323,10 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
         }
     });
 
-    button.on('pointerout', function () {
+    container.on('pointerout', () => {
         setBgNormal();
         scene.tweens.add({
-            targets: button,
+            targets: container,
             scaleX: BUTTON_STYLES.normal.scale,
             scaleY: BUTTON_STYLES.normal.scale,
             duration: BUTTON_STYLES.normal.duration,
@@ -327,10 +334,10 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
         });
     });
 
-    button.on('pointerdown', function () {
+    container.on('pointerdown', () => {
         setBgPress();
         scene.tweens.add({
-            targets: button,
+            targets: container,
             scaleX: BUTTON_STYLES.press.scale,
             scaleY: BUTTON_STYLES.press.scale,
             duration: BUTTON_STYLES.press.duration,
@@ -338,11 +345,9 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
         });
     });
 
-    button.on('pointerup', function () {
+    container.on('pointerup', () => {
         const now = (scene?.time && typeof scene.time.now === 'number') ? scene.time.now : Date.now();
 
-        // Защита от многократного клика: в период cooldown просто игнорируем, но принудительно сбрасываем визуал
-        // (чтобы модальная подложка не «съела» pointerout и кнопка не застряла)
         if (clickCooldownMs > 0 && now - lastClickAt < clickCooldownMs) {
             resetVisual();
             return;
@@ -350,25 +355,20 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
 
         lastClickAt = now;
         clearUnlockTimer();
-
-        // На время обработки клика отключаем ввод, чтобы не срабатывать повторно до завершения твина
         disableButtonInput();
 
-        // Важно: не оставляем в состоянии hover/press; после появления модалки может не прийти pointerout
         if (scene?.tweens && typeof scene.tweens.killTweensOf === 'function') {
-            scene.tweens.killTweensOf(button);
+            scene.tweens.killTweensOf(container);
         }
         setBgNormal();
 
         scene.tweens.add({
-            targets: button,
+            targets: container,
             scaleX: BUTTON_STYLES.release.scale,
             scaleY: BUTTON_STYLES.release.scale,
             duration: BUTTON_STYLES.release.duration,
             ease: BUTTON_STYLES.release.ease,
             onComplete: () => {
-                // Сначала полностью возвращаем визуал, затем выполняем бизнес-логику,
-                // чтобы кнопка не «казалась зажатой»
                 resetVisual();
 
                 let clickResult;
@@ -377,11 +377,10 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
                         clickResult = onClick();
                     }
                 } finally {
-                    // Если onClick вернул «уничтожаемый объект» (например dialog) — блокируем до его уничтожения
                     if (
                         config.lockWhileReturnedAlive &&
                         clickResult &&
-                        clickResult !== button &&
+                        clickResult !== container &&
                         typeof clickResult.once === 'function'
                     ) {
                         clickResult.once('destroy', () => {
@@ -391,18 +390,11 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
                         return;
                     }
 
-                    // Иначе разблокируем по cooldown (0 — немедленно)
                     if (clickCooldownMs > 0 && scene?.time && typeof scene.time.delayedCall === 'function') {
                         unlockTimer = scene.time.delayedCall(clickCooldownMs, () => {
                             enableButtonInput();
                             resetVisual();
                         });
-                    } else if (clickCooldownMs > 0) {
-                        unlockTimer = setTimeout(() => {
-                            unlockTimer = null;
-                            enableButtonInput();
-                            resetVisual();
-                        }, clickCooldownMs);
                     } else {
                         enableButtonInput();
                         resetVisual();
@@ -416,11 +408,11 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
         }
     });
 
-    // Управление анимацией появления
+    // ---- Анимация появления ----
     if (config.autoPlayAnim) {
-        button.setScale(0);
+        container.setScale(0);
         scene.tweens.add({
-            targets: button,
+            targets: container,
             scaleX: 1,
             scaleY: 1,
             duration: BUTTON_STYLES.entrance.duration,
@@ -429,26 +421,37 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
         });
     }
 
-    return button;
+    // ---- API совместимости с RexUI ----
+    container.getElement = (key) => {
+        if (key === 'background') return bgElement;
+        if (key === 'text') return textObj;
+        return null;
+    };
+    container.layout = () => container; // no-op для совместимости
+
+    return container;
 }
 
+// ============================================================
+// createDialog — модальное окно на чистом Phaser
+// ============================================================
+
 /**
- * Создать диалоговое окно RexUI (кнопки могут управлять закрытием окна)
+ * Создать модальное диалоговое окно на чистом Phaser (без RexUI).
+ *
  * @param {Phaser.Scene} scene
  * @param {string} title
- * @param {string} content
- * @param {Array} buttons
- * @param {string} buttons[].text
- * @param {Function} buttons[].callback
- * @param {boolean} buttons[].closeDialog
- * @returns {RexUI.Dialog}
+ * @param {string} content — текст (поддерживает \n)
+ * @param {Array} buttons — [{ text, callback?, closeDialog? }]
+ * @param {Object} options
+ *   - singleton: boolean (по умолчанию true)
+ *   - singletonKey: string
+ *   - closeOnBlocker: boolean (по умолчанию false — клик по подложке НЕ закрывает)
+ *   - coverColor, coverAlpha
+ *   - baseDepth
+ * @returns {Phaser.GameObjects.Container}
  */
 export function createDialog(scene, title, content, buttons = [], options = {}) {
-    if (!scene.rexUI) {
-        console.error('RexUI plugin not loaded! Cannot create dialog.');
-        return null;
-    }
-
     const opts = options || {};
     const singleton = opts.singleton !== false;
     const singletonKey = opts.singletonKey || `dialog:${title}`;
@@ -465,8 +468,6 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         return max;
     };
 
-    // Окно/подложка всегда «поверх текущего максимального слоя сцены»,
-    // чтобы scrollablePanel/UI не прорисовывались поверх после самоподъёма depth
     const depthPadding = Number.isFinite(opts.depthPadding) ? opts.depthPadding : 20;
     const baseDepth = Number.isFinite(opts.baseDepth)
         ? opts.baseDepth
@@ -478,8 +479,9 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
 
     const coverColor = (typeof opts.coverColor === 'number') ? opts.coverColor : DIALOG_STYLES.modal.coverColor;
     const coverAlpha = (typeof opts.coverAlpha === 'number') ? opts.coverAlpha : DIALOG_STYLES.modal.coverAlpha;
-    const closeOnBlocker = opts.closeOnBlocker !== undefined ? !!opts.closeOnBlocker : true;
+    const closeOnBlocker = opts.closeOnBlocker !== undefined ? !!opts.closeOnBlocker : false;
 
+    // Сбрасываем визуал нижних кнопок при открытии модалки
     const resetSceneButtonVisuals = () => {
         const list = scene?.children?.list || [];
         for (let i = 0; i < list.length; i++) {
@@ -487,76 +489,70 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             if (go && typeof go.__uiResetVisual === 'function') {
                 go.__uiResetVisual();
             }
-        }
-    };
-
-    const ensureModalBlocker = (targetDialog) => {
-        if (targetDialog && targetDialog.__uiModalBlocker && targetDialog.__uiModalBlocker.scene) {
-            const blk = targetDialog.__uiModalBlocker;
-            blk.setDepth(coverDepth);
-            blk.setVisible(true);
-            return blk;
-        }
-
-        const cam = scene.cameras.main;
-        const blocker = scene.add.rectangle(0, 0, cam.width, cam.height, coverColor, coverAlpha)
-            .setOrigin(0, 0)
-            .setScrollFactor(0)
-            .setDepth(coverDepth);
-
-        if (typeof blocker.setInteractive === 'function') {
-            blocker.setInteractive();
-        }
-
-        if (closeOnBlocker && typeof blocker.on === 'function') {
-            blocker.on('pointerup', () => {
-                if (targetDialog && typeof targetDialog.closeDialog === 'function') {
-                    targetDialog.closeDialog();
-                } else if (targetDialog && typeof targetDialog.modalClose === 'function') {
-                    targetDialog.modalClose();
-                }
-            });
-        }
-
-        if (targetDialog) {
-            targetDialog.__uiModalBlocker = blocker;
-            if (typeof targetDialog.once === 'function') {
-                targetDialog.once('destroy', () => {
-                    if (blocker && blocker.scene && typeof blocker.destroy === 'function') {
-                        blocker.destroy();
+            // Рекурсивно для контейнеров
+            if (go && Array.isArray(go.list)) {
+                for (let j = 0; j < go.list.length; j++) {
+                    const child = go.list[j];
+                    if (child && typeof child.__uiResetVisual === 'function') {
+                        child.__uiResetVisual();
                     }
-                });
+                }
             }
         }
-
-        return blocker;
     };
 
+    // Singleton — если окно уже открыто, просто поднимаем его наверх
     if (singleton) {
         if (!scene.__uiSingletonDialogs) scene.__uiSingletonDialogs = new Map();
         const existing = scene.__uiSingletonDialogs.get(singletonKey);
         if (existing && existing.scene && existing.active !== false) {
-            // При появлении окна нижние кнопки могли застрять в hover/pressed из-за подложки,
-            // сначала принудительно сбрасываем
             resetSceneButtonVisuals();
-            ensureModalBlocker(existing);
-
             if (typeof existing.setDepth === 'function') existing.setDepth(dialogDepth);
             if (typeof existing.setVisible === 'function') existing.setVisible(true);
-            if (typeof existing.layout === 'function') existing.layout();
-
-            // По возможности поднимаем и actions (в некоторых версиях rexUI actions не являются children dialog)
-            const actions = existing.getElement ? existing.getElement('actions') : null;
-            if (actions && typeof actions.setDepth === 'function') actions.setDepth(buttonDepth);
-
             return existing;
         }
     }
 
-    let dialog;
+    const cam = scene.cameras.main;
+    const centerX = cam.centerX;
+    const centerY = cam.centerY;
 
-    // Переиспользуем createButton для формирования массива кнопок
-    const actionButtons = buttons.map((btnConfig, index) => {
+    // Подложка (блокер)
+    const blocker = scene.add.rectangle(0, 0, cam.width, cam.height, coverColor, coverAlpha)
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(coverDepth);
+    blocker.setInteractive();
+
+    // Контейнер диалога
+    const dialog = scene.add.container(centerX, centerY);
+    dialog.setDepth(dialogDepth);
+    dialog.setScrollFactor(0);
+
+    // Размеры панели — адаптируются к контенту
+    const dialogWidth = DIALOG_STYLES.width;
+    const pad = DIALOG_STYLES.padding;
+
+    // Заголовок
+    const titleText = scene.add.text(0, 0, title, {
+        fontSize: DIALOG_STYLES.title.fontSize,
+        fontStyle: DIALOG_STYLES.title.fontWeight,
+        color: TYPOGRAPHY.textColor.primary,
+        fontFamily: TYPOGRAPHY.fontFamily.default
+    }).setOrigin(0.5, 0);
+
+    // Контент
+    const contentText = scene.add.text(0, 0, content, {
+        fontSize: DIALOG_STYLES.content.fontSize,
+        color: TYPOGRAPHY.textColor.primary,
+        fontFamily: TYPOGRAPHY.fontFamily.default,
+        align: 'center',
+        wordWrap: { width: DIALOG_STYLES.content.wrapWidth }
+    }).setOrigin(0.5, 0);
+
+    // Кнопки
+    const actionButtons = [];
+    const actionContainers = buttons.map((btnConfig, index) => {
         const isPrimary = index === 0;
         const shouldCloseDialog = btnConfig.closeDialog !== false;
 
@@ -564,18 +560,12 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             if (btnConfig.callback && typeof btnConfig.callback === 'function') {
                 btnConfig.callback(dialog);
             }
-
             if (shouldCloseDialog && dialog) {
-                actionButtons.forEach(btn => {
-                    btn.disableInteractive();
-                    scene.tweens.killTweensOf(btn);
-                    btn.setScale(1);
-                });
-                dialog.modalClose();
+                closeDialog();
             }
         };
 
-        return createButton(scene, 0, 0, btnConfig.text, wrappedCallback, {
+        const btn = createButton(scene, 0, 0, btnConfig.text, wrappedCallback, {
             backgroundColor: isPrimary ? COLORS.primary : COLORS.secondary,
             hoverColor: isPrimary ? COLORS.light : COLORS.secondaryLight,
             pressColor: isPrimary ? COLORS.dark : COLORS.secondaryDark,
@@ -584,142 +574,173 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             autoPlayAnim: false,
             clickCooldown: 0
         });
+        btn.setDepth(buttonDepth);
+        actionButtons.push(btn);
+        return btn;
     });
 
-    // Создаём компонент Dialog
-    dialog = scene.rexUI.add.dialog({
-        x: scene.cameras.main.centerX,
-        y: scene.cameras.main.centerY,
-        width: DIALOG_STYLES.width,
+    // Добавляем элементы в контейнер
+    dialog.add(blocker); // не добавляем — blocker уже на сцене с глубиной coverDepth
+    // Внимание: blocker не должен быть внутри контейнера, т.к. у него свой depth и scrollFactor
+    // Убираем его из контейнера (если попал) и используем как отдельный объект
+    dialog.remove(blocker);
 
-        background: createRoundRectangle(
-            scene,
-            COLORS.dialogBg,
-            DIALOG_STYLES.cornerRadius,
-            COLORS.dialogStroke,
-            DIALOG_STYLES.strokeWidth
-        ),
+    dialog.add(titleText);
+    dialog.add(contentText);
+    actionContainers.forEach((btn) => dialog.add(btn));
 
-        title: scene.add.text(0, 0, title, {
-            fontSize: DIALOG_STYLES.title.fontSize,
-            fontWeight: DIALOG_STYLES.title.fontWeight,
-            color: TYPOGRAPHY.textColor.primary,
-            fontFamily: TYPOGRAPHY.fontFamily.default
-        }),
+    // ----- Раскладка содержимого -----
+    const layout = () => {
+        const titleH = titleText.height || 30;
+        const contentH = contentText.height || 60;
 
-        content: scene.rexUI.add.BBCodeText(0, 0, content, {
-            fontSize: DIALOG_STYLES.content.fontSize,
-            color: TYPOGRAPHY.textColor.primary,
-            align: 'center',
-            fontFamily: TYPOGRAPHY.fontFamily.default,
-            wrap: { mode: 'word', width: DIALOG_STYLES.content.wrapWidth }
-        }),
-
-        actions: actionButtons,
-
-        space: DIALOG_STYLES.padding,
-
-        align: {
-            title: 'center',
-            content: 'center',
-            actions: 'center'
-        },
-
-        expand: {
-            title: false,
-            content: false,
-            actions: false
+        let totalH = pad.top + titleH + pad.title + contentH + pad.content;
+        if (actionContainers.length > 0) {
+            totalH += pad.action + 50; // высота кнопки ~50
         }
-    });
+        totalH += pad.bottom;
 
-    // Сначала сбрасываем визуал нижних кнопок (чтобы не застряло hover/pressed), затем ставим видимую и интерактивную подложку
-    resetSceneButtonVisuals();
-    ensureModalBlocker(dialog);
+        // Перерисовываем фон панели
+        panelBg.clear();
+        panelBg.fillStyle(COLORS.dialogBg, 1);
+        panelBg.fillRoundedRect(-dialogWidth / 2, -totalH / 2, dialogWidth, totalH, DIALOG_STYLES.cornerRadius);
+        panelBg.lineStyle(DIALOG_STYLES.strokeWidth, COLORS.dialogStroke, 1);
+        panelBg.strokeRoundedRect(-dialogWidth / 2, -totalH / 2, dialogWidth, totalH, DIALOG_STYLES.cornerRadius);
+        panelBg.setDepth(dialogDepth - 1);
+        dialog.panelHeight = totalH;
 
-    dialog.setDepth(dialogDepth);
-    dialog.layout();
-    dialog.setVisible(true);
-    dialog.setScale(1);
-    actionButtons.forEach(btn => btn.setDepth(buttonDepth));
+        // Заголовок
+        titleText.setPosition(0, -totalH / 2 + pad.top);
 
-    if (singleton) {
-        scene.__uiSingletonDialogs.set(singletonKey, dialog);
-        if (dialog && typeof dialog.once === 'function') {
-            dialog.once('destroy', () => {
-                if (scene.__uiSingletonDialogs) {
-                    scene.__uiSingletonDialogs.delete(singletonKey);
-                }
+        // Контент
+        contentText.setPosition(0, -totalH / 2 + pad.top + titleH + pad.title);
+
+        // Кнопки — в один ряд
+        const n = actionContainers.length;
+        const btnY = totalH / 2 - pad.bottom - 25;
+        if (n === 1) {
+            actionContainers[0].setPosition(0, btnY);
+        } else if (n > 1) {
+            const spacing = (dialogWidth - 40) / n;
+            actionContainers.forEach((btn, i) => {
+                const x = -dialogWidth / 2 + 20 + spacing / 2 + i * spacing;
+                btn.setPosition(x, btnY);
             });
-        }
-    }
-
-    // Модальное появление: встроенную подложку RexUI делаем прозрачной,
-    // чтобы не конфликтовать по слоям/визуалу с нашей собственной подложкой
-    dialog.modalPromise({
-        manualClose: true,
-        defaultBehavior: false,
-        duration: {
-            in: DIALOG_STYLES.modal.durationIn,
-            out: DIALOG_STYLES.modal.durationOut
-        },
-        cover: {
-            color: coverColor,
-            alpha: 0,
-            depth: coverDepth
-        },
-        transitIn: function (gameObject, duration) {
-            gameObject.setVisible(true);
-            gameObject.setScale(1);
-            return scene.tweens.add({
-                targets: gameObject,
-                scaleX: { from: 0.1, to: 1 },
-                scaleY: { from: 0.1, to: 1 },
-                duration: duration,
-                ease: DIALOG_STYLES.animation.transitInEase
-            });
-        },
-        transitOut: function (gameObject, duration) {
-            return scene.tweens.add({
-                targets: gameObject,
-                scaleX: 0,
-                scaleY: 0,
-                duration: duration,
-                ease: DIALOG_STYLES.animation.transitOutEase
-            });
-        }
-    }).then(() => {
-        dialog.destroy();
-    });
-
-    // Единый метод обновления содержимого
-    dialog.setContentText = function (text) {
-        const contentElement = dialog.getElement('content');
-        if (contentElement) {
-            contentElement.setText(text);
-            dialog.layout();
         }
     };
 
-    // Добавляем метод ручного закрытия
-    dialog.closeDialog = function () {
-        actionButtons.forEach(btn => {
-            btn.disableInteractive();
-            scene.tweens.killTweensOf(btn);
+    // Фон панели (graphics) — должен быть добавлен ПЕРВЫМ в контейнер, чтобы быть позади
+    const panelBg = scene.add.graphics();
+    panelBg.setDepth(dialogDepth - 1);
+    panelBg.setScrollFactor(0);
+    // Вставляем panelBg первым в контейнер
+    dialog.addAt(panelBg, 0);
+
+    layout();
+
+    // ----- Закрытие диалога -----
+    let isClosing = false;
+    const closeDialog = () => {
+        if (isClosing) return;
+        isClosing = true;
+
+        // Блокируем кнопки
+        actionButtons.forEach((btn) => {
+            if (typeof btn.disableInteractive === 'function') btn.disableInteractive();
+            if (scene?.tweens && typeof scene.tweens.killTweensOf === 'function') {
+                scene.tweens.killTweensOf(btn);
+            }
             btn.setScale(1);
         });
-        dialog.modalClose();
+
+        // Анимация исчезновения
+        scene.tweens.add({
+            targets: dialog,
+            scaleX: 0.1,
+            scaleY: 0.1,
+            alpha: 0,
+            duration: DIALOG_STYLES.modal.durationOut,
+            ease: DIALOG_STYLES.animation.transitOutEase,
+            onComplete: () => {
+                // Уничтожаем blocker
+                if (blocker && blocker.scene) blocker.destroy();
+                // Уничтожаем диалог
+                dialog.destroy();
+            }
+        });
+
+        // Также гасим подложку
+        scene.tweens.add({
+            targets: blocker,
+            alpha: 0,
+            duration: DIALOG_STYLES.modal.durationOut,
+            onComplete: () => {
+                if (blocker && blocker.scene) blocker.destroy();
+            }
+        });
     };
+
+    // Если клик по подложке должен закрывать
+    if (closeOnBlocker) {
+        blocker.on('pointerup', () => closeDialog());
+    }
+
+    // ----- API совместимости с RexUI Dialog -----
+    dialog.active = true;
+    dialog.__uiModalBlocker = blocker;
+    dialog.closeDialog = closeDialog;
+    dialog.modalClose = closeDialog; // алиас для совместимости
+    dialog.setContentText = (text) => {
+        contentText.setText(text);
+        layout();
+    };
+    dialog.layout = layout;
+    dialog.getElement = (key) => {
+        if (key === 'title') return titleText;
+        if (key === 'content') return contentText;
+        if (key === 'actions') return actionContainers;
+        if (key === 'background') return panelBg;
+        return null;
+    };
+
+    // Singleton registry
+    if (singleton) {
+        scene.__uiSingletonDialogs.set(singletonKey, dialog);
+        dialog.once('destroy', () => {
+            if (scene.__uiSingletonDialogs) {
+                scene.__uiSingletonDialogs.delete(singletonKey);
+            }
+        });
+    }
+
+    // Анимация появления
+    resetSceneButtonVisuals();
+    dialog.setScale(0.1);
+    dialog.setAlpha(0);
+    blocker.setAlpha(0);
+    scene.tweens.add({
+        targets: dialog,
+        scaleX: 1,
+        scaleY: 1,
+        alpha: 1,
+        duration: DIALOG_STYLES.modal.durationIn,
+        ease: DIALOG_STYLES.animation.transitInEase
+    });
+    scene.tweens.add({
+        targets: blocker,
+        alpha: coverAlpha,
+        duration: DIALOG_STYLES.modal.durationIn
+    });
 
     return dialog;
 }
 
+// ============================================================
+// createParticleExplosion — взрыв частиц (без изменений)
+// ============================================================
+
 /**
  * Создать эффект взрыва частиц
- * @param {Phaser.Scene} scene
- * @param {number} x
- * @param {number} y
- * @param {string} texture - ключ текстуры частиц
- * @param {number} count - количество частиц
  */
 export function createParticleExplosion(scene, x, y, texture = 'particle', count = 20) {
     const emitter = scene.add.particles(x, y, texture, {
@@ -735,7 +756,6 @@ export function createParticleExplosion(scene, x, y, texture = 'particle', count
         emitter.explode(count);
     }
 
-    // Авто-уничтожение
     scene.time.delayedCall(PARTICLE_STYLES.destroyDelay, () => {
         if (emitter && typeof emitter.destroy === 'function') {
             emitter.destroy();
@@ -745,13 +765,12 @@ export function createParticleExplosion(scene, x, y, texture = 'particle', count
     return emitter;
 }
 
+// ============================================================
+// createFloatingText — всплывающий текст (без изменений)
+// ============================================================
+
 /**
  * Создать всплывающий текст (число урона/подсказка очков)
- * @param {Phaser.Scene} scene
- * @param {number} x
- * @param {number} y
- * @param {string} text
- * @param {string} color
  */
 export function createFloatingText(scene, x, y, text, color = TYPOGRAPHY.textColor.primary) {
     const floatText = scene.add.text(x, y, text, {
@@ -778,75 +797,42 @@ export function createFloatingText(scene, x, y, text, color = TYPOGRAPHY.textCol
     return floatText;
 }
 
+// ============================================================
+// createScaledImage — изображение с адаптивным масштабом (без изменений)
+// ============================================================
+
 /**
  * Создать изображение с адаптивным масштабированием
- * @param {Phaser.Scene} scene
- * @param {number} x
- * @param {number} y
- * @param {string} texture
- * @param {number} maxWidth - максимальная ширина
- * @param {number} maxHeight - максимальная высота (необязательно)
  */
 export function createScaledImage(scene, x, y, texture, maxWidth, maxHeight = null) {
     const image = scene.add.image(x, y, texture);
-    
-    // Если высота не задана — используем ширину
+
     if (!maxHeight) {
         maxHeight = maxWidth;
     }
-    
-    // Вычисляем коэффициент масштабирования
+
     const scaleX = maxWidth / image.width;
     const scaleY = maxHeight / image.height;
     const scale = Math.min(scaleX, scaleY);
-    
+
     if (image && typeof image.setScale === 'function') {
         image.setScale(scale);
     }
-    
+
     return image;
 }
 
-/**
- * Создать объект форматированного текста BBCodeText (для сюжетного диалога)
- * @param {Phaser.Scene} scene
- * @param {number} wrapWidth - ширина переноса текста
- * @param {number} fixedWidth - фиксированная ширина
- * @param {number} fixedHeight - фиксированная высота
- * @returns {RexUI.BBCodeText}
- */
-function createBBCodeText(scene, wrapWidth, fixedWidth, fixedHeight) {
-    return scene.rexUI.add.BBCodeText(0, 0, '', {
-        fixedWidth: fixedWidth,
-        fixedHeight: fixedHeight,
-        fontSize: STORY_TEXTBOX_STYLES.textBox.fontSize,
-        color: TYPOGRAPHY.textColor.primary,
-        fontFamily: TYPOGRAPHY.fontFamily.default,
-        wrap: {
-            mode: 'word',
-            width: wrapWidth
-        },
-        maxLines: STORY_TEXTBOX_STYLES.textBox.maxLines
-    });
-}
+// ============================================================
+// createStoryTextBox — упрощённая реализация на чистом Phaser
+// (без эффекта печатной машинки постраничной навигации RexUI)
+// ============================================================
 
 /**
- * Создать сюжетное диалоговое окно (с эффектом печатной машинки)
- * @param {Phaser.Scene} scene
- * @param {Object} config - объект конфигурации
- * @param {string} config.characterName - имя персонажа
- * @param {string} config.content - содержимое диалога (поддерживает теги BBCode)
- * @param {string} config.avatarTexture - ключ текстуры аватара (необязательно)
- * @param {number} config.typingSpeed - скорость печати (мс/символ, по умолчанию 50)
- * @param {Function} config.onComplete - колбэк завершения сюжета (необязательно)
- * @returns {Object} - объект, содержащий textBox и nameLabel
+ * Создать сюжетное диалоговое окно.
+ * Упрощённая реализация: один блок текста + имя говорящего.
+ * Клик по экрану — закрывает.
  */
 export function createStoryTextBox(scene, config = {}) {
-    if (!scene.rexUI) {
-        console.error('RexUI plugin not loaded! Cannot create story textbox.');
-        return null;
-    }
-
     const {
         characterName = 'Рассказчик',
         content = '',
@@ -857,149 +843,96 @@ export function createStoryTextBox(scene, config = {}) {
         y = scene.cameras.main.height + STORY_TEXTBOX_STYLES.defaultPosition.yOffset
     } = config;
 
-    // 1. Создаём метку имени
-    const nameLabel = scene.rexUI.add.label({
-        background: createRoundRectangle(
-            scene, 
-            COLORS.storyPrimary, 
-            STORY_TEXTBOX_STYLES.nameLabel.cornerRadius, 
-            COLORS.storyLight, 
-            STORY_TEXTBOX_STYLES.nameLabel.strokeWidth
-        ),
-        text: scene.add.text(0, 0, characterName, {
-            fontSize: STORY_TEXTBOX_STYLES.nameLabel.fontSize,
-            color: TYPOGRAPHY.textColor.primary,
-            fontFamily: TYPOGRAPHY.fontFamily.default,
-            fontWeight: TYPOGRAPHY.fontWeight.bold
-        }),
-        space: STORY_TEXTBOX_STYLES.nameLabel.padding
-    });
-
-    // 2. Создаём контейнер основного диалога
     const { wrapWidth, fixedWidth, fixedHeight } = STORY_TEXTBOX_STYLES.textBox;
 
-    const textBox = scene.rexUI.add.textBox({
-        background: createRoundRectangle(
-            scene, 
-            COLORS.storyPrimary, 
-            STORY_TEXTBOX_STYLES.textBox.cornerRadius, 
-            COLORS.storyLight, 
-            STORY_TEXTBOX_STYLES.textBox.strokeWidth
-        ),
+    // Метка имени
+    const nameLabel = scene.add.text(0, 0, characterName, {
+        fontSize: STORY_TEXTBOX_STYLES.nameLabel.fontSize,
+        color: TYPOGRAPHY.textColor.primary,
+        fontFamily: TYPOGRAPHY.fontFamily.default,
+        fontStyle: TYPOGRAPHY.fontWeight.bold,
+        backgroundColor: '#000000',
+        padding: STORY_TEXTBOX_STYLES.nameLabel.padding
+    }).setOrigin(0, 1);
 
-        icon: avatarTexture ? 
-            scene.add.image(0, 0, avatarTexture).setDisplaySize(
-                STORY_TEXTBOX_STYLES.avatar.displayWidth, 
-                STORY_TEXTBOX_STYLES.avatar.displayHeight
-            ) : undefined,
+    // Основной текст
+    const textBox = scene.add.text(0, 0, content, {
+        fontSize: STORY_TEXTBOX_STYLES.textBox.fontSize,
+        color: TYPOGRAPHY.textColor.primary,
+        fontFamily: TYPOGRAPHY.fontFamily.default,
+        wordWrap: { width: wrapWidth },
+        maxLines: STORY_TEXTBOX_STYLES.textBox.maxLines
+    }).setOrigin(0.5);
 
-        text: createBBCodeText(scene, wrapWidth, fixedWidth, fixedHeight),
+    // Фон
+    const bg = scene.add.graphics();
+    bg.fillStyle(COLORS.storyPrimary, 1);
+    bg.fillRoundedRect(-fixedWidth / 2, -fixedHeight / 2, fixedWidth, fixedHeight, STORY_TEXTBOX_STYLES.textBox.cornerRadius);
+    bg.lineStyle(STORY_TEXTBOX_STYLES.textBox.strokeWidth, COLORS.storyLight, 1);
+    bg.strokeRoundedRect(-fixedWidth / 2, -fixedHeight / 2, fixedWidth, fixedHeight, STORY_TEXTBOX_STYLES.textBox.cornerRadius);
 
-        action: scene.add.image(0, 0, 'nextPageIcon')
-            .setTint(COLORS.storyLight)
-            .setVisible(false)
-            .setDisplaySize(
-                STORY_TEXTBOX_STYLES.actionIcon.displayWidth, 
-                STORY_TEXTBOX_STYLES.actionIcon.displayHeight
-            ),
+    // Контейнер
+    const storyDialog = scene.add.container(x, y);
+    storyDialog.add(bg);
+    storyDialog.add(textBox);
+    storyDialog.add(nameLabel);
+    nameLabel.setPosition(-fixedWidth / 2 + STORY_TEXTBOX_STYLES.padding.nameLeft, -fixedHeight / 2 - STORY_TEXTBOX_STYLES.padding.nameBottom);
 
-        space: {
-            left: STORY_TEXTBOX_STYLES.padding.left,
-            right: STORY_TEXTBOX_STYLES.padding.right,
-            top: STORY_TEXTBOX_STYLES.padding.top,
-            bottom: STORY_TEXTBOX_STYLES.padding.bottom,
-            icon: avatarTexture ? STORY_TEXTBOX_STYLES.padding.icon : 0,
-            text: STORY_TEXTBOX_STYLES.padding.text
-        }
-    });
-
-    // 3. Объединяем метку имени и диалоговое окно
-    const storyDialog = scene.rexUI.add.sizer({
-        orientation: 'y',
-        x: x,
-        y: y
-    })
-    .add(nameLabel, { 
-        align: 'left', 
-        padding: { 
-            bottom: STORY_TEXTBOX_STYLES.padding.nameBottom, 
-            left: STORY_TEXTBOX_STYLES.padding.nameLeft 
-        } 
-    })
-    .add(textBox)
-    .layout();
-
-    // 4. Устанавливаем уровень слоя
     storyDialog.setDepth(STORY_TEXTBOX_STYLES.depth);
 
-    // 5. Добавляем анимацию «дыхания» иконки «продолжить»
-    const actionIcon = textBox.getElement('action');
-    if (actionIcon) {
-        scene.tweens.add({
-            targets: actionIcon,
-            scaleX: STORY_TEXTBOX_STYLES.typing.iconBreath.scale,
-            scaleY: STORY_TEXTBOX_STYLES.typing.iconBreath.scale,
-            duration: STORY_TEXTBOX_STYLES.typing.iconBreath.duration,
-            yoyo: true,
-            repeat: -1,
-            ease: STORY_TEXTBOX_STYLES.typing.iconBreath.ease
+    // Эффект печатной машинки (упрощённый)
+    let isTyping = false;
+    let typeIndex = 0;
+    let typeTimer = null;
+
+    const startTyping = () => {
+        isTyping = true;
+        textBox.setText('');
+        typeIndex = 0;
+        typeTimer = scene.time.addEvent({
+            delay: typingSpeed,
+            callback: () => {
+                if (typeIndex >= content.length) {
+                    typeTimer.remove();
+                    isTyping = false;
+                    return;
+                }
+                textBox.setText(content.substring(0, typeIndex + 1));
+                typeIndex++;
+                if (scene.audioManager && typeof scene.audioManager.playTypewriter === 'function') {
+                    scene.audioManager.playTypewriter();
+                }
+            },
+            loop: true
         });
-    }
-
-    // 6. Запускаем эффект печатной машинки
-    textBox.start(content, typingSpeed);
-
-    // 7. Логика взаимодействия
-    let isCurrentlyTyping = false;
-
-    textBox.on('type', function () {
-        isCurrentlyTyping = true;
-        if (actionIcon) actionIcon.setVisible(false);
-        // Воспроизводим звук печатной машинки
-        if (scene.audioManager && typeof scene.audioManager.playTypewriter === 'function') {
-            scene.audioManager.playTypewriter();
-        }
-    });
-
-    textBox.on('pageend', function () {
-        isCurrentlyTyping = false;
-        if (actionIcon) actionIcon.setVisible(true);
-    });
-
-    // 8. Глобальная обработка клика
-    const clickHandler = function () {
-        if (isCurrentlyTyping) {
-            textBox.stop(true);
-            isCurrentlyTyping = false;
-            if (actionIcon) actionIcon.setVisible(true);
-        } else {
-            if (!textBox.isLastPage) {
-                textBox.typeNextPage();
-                if (actionIcon) actionIcon.setVisible(false);
-            } else {
-                console.log('Сюжетный диалог завершён');
-                scene.input.off('pointerdown', clickHandler);
-                
-                scene.tweens.add({
-                    targets: storyDialog,
-                    alpha: 0,
-                    y: y + STORY_TEXTBOX_STYLES.animation.exit.offsetY,
-                    duration: STORY_TEXTBOX_STYLES.animation.exit.duration,
-                    ease: STORY_TEXTBOX_STYLES.animation.exit.ease,
-                    onComplete: () => {
-                        storyDialog.destroy();
-                        if (onComplete && typeof onComplete === 'function') {
-                            onComplete();
-                        }
-                    }
-                });
-            }
-        }
     };
 
+    const clickHandler = () => {
+        if (isTyping) {
+            // Пропускаем анимацию печати
+            if (typeTimer) typeTimer.remove();
+            textBox.setText(content);
+            isTyping = false;
+        } else {
+            scene.input.off('pointerdown', clickHandler);
+            scene.tweens.add({
+                targets: storyDialog,
+                alpha: 0,
+                y: y + STORY_TEXTBOX_STYLES.animation.exit.offsetY,
+                duration: STORY_TEXTBOX_STYLES.animation.exit.duration,
+                ease: STORY_TEXTBOX_STYLES.animation.exit.ease,
+                onComplete: () => {
+                    storyDialog.destroy();
+                    if (onComplete && typeof onComplete === 'function') {
+                        onComplete();
+                    }
+                }
+            });
+        }
+    };
     scene.input.on('pointerdown', clickHandler);
 
-    // 9. Анимация появления
+    // Анимация появления
     storyDialog.setAlpha(0);
     storyDialog.y += STORY_TEXTBOX_STYLES.animation.entrance.offsetY;
     scene.tweens.add({
@@ -1007,24 +940,32 @@ export function createStoryTextBox(scene, config = {}) {
         alpha: 1,
         y: y,
         duration: STORY_TEXTBOX_STYLES.animation.entrance.duration,
-        ease: STORY_TEXTBOX_STYLES.animation.entrance.ease
+        ease: STORY_TEXTBOX_STYLES.animation.entrance.ease,
+        onComplete: () => startTyping()
     });
 
-    // 10. Возвращаем объект диалога
     return {
         textBox: textBox,
         nameLabel: nameLabel,
         container: storyDialog,
         destroy: () => {
             scene.input.off('pointerdown', clickHandler);
+            if (typeTimer) typeTimer.remove();
             storyDialog.destroy();
         }
     };
 }
 
-export function createScrollableList(scene, config = {}) {
-    if (!scene.rexUI) return null;
+// ============================================================
+// createScrollableList — упрощённая реализация на чистом Phaser
+// ============================================================
 
+/**
+ * Создать прокручиваемый список.
+ * Упрощённая реализация: один вертикальный контейнер с элементами,
+ * скролл колёсиком мыши или перетаскиванием.
+ */
+export function createScrollableList(scene, config = {}) {
     const {
         x = 0, y = 0, width = 400, height = 500,
         headerTitle = 'Inventory',
@@ -1032,160 +973,69 @@ export function createScrollableList(scene, config = {}) {
         depth = 0
     } = config;
 
-    const STYLES = {
-        bg: 0x2d2d2d, stroke: 0x5e92f3,
-        track: 0x1a1a1a, thumb: 0x5e92f3,
-        // space.panel -> внутри rexScrollablePanel отображается как space.child
-        // - panel.right: оставляем правый внутренний отступ для прокручиваемого контента, чтобы не прилипал к скроллбару
-        // - slider: управляет расстоянием между panel и скроллбаром
-        space: {
-            left: 10,
-            right: 10,
-            top: 10,
-            bottom: 10,
-            item: 5,
-            panel: { left: 0, right: 12 },
-            slider: 10
-        }
-    };
+    // Фон
+    const bg = scene.add.graphics();
+    bg.fillStyle(0x2d2d2d, 1);
+    bg.fillRoundedRect(0, 0, width, height, 10);
+    bg.lineStyle(2, 0x5e92f3, 1);
+    bg.strokeRoundedRect(0, 0, width, height, 10);
 
-    // 1. Контейнер содержимого
-    const contentPanel = scene.rexUI.add.sizer({
-        orientation: 'y',
-        space: { item: STYLES.space.item }
+    // Заголовок
+    const header = scene.add.text(12, 8, headerTitle, {
+        fontSize: '20px',
+        fontStyle: 'bold',
+        color: '#ffffff'
     });
 
-    // Для решения проблемы перекрытия при «сначала item, потом panel»: держим глубину item синхронной с панелью
+    // Контейнер
+    const container = scene.add.container(x, y);
+    container.add(bg);
+    container.add(header);
+    container.setDepth(depth);
+
+    // Элементы списка
     const itemNodes = [];
+    let itemY = 50;
+    const itemHeight = 52;
 
-    // 2. Основная панель
-    const scrollable = scene.rexUI.add.scrollablePanel({
-        x: x, y: y,
-        width: width, height: height,
-        scrollMode: 0,
-
-        background: scene.rexUI.add.roundRectangle(0, 0, 2, 2, 10, STYLES.bg)
-            .setStrokeStyle(2, STYLES.stroke),
-
-        panel: {
-            child: contentPanel,
-            mask: { padding: 1 }
-        },
-
-        slider: {
-            // Вертикальный скроллбар: делаем thumb «длинной капсулой», чтобы не выглядел как точка
-            track: scene.rexUI.add.roundRectangle(0, 0, 12, 10, 6, STYLES.track),
-            thumb: scene.rexUI.add.roundRectangle(0, 0, 12, 60, 6, STYLES.thumb),
-            input: 'drag',
-
-            // === КРИТИЧЕСКИЕ ИСПРАВЛЕНИЯ ===
-            hideUnscrollableSlider: true, // скрываем, когда прокрутка не нужна — прерывает зацикливание в некоторых версиях
-            minThumbSize: 48,             // минимальная высота, чтобы всегда выглядело как «длинная полоса»
-            // ======================
-        },
-
-        scroller: {
-            threshold: 10,
-            slidingDeceleration: 5000,
-            backDeceleration: 2000,
-        },
-
-        header: scene.rexUI.add.label({
-            // Немного увеличиваем высоту заголовка, чтобы текст сверху не обрезался
-            height: 52,
-            orientation: 'x',
-            background: scene.rexUI.add.roundRectangle(0, 0, 2, 2, { tl: 10, tr: 10 }, 0x444444),
-            text: scene.add.text(0, 0, headerTitle, {
-                fontSize: '20px',
-                fontStyle: 'bold',
-                padding: { x: 0, y: 2 }
-            }).setOrigin(0, 0.5),
-            space: { left: 12, top: 8, bottom: 8 }
-        }),
-
-        space: STYLES.space
-    });
-
-    const originalSetDepth = scrollable.setDepth ? scrollable.setDepth.bind(scrollable) : null;
-    scrollable.setDepthAll = (d) => {
-        if (originalSetDepth) originalSetDepth(d);
-        // Гарантируем, что item списка не перекроет фон panel
-        itemNodes.forEach((n) => {
-            if (n && typeof n.setDepth === 'function') n.setDepth(d + 1);
-        });
-        return scrollable;
-    };
-    // Совместимость с внешними вызовами list.setDepth(...)
-    if (originalSetDepth) scrollable.setDepth = scrollable.setDepthAll;
-
-    // 3. Подключаем методы
-    // item поддерживает:
-    // - string: простой текстовый пункт
-    // - { text, onClick?, backgroundColor? }
-    // - { type: 'spacer', height }
-    // - { node: RexUI/GameObject, expand? }
-    scrollable.addItem = (item) => {
-        // spacer
+    const addItem = (item) => {
         if (item && typeof item === 'object' && item.type === 'spacer') {
-            const h = Math.max(1, item.height || STYLES.space.item);
-            const zone = scene.add.zone(0, 0, 1, h);
-            contentPanel.add(zone, 0, 'center', 0, true);
-            itemNodes.push(zone);
+            itemY += Math.max(1, item.height || 5);
             return;
         }
 
-        // пользовательский узел
-        if (item && typeof item === 'object' && item.node) {
-            const node = item.node;
-            // Более универсальная сигнатура RexUI: add(child, proportion, align, padding, expand)
-            contentPanel.add(node, 0, 'center', 0, item.expand !== false);
-            itemNodes.push(node);
-            // Сразу синхронизируем глубину (снаружи может быть вызван setDepth позже)
-            if (typeof scrollable.depth === 'number' && typeof node.setDepth === 'function') {
-                node.setDepth(scrollable.depth + 1);
-            }
-            return;
-        }
-
-        // нормализуем текстовый пункт
         const text = typeof item === 'string' ? item : (item?.text ?? '');
         const bgColor = (typeof item === 'object' && item.backgroundColor != null) ? item.backgroundColor : 0x3e3e3e;
-        const hoverColor = 0x555555;
 
-        const bg = scene.rexUI.add.roundRectangle(0, 0, 20, 20, 8, bgColor);
-        const label = scene.rexUI.add.label({
-            height: 52,
-            orientation: 'x',
-            background: bg,
-            text: scene.add.text(0, 0, text, { fontSize: '16px' }),
-            space: { left: 12, right: 12, top: 10, bottom: 10 },
+        const itemBg = scene.add.rectangle(10, itemY, width - 20, itemHeight - 4, bgColor, 1)
+            .setOrigin(0, 0);
+        itemBg.setStrokeStyle(1, 0x555555);
+        itemBg.setInteractive({ useHandCursor: true });
+
+        const label = scene.add.text(20, itemY + 12, text, {
+            fontSize: '16px',
+            color: '#ffffff'
         });
 
-        label.setInteractive({ useHandCursor: true })
-            .on('pointerover', () => bg.setFillStyle(hoverColor))
-            .on('pointerout', () => bg.setFillStyle(bgColor));
+        itemBg.on('pointerover', () => itemBg.setFillStyle(0x555555, 1));
+        itemBg.on('pointerout', () => itemBg.setFillStyle(bgColor, 1));
 
         if (item && typeof item === 'object' && typeof item.onClick === 'function') {
-            label.on('pointerup', () => item.onClick(item));
+            itemBg.on('pointerup', () => item.onClick(item));
         }
 
-        contentPanel.add(label, 0, 'center', 0, true);
-        itemNodes.push(label);
+        container.add(itemBg);
+        container.add(label);
+        itemNodes.push({ bg: itemBg, label });
+        itemY += itemHeight;
     };
 
-    // 4. Заполняем данными
     if (items.length > 0) {
-        items.forEach((item) => scrollable.addItem(item));
-    } else {
-        // Предотвращаем ошибку расчёта высоты для пустого списка
-        const zone = scene.add.zone(0, 0, 1, 1);
-        contentPanel.add(zone, 0, 'center', 0, true);
-        itemNodes.push(zone);
+        items.forEach((item) => addItem(item));
     }
 
-    scrollable.layout();
-    // Начальная глубина (если снаружи будет вызван setDepth, здесь тоже перекроется и автоматически синхронизируется с items)
-    scrollable.setDepthAll(depth);
+    container.addItem = addItem;
+    container.setDepthAll = (d) => container.setDepth(d);
 
-    return scrollable;
+    return container;
 }

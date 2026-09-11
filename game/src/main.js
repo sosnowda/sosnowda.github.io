@@ -1,5 +1,6 @@
-// Phaser загружен глобально через CDN
-// UIPlugin загружен глобально
+// Phaser загружен глобально через CDN.
+// RexUI полностью удалён — все UI-компоненты построены на нативном Phaser
+// (см. src/utils/ui.js).
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { VillageScene } from './scenes/VillageScene.js';
@@ -20,13 +21,6 @@ const config = {
         arcade: { gravity: { x: 0, y: 0 }, debug: false },
     },
     scene: [BootScene, TitleScene, VillageScene, CombatScene, CharacterScene],
-    plugins: {
-        scene: [{
-            key: 'rexUI',
-            plugin: UIPlugin,
-            mapping: 'rexUI',
-        }],
-    },
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
