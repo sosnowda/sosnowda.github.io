@@ -24,6 +24,9 @@ export class CombatScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
 
+        // Боевая музыка
+        this.audioManager.playSceneMusic('combat');
+
         this.player = this.registry.get('player');
         this.enemies = this.enemyKeys.map(k => spawnEnemy(k));
         this.busy = false;
@@ -237,12 +240,14 @@ export class CombatScene extends Phaser.Scene {
             if (res.result === ROLL_RESULT.FAIL || res.result === ROLL_RESULT.FUMBLE) {
                 this.pushLog(`${w.name}: ${res.roll} — промах!`);
                 this.playHitEffect(targetSprite.x, targetSprite.y, 'dust');
+                if (this.audioManager) this.audioManager.playSwordMiss();
             } else {
                 const tw = this.enemySprites.find(x => x.combatant === target);
                 const dodgeRes = skillCheck(target.dodge);
                 if (dodgeRes.result === ROLL_RESULT.SUCCESS || dodgeRes.result === ROLL_RESULT.CRITICAL) {
                     this.pushLog(`${target.name} уклонился от удара (${dodgeRes.roll}).`);
                     this.playHitEffect(targetSprite.x, targetSprite.y, 'dust');
+                    if (this.audioManager) this.audioManager.playSwordMiss();
                 } else {
                     let dmg = rollDamage(w.dice, this.player.DB) + (w.bonus || 0);
                     const isCrit = res.result === ROLL_RESULT.CRITICAL;
@@ -258,8 +263,10 @@ export class CombatScene extends Phaser.Scene {
 
                     if (isCrit) {
                         this.playCritEffect(tw.sprite.x, tw.sprite.y);
+                        if (this.audioManager) this.audioManager.playLevelUp();
                     } else {
                         this.playHitEffect(tw.sprite.x, tw.sprite.y, 'blood');
+                        if (this.audioManager) this.audioManager.playSwordHit();
                     }
                     this.cameras.main.shake(120, isCrit ? 0.010 : 0.005);
 
@@ -302,6 +309,7 @@ export class CombatScene extends Phaser.Scene {
         this.player.HP = Math.min(this.player.HPmax, this.player.HP + heal);
         createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `+${heal}`, '#7CFC00');
         this.pushLog(`Ты принял траву и восстановил ${heal} здоровья.`);
+        if (this.audioManager) this.audioManager.playHeal();
         // Эффект исцеления — зелёные частицы
         const emitter = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
             speed: { min: -80, max: 80 },
@@ -334,12 +342,14 @@ export class CombatScene extends Phaser.Scene {
                     if (res.result === ROLL_RESULT.FAIL || res.result === ROLL_RESULT.FUMBLE) {
                         this.pushLog(`${en.name}: ${res.roll} — промах.`);
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'dust');
+                        if (this.audioManager) this.audioManager.playSwordMiss();
                     } else {
                         if (this.playerDodging) {
                             const dr = skillCheck(this.player.skills.dodge);
                             if (dr.result === ROLL_RESULT.SUCCESS || dr.result === ROLL_RESULT.CRITICAL) {
                                 this.pushLog(`Ты уклонился от ${en.name} (${dr.roll})!`);
                                 this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'dust');
+                                if (this.audioManager) this.audioManager.playSwordMiss();
                                 this.drawBars();
                                 if (idx === alive.length - 1) this.afterEnemy();
                                 return;
@@ -355,6 +365,7 @@ export class CombatScene extends Phaser.Scene {
                         createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `-${dmg}`, '#ff6b5a');
                         this.pushLog(`${en.name} бьёт ${en.weapon.name}: урон ${dmg} (${res.roll}).`);
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'blood');
+                        if (this.audioManager) this.audioManager.playDamageTaken();
                         this.cameras.main.shake(120, 0.006);
                         this.drawBars();
                         if (this.player.HP <= 0) {
@@ -390,6 +401,7 @@ export class CombatScene extends Phaser.Scene {
         this.autosave();
         this.busy = true;
         this.pushLog('Враг повержен! Ты одержал победу.');
+        if (this.audioManager) this.audioManager.playLevelUp();
         // Эффект победы — золотые частицы
         const emitter = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
             speed: { min: -150, max: 150 },

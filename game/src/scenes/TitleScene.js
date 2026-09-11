@@ -15,6 +15,9 @@ export class TitleScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
 
+        // Фоновая музыка главного меню
+        this.audioManager.playSceneMusic('menu');
+
         // Декор: парящие золотые точки
         for (let i = 0; i < 40; i++) {
             const d = this.add.circle(

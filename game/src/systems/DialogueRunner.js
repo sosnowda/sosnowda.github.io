@@ -54,6 +54,11 @@ export class DialogueRunner {
             this._currentDialog.destroy();
         }
 
+        // Звук открытия диалога
+        if (this.scene.audioManager && typeof this.scene.audioManager.playDialogueOpen === 'function') {
+            this.scene.audioManager.playDialogueOpen();
+        }
+
         this._currentDialog = createDialog(
             this.scene,
             node.speaker || '...',

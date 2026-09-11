@@ -71,6 +71,27 @@ export class BootScene extends Phaser.Scene {
         pg.fillRect(0, 0, 8, 8);
         pg.generateTexture('particle', 8, 8);
         pg.destroy();
+
+        // ----- АУДИО -----
+        // SFX
+        const sfxKeys = [
+            'sfx_button_click', 'sfx_button_hover',
+            'sfx_sword_hit', 'sfx_sword_miss',
+            'sfx_bow_shoot', 'sfx_arrow_hit',
+            'sfx_damage_taken', 'sfx_heal', 'sfx_level_up',
+            'sfx_dialogue_open', 'sfx_dialogue_close',
+            'sfx_step', 'sfx_typewriter',
+        ];
+        sfxKeys.forEach((key) => {
+            this.load.audio(key, `assets/audio/sfx/${key}.ogg`);
+        });
+        // Музыка
+        this.load.audio('music_menu', 'assets/audio/music/music_menu.ogg');
+        this.load.audio('music_village', 'assets/audio/music/music_village.ogg');
+        this.load.audio('music_combat', 'assets/audio/music/music_combat.ogg');
+
+        // Сохраняем список аудио-ключей в registry для AudioManager
+        this.registry.set('audioKeys', sfxKeys);
     }
 
     create() {

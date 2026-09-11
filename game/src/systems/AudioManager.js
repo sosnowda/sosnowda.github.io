@@ -16,6 +16,7 @@ export default class AudioManager {
 
         this.music = {}; // объекты фоновой музыки
         this.sounds = {}; // объекты звуковых эффектов
+        this.realSounds = {}; // реальные SFX-файлы (key -> Phaser.Sound.BaseSound)
         this.currentMusic = null; // ключ текущей проигрываемой музыки
 
         // Состояние времени выполнения (управляется из settings.audio.*)
@@ -24,8 +25,11 @@ export default class AudioManager {
         this.musicMuted = false;
         this.sfxMuted = false;
 
-        // Интеграция системы процедурных звуков
+        // Интеграция системы процедурных звуков (fallback если реальные SFX не загружены)
         this.audioEffects = new AudioEffects(scene);
+
+        // Загрузка реальных SFX из registry (если они были предзагружены в BootScene)
+        this._loadRealSounds();
 
         // Первичная синхронизация (если SettingsManager уже инициализирован, он запишет settings.audio.* в registry)
         this._pullFromRegistry();
@@ -36,6 +40,100 @@ export default class AudioManager {
         if (this.scene?.events && typeof this.scene.events.once === 'function') {
             this.scene.events.once('shutdown', () => this.destroy());
         }
+    }
+
+    /**
+     * Загрузить реальные SFX из registry, где они были предзагружены в BootScene.
+     * Реальные SFX имеют приоритет над процедурными.
+     */
+    _loadRealSounds() {
+        if (!this.scene?.sound) return;
+        const registry = this.scene.registry;
+        const audioKeys = registry?.get('audioKeys') || [];
+        audioKeys.forEach((key) => {
+            try {
+                this.realSounds[key] = this.scene.sound.add(key);
+            } catch (e) {
+                // ignore
+            }
+        });
+    }
+
+    /**
+     * Проиграть реальный SFX-файл по ключу. Falls back to procedural если не загружен.
+     */
+    _playRealSfx(key, fallback, volume = 1) {
+        if (this.sfxMuted) return;
+        const effectiveVolume = this.sfxVolume * volume;
+        if (this.realSounds[key]) {
+            try {
+                this.realSounds[key].play({ volume: effectiveVolume });
+                return;
+            } catch (e) {
+                // fall through to fallback
+            }
+        }
+        if (fallback && this.audioEffects && typeof this.audioEffects[fallback] === 'function') {
+            this.audioEffects[fallback]();
+        }
+    }
+
+    /**
+     * Загрузить музыкальные треки. Должна вызываться после preload.
+     */
+    loadMusic() {
+        if (!this.scene?.sound) return;
+        const musicMap = {
+            'menu': 'music_menu',
+            'village': 'music_village',
+            'combat': 'music_combat',
+        };
+        Object.entries(musicMap).forEach(([key, assetKey]) => {
+            if (this.scene.sound.game.cache.audio.exists(assetKey) && !this.music[key]) {
+                this.music[key] = this.scene.sound.add(assetKey, {
+                    loop: true,
+                    volume: this.musicMuted ? 0 : this.musicVolume * 0.5,
+                });
+            }
+        });
+    }
+
+    /**
+     * Переключить музыку по сцене. Fade out старой, fade in новой.
+     */
+    playSceneMusic(sceneKey) {
+        // Загружаем музыке при первом вызове
+        if (Object.keys(this.music).length === 0) {
+            this.loadMusic();
+        }
+        if (!this.music[sceneKey]) return;
+
+        if (this.currentMusic === sceneKey) return;
+
+        // Fade out текущей
+        if (this.currentMusic && this.music[this.currentMusic]) {
+            const oldMusic = this.music[this.currentMusic];
+            this.scene.tweens.add({
+                targets: oldMusic,
+                volume: 0,
+                duration: 800,
+                onComplete: () => {
+                    oldMusic.stop();
+                    oldMusic.setVolume(this.musicMuted ? 0 : this.musicVolume * 0.5);
+                },
+            });
+        }
+
+        // Fade in новой
+        const newMusic = this.music[sceneKey];
+        newMusic.play();
+        newMusic.setVolume(0);
+        this.scene.tweens.add({
+            targets: newMusic,
+            volume: this.musicMuted ? 0 : this.musicVolume * 0.5,
+            duration: 800,
+        });
+        this.currentMusic = sceneKey;
     }
 
     _emit(eventName, payload) {
@@ -290,21 +388,15 @@ export default class AudioManager {
     // ==========================================
 
     playButtonClick() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playButtonClick();
-        }
+        this._playRealSfx('sfx_button_click', 'playButtonClick');
     }
 
     playButtonHover() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playButtonHover();
-        }
+        this._playRealSfx('sfx_button_hover', 'playButtonHover');
     }
 
     playCollectItem() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playCollectItem();
-        }
+        this._playRealSfx('sfx_level_up', 'playCollectItem');
     }
 
     playJump() {
@@ -320,27 +412,19 @@ export default class AudioManager {
     }
 
     playShoot() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playShoot();
-        }
+        this._playRealSfx('sfx_bow_shoot', 'playShoot');
     }
 
     playExplosion() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playExplosion();
-        }
+        this._playRealSfx('sfx_sword_hit', 'playExplosion');
     }
 
     playVictory() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playVictory();
-        }
+        this._playRealSfx('sfx_level_up', 'playVictory');
     }
 
     playLevelUp() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playLevelUp();
-        }
+        this._playRealSfx('sfx_level_up', 'playLevelUp');
     }
 
     playGameOver() {
@@ -350,21 +434,15 @@ export default class AudioManager {
     }
 
     playAchievement() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playAchievement();
-        }
+        this._playRealSfx('sfx_level_up', 'playAchievement');
     }
 
     playDoorOpen() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playDoorOpen();
-        }
+        this._playRealSfx('sfx_dialogue_open', 'playDoorOpen');
     }
 
     playDoorClose() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playDoorClose();
-        }
+        this._playRealSfx('sfx_dialogue_close', 'playDoorClose');
     }
 
     playWarning() {
@@ -374,16 +452,23 @@ export default class AudioManager {
     }
 
     playMagic() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playMagic();
-        }
+        this._playRealSfx('sfx_heal', 'playMagic');
     }
 
     playTypewriter() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playTypewriter();
-        }
+        this._playRealSfx('sfx_typewriter', 'playTypewriter', 0.4);
     }
+
+    // ====== Новые методы для конкретных SFX ======
+
+    playSwordHit() { this._playRealSfx('sfx_sword_hit', null); }
+    playSwordMiss() { this._playRealSfx('sfx_sword_miss', null); }
+    playArrowHit() { this._playRealSfx('sfx_arrow_hit', null); }
+    playDamageTaken() { this._playRealSfx('sfx_damage_taken', null); }
+    playHeal() { this._playRealSfx('sfx_heal', null); }
+    playStep() { this._playRealSfx('sfx_step', null, 0.4); }
+    playDialogueOpen() { this._playRealSfx('sfx_dialogue_open', null); }
+    playDialogueClose() { this._playRealSfx('sfx_dialogue_close', null); }
 
     playRandomEffect() {
         if (this.audioEffects && !this.sfxMuted) {

@@ -8,6 +8,7 @@ import {
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
+import { Tutorial } from '../systems/Tutorial.js';
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -23,6 +24,9 @@ export class VillageScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.dialogue = new DialogueRunner(this);
+
+        // Фоновая музыка деревни (ambient)
+        this.audioManager.playSceneMusic('village');
 
         this.physics.world.setBounds(0, 0, this.worldW, this.worldH);
         this.cameras.main.setBounds(0, 0, this.worldW, this.worldH);
@@ -169,6 +173,10 @@ export class VillageScene extends Phaser.Scene {
         this.busyDialog = false;
         this.lastDir = 'down';
 
+        // ----- Звук шагов -----
+        this.lastStepTime = 0;
+        this.stepInterval = 350; // мс между шагами
+
         // ----- HUD -----
         // Левый верхний угол — HP/MP/Меч
         this.hud = this.add.text(16, 12, '', {
@@ -196,6 +204,15 @@ export class VillageScene extends Phaser.Scene {
         }).setOrigin(0.5).setScrollFactor(0).setDepth(100).setVisible(false);
 
         this.autosave();
+
+        // ----- Туториал (3 подсказки при первом входе) -----
+        this.tutorial = new Tutorial(this);
+        this.tutorial.maybeStart();
+
+        // При выходе из сцены — очистить туториал
+        this.events.once('shutdown', () => {
+            if (this.tutorial) this.tutorial.destroyAll();
+        });
     }
 
     createMinimap() {
@@ -272,7 +289,12 @@ export class VillageScene extends Phaser.Scene {
                 this.playerObj.play(`player_walk_${dir}`, true);
                 this.lastDir = dir;
             }
-            // Поворот спрайта — не нужен, т.к. есть отдельные анимации для каждого направления
+            // Звук шага
+            const now = this.time.now;
+            if (now - this.lastStepTime > this.stepInterval) {
+                this.audioManager.playStep();
+                this.lastStepTime = now;
+            }
         } else {
             this.playerObj.anims.pause();
             // Возвращаем в idle
