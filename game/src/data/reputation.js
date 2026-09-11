@@ -28,6 +28,9 @@ const NPC_REP_MIN = -100;
 const NPC_REP_MAX = 100;
 
 const WIN_THRESHOLD = 100;          // +100 = выигрыш (п.13)
+const MARRIAGE_NPC_REP = 90;        // +90 личная репутация у NPC для брака (п.1)
+const MARRIAGE_VILLAGE_REP = 50;    // +50 деревенская репутация для брака (п.1)
+const MARRIAGE_COST = 200;          // 200 денег на свадебное торжество (п.1)
 const EXPULSION_THRESHOLD = -80;    // ниже этого — изгнание (п.12)
 const ATTACK_THRESHOLD = -80;       // ниже этого — ШАНС нападения (п.2)
 const REFUSE_TRADE_THRESHOLD = -50; // ниже этого — отказ торговать (п.1)
@@ -509,4 +512,109 @@ export function willNpcRefuseTrade(registry, npcId) {
 
 export function willNpcRefuseTalk(registry, npcId) {
     return getNpcRep(registry, npcId) <= REFUSE_TALK_THRESHOLD;
+}
+
+// === СИСТЕМА БРАКА (п.1) ===
+
+/**
+ * Проверить, может ли игрок вступить в брак с NPC.
+ * Условия (п.1):
+ * - Личная репутация у NPC ≥ +90
+ * - Деревенская репутация ≥ +50
+ * - NPC противоположного пола
+ * - У игрока достаточно денег (200 д. на свадебное торжество)
+ * - NPC не состоит в браке
+ */
+export function canMarry(registry, npcId, player) {
+    const npcRep = getNpcRep(registry, npcId);
+    const villageRep = getVillageRep(registry);
+    const npcs = getNpcs(registry);
+    const npc = npcs.find(n => n.id === npcId);
+    
+    if (!npc || !player) return { canMarry: false, reason: 'NPC не найден' };
+    
+    // Проверка пола
+    if (npc.gender === player.gender) {
+        return { canMarry: false, reason: 'Традиции не позволяют брак с человеком того же пола' };
+    }
+    
+    // Проверка личной репутации
+    if (npcRep < MARRIAGE_NPC_REP) {
+        return { canMarry: false, reason: `Недостаточно личной репутации (нужно +${MARRIAGE_NPC_REP}, у вас ${npcRep})` };
+    }
+    
+    // Проверка деревенской репутации
+    if (villageRep < MARRIAGE_VILLAGE_REP) {
+        return { canMarry: false, reason: `Недостаточно деревенской репутации (нужно +${MARRIAGE_VILLAGE_REP}, у вас ${villageRep})` };
+    }
+    
+    // Проверка денег
+    if ((player.dengas || 0) < MARRIAGE_COST) {
+        return { canMarry: false, reason: `Недостаточно денег на свадебное торжество (нужно ${MARRIAGE_COST} д., у вас ${player.dengas || 0} д.)` };
+    }
+    
+    // Проверка, не состоит ли NPC в браке
+    if (npc.married) {
+        return { canMarry: false, reason: `${npc.name} уже состоит в браке` };
+    }
+    
+    return { canMarry: true };
+}
+
+/**
+ * Выполнить брак.
+ * Снимает деньги, отмечает NPC и игрока как состоящих в браке.
+ * Повышает деревенскую репутацию.
+ * Возвращает true при успехе — это означает ВЫИГРЫШ.
+ */
+export function marry(registry, npcId, player) {
+    const check = canMarry(registry, npcId, player);
+    if (!check.canMarry) return { success: false, reason: check.reason };
+    
+    const npcs = getNpcs(registry);
+    const npc = npcs.find(n => n.id === npcId);
+    
+    // Снимаем деньги за свадебное торжество
+    player.dengas = (player.dengas || 0) - MARRIAGE_COST;
+    player.married = true;
+    player.spouseNpcId = npcId;
+    registry.set('player', player);
+    
+    // Отмечаем NPC как состоящего в браке
+    npc.married = true;
+    npc.spousePlayerName = player.name;
+    registry.set('npcs', npcs);
+    
+    // Свадьба повышает деревенскую репутацию
+    changeVillageRep(registry, 20, 'свадьба с жителем деревни');
+    changeNpcRep(registry, npcId, 10, 'брак');
+    
+    ActionLog.add(registry, 
+        `СВАДЬБА: ${player.name} женился на ${npc.name} (${npc.profession.name}). ` +
+        `Свадебное торжество обошлось в ${MARRIAGE_COST} д. ` +
+        `Деревенская репутация выросла.`
+    );
+    
+    return { success: true, npcName: npc.name };
+}
+
+/**
+ * Получить стоимость свадебного торжества.
+ */
+export function getMarriageCost() {
+    return MARRIAGE_COST;
+}
+
+/**
+ * Получить минимальную личную репутацию для брака.
+ */
+export function getMarriageNpcRepThreshold() {
+    return MARRIAGE_NPC_REP;
+}
+
+/**
+ * Получить минимальную деревенскую репутацию для брака.
+ */
+export function getMarriageVillageRepThreshold() {
+    return MARRIAGE_VILLAGE_REP;
 }

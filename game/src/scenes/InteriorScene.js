@@ -17,6 +17,8 @@ import {
     applyGiftBonus, applyCompliment, applyTreatEveryoneBonus,
     applyQuestCompleteBonus, applyThreat, willNpcAttack, willNpcRefuseTrade,
     getPriceModifier, getRewardModifier,
+    canMarry, marry, getMarriageCost, getMarriageNpcRepThreshold, getMarriageVillageRepThreshold,
+    getVillageRep,
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 
@@ -224,6 +226,21 @@ export class InteriorScene extends Phaser.Scene {
             fontSize: 14, padding: { left: 14, right: 14, top: 8, bottom: 8 },
             cornerRadius: 8,
         });
+
+        // ----- Кнопка "Свататься" (п.1) — только при высокой репутации -----
+        const player = this.registry.get('player');
+        const npcRepValue = getNpcRep(this.registry, interior.npcId);
+        const villageRepValue = getVillageRep(this.registry);
+        // Показываем кнопку только если есть шанс на брак
+        if (npcRepValue >= 50 && villageRepValue >= 30 && this.npcData && this.npcData.gender !== player.gender) {
+            createButton(this, width / 2 + 80, height - 90, '💍 Свататься', () => {
+                this.proposeMarriage(interior);
+            }, {
+                backgroundColor: 0x5a2a5a, hoverColor: 0x6a3a6a, textColor: RUS.text,
+                fontSize: 14, padding: { left: 14, right: 14, top: 8, bottom: 8 },
+                cornerRadius: 8,
+            });
+        }
 
         // ----- Кнопка "Угостить всех" — только в таверне (п.9) -----
         if (interior.id === 'tavern') {
@@ -554,6 +571,103 @@ export class InteriorScene extends Phaser.Scene {
             );
         }
         this.updateHUD();
+    }
+
+    // === Пункт 1: Свататься к NPC ===
+    proposeMarriage(interior) {
+        const player = this.registry.get('player');
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        const npcRepValue = getNpcRep(this.registry, interior.npcId);
+        const villageRepValue = getVillageRep(this.registry);
+        const cost = getMarriageCost();
+        const npcRepThreshold = getMarriageNpcRepThreshold();
+        const villageRepThreshold = getMarriageVillageRepThreshold();
+        
+        // Проверка условий
+        const check = canMarry(this.registry, interior.npcId, player);
+        
+        if (!check.canMarry) {
+            // NPC отказывает
+            let message = '';
+            if (npcRepValue < npcRepThreshold) {
+                message = `${npcName}: «Ты мне хоть и люб, но я тебя ещё не так хорошо знаю, ` +
+                    `чтобы семью создавать. Подожди ещё, наберись опыта в деревне.» ` +
+                    `(Нужно личная репутация +${npcRepThreshold}, у вас ${npcRepValue})`;
+            } else if (villageRepValue < villageRepThreshold) {
+                message = `${npcName}: «Я бы рад(а), да староста не благословит. ` +
+                    `Ты ещё не заслужил уважение всей деревни.» ` +
+                    `(Нужно деревенская репутация +${villageRepThreshold}, у вас ${villageRepValue})`;
+            } else if ((player.dengas || 0) < cost) {
+                message = `${npcName}: «Свадьба — дело не дешёвое! Нужно ${cost} д. ` +
+                    `на свадебное торжество и подарки. А у тебя всего ${player.dengas || 0} д.»`;
+            } else {
+                message = `${npcName}: «Не могу я выйти за тебя. ${check.reason}.»`;
+            }
+            
+            createDialog(this, 'Сватовство', message, [
+                { text: 'Понятно', callback: () => {} },
+            ], {
+                singleton: false,
+                portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+                typing: true, typingSpeed: 30,
+            });
+            return;
+        }
+        
+        // Условия выполнены — предложение брака
+        const proposalText = `Ты решил свататься к ${npcName}.\n\n` +
+            `Условия для свадьбы:\n` +
+            `✓ Личная репутация: ${npcRepValue} (нужно +${npcRepThreshold})\n` +
+            `✓ Деревенская репутация: ${villageRepValue} (нужно +${villageRepThreshold})\n` +
+            `✓ Свадебное торжество: ${cost} д. (у вас ${player.dengas || 0} д.)\n\n` +
+            `${npcName} согласен(на) принять твоё предложение! Свадьба состоится по обычаям Руси!`;
+        
+        createDialog(this, '💍 Сватовство', proposalText, [
+            {
+                text: '💍 Сыграем свадьбу!',
+                callback: () => {
+                    const result = marry(this.registry, interior.npcId, player);
+                    if (result.success) {
+                        // Свадьба состоялась — ВЫИГРЫШ
+                        const winMessage = `🎉 СВАДЬВА! 🎉\n\n` +
+                            `По обычаям Руси, отец Савватий обвенчал вас в церкви. ` +
+                            `Вся деревня гуляла три дня на свадебном пиру!\n\n` +
+                            `${player.name} и ${result.npcName} теперь — муж и жена.\n` +
+                            `Ты принят в деревню как свой!\n\n` +
+                            `ИГРА УСПЕШНО ЗАВЕРШЕНА!`;
+                        
+                        createDialog(this, '🎉 СВАДЬБА', winMessage, [
+                            {
+                                text: '🎉 Финал',
+                                callback: () => {
+                                    const q = this.registry.get('quest');
+                                    q.thiefDefeated = true; // флаг победы для EndScene
+                                    q.currentObjective = 'Женился и принят в деревню! Победа!';
+                                    this.registry.set('quest', q);
+                                    this.scene.stop();
+                                    this.scene.resume(this.from);
+                                    this.scene.getScene(this.from).scene.start('End');
+                                },
+                            },
+                        ], {
+                            singleton: false,
+                            portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+                            typing: true, typingSpeed: 20,
+                        });
+                    }
+                },
+            },
+            {
+                text: 'Подумать ещё',
+                callback: () => {
+                    ActionLog.add(this.registry, `Решил пока не жениться на ${npcName}.`);
+                },
+            },
+        ], {
+            singleton: false,
+            portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+            typing: true, typingSpeed: 25,
+        });
     }
 
     // === Пункт 9: Угостить всех выпивкой в таверне ===
