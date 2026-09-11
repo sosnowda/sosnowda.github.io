@@ -2,7 +2,7 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { WEAPONS } from '../config/GameConfig.js';
-import { skillCheck, rollDamage, ROLL_RESULT } from '../systems/BRPEngine.js';
+import { skillCheck, rollDamage, ROLL_RESULT, applyDamage } from '../systems/BRPEngine.js';
 import { spawnEnemy } from '../data/characters.js';
 import { createButton, createFloatingText } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
@@ -228,8 +228,9 @@ export class CombatScene extends Phaser.Scene {
     }
 
     playerAttack(weaponKey) {
-        const w = WEAPONS[weaponKey];
-        const skill = this.player.skills[w.skill];
+        // Используем экипированное оружие игрока, а не переданный ключ
+        const w = this.player.weapon || WEAPONS[weaponKey] || WEAPONS.fists;
+        const skill = this.player.skills[w.skill] || 20;
         const res = skillCheck(skill);
         const target = this.firstAlive();
         if (!target) { this.endCombatVictory(); return; }
@@ -251,17 +252,21 @@ export class CombatScene extends Phaser.Scene {
                     this.playHitEffect(targetSprite.x, targetSprite.y, 'dust');
                     if (this.audioManager) this.audioManager.playSwordMiss();
                 } else {
-                    let dmg = rollDamage(w.dice, this.player.DB) + (w.bonus || 0);
+                    // BRP SRD: урон = weapon dice + DB, особый успех ×2
+                    let dmg = rollDamage(w.dice, this.player.DB, res.special);
+                    dmg += (w.bonus || 0);
                     const isCrit = res.result === ROLL_RESULT.CRITICAL;
                     if (isCrit) dmg = Math.ceil(dmg * 1.5);
-                    target.HP = Math.max(0, target.HP - dmg);
+                    // Броня врага поглощает урон
+                    const targetArmorDef = target.armor ? target.armor.def : 0;
+                    const { actualDmg, absorbed } = applyDamage(target, dmg, targetArmorDef);
 
                     // Flash цели
                     tw.sprite.setTintFill(0xff6060);
                     this.time.delayedCall(80, () => tw.sprite.clearTint());
 
-                    createFloatingText(this, tw.sprite.x, tw.sprite.y - 60, `-${dmg}`, '#ff6b5a');
-                    this.pushLog(`${w.name}: попадание! Урон ${dmg} (бросок ${res.roll})${isCrit ? ' [КРИТ!]' : ''}.`);
+                    createFloatingText(this, tw.sprite.x, tw.sprite.y - 60, `-${actualDmg}`, '#ff6b5a');
+                    this.pushLog(`${w.name}: попадание! Урон ${actualDmg}${absorbed > 0 ? ` (бронь ${absorbed})` : ''} (бросок ${res.roll})${isCrit ? ' [КРИТ!]' : ''}${res.special ? ' [ОСОБЫЙ!]' : ''}.`);
 
                     if (isCrit) {
                         this.playCritEffect(tw.sprite.x, tw.sprite.y);
@@ -357,15 +362,18 @@ export class CombatScene extends Phaser.Scene {
                                 return;
                             }
                         }
-                        const dmg = rollDamage(en.weapon.dice, en.DB);
-                        this.player.HP = Math.max(0, this.player.HP - dmg);
+                        // BRP SRD: урон = weapon dice + DB, особый успех ×2
+                        const dmg = rollDamage(en.weapon.dice, en.DB, res.special);
+                        // Броня игрока поглощает урон
+                        const playerArmorDef = this.player.armor ? this.player.armor.def : 0;
+                        const { actualDmg, absorbed } = applyDamage(this.player, dmg, playerArmorDef);
 
                         // Flash игрока
                         this.playerSprite.setTintFill(0xff6060);
                         this.time.delayedCall(80, () => this.playerSprite.clearTint());
 
-                        createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `-${dmg}`, '#ff6b5a');
-                        this.pushLog(`${en.name} бьёт ${en.weapon.name}: урон ${dmg} (${res.roll}).`);
+                        createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `-${actualDmg}`, '#ff6b5a');
+                        this.pushLog(`${en.name} бьёт ${en.weapon.name}: урон ${actualDmg}${absorbed > 0 ? ` (бронь ${absorbed})` : ''} (${res.roll})${res.special ? ' [ОСОБЫЙ!]' : ''}.`);
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'blood');
                         if (this.audioManager) this.audioManager.playDamageTaken();
                         this.cameras.main.shake(120, 0.006);

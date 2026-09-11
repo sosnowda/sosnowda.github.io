@@ -3,7 +3,7 @@
 import { RUS } from '../config/RusTheme.js';
 import {
     buildMap, SOLID, tileTexture, doorInteriorId, isGate,
-    PLAYER_START, LOCATION_NAME, MAP_W, MAP_H
+    PLAYER_START, MAP_W, MAP_H, getVillageName,
 } from '../data/world.js';
 import { BUILDINGS, VILLAGE_GATE } from '../data/interiors.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
@@ -13,6 +13,8 @@ import { Tutorial } from '../systems/Tutorial.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
 import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd } from '../data/thief.js';
+import { formatMoney } from '../systems/Character.js';
+import { createButton } from '../utils/ui.js';
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -86,18 +88,17 @@ export class VillageScene extends Phaser.Scene {
             const doorY = b.row + b.h - 1;
             const px = doorX * ts + ts / 2;
             const py = doorY * ts + ts / 2;
-            // Метка здания над дверью
-            const label = this.add.text(b.col * ts + b.w * ts / 2, (b.row - 0.5) * ts, b.label, {
+            // Метка здания над дверью — сдвинута ВЫШЕ, чтобы не перекрываться HUD
+            const label = this.add.text(b.col * ts + b.w * ts / 2, (b.row - 1) * ts - 10, b.label, {
                 fontSize: '14px', color: RUS.text, backgroundColor: '#00000088',
                 padding: { x: 6, y: 3 },
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(10);
-            // Золотой кружок над дверью (метка входа)
+            // Золотой кружок над дверью
             const doorMarker = this.add.image(px, py - ts, 'particle_spark')
                 .setTint(0xc9a14a)
                 .setDisplaySize(20, 20)
                 .setDepth(10);
-            // Лёгкое мерцание
             this.tweens.add({
                 targets: doorMarker,
                 alpha: { from: 0.7, to: 1 },
@@ -135,10 +136,10 @@ export class VillageScene extends Phaser.Scene {
         // ----- Игрок -----
         this.player = this.registry.get('player');
         const ps = PLAYER_START;
-        this.playerObj = this.physics.add.sprite(ps.col * ts + ts / 2, ps.row * ts + ts / 2, 'player');
+        this.playerObj = this.physics.add.sprite(ps.col * ts + ts / 2, ps.row * ts + ts / 2, this.player.sprite || 'player');
         this.playerObj.setScale(ts / 32 * 1.5);
         this.playerObj.setCollideWorldBounds(true);
-        this.playerObj.play('player_idle_down');
+        this.playerObj.play(`${this.player.sprite || 'player'}_idle_down`);
         this.physics.add.collider(this.playerObj, this.solids);
         this.cameras.main.startFollow(this.playerObj, true, 0.1, 0.1);
 
@@ -146,39 +147,46 @@ export class VillageScene extends Phaser.Scene {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasd = this.input.keyboard.addKeys('W,A,S,D');
         this.input.keyboard.on('keydown-E', () => this.tryInteract());
+        // Также стрелки вверх/вниз — фикс п.7: используем Space как альтернативу
+        this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
         this.busyDialog = false;
         this.lastDir = 'down';
         this.lastStepTime = 0;
         this.stepInterval = 350;
 
-        // ----- HUD -----
-        this.hud = this.add.text(16, 12, '', {
-            fontSize: '16px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
+        // ----- HUD (сверху, тонкая полоска) -----
+        // Левый блок: HP/MP/Меч/Деньги — компактнее, чтобы не перекрывать здания
+        this.hud = this.add.text(8, 6, '', {
+            fontSize: '13px', color: RUS.text, backgroundColor: '#000000cc', padding: { x: 6, y: 4 },
             stroke: '#000', strokeThickness: 2,
         }).setScrollFactor(0).setDepth(100);
-        this.objectiveText = this.add.text(16, 56, '', {
-            fontSize: '14px', color: '#c9a14a', backgroundColor: '#000000aa', padding: { x: 8, y: 4 },
+
+        // Под HUD — текущая цель квеста (правее)
+        this.objectiveText = this.add.text(8, 30, '', {
+            fontSize: '12px', color: '#c9a14a', backgroundColor: '#000000cc', padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
         }).setScrollFactor(0).setDepth(100);
-        // Счётчик ходов
-        this.turnsText = this.add.text(16, 84, '', {
-            fontSize: '13px', color: '#ff8060', backgroundColor: '#000000aa', padding: { x: 8, y: 4 },
+
+        // Счётчик ходов (ещё ниже)
+        this.turnsText = this.add.text(8, 52, '', {
+            fontSize: '12px', color: '#ff8060', backgroundColor: '#000000cc', padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
         }).setScrollFactor(0).setDepth(100);
-        this.add.text(this.scale.width - 16, 12, LOCATION_NAME, {
-            fontSize: '18px', color: RUS.textDim, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
+
+        // Название деревни — справа сверху
+        const villageName = getVillageName();
+        this.add.text(this.scale.width - 8, 6, villageName, {
+            fontSize: '16px', color: RUS.textDim, backgroundColor: '#000000cc', padding: { x: 8, y: 4 },
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
 
-        // Мини-карта
-        this.createMinimap();
+        // ----- Кнопки меню сверху (Пункт 9) -----
+        this.createTopMenu();
 
         this.prompt = this.add.text(this.scale.width / 2, this.scale.height - 40, '', {
-            fontSize: '18px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 12, y: 6 },
+            fontSize: '16px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 10, y: 5 },
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(100).setVisible(false);
-
-        this.autosave();
 
         // ----- Туториал -----
         this.tutorial = new Tutorial(this);
@@ -193,41 +201,50 @@ export class VillageScene extends Phaser.Scene {
         });
     }
 
-    createMinimap() {
-        const mmW = 200, mmH = 140;
-        const mmX = this.scale.width - mmW - 16;
-        const mmY = 56;
-        const scaleX = mmW / this.worldW;
-        const scaleY = mmH / this.worldH;
-
-        this.add.rectangle(mmX + mmW / 2, mmY + mmH / 2, mmW + 4, mmH + 4, 0xc9a14a, 0.8)
-            .setStrokeStyle(2, 0x000000).setScrollFactor(0).setDepth(100);
-        this.add.rectangle(mmX + mmW / 2, mmY + mmH / 2, mmW, mmH, 0x1b2a1f, 0.7)
-            .setScrollFactor(0).setDepth(100);
-
-        // Метки зданий на мини-карте
-        BUILDINGS.forEach(b => {
-            const mx = mmX + (b.col + b.w / 2) * 48 * scaleX;
-            const my = mmY + (b.row + b.h / 2) * 48 * scaleY;
-            this.add.circle(mx, my, 2, 0xc9a14a, 1).setScrollFactor(0).setDepth(101);
+    /**
+     * Создать кнопки меню сверху: [Персонаж] [Инвентарь]
+     */
+    createTopMenu() {
+        const { width } = this.scale;
+        // Кнопка "Персонаж" — справа сверху, под названием деревни
+        const charBtnX = width - 80;
+        const charBtnY = 36;
+        const charBtn = this.add.rectangle(charBtnX, charBtnY, 140, 26, 0x4a3520, 0.95)
+            .setStrokeStyle(1, 0xC9A961)
+            .setInteractive({ useHandCursor: true })
+            .setScrollFactor(0)
+            .setDepth(100);
+        const charText = this.add.text(charBtnX, charBtnY, '📜 Персонаж', {
+            fontSize: '13px', color: '#E8DCC4',
+            stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+        charBtn.on('pointerup', () => {
+            ActionLog.add(this.registry, 'Открыл меню персонажа.');
+            this.scene.pause();
+            this.scene.launch('Character', { from: 'Village' });
         });
-        // Ворота
-        const gateMx = mmX + (MAP_W - 1) * 48 * scaleX;
-        const gateMy = mmY + VILLAGE_GATE.row * 48 * scaleY;
-        this.add.circle(gateMx, gateMy, 3, 0xff6040, 1).setScrollFactor(0).setDepth(101);
+        charBtn.on('pointerover', () => charBtn.setFillStyle(0x5a4530, 1));
+        charBtn.on('pointerout', () => charBtn.setFillStyle(0x4a3520, 0.95));
 
-        this.minimapPlayer = this.add.circle(mmX + 24 * scaleX, mmY + 24 * scaleY, 4, 0x60ff60, 1)
-            .setStrokeStyle(1, 0x000000).setScrollFactor(0).setDepth(103);
-        this.minimapBounds = { mmX, mmY, mmW, mmH, scaleX, scaleY };
-    }
-
-    updateMinimap() {
-        if (!this.minimapPlayer || !this.minimapBounds) return;
-        const { mmX, mmY, scaleX, scaleY } = this.minimapBounds;
-        this.minimapPlayer.setPosition(
-            mmX + this.playerObj.x * scaleX,
-            mmY + this.playerObj.y * scaleY
-        );
+        // Кнопка "Инвентарь" — рядом
+        const invBtnX = width - 80;
+        const invBtnY = 66;
+        const invBtn = this.add.rectangle(invBtnX, invBtnY, 140, 26, 0x4a3520, 0.95)
+            .setStrokeStyle(1, 0xC9A961)
+            .setInteractive({ useHandCursor: true })
+            .setScrollFactor(0)
+            .setDepth(100);
+        const invText = this.add.text(invBtnX, invBtnY, '🎒 Инвентарь', {
+            fontSize: '13px', color: '#E8DCC4',
+            stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+        invBtn.on('pointerup', () => {
+            ActionLog.add(this.registry, 'Открыл инвентарь.');
+            this.scene.pause();
+            this.scene.launch('Character', { from: 'Village', tab: 'inventory' });
+        });
+        invBtn.on('pointerover', () => invBtn.setFillStyle(0x5a4530, 1));
+        invBtn.on('pointerout', () => invBtn.setFillStyle(0x4a3520, 0.95));
     }
 
     update() {
@@ -253,10 +270,11 @@ export class VillageScene extends Phaser.Scene {
             vx = joyMove.x;
             vy = joyMove.y;
         } else {
+            // Фикс п.7: каждая клавиша проверяется отдельно, без else if
             if (this.cursors.left.isDown || this.wasd.A.isDown) vx = -1;
-            else if (this.cursors.right.isDown || this.wasd.D.isDown) vx = 1;
+            if (this.cursors.right.isDown || this.wasd.D.isDown) vx = 1;
             if (this.cursors.up.isDown || this.wasd.W.isDown) vy = -1;
-            else if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
+            if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
         }
 
         const v = new Phaser.Math.Vector2(vx, vy);
@@ -269,7 +287,7 @@ export class VillageScene extends Phaser.Scene {
                 dir = vx < 0 ? 'left' : 'right';
             }
             if (dir !== this.lastDir || !this.playerObj.anims.isPlaying) {
-                this.playerObj.play(`player_walk_${dir}`, true);
+                this.playerObj.play(`${this.player.sprite || 'player'}_walk_${dir}`, true);
                 this.lastDir = dir;
             }
             const now = this.time.now;
@@ -279,13 +297,12 @@ export class VillageScene extends Phaser.Scene {
             }
         } else {
             this.playerObj.anims.pause();
-            this.playerObj.play(`player_idle_${this.lastDir}`, true);
+            this.playerObj.play(`${this.player.sprite || 'player'}_idle_${this.lastDir}`, true);
         }
         this.playerObj.setVelocity(v.x, v.y);
 
         this.updateNearestInteractable();
         this.updateHUD();
-        this.updateMinimap();
     }
 
     /**
@@ -296,16 +313,13 @@ export class VillageScene extends Phaser.Scene {
         const px = Math.floor(this.playerObj.x / ts);
         const py = Math.floor(this.playerObj.y / ts);
 
-        // Проверяем соседние клетки на наличие дверей/ворот
         let nearest = null;
-        let bestDist = 1.5; // в клетках
+        let bestDist = 1.5;
 
-        // Проверяем саму клетку игрока и соседние
         for (let dy = -1; dy <= 1; dy++) {
             for (let dx = -1; dx <= 1; dx++) {
                 const cx = px + dx;
                 const cy = py + dy;
-                // Двери
                 const interiorId = doorInteriorId(cx, cy);
                 if (interiorId) {
                     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -315,7 +329,6 @@ export class VillageScene extends Phaser.Scene {
                         nearest = { type: 'door', interiorId, label: b ? b.label : 'Войти' };
                     }
                 }
-                // Ворота
                 if (isGate(cx, cy)) {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < bestDist) {
@@ -338,15 +351,15 @@ export class VillageScene extends Phaser.Scene {
         const p = this.player;
         if (!p) return;
         const q = this.registry.get('quest') || {};
-        this.hud.setText(`❤ ${p.HP}/${p.HPmax}   ✦ Воля ${p.MP}/${p.MPmax}   ⚔ Меч ${p.skills.sword}%   ◈ ${q.gold || 0} з.`);
+        // Используем реальные деньги Руси
+        const moneyStr = formatMoney(p.dengas || 0);
+        this.hud.setText(`❤ ${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  ⚔${p.skills.sword}%  💰${moneyStr}`);
         if (q.currentObjective) {
             this.objectiveText.setText(`◆ ${q.currentObjective}`);
         }
-        // Счётчик ходов
         const turnsLeft = (q.turnLimit || 12) - (q.turnsUsed || 0);
         if (turnsLeft > 0 && !q.thiefDefeated && !q.thiefEscaped) {
-            this.turnsText.setText(`⏳ Ходов до побега вора: ${turnsLeft}`);
-            // Цвет меняется в зависимости от срочности
+            this.turnsText.setText(`⏳ Ходов: ${turnsLeft}`);
             if (turnsLeft <= 3) this.turnsText.setColor('#ff4040');
             else if (turnsLeft <= 6) this.turnsText.setColor('#ffaa40');
             else this.turnsText.setColor('#ff8060');
@@ -359,17 +372,13 @@ export class VillageScene extends Phaser.Scene {
         if (this.busyDialog || !this.nearestInteractable) return;
         ActionLog.add(this.registry, `Игрок взаимодействует с: ${this.nearestInteractable.label}.`);
         if (this.nearestInteractable.type === 'door') {
-            // Переход в интерьер
             this.scene.start('Interior', { interiorId: this.nearestInteractable.interiorId, from: 'Village' });
         } else if (this.nearestInteractable.type === 'gate') {
-            // Переход на развилку
             this.scene.start('Fork');
         }
     }
 
     autosave() {
-        const p = this.registry.get('player');
-        const q = this.registry.get('quest');
-        this.saveManager.saveGame(0, { player: p, quest: q }, 'Поход');
+        // Сохранение отключено (одноразовая игра)
     }
 }

@@ -59,10 +59,16 @@ export class DialogueRunner {
             this.scene.audioManager.playDialogueOpen();
         }
 
+        // Если в node.text стоит '...' и есть _lastAskResult — используем сообщение оттуда
+        let displayText = node.text;
+        if (displayText === '...' && this.scene._lastAskResult && this.scene._lastAskResult.message) {
+            displayText = this.scene._lastAskResult.message;
+        }
+
         this._currentDialog = createDialog(
             this.scene,
             node.speaker || '...',
-            node.text,
+            displayText,
             choices.length ? choices : [{ text: 'Закрыть', callback: () => this._finish() }],
             {
                 singleton: false,

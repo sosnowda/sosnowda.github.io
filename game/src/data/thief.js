@@ -234,3 +234,88 @@ export function loseHeroDead(registry) {
     registry.set('quest', q);
     ActionLog.add(registry, 'ПОРАЖЕНИЕ: герой пал в бою с вором.');
 }
+
+/**
+ * Попросить денег у NPC. Одноразовое действие для каждого NPC.
+ * Шанс успеха и сумма зависят от навыка Persuade и кто просит.
+ * Возвращает { success, amount, message, turnsLeft }.
+ */
+export function askMoneyForHelp(registry, npcId, npcName) {
+    const q = registry.get('quest');
+    const player = registry.get('player');
+
+    // Инициализируем список, у кого уже просили деньги
+    if (!q.moneyAskedFrom) q.moneyAskedFrom = [];
+    if (q.moneyAskedFrom.includes(npcId)) {
+        return {
+            success: false,
+            alreadyAsked: true,
+            message: `${npcName}: «Я уже помог тебе, чем мог. Больше не дам.»`,
+            turnsLeft: getHuntState(registry).turnsLeft,
+        };
+    }
+    q.moneyAskedFrom.push(npcId);
+
+    // Тратим ход
+    const turnsLeft = spendTurn(registry, `Просил денег у ${npcName}`);
+
+    // Модификатор в зависимости от NPC
+    // Староста — больше всего даст, купец/тавернщик — средне, крестьяне — мало
+    const npcGenerosity = {
+        elder: 1.5, blacksmith: 0.8, tavernkeeper: 1.0,
+        peasant1: 0.4, widow: 0.3,
+    }[npcId] || 0.5;
+
+    // Проверка навыка Persuade
+    const persuadeSkill = player.skills.persuade || 20;
+    const res = skillCheck(persuadeSkill);
+
+    let success = false;
+    let amount = 0;
+    let message = '';
+
+    if (res.result === 'critical') {
+        // Крит — двойная сумма
+        amount = Math.round((15 + Math.floor(Math.random() * 15)) * npcGenerosity * 2);
+        success = true;
+        message = `${npcName}: «Возьми, путник, чем богат. Помоги тебе Господь!» (+${amount} д.)`;
+        ActionLog.add(registry, `Просил денег у ${npcName} — КРИТИЧЕСКИЙ успех, получено ${amount} д. (бросок ${res.roll}).`);
+    } else if (res.result === 'success') {
+        amount = Math.round((5 + Math.floor(Math.random() * 15)) * npcGenerosity);
+        success = true;
+        message = `${npcName}: «Вот тебе немного денег на дорогу.» (+${amount} д.)`;
+        ActionLog.add(registry, `Просил денег у ${npcName} — успех, получено ${amount} д. (бросок ${res.roll}).`);
+    } else if (res.result === 'fumble') {
+        // Fumble — NPC обижен, теперь вообще ничего не даст
+        message = `${npcName}: «Попрошайка! Уходи, не позорься!» (${npcName} больше не даст денег.)`;
+        ActionLog.add(registry, `Просил денег у ${npcName} — FUMBLE, ничего не получено (бросок ${res.roll}).`);
+    } else {
+        message = `${npcName}: «Нет у меня лишних денег, сам перебиваюсь.»`;
+        ActionLog.add(registry, `Просил денег у ${npcName} — провал, ничего не получено (бросок ${res.roll}).`);
+    }
+
+    if (success) {
+        player.dengas = (player.dengas || 0) + amount;
+        registry.set('player', player);
+    }
+    registry.set('quest', q);
+
+    // Проверка на побег вора
+    if (turnsLeft <= 0 && !q.thiefFound) {
+        q.thiefEscaped = true;
+        q.currentObjective = 'Вор успел скрыться! Игра проиграна.';
+        registry.set('quest', q);
+        ActionLog.add(registry, 'ПОРАЖЕНИЕ: вор успел сбежать, пока ты клянчил деньги.');
+        return { success, amount, message, turnsLeft: 0, thiefEscaped: true };
+    }
+
+    return { success, amount, message, turnsLeft, thiefEscaped: false };
+}
+
+/**
+ * Попросить задаток у старосты. Одноразовое.
+ * Больший шанс и сумма, чем у обычных NPC, т.к. староста заинтересован в поимке вора.
+ */
+export function askElderAdvance(registry) {
+    return askMoneyForHelp(registry, 'elder', 'Староста Мирослав');
+}

@@ -3,6 +3,7 @@
 // (см. src/utils/ui.js).
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
+import { CharacterSelectionScene } from './scenes/CharacterSelectionScene.js';
 import { VillageScene } from './scenes/VillageScene.js';
 import { InteriorScene } from './scenes/InteriorScene.js';
 import { ForkScene } from './scenes/ForkScene.js';
@@ -27,6 +28,7 @@ const config = {
     scene: [
         BootScene,
         TitleScene,
+        CharacterSelectionScene,
         VillageScene,
         InteriorScene,
         ForkScene,

@@ -1,10 +1,6 @@
 // Главное меню игры — кнопки на чистом Phaser (без RexUI)
 import { RUS } from '../config/RusTheme.js';
 import AudioManager from '../systems/AudioManager.js';
-import SaveManager from '../systems/SaveManager.js';
-import { createCharacter } from '../systems/Character.js';
-import { ActionLog } from '../data/actionLog.js';
-import { initThiefHunt } from '../data/thief.js';
 
 export class TitleScene extends Phaser.Scene {
     constructor() {
@@ -15,7 +11,6 @@ export class TitleScene extends Phaser.Scene {
         const { width, height } = this.scale;
         this.cameras.main.setBackgroundColor(RUS.bg);
         this.audioManager = new AudioManager(this);
-        this.saveManager = new SaveManager(this);
 
         // Фоновая музыка главного меню
         this.audioManager.playSceneMusic('menu');
@@ -47,12 +42,11 @@ export class TitleScene extends Phaser.Scene {
             fontSize: '22px', color: '#A89878',
         }).setOrigin(0.5);
 
-        // Кнопки на чистом Phaser (без RexUI)
+        // Кнопки — без "Продолжить" (одноразовая игра)
         const by = 300;
-        this.makeButton(width / 2, by, 'Новая игра', 0x8B2C1A, 0xB53925, () => this.newGame());
-        this.makeButton(width / 2, by + 78, 'Продолжить', 0x3a5a3a, 0x4a6a4a, () => this.continueGame());
-        this.makeButton(width / 2, by + 156, 'Персонаж', 0x4a3520, 0x5a4530, () => this.scene.start('Character', { from: 'Title' }));
-        this.makeButton(width / 2, by + 234, 'О игре', 0x2e4a6a, 0x3a5a8a, () => this.about());
+        this.makeButton(width / 2, by, 'Новая игра', 0x8B2C1A, 0xB53925, () => this.scene.start('CharacterSelection'));
+        this.makeButton(width / 2, by + 78, 'Персонаж', 0x4a3520, 0x5a4530, () => this.scene.start('Character', { from: 'Title' }));
+        this.makeButton(width / 2, by + 156, 'О игре', 0x2e4a6a, 0x3a5a8a, () => this.about());
     }
 
     makeButton(x, y, label, bgColor, hoverColor, callback) {
@@ -69,7 +63,6 @@ export class TitleScene extends Phaser.Scene {
             strokeThickness: 2,
         }).setOrigin(0.5);
 
-        // Контейнер для hover-эффекта
         bg.on('pointerover', () => {
             bg.setFillStyle(hoverColor, 1);
             bg.setScale(1.05);
@@ -136,48 +129,14 @@ export class TitleScene extends Phaser.Scene {
         overlay.on('pointerup', closeDialog);
     }
 
-    newGame() {
-        const p = createCharacter('Путник');
-        // Стартовый инвентарь и золото
-        p.gold = 20;
-        const q = {
-            elderTalked: false,
-            merchantTalked: false,
-            soldierTalked: false,
-            banditDefeated: false,
-            hasHerb: true,  // стартовая трава
-            tutorialStep: 0,
-            currentObjective: 'Вор украл икону! Поговори со старостой',
-            chestsOpened: [],
-            hoursPassed: 0,
-            gold: 20,
-        };
-        this.registry.set('player', p);
-        this.registry.set('quest', q);
-        // Инициализация охоты за вором (выбирает случайную локацию)
-        initThiefHunt(this.registry);
-        // Лог действий
-        ActionLog.init(this.registry);
-        this.saveManager.saveGame(0, { player: p, quest: q }, 'Поход');
-        this.scene.start('Village');
-    }
-
-    continueGame() {
-        const data = this.saveManager.loadGame(0);
-        if (data && data.player) {
-            this.registry.set('player', data.player);
-            this.registry.set('quest', data.quest || {});
-            this.scene.start('Village');
-        } else {
-            this.showSimpleDialog('Сохранение', 'Нет доступных сохранений. Начните новую игру.');
-        }
-    }
-
     about() {
         this.showSimpleDialog('О игре',
             '«Летописи Руси» — браузерная RPG в сеттинге Руси XV века.\n' +
-            'Основа боевой и ролевой системы — BRP (Basic Roleplaying): ' +
-            'характеристики 3d6×5, проверки навыков d100, урон с бонусом силы.\n' +
-            'Управление: WASD/стрелки — движение, E — действие.');
+            'Ролевая система: BRP (Basic Roleplaying Universal Game Engine SRD) — ' +
+            'характеристики 3d6×5, проверки d100, критический успех 1/20 навыка, ' +
+            'особый успех 1/5 навыка, бонус урона по таблице STR+SIZ.\n' +
+            'Деньги: рубли, гривны, куны, деньги (Русь XV в.).\n' +
+            'Управление: WASD/стрелки — движение, E — действие.\n' +
+            'Игра одноразовая — сохранения не поддерживаются.');
     }
 }

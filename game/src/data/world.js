@@ -124,4 +124,56 @@ export function isGate(col, row) {
 export const NPCS = [];
 
 export const PLAYER_START = { col: 13, row: 15 };
-export const LOCATION_NAME = 'Деревня Русь';
+
+// Исторические названия деревень Руси XV века — выбираются случайно при каждой сессии
+export const HISTORICAL_VILLAGE_NAMES = [
+    'Березовец',
+    'Волок Ламский',
+    'Городец на Волге',
+    'Двинская слобода',
+    'Елец',
+    'Заозерье',
+    'Кистерма',
+    'Лукомлье',
+    'Медвежья Голова',
+    'Новое Село',
+    'Опоки',
+    'Пёрмышль',
+    'Раковая слобода',
+    'Старая Руса',
+    'Торжок-Новый',
+    'Углич-Поле',
+    'Холм Великий',
+    'Царёво Займище',
+    'Чёрная Грязь',
+    'Шуя Малая',
+    'Верхний Млин',
+    'Боголюбово',
+    'Вятская Поляна',
+    'Деревянница',
+    'Клещин городок',
+    'Муромское селище',
+    'Плёс на Волге',
+    'Рогачёвский погост',
+    'Славянское',
+    'Тихвинский погост',
+];
+
+let _currentVillageName = null;
+
+export function getRandomVillageName() {
+    return HISTORICAL_VILLAGE_NAMES[Math.floor(Math.random() * HISTORICAL_VILLAGE_NAMES.length)];
+}
+
+export function getVillageName() {
+    if (!_currentVillageName) {
+        _currentVillageName = getRandomVillageName();
+    }
+    return _currentVillageName;
+}
+
+export function resetVillageName() {
+    _currentVillageName = null;
+}
+
+export const LOCATION_NAME = '';  // используется getVillageName() во время выполнения
