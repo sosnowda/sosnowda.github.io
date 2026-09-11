@@ -11,6 +11,7 @@ import { checkGameEnd, askMoneyForHelp, askElderAdvance } from '../data/thief.js
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
 import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion } from '../data/questGenerator.js';
 import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
+import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
 
 export class InteriorScene extends Phaser.Scene {
     constructor() {
@@ -37,6 +38,11 @@ export class InteriorScene extends Phaser.Scene {
         }
         this.interior = interior;
 
+        // Получаем NPC из registry (со случайным именем, п.5,6)
+        this.npcData = findNpc(this.registry, interior.npcId);
+        // Отображаемое имя: до знакомства — «старик священник», после — «Отец Савватий (священник)»
+        const displayName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+
         // ----- Фон интерьера — запасной цвет (если текстуры не загрузились) -----
         this.cameras.main.setBackgroundColor(RUS.panel);
 
@@ -55,8 +61,9 @@ export class InteriorScene extends Phaser.Scene {
         }).setOrigin(0, 0).setDepth(50);
 
         // ----- NPC в интерьере -----
-        this.npcSprite = this.add.sprite(width * 0.65, height * 0.55, interior.npcSprite, 0).setScale(2.5);
-        this.npcSprite.play(`${interior.npcSprite}_idle_down`);
+        const npcSpriteKey = (this.npcData && this.npcData.sprite) || interior.npcSprite;
+        this.npcSprite = this.add.sprite(width * 0.65, height * 0.55, npcSpriteKey, 0).setScale(2.5);
+        this.npcSprite.play(`${npcSpriteKey}_idle_down`);
         // Лёгкое дыхание
         this.tweens.add({
             targets: this.npcSprite,
@@ -64,8 +71,8 @@ export class InteriorScene extends Phaser.Scene {
             scaleY: { from: 2.5, to: 2.45 },
             duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         });
-        // Имя NPC
-        this.add.text(this.npcSprite.x, this.npcSprite.y + 80, interior.npcName, {
+        // Имя NPC — динамическое (п.2-5)
+        this.npcNameText = this.add.text(this.npcSprite.x, this.npcSprite.y + 80, displayName, {
             fontSize: '16px', color: RUS.text,
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(20);
@@ -111,11 +118,22 @@ export class InteriorScene extends Phaser.Scene {
 
         // ----- Кнопка "Поговорить" -----
         createButton(this, width / 2 - 200, height - 50, 'Поговорить', () => {
-            ActionLog.add(this.registry, `Поговорил с ${interior.npcName} в «${interior.name}».`);
+            const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+            ActionLog.add(this.registry, `Поговорил с ${npcName} в «${interior.name}».`);
+
+            // При первом разговоре — знакомство (п.5): NPC представляется
+            if (this.npcData && !this.npcData.met) {
+                meetNpc(this.registry, interior.npcId);
+                ActionLog.add(this.registry, `Познакомился с ${this.npcData.knownDescription}.`);
+                // Обновляем имя над NPC
+                const newName = getNpcDisplayName(this.registry, interior.npcId);
+                this.npcNameText.setText(newName);
+            }
+
             this.activeNpc = {
                 id: interior.npcId,
-                name: interior.npcName,
-                portrait: interior.portrait,
+                name: this.npcData ? (this.npcData.met ? this.npcData.name : npcName) : interior.npcName,
+                portrait: (this.npcData && this.npcData.portrait) || interior.portrait,
             };
             this.busyDialog = true;
             this.dialogue.run(interior.dialogueId, () => {
@@ -188,7 +206,8 @@ export class InteriorScene extends Phaser.Scene {
      * Попросить денег у NPC (п.16) — одноразовое действие.
      */
     askMoneyFromNpc(interior) {
-        const result = askMoneyForHelp(this.registry, interior.npcId, interior.npcName);
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        const result = askMoneyForHelp(this.registry, interior.npcId, npcName);
         createDialog(this, 'Просьба о деньгах', result.message, [
             { text: 'Понятно', callback: () => {} },
         ], {
@@ -208,15 +227,16 @@ export class InteriorScene extends Phaser.Scene {
      * Предложить задание от NPC (п.5-8: процедурный генератор).
      */
     offerQuest(interior) {
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
         // Проверяем, есть ли уже активные задания от этого NPC
         const activeQuests = getActiveQuests(this.registry);
         const hasActiveFromThisNpc = activeQuests.some(q => q.npcId === interior.npcId);
         
         if (hasActiveFromThisNpc) {
             createDialog(this, 'Задание', 
-                `${interior.npcName}: «Ты ещё не выполнил моё прошлое поручение. Сперва закончи его!»`, 
+                `${npcName}: «Ты ещё не выполнил моё прошлое поручение. Сперва закончи его!»`, 
                 [{ text: 'Понятно', callback: () => {} }],
-                { singleton: false, portraitKey: interior.portrait, typing: true, typingSpeed: 30 }
+                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 30 }
             );
             return;
         }
@@ -225,9 +245,9 @@ export class InteriorScene extends Phaser.Scene {
         const quest = generateQuest(interior.npcId, this.registry);
         if (!quest) {
             createDialog(this, 'Задание',
-                `${interior.npcName}: «Нет у меня сейчас для тебя дел. Зайди попозже.»`,
+                `${npcName}: «Нет у меня сейчас для тебя дел. Зайди попозже.»`,
                 [{ text: 'Понятно', callback: () => {} }],
-                { singleton: false, portraitKey: interior.portrait, typing: true, typingSpeed: 30 }
+                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 30 }
             );
             return;
         }
@@ -254,9 +274,9 @@ export class InteriorScene extends Phaser.Scene {
                 callback: () => {
                     acceptQuest(this.registry, quest);
                     createDialog(this, 'Задание принято',
-                        `${interior.npcName}: «Благодарю, путник! Не подведи. Возвращайся, как выполнишь.»`,
+                        `${npcName}: «Благодарю! Не подведи. Возвращайся, как выполнишь.»`,
                         [{ text: 'Понятно', callback: () => {} }],
-                        { singleton: false, portraitKey: interior.portrait, typing: true, typingSpeed: 30 }
+                        { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 30 }
                     );
                 },
             },
@@ -268,7 +288,7 @@ export class InteriorScene extends Phaser.Scene {
             },
         ], {
             singleton: false,
-            portraitKey: interior.portrait,
+            portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
             typing: true,
             typingSpeed: 25,
         });

@@ -1,7 +1,8 @@
 // Запуск диалоговых деревьев через готовый модальный диалог из ui.js.
-// Поддерживает портреты NPC и эффект печатной машинки.
+// Поддерживает портреты NPC, эффект печатной машинки, учёт пола и знакомства.
 import { createDialog } from '../utils/ui.js';
 import { DIALOGUES } from '../data/dialogue.js';
+import { findNpc, getNpcDisplayName, meetNpc } from '../data/npcNames.js';
 
 export class DialogueRunner {
     constructor(scene) {
@@ -68,9 +69,19 @@ export class DialogueRunner {
         const address = this._getPlayerAddress();
         displayText = displayText.replace(/\{address\}/g, address);
 
+        // Динамическое имя спикера (п.2-5): до знакомства — «старик священник»,
+        // после — «Отец Савватий (священник)»
+        let speakerName = node.speaker || '...';
+        if (this.scene.activeNpc && this.scene.activeNpc.id) {
+            const npc = findNpc(this.scene.registry, this.scene.activeNpc.id);
+            if (npc) {
+                speakerName = getNpcDisplayName(this.scene.registry, this.scene.activeNpc.id);
+            }
+        }
+
         this._currentDialog = createDialog(
             this.scene,
-            node.speaker || '...',
+            speakerName,
             displayText,
             choices.length ? choices : [{ text: 'Закрыть', callback: () => this._finish() }],
             {

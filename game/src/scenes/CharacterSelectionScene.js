@@ -14,6 +14,7 @@ import { ActionLog } from '../data/actionLog.js';
 import { initThiefHunt } from '../data/thief.js';
 import { resetVillageName, getVillageName } from '../data/world.js';
 import { initTime, createRandomStartDate } from '../systems/TimeSystem.js';
+import { initNpcNames } from '../data/npcNames.js';
 import AudioManager from '../systems/AudioManager.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
@@ -384,19 +385,35 @@ export class CharacterSelectionScene extends Phaser.Scene {
             banditDefeated: false,
             hasHerb: true,
             tutorialStep: 0,
-            currentObjective: `Вор украл икону! Поговори со старостой в ${villageName}`,
+            currentObjective: `Ты беженец в деревне ${villageName}. Найди приют и работу.`,
             chestsOpened: [],
             hoursPassed: 0,
             moneyAskedFrom: [],
             villageName: villageName,
+            // Сценарий беженца (п.1): герой пришёл в незнакомую деревню
+            isRefugee: true,
+            metNpcs: [],
+            // Беженец начинает с минимумом денег
+            refugeeStartingMoney: 5 + Math.floor(Math.random() * 10), // 5-14 д.
         };
+
+        // Беженец начинает с минимумом денег (п.1)
+        hero.dengas = q.refugeeStartingMoney;
+
         this.registry.set('player', hero);
         this.registry.set('quest', q);
         initThiefHunt(this.registry);
         ActionLog.init(this.registry);
-        // Инициализируем игровое время (п.4,12,14)
+        // Инициализируем игровое время
         initTime(this.registry, startDate);
-        ActionLog.add(this.registry, `Игра началась. Герой: ${hero.name} (${hero.archetype}). Деревня: ${villageName}. Дата: ${startDate.day}.${startDate.month + 1}.${startDate.yearFromChrist}`);
+        // Инициализируем NPC со случайными историческими именами (п.6)
+        initNpcNames(this.registry);
+        
+        ActionLog.add(this.registry, 
+            `Игра началась. ${hero.name} (${hero.archetype}) — беженец из разорённой врагами деревни. ` +
+            `Пришёл в незнакомую деревню ${villageName}. ` +
+            `Дата: ${startDate.day}.${startDate.month + 1}.${startDate.yearFromChrist} от Р.Х.`
+        );
         this.scene.start('Village');
     }
 }
