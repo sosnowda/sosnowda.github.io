@@ -5,7 +5,7 @@ import {
     buildMap, SOLID, tileTexture, doorInteriorId, isGate,
     PLAYER_START, MAP_W, MAP_H, getVillageName,
 } from '../data/world.js';
-import { BUILDINGS, VILLAGE_GATE } from '../data/interiors.js';
+import { BUILDINGS, VILLAGE_GATE, INTERIORS } from '../data/interiors.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
@@ -16,7 +16,9 @@ import { checkGameEnd } from '../data/thief.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, formatDateTime } from '../systems/TimeSystem.js';
-import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory } from '../data/reputation.js';
+import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep } from '../data/reputation.js';
+import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
+import { getNpcActivity } from '../data/npcSchedules.js';
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -90,7 +92,7 @@ export class VillageScene extends Phaser.Scene {
             const doorY = b.row + b.h - 1;
             const px = doorX * ts + ts / 2;
             const py = doorY * ts + ts / 2;
-            // Метка здания над дверью — сдвинута ВЫШЕ, чтобы не перекрываться HUD
+            // Метка здания над дверью
             const label = this.add.text(b.col * ts + b.w * ts / 2, (b.row - 1) * ts - 10, b.label, {
                 fontSize: '14px', color: RUS.text, backgroundColor: '#00000088',
                 padding: { x: 6, y: 3 },
@@ -112,7 +114,10 @@ export class VillageScene extends Phaser.Scene {
             });
             this.doors.push({ x: doorX, y: doorY, interiorId: b.interiorId, label, marker: doorMarker });
 
-            // ----- Ограда и грядки для жилых домов (п.7) -----
+            // ----- П.7: Уникальные детали зданий -----
+            this.addBuildingDetails(b, ts);
+
+            // ----- Ограда и грядки для жилых домов (п.6) -----
             if (b.interiorId === 'villager_house_1' || b.interiorId === 'villager_house_2') {
                 this.addYardAndGarden(b, ts);
             }
@@ -177,6 +182,29 @@ export class VillageScene extends Phaser.Scene {
             this.scene.start('Title');
         });
 
+        // П.16,23: ЛКМ на здании — подойти и войти
+        // П.24: ПКМ на здании — показать информацию
+        this.input.on('pointerdown', (pointer) => {
+            if (this.busyDialog) return;
+            const worldPoint = pointer.positionToCamera(this.cameras.main);
+            const ts = this.tileSize;
+            const tx = Math.floor(worldPoint.x / ts);
+            const ty = Math.floor(worldPoint.y / ts);
+
+            // Проверяем, кликнул ли на дверь здания
+            const interiorId = doorInteriorId(tx, ty);
+            if (intereriorId) {
+                if (pointer.rightButtonDown()) {
+                    // П.24: ПКМ — показать информацию о здании
+                    this.showBuildingInfo(interiorId);
+                } else {
+                    // П.16,23: ЛКМ — подойти к двери и войти
+                    this.walkToAndEnter(interiorId, tx, ty);
+                }
+                return;
+            }
+        });
+
         // ----- СТАТУС-БАР (п.10: горизонтальный бар в самом верху) -----
         // Единая строка со всеми статусами
         this.statusBar = this.add.rectangle(0, 0, this.scale.width, 28, 0x000000, 0.85)
@@ -229,15 +257,106 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
-     * Добавить двор с оградой и грядками к жилому дому (п.7).
+     * П.7: Уникальные детали для каждого здания.
+     */
+    addBuildingDetails(b, ts) {
+        const cx = b.col * ts + b.w * ts / 2;
+        const topY = b.row * ts;
+
+        if (b.interiorId === 'church') {
+            // Церковь: луковка купола + крест + звонница
+            // Купол (луковка) — круг + треугольник
+            const domeY = topY - ts * 0.6;
+            const dome = this.add.graphics();
+            dome.fillStyle(0x8b7355, 1);
+            dome.fillCircle(cx, domeY, ts * 0.4);
+            dome.fillStyle(0x6b5535, 1);
+            dome.fillTriangle(cx - ts * 0.3, domeY, cx + ts * 0.3, domeY, cx, domeY - ts * 0.5);
+            dome.lineStyle(2, 0x4a3a25, 1);
+            dome.strokeCircle(cx, domeY, ts * 0.4);
+            dome.setDepth(8);
+
+            // Крест на куполе
+            this.add.text(cx, domeY - ts * 0.7, '✝', {
+                fontSize: '20px', color: '#c9a14a',
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(9);
+
+            // Звонница — справа от церкви
+            const bellX = cx + b.w * ts / 2 - ts * 0.3;
+            const bellY = topY - ts * 0.3;
+            const bell = this.add.graphics();
+            bell.fillStyle(0x7a5a3a, 1);
+            bell.fillRect(bellX - ts * 0.15, bellY - ts * 0.5, ts * 0.3, ts * 0.8);
+            bell.lineStyle(2, 0x4a3a25, 1);
+            bell.strokeRect(bellX - ts * 0.15, bellY - ts * 0.5, ts * 0.3, ts * 0.8);
+            // Колокол
+            bell.fillStyle(0xc9a14a, 1);
+            bell.fillCircle(bellX, bellY, ts * 0.1);
+            bell.setDepth(8);
+            // Крест на звоннице
+            this.add.text(bellX, bellY - ts * 0.7, '✝', {
+                fontSize: '14px', color: '#c9a14a',
+            }).setOrigin(0.5).setDepth(9);
+
+        } else if (b.interiorId === 'tavern') {
+            // Таверна: вывеска с кружкой
+            this.add.text(cx, topY - ts * 0.4, '🍺', {
+                fontSize: '18px',
+            }).setOrigin(0.5).setDepth(9);
+            // Дымоход
+            const chimney = this.add.graphics();
+            chimney.fillStyle(0x5a4030, 1);
+            chimney.fillRect(cx + ts * 0.6, topY - ts * 0.5, ts * 0.25, ts * 0.5);
+            chimney.setDepth(8);
+
+        } else if (b.interiorId === 'blacksmith') {
+            // Кузница: молот + наковальня (эмблема)
+            this.add.text(cx, topY - ts * 0.4, '🔨', {
+                fontSize: '18px',
+            }).setOrigin(0.5).setDepth(9);
+            // Труба кузницы
+            const chimney = this.add.graphics();
+            chimney.fillStyle(0x4a3a25, 1);
+            chimney.fillRect(cx - ts * 0.8, topY - ts * 0.5, ts * 0.3, ts * 0.6);
+            chimney.setDepth(8);
+
+        } else if (b.interiorId === 'elder_house') {
+            // Дом старосты: флаг/вымпел
+            const flag = this.add.graphics();
+            flag.fillStyle(0x8b2c1a, 1);
+            flag.fillTriangle(cx, topY - ts * 0.8, cx + ts * 0.5, topY - ts * 0.6, cx, topY - ts * 0.4);
+            flag.fillRect(cx - ts * 0.05, topY - ts * 0.8, ts * 0.1, ts * 0.8);
+            flag.setDepth(8);
+
+        } else if (b.interiorId === 'villager_house_1') {
+            // Дом Авдея: сено на крыше
+            this.add.text(cx, topY - ts * 0.3, '🌾', {
+                fontSize: '14px',
+            }).setOrigin(0.5).setDepth(9);
+
+        } else if (b.interiorId === 'villager_house_2') {
+            // Дом Марфы: прялка у окна (эмблема)
+            this.add.text(cx, topY - ts * 0.3, '🧶', {
+                fontSize: '14px',
+            }).setOrigin(0.5).setDepth(9);
+        }
+    }
+
+    /**
+     * Добавить двор с оградой, грядками и КАЛИТКОЙ к жилому дому (п.6).
+     * Калитка — проход в ограде перед дверью, через который игрок может войти.
      */
     addYardAndGarden(b, ts) {
         const baseX = b.col * ts;
         const baseY = (b.row + b.h) * ts;  // под домом
+        const doorX = b.col + Math.floor(b.w / 2);  // колонка двери
 
-        // Грядки перед домом (2×3)
+        // Грядки перед домом (2×3) — по бокам от дорожки к двери
         for (let gy = 0; gy < 2; gy++) {
-            for (let gx = 0; gx < 3; gx++) {
+            for (let gx = 0; gx < b.w + 1; gx++) {
+                // Пропускаем колонку двери — там дорожка
+                if (gx === Math.floor(b.w / 2) || gx === Math.floor(b.w / 2) + 1) continue;
                 const px = baseX + gx * ts + ts / 2;
                 const py = baseY + gy * ts + ts / 2;
                 if (this.textures.exists('tile_garden_0')) {
@@ -250,8 +369,11 @@ export class VillageScene extends Phaser.Scene {
         }
 
         // Ограда: горизонтальная снизу грядок
+        // П.6: В ограде оставляем КАЛИТКУ — проём перед дверью (1 тайл)
         const fenceY = baseY + 2 * ts;
         for (let fx = 0; fx < b.w + 1; fx++) {
+            // Пропускаем тайл калитки — перед дверью
+            if (fx === Math.floor(b.w / 2)) continue;
             const px = baseX + fx * ts + ts / 2;
             if (this.textures.exists('tile_fence_h')) {
                 this.add.image(px, fenceY, 'tile_fence_h')
@@ -259,10 +381,10 @@ export class VillageScene extends Phaser.Scene {
                     .setDepth(3);
             }
         }
+
         // Вертикальные ограды по бокам двора
         for (let fy = 0; fy < 2; fy++) {
             const py = baseY + fy * ts + ts / 2;
-            // Левая сторона
             if (this.textures.exists('tile_fence_v')) {
                 this.add.image(baseX - ts / 2, py, 'tile_fence_v')
                     .setScale(ts / 32)
@@ -278,6 +400,16 @@ export class VillageScene extends Phaser.Scene {
                 .setScale(ts / 32).setDepth(3);
             this.add.image(baseX + (b.w + 1) * ts - ts / 2, fenceY, 'tile_fence_corner')
                 .setScale(ts / 32).setDepth(3);
+        }
+
+        // Калитка — декоративный столбик с двух сторон от прохода
+        const gateX = baseX + Math.floor(b.w / 2) * ts + ts / 2;
+        if (this.textures.exists('tile_fence_v')) {
+            // Два коротких столбика по бокам от калитки
+            this.add.image(gateX - ts / 3, fenceY, 'tile_fence_v')
+                .setScale(ts / 32 * 0.7).setDepth(4);
+            this.add.image(gateX + ts / 3, fenceY, 'tile_fence_v')
+                .setScale(ts / 32 * 0.7).setDepth(4);
         }
     }
 
@@ -305,10 +437,25 @@ export class VillageScene extends Phaser.Scene {
         const { width } = this.scale;
         // Кнопки в статус-баре (п.10): справа вверху, в пределах бара (y=14)
         const btnY = 14;
-        const btnW = 90, btnH = 20;
+        const btnW = 70, btnH = 20;
+
+        // Кнопка "Задания" (п.20)
+        const questBtnX = width - 310;
+        const questBtn = this.add.rectangle(questBtnX, btnY, btnW, btnH, 0x2a4a6a, 0.95)
+            .setStrokeStyle(1, 0xC9A961)
+            .setInteractive({ useHandCursor: true })
+            .setScrollFactor(0)
+            .setDepth(101);
+        const questText = this.add.text(questBtnX, btnY, '📋 Задания', {
+            fontSize: '10px', color: '#E8DCC4',
+            stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+        questBtn.on('pointerup', () => { this.showQuestJournal(); });
+        questBtn.on('pointerover', () => questBtn.setFillStyle(0x3a5a7a, 1));
+        questBtn.on('pointerout', () => questBtn.setFillStyle(0x2a4a6a, 0.95));
 
         // Кнопка "Персонаж"
-        const charBtnX = width - 200;
+        const charBtnX = width - 220;
         const charBtn = this.add.rectangle(charBtnX, btnY, btnW, btnH, 0x4a3520, 0.95)
             .setStrokeStyle(1, 0xC9A961)
             .setInteractive({ useHandCursor: true })
@@ -527,6 +674,169 @@ export class VillageScene extends Phaser.Scene {
         } else if (this.nearestInteractable.type === 'gate') {
             this.scene.start('Fork');
         }
+    }
+
+    // П.16,23: Подойти к двери и войти
+    walkToAndEnter(interiorId, tx, ty) {
+        const ts = this.tileSize;
+        const targetX = tx * ts + ts / 2;
+        const targetY = ty * ts + ts / 2;
+        const dist = Phaser.Math.Distance.Between(this.playerObj.x, this.playerObj.y, targetX, targetY);
+        
+        if (dist < ts * 1.5) {
+            // Уже рядом — входим
+            ActionLog.add(this.registry, `Игрок вошёл в здание.`);
+            this.scene.pause();
+            this.scene.launch('Interior', { interiorId: interiorId, from: 'Village' });
+        } else {
+            // Идём к двери
+            this.playerObj.setVelocity(0, 0);
+            const angle = Phaser.Math.Angle.Between(this.playerObj.x, this.playerObj.y, targetX, targetY);
+            const speed = 200;
+            this.playerObj.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+            
+            // Останавливаемся у двери
+            this.time.delayedCall(dist / speed * 1000, () => {
+                this.playerObj.setVelocity(0, 0);
+                ActionLog.add(this.registry, `Игрок подошёл к зданию и вошёл.`);
+                this.scene.pause();
+                this.scene.launch('Interior', { interiorId: interiorId, from: 'Village' });
+            });
+        }
+    }
+
+    // П.24: Показать информацию о здании
+    showBuildingInfo(interiorId) {
+        const interior = INTERIORS[interiorId];
+        if (!interior) return;
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        const npcRep = getNpcRep(this.registry, interior.npcId);
+        const repLevel = getReputationLevel(npcRep);
+        const timeState = getTime(this.registry);
+        const hour = timeState ? timeState.hour : 12;
+        const activity = this.npcData ? getNpcActivity(this.npcData, hour) : 'занят';
+        
+        const info = `${interior.name}\n` +
+            `NPC: ${npcName}\n` +
+            `Личная репутация: ${npcRep > 0 ? '+' : ''}${npcRep} (${repLevel.name})\n` +
+            `Сейчас: ${activity}`;
+        
+        // Показываем как всплывающую подсказку
+        const { width, height } = this.scale;
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.5)
+            .setOrigin(0).setInteractive().setDepth(200).setScrollFactor(0);
+        const panel = this.add.rectangle(width / 2, height / 2, 400, 180, 0x241B15, 1)
+            .setStrokeStyle(2, 0xC9A961).setDepth(201).setScrollFactor(0);
+        const text = this.add.text(width / 2, height / 2, info, {
+            fontSize: '14px', color: '#E8DCC4', align: 'center',
+            fontFamily: 'Georgia, serif',
+            stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setDepth(202).setScrollFactor(0);
+        
+        const closeInfo = () => {
+            overlay.destroy();
+            panel.destroy();
+            text.destroy();
+        };
+        overlay.on('pointerup', closeInfo);
+        this.time.delayedCall(3000, closeInfo); // авто-закрытие через 3 сек
+    }
+
+    // П.20-22: Журнал заданий
+    showQuestJournal() {
+        const { width, height } = this.scale;
+        this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
+
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
+            .setOrigin(0).setInteractive().setDepth(200);
+        const panelW = 750, panelH = 600;
+        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
+            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+
+        this.add.text(width / 2, height / 2 - panelH / 2 + 20, '📋 Журнал заданий', {
+            fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif',
+            stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(202);
+
+        const q = this.registry.get('quest') || {};
+        const quests = q.activeQuests || [];
+        const timeState = getTime(this.registry);
+
+        if (quests.length === 0) {
+            this.add.text(width / 2, height / 2, 'Нет активных заданий.\nПоговорите с жителями деревни.', {
+                fontSize: '16px', color: RUS.textDim, align: 'center',
+            }).setOrigin(0.5).setDepth(202);
+        } else {
+            let y = height / 2 - panelH / 2 + 60;
+            quests.forEach((quest) => {
+                // П.21: Детальная информация о задании
+                const status = quest.completed ? '✅ Выполнено' : (quest.failed ? '❌ Провалено' : '🔄 Выполняется');
+                const statusColor = quest.completed ? '#60ff60' : (quest.failed ? '#ff4040' : '#c9a14a');
+                
+                // П.22: Сроки в часах/днях
+                const timeLimitHours = quest.timeLimit ? quest.timeLimit * 4 : 0; // 1 ход = ~4 часа
+                const timeLimitDays = Math.ceil(timeLimitHours / 24);
+                const timeTaken = quest.acceptedTime || 'неизвестно';
+                const deadline = quest.deadline || `${timeLimitDays} дн. (${timeLimitHours} ч.)`;
+
+                // П.18: Штрафы за невыполнение
+                const penaltyText = quest.difficulty === 'hard' 
+                    ? 'Штраф: −15 репутации, возможное изгнание' 
+                    : (quest.difficulty === 'medium' 
+                        ? 'Штраф: −8 репутации' 
+                        : 'Штраф: нет или −3 репутации');
+
+                // П.21.7: Награды
+                const rewardsText = (quest.rewards || []).map(r => {
+                    if (r.type === 'money') return `${r.amount} д.`;
+                    if (r.type === 'item') return `${r.name} ×${r.count}`;
+                    if (r.type === 'lodging') return 'ночлег';
+                    if (r.type === 'blessing') return 'благословение';
+                    return r.name || '';
+                }).join(', ');
+
+                const questInfo = [
+                    `${status}  |  ${quest.title}`,
+                    `Выдал: ${quest.npcName || 'неизвестно'}`,
+                    `Срок: ${deadline}  |  Сложность: ${quest.difficulty}`,
+                    `Цель: ${quest.objective}`,
+                    `Награда: ${rewardsText || 'нет'}`,
+                    `${penaltyText}`,
+                    `Сдавать: ${quest.npcName || 'тому же NPC'}`,
+                ].join('\n');
+
+                this.add.text(width / 2 - panelW / 2 + 20, y, questInfo, {
+                    fontSize: '12px', color: '#E8DCC4',
+                    fontFamily: 'Arial, sans-serif',
+                    stroke: '#000', strokeThickness: 1,
+                    lineSpacing: 3,
+                    wordWrap: { width: panelW - 40 },
+                }).setOrigin(0, 0).setDepth(202);
+
+                // Цветная метка статуса
+                this.add.text(width / 2 - panelW / 2 + 20, y, status, {
+                    fontSize: '12px', color: statusColor, fontStyle: 'bold',
+                }).setOrigin(0, 0).setDepth(203);
+
+                y += 110;
+                if (y > height / 2 + panelH / 2 - 60) return; // не выходим за пределы
+            });
+        }
+
+        // Кнопка закрытия
+        const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 25, 140, 30, 0x8B2C1A, 1)
+            .setStrokeStyle(2, 0xC9A961)
+            .setInteractive({ useHandCursor: true }).setDepth(202);
+        const btnText = this.add.text(width / 2, height / 2 + panelH / 2 - 25, 'Закрыть', {
+            fontSize: '14px', color: '#E8DCC4',
+        }).setOrigin(0.5).setDepth(203);
+
+        const closeJournal = () => {
+            this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
+        };
+        btnBg.on('pointerup', closeJournal);
+        overlay.on('pointerup', closeJournal);
     }
 
     autosave() {

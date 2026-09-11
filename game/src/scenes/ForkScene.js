@@ -9,6 +9,7 @@ import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { getForkLocations } from '../data/mapLocations.js';
 import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
+import { getVillageName } from '../data/world.js';
 
 export class ForkScene extends Phaser.Scene {
     constructor() {
@@ -122,5 +123,94 @@ export class ForkScene extends Phaser.Scene {
             fontSize: 16, padding: { left: 24, right: 24, top: 10, bottom: 10 },
             cornerRadius: 8,
         });
+
+        // П.17: Кнопка "Карта" — показать карту местности
+        createButton(this, width / 2, backBtnY + 40, '🗺 Карта местности', () => {
+            this.showMap();
+        }, {
+            backgroundColor: 0x2a4a6a, hoverColor: 0x3a5a7a, textColor: RUS.text,
+            fontSize: 16, padding: { left: 24, right: 24, top: 10, bottom: 10 },
+            cornerRadius: 8,
+        });
+    }
+
+    // П.17: Карта местности с указанием положения игрока
+    showMap() {
+        const { width, height } = this.scale;
+        this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
+
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
+            .setOrigin(0).setInteractive().setDepth(200);
+        const panelW = 700, panelH = 550;
+        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x1a2a1a, 1)
+            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+
+        this.add.text(width / 2, height / 2 - panelH / 2 + 20, '🗺 Карта местности', {
+            fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif',
+            stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(202);
+
+        // Рисуем карту: деревня в центре, локации вокруг
+        const cx = width / 2;
+        const cy = height / 2;
+        const mapGfx = this.add.graphics().setDepth(202);
+
+        // Деревня в центре
+        mapGfx.fillStyle(0x4a7c3a, 1);
+        mapGfx.fillCircle(cx, cy, 30);
+        mapGfx.lineStyle(2, 0xc9a14a, 1);
+        mapGfx.strokeCircle(cx, cy, 30);
+        this.add.text(cx, cy, '🏠', { fontSize: '20px' }).setOrigin(0.5).setDepth(203);
+        this.add.text(cx, cy + 35, getVillageName(), {
+            fontSize: '12px', color: '#c9a14a',
+        }).setOrigin(0.5).setDepth(203);
+
+        // Локации вокруг деревни
+        const positions = [
+            { id: 'forest', name: 'Лес', icon: '🌲', angle: -90, dist: 150 },
+            { id: 'road_south', name: 'Тракт', icon: '🛤', angle: 90, dist: 150 },
+            { id: 'river', name: 'Река', icon: '🌊', angle: 180, dist: 150 },
+            { id: 'field', name: 'Поле', icon: '🌾', angle: 0, dist: 150 },
+            { id: 'monastery', name: 'Монастырь', icon: '⛪', angle: -45, dist: 200 },
+            { id: 'fortress', name: 'Городище', icon: '🏰', angle: 45, dist: 200 },
+            { id: 'mill', name: 'Мельница', icon: '🏭', angle: 135, dist: 200 },
+            { id: 'apiary', name: 'Пасека', icon: '🐝', angle: -135, dist: 200 },
+        ];
+
+        positions.forEach(pos => {
+            const rad = Phaser.Math.DegToRad(pos.angle);
+            const x = cx + Math.cos(rad) * pos.dist;
+            const y = cy + Math.sin(rad) * pos.dist;
+            // Линия от деревни к локации
+            mapGfx.lineStyle(1, 0x5a5a3a, 0.5);
+            mapGfx.lineBetween(cx, cy, x, y);
+            // Точка локации
+            mapGfx.fillStyle(0x3a5a3a, 1);
+            mapGfx.fillCircle(x, y, 15);
+            this.add.text(x, y, pos.icon, { fontSize: '16px' }).setOrigin(0.5).setDepth(203);
+            this.add.text(x, y + 18, pos.name, {
+                fontSize: '10px', color: '#a0a080',
+            }).setOrigin(0.5).setDepth(203);
+        });
+
+        // Игрок — в деревне (зелёная точка)
+        mapGfx.fillStyle(0x60ff60, 1);
+        mapGfx.fillCircle(cx, cy - 5, 5);
+        this.add.text(cx, cy - 20, '🧑', { fontSize: '14px' }).setOrigin(0.5).setDepth(203);
+
+        // Кнопка закрытия
+        const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 25, 140, 30, 0x8B2C1A, 1)
+            .setStrokeStyle(2, 0xC9A961)
+            .setInteractive({ useHandCursor: true }).setDepth(202);
+        const btnText = this.add.text(width / 2, height / 2 + panelH / 2 - 25, 'Закрыть', {
+            fontSize: '14px', color: '#E8DCC4',
+        }).setOrigin(0.5).setDepth(203);
+
+        const closeMap = () => {
+            this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
+        };
+        btnBg.on('pointerup', closeMap);
+        overlay.on('pointerup', closeMap);
     }
 }
