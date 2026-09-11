@@ -16,7 +16,7 @@ import { checkGameEnd } from '../data/thief.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, formatDateTime } from '../systems/TimeSystem.js';
-import { getVillageRep, getReputationLevel, checkExpulsion } from '../data/reputation.js';
+import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory } from '../data/reputation.js';
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -363,8 +363,20 @@ export class VillageScene extends Phaser.Scene {
         if (expulsion.expelled) {
             ActionLog.add(this.registry, `ПОРАЖЕНИЕ: ${expulsion.message}`);
             const q = this.registry.get('quest');
-            q.heroDead = true; // используем как общий флаг конца
+            q.heroDead = true;
             q.currentObjective = 'Изгнан из деревни за дурную славу.';
+            this.registry.set('quest', q);
+            this.scene.start('End');
+            return;
+        }
+        
+        // Пункт 13: Проверка выигрыша при репутации +100
+        const victory = checkVictory(this.registry);
+        if (victory.victory) {
+            ActionLog.add(this.registry, `ПОБЕДА: ${victory.message}`);
+            const q = this.registry.get('quest');
+            q.thiefDefeated = true; // используем как флаг победы для EndScene
+            q.currentObjective = 'Принят в деревню как свой! Победа!';
             this.registry.set('quest', q);
             this.scene.start('End');
             return;
