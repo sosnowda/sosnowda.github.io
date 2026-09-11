@@ -282,22 +282,6 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
 </div>
     </section>
 
-<section class="section" style="text-align:center;">
-    <div class="container">
-<div style="margin-top:2rem;padding-top:2rem;border-top:1px solid rgba(201,169,97,0.2);text-align:center;">
-        <h4 style="color:#c9a961;margin-bottom:1rem;font-family:'Marcellus',serif;">Поддержите проект</h4>
-        <div style="margin-bottom:1.5rem;">
-            <h4 style="color:#c9a961;margin-bottom:0.5rem;font-family:'Marcellus',serif;font-size:1rem;">Поделиться</h4>
-            <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
-                <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0077ff;color:#fff;text-decoration:none;font-size:0.85rem;">ВК</a>
-                <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=Летописи Руси XV века — AI-narrative RPG" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0088cc;color:#fff;text-decoration:none;font-size:0.85rem;">Telegram</a>
-                <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#ee8208;color:#fff;text-decoration:none;font-size:0.85rem;">Одноклассники</a>
-                <a href="javascript:navigator.clipboard.writeText('https://sosnowda.github.io').then(()=>{alert('Ссылка скопирована!')})" style="padding:0.5rem 1.2rem;border-radius:8px;background:#333;color:#fff;text-decoration:none;font-size:0.85rem;cursor:pointer;">Копировать</a>
-            </div>
-        </div>
-    </div>
-</section>
-
 <!-- ТЕХНОЛОГИИ -->
     <section class="section section-alt" id="tech">
         <div class="container">
@@ -309,13 +293,15 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
                     <li>
 <strong>Игровой движок Godot</strong> — управляет игровым окружением, загрузкой нейросетей, ведёт все расчёты и следит за исторической достоверностью промптов через RAG-базу.</li>
                     <li>
-<strong>Локальная нейросеть</strong> — загружается с репозитория Hugging Face при первом старте. Работает офлайн через llama.cpp server (OpenAI-совместимый API по HTTP).</li>
+<strong>Локальная нейросеть</strong> — загружается с репозитория Hugging Face при первом старте. Работает офлайн через llama.cpp server.</li>
                     <li>
 <strong>Облачные модели</strong> — подключите любую модель через свой OpenAI-совместимый API-ключ, указав адрес провайдера и название модели.</li>
                     <li>
 <strong>RAG-База Данных</strong> — собрана из нескольких сотен исторических книг и статей. Проверяет каждый промпт на историчность перед передачей нейросети.</li>
                     <li>
 <strong>BRP d100</strong> — ролевая система Chaosium BRP Universal Game Engine SRD. Все броски, урон, навыки и проверки считает движок.</li>
+                    <li>
+<strong>Встроенная модель для эмбеддинга</strong> — mxbai-embed-large-v1 · Q5_K_M · dim 1024 · косинусный поиск. Вторая нейросеть для RAG-базы знаний.</li>
                     <li>
 <strong>Rolling Summary + State Injection</strong> — интеллектуальное управление контекстным окном модели, предотвращающее переполнение и сохраняющее ключевые события.</li>
                 </ul>
@@ -530,6 +516,23 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
                 Игра откроется в новой вкладке. Управление: WASD/стрелки — движение, E — взаимодействие.<br>
                 Размер окна: 1280×720. Рекомендуется полноэкранный режим (F11).
             </p>
+        </div>
+    </div>
+</section>
+
+<!-- ПОДДЕРЖИТЕ ПРОЕКТ -->
+<section class="section" style="text-align:center;">
+    <div class="container">
+<div style="margin-top:0;padding-top:0;border-top:1px solid rgba(201,169,97,0.2);text-align:center;">
+        <h4 style="color:#c9a961;margin-bottom:1rem;font-family:'Marcellus',serif;">Поддержите проект</h4>
+        <div style="margin-bottom:1.5rem;">
+            <h4 style="color:#c9a961;margin-bottom:0.5rem;font-family:'Marcellus',serif;font-size:1rem;">Поделиться</h4>
+            <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
+                <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0077ff;color:#fff;text-decoration:none;font-size:0.85rem;">ВК</a>
+                <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=Летописи Руси XV века — AI-narrative RPG" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0088cc;color:#fff;text-decoration:none;font-size:0.85rem;">Telegram</a>
+                <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#ee8208;color:#fff;text-decoration:none;font-size:0.85rem;">Одноклассники</a>
+                <a href="javascript:navigator.clipboard.writeText('https://sosnowda.github.io').then(()=>{alert('Ссылка скопирована!')})" style="padding:0.5rem 1.2rem;border-radius:8px;background:#333;color:#fff;text-decoration:none;font-size:0.85rem;cursor:pointer;">Копировать</a>
+            </div>
         </div>
     </div>
 </section>
