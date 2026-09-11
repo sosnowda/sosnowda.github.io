@@ -16,6 +16,11 @@ const LOCATION_BG = {
     road: 0x4a3a2a,
     river: 0x1a3a4a,
     field: 0x4a5a2a,
+    lake: 0x1a3a4a,
+    pogost: 0x2a2a1a,
+    pasture: 0x3a5a2a,
+    mill: 0x3a4a2a,
+    apiary: 0x2a3a1a,
 };
 
 export class LocationScene extends Phaser.Scene {
@@ -218,6 +223,119 @@ export class LocationScene extends Phaser.Scene {
                     duration: 1500 + Math.random() * 1500,
                     yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
                 });
+            }
+        } else if (locId === 'lake') {
+            // Озеро — тёмная вода с бликами
+            gfx.fillStyle(0x1a3050, 1);
+            gfx.fillRect(0, 80, width, height - 80);
+            gfx.setDepth(0);
+            // Анимированные волны озера
+            for (let i = 0; i < 30; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 120);
+                const water = this.add.image(x, y, `tile_lake_${i % 3}`).setScale(2);
+                this.tweens.add({
+                    targets: water,
+                    x: x + 15,
+                    duration: 2500 + Math.random() * 2000,
+                    yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                });
+            }
+            // Камыши по берегу
+            for (let i = 0; i < 12; i++) {
+                const x = Math.random() * width;
+                this.add.image(x, 100, 'tile_forest_0').setScale(2).setOrigin(0.5, 1).setDepth(2);
+            }
+            // Деревья вокруг озера
+            for (let i = 0; i < 6; i++) {
+                const x = (i < 3) ? Math.random() * 150 : width - Math.random() * 150;
+                const y = 100 + Math.random() * (height - 150);
+                this.add.image(x, y, `tile_forest_${i % 2}`).setScale(3).setOrigin(0.5, 0.7).setDepth(3);
+            }
+        } else if (locId === 'pogost') {
+            // Погост — кладбище с часовней, могилами и крестами
+            gfx.fillStyle(0x3a3a2a, 1);
+            gfx.fillRect(0, 80, width, height - 80);
+            gfx.setDepth(0);
+            // Заросшая земля
+            gfx.fillStyle(0x4a4a3a, 0.5);
+            for (let i = 0; i < 60; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 120);
+                gfx.fillRect(x, y, 4, 4);
+            }
+            // Часовня в центре
+            if (this.textures.exists('deco_chapel')) {
+                this.add.image(width / 2, height * 0.3, 'deco_chapel').setScale(2).setDepth(4);
+            }
+            // Могилы с крестами (ряды)
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 4; col++) {
+                    const x = 80 + col * 180 + (row % 2) * 40;
+                    const y = 250 + row * 120;
+                    const v = (row + col) % 2;
+                    if (this.textures.exists(`deco_grave_${v}`)) {
+                        this.add.image(x, y, `deco_grave_${v}`).setScale(2).setDepth(3);
+                    }
+                }
+            }
+            // Много деревьев
+            for (let i = 0; i < 12; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 150);
+                this.add.image(x, y, `tile_forest_${i % 2}`).setScale(2.5).setOrigin(0.5, 0.7).setDepth(2);
+            }
+            // Трава
+            for (let i = 0; i < 20; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 120);
+                this.add.image(x, y, 'tile_grass_0').setScale(2).setDepth(1);
+            }
+        } else if (locId === 'pasture') {
+            // Выпас — луг с коровами, козами и лошадьми
+            gfx.fillStyle(0x5a8a3a, 1);
+            gfx.fillRect(0, 80, width, height - 80);
+            gfx.setDepth(0);
+            // Сочная трава
+            gfx.fillStyle(0x6a9a4a, 0.5);
+            for (let i = 0; i < 80; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 120);
+                gfx.fillRect(x, y, 3, 5);
+            }
+            // Коровы (3 шт)
+            for (let i = 0; i < 3; i++) {
+                const x = 150 + i * 300 + Math.random() * 50;
+                const y = 250 + Math.random() * 200;
+                if (this.textures.exists('deco_cow')) {
+                    const cow = this.add.image(x, y, 'deco_cow').setScale(2).setDepth(3);
+                    // Лёгкое движение
+                    this.tweens.add({
+                        targets: cow,
+                        y: y - 3,
+                        duration: 2000 + Math.random() * 1000,
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                }
+            }
+            // Козы (2 шт)
+            for (let i = 0; i < 2; i++) {
+                const x = 200 + i * 400 + Math.random() * 50;
+                const y = 300 + Math.random() * 150;
+                if (this.textures.exists('deco_goat')) {
+                    this.add.image(x, y, 'deco_goat').setScale(2).setDepth(3);
+                }
+            }
+            // Лошадь (1 шт)
+            if (this.textures.exists('deco_horse')) {
+                this.add.image(width * 0.7, height * 0.6, 'deco_horse').setScale(2).setDepth(3);
+            }
+            // Ограда выпаса (забор по периметру)
+            for (let x = 0; x < width; x += 48) {
+                if (this.textures.exists('tile_fence_h')) {
+                    this.add.image(x + 24, 90, 'tile_fence_h').setScale(1.5).setDepth(2);
+                    this.add.image(x + 24, height - 30, 'tile_fence_h').setScale(1.5).setDepth(2);
+                }
             }
         }
     }

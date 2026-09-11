@@ -166,16 +166,17 @@ export class ForkScene extends Phaser.Scene {
             fontSize: '12px', color: '#c9a14a',
         }).setOrigin(0.5).setDepth(203);
 
-        // Локации вокруг деревни
+        // Локации вокруг деревни (п.4: финальный список)
         const positions = [
             { id: 'forest', name: 'Лес', icon: '🌲', angle: -90, dist: 150 },
             { id: 'road_south', name: 'Тракт', icon: '🛤', angle: 90, dist: 150 },
             { id: 'river', name: 'Река', icon: '🌊', angle: 180, dist: 150 },
             { id: 'field', name: 'Поле', icon: '🌾', angle: 0, dist: 150 },
-            { id: 'monastery', name: 'Монастырь', icon: '⛪', angle: -45, dist: 200 },
-            { id: 'fortress', name: 'Городище', icon: '🏰', angle: 45, dist: 200 },
+            { id: 'lake', name: 'Озеро', icon: '🏞', angle: -45, dist: 200 },
+            { id: 'pogost', name: 'Погост', icon: '⚰️', angle: 45, dist: 200 },
             { id: 'mill', name: 'Мельница', icon: '🏭', angle: 135, dist: 200 },
             { id: 'apiary', name: 'Пасека', icon: '🐝', angle: -135, dist: 200 },
+            { id: 'pasture', name: 'Выпас', icon: '🐄', angle: 0, dist: 250 },
         ];
 
         positions.forEach(pos => {

@@ -1,12 +1,7 @@
 // Карта местности вокруг деревни — исторические локации Руси XV века.
-// Каждая локация имеет:
-// - id, name, icon, description
-// - тип (лес/поле/река/тракт/мельница/пасека/монастырь/городище/и т.д.)
-// - доступность из деревни
-// - возможные события (бой, находки, встречи)
+// Финальный список (п.4): Деревня, Лес, Тракт, Поле, Озеро, Погост, Мельница, Пасека, Выпас.
 
 export const MAP_LOCATIONS = [
-    // Основные локации (доступны с развилки)
     {
         id: 'forest',
         name: 'Тёмный лес',
@@ -28,15 +23,6 @@ export const MAP_LOCATIONS = [
         enemies: ['bandit'],
     },
     {
-        id: 'river',
-        name: 'Рѣка Кистерма',
-        icon: '🌊',
-        description: 'Брод через реку. Здесь стирают бельё, ловят рыбу, поят скот.',
-        type: 'river',
-        danger: 'low',
-        canFight: false,
-    },
-    {
         id: 'field',
         name: 'Ржаное поле',
         icon: '🌾',
@@ -45,7 +31,24 @@ export const MAP_LOCATIONS = [
         danger: 'low',
         canFight: false,
     },
-    // Дополнительные локации (исторически верные для Руси XV века)
+    {
+        id: 'lake',
+        name: 'Святое озеро',
+        icon: '🏞',
+        description: 'Тихое лесное озеро с чистой водой. Здесь ловят рыбу и собирают камыши.',
+        type: 'lake',
+        danger: 'low',
+        canFight: false,
+    },
+    {
+        id: 'pogost',
+        name: 'Погостъ',
+        icon: '⚰️',
+        description: 'Деревенское кладбище с деревянной часовней и рядами могил с крестами. Много деревьев и травы.',
+        type: 'cemetery',
+        danger: 'low',
+        canFight: false,
+    },
     {
         id: 'mill',
         name: 'Водяная мельница',
@@ -54,8 +57,6 @@ export const MAP_LOCATIONS = [
         type: 'building',
         danger: 'low',
         canFight: false,
-        npc: 'miller',
-        hasInterior: true,
     },
     {
         id: 'apiary',
@@ -65,80 +66,22 @@ export const MAP_LOCATIONS = [
         type: 'building',
         danger: 'low',
         canFight: false,
-        npc: 'beekeeper',
     },
     {
-        id: 'monastery',
-        name: 'Мужской монастырь',
-        icon: '⛪',
-        description: 'Небольшой монастырь в часе ходьбы от деревни. Монахи молятся и переписывают книги.',
-        type: 'building',
-        danger: 'low',
-        canFight: false,
-        npc: 'monk',
-        hasInterior: true,
-    },
-    {
-        id: 'fortress',
-        name: 'Городище',
-        icon: '🏰',
-        description: 'Старинное городище на холме. Когда-то здесь была крепость, теперь лишь валы и рвы.',
-        type: 'ruins',
-        danger: 'medium',
-        canFight: true,
-        enemies: ['bandit'],
-    },
-    {
-        id: 'crossroads',
-        name: 'Перекрёстокъ',
-        icon: '✝',
-        description: 'Перекрёсток трёх дорог с придорожным крестом. Путники здесь отдыхают.',
-        type: 'road',
+        id: 'pasture',
+        name: 'Выпасъ',
+        icon: '🐄',
+        description: 'Луг, где пасутся деревенские коровы, козы и лошади. Тут же пастух присматривает за стадом.',
+        type: 'pasture',
         danger: 'low',
         canFight: false,
     },
     {
-        id: 'bridge',
-        name: 'Мостъ через рѣку',
-        icon: '🌉',
-        description: 'Деревянный мост через реку. За ним начинается большой лес.',
-        type: 'road',
-        danger: 'low',
-        canFight: false,
-    },
-    {
-        id: 'cemetery',
-        name: 'Погостъ',
-        icon: '⚰️',
-        description: 'Деревенское кладбище за оградой. Старые кресты покосились, заросли травой.',
-        type: 'cemetery',
-        danger: 'low',
-        canFight: false,
-    },
-    {
-        id: 'bathhouse',
-        name: 'Баня',
-        icon: '♨️',
-        description: 'Общественная баня на отшибе. Здесь моются по субботам.',
-        type: 'building',
-        danger: 'low',
-        canFight: false,
-    },
-    {
-        id: 'well',
-        name: 'Колодецъ',
-        icon: '🪣',
-        description: 'Общественный колодец в центре деревни. Здесь собираются новости.',
-        type: 'building',
-        danger: 'low',
-        canFight: false,
-    },
-    {
-        id: 'market',
-        name: 'Торговая площадь',
-        icon: '🏪',
-        description: 'Небольшая площадь, где по праздникам устраивают торг.',
-        type: 'building',
+        id: 'river',
+        name: 'Рѣка Кистерма',
+        icon: '🌊',
+        description: 'Брод через реку. Здесь стирают бельё, ловят рыбу, поят скот.',
+        type: 'river',
         danger: 'low',
         canFight: false,
     },
@@ -149,10 +92,9 @@ export function getLocationById(id) {
     return MAP_LOCATIONS.find(l => l.id === id);
 }
 
-// Получить все доступные с развилки локации
+// Получить все доступные с развилки локации (п.4: финальный список)
 export function getForkLocations() {
     return MAP_LOCATIONS.filter(l => 
-        ['forest', 'road_south', 'river', 'field', 'mill', 'apiary', 'monastery', 
-         'fortress', 'crossroads', 'bridge', 'cemetery', 'bathhouse'].includes(l.id)
+        ['forest', 'road_south', 'field', 'lake', 'pogost', 'mill', 'apiary', 'pasture', 'river'].includes(l.id)
     );
 }

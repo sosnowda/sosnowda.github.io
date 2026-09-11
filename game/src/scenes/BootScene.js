@@ -92,6 +92,20 @@ export class BootScene extends Phaser.Scene {
         for (let v = 0; v < 2; v++) this.load.image(`tile_field_${v}`, `assets/tiles/field_${v}.png`);
         this.load.image('tile_gate', 'assets/tiles/gate.png');
 
+        // ----- ТАЙЛЫ НОВЫХ ЛОКАЦИЙ (озеро, погост, выпас) -----
+        for (let f = 0; f < 3; f++) this.load.image(`tile_lake_${f}`, `assets/tiles/lake_${f}.png`);
+        this.load.image('tile_cemetery_ground', 'assets/tiles/cemetery_ground.png');
+        for (let v = 0; v < 2; v++) this.load.image(`deco_grave_${v}`, `assets/tiles/grave_cross_${v}.png`);
+        this.load.image('tile_pasture_grass', 'assets/tiles/pasture_grass.png');
+
+        // ----- ДЕКОРАЦИИ ЛОКАЦИЙ (часовня, скот, храм, дома) -----
+        this.load.image('deco_chapel', 'assets/sprites/deco_chapel.png');
+        this.load.image('deco_cow', 'assets/sprites/deco_cow.png');
+        this.load.image('deco_goat', 'assets/sprites/deco_goat.png');
+        this.load.image('deco_horse', 'assets/sprites/deco_horse.png');
+        this.load.image('deco_church_building', 'assets/sprites/deco_church_building.png');
+        for (let v = 0; v < 4; v++) this.load.image(`deco_house_${v}`, `assets/sprites/deco_house_${v}.png`);
+
         // Запасная частица (для совместимости со старым кодом)
         const pg = this.make.graphics({ add: false });
         pg.fillStyle(0xffffff, 1);
