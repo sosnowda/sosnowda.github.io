@@ -9,6 +9,7 @@ import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { ActionLog } from '../data/actionLog.js';
 import { winGame, loseHeroDead } from '../data/thief.js';
+import { getTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 
 export class CombatScene extends Phaser.Scene {
     constructor() {
@@ -98,6 +99,14 @@ export class CombatScene extends Phaser.Scene {
         this.createActions();
         this.drawBars();
         this.pushLog('Бой начинается! Приготовься, путник.');
+
+        // ----- Overlay дня/ночи (п.5) -----
+        const timeState = getTime(this.registry);
+        if (timeState) {
+            const overlay = getDayNightOverlay(timeState);
+            this.add.rectangle(0, 0, width, height, overlay.color, overlay.alpha)
+                .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY);
+        }
     }
 
     createActions() {

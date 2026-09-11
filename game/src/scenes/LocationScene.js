@@ -3,11 +3,13 @@
 import { RUS } from '../config/RusTheme.js';
 import { FORK_LOCATIONS } from '../data/interiors.js';
 import { THIEF_LOCATIONS } from '../data/thief.js';
+import { getLocationById } from '../data/mapLocations.js';
 import { searchLocation, getHuntState, checkGameEnd } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
 import { createButton, createDialog } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
+import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 
 const LOCATION_BG = {
     forest: 0x1a2a1a,
@@ -32,26 +34,44 @@ export class LocationScene extends Phaser.Scene {
         this.saveManager = new SaveManager(this);
         this.audioManager.playSceneMusic('village');
 
-        const loc = FORK_LOCATIONS.find(l => l.id === this.locationId);
+        const loc = getLocationById(this.locationId) || FORK_LOCATIONS.find(l => l.id === this.locationId) || { name: this.locationId, icon: '❓', description: '' };
         const state = getHuntState(this.registry);
 
         // ----- Фон локации — устанавливаем базовый цвет -----
         this.cameras.main.setBackgroundColor(LOCATION_BG[this.locationId] || 0x1a2a1a);
         this.drawLocationBackground(this.locationId, width, height);
 
+        // ----- Overlay дня/ночи (п.5) -----
+        const timeState = getTime(this.registry);
+        if (timeState) {
+            const overlay = getDayNightOverlay(timeState);
+            this.add.rectangle(0, 0, width, height, overlay.color, overlay.alpha)
+                .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY);
+        }
+
         // ----- Заголовок -----
-        this.add.text(width / 2, 30, `${loc.icon} ${loc.name}`, {
-            fontSize: '32px', color: RUS.text, fontStyle: 'bold',
+        this.add.text(width / 2, 20, `${loc.icon} ${loc.name}`, {
+            fontSize: '28px', color: RUS.text, fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5, 0);
 
-        this.add.text(width / 2, 80, loc.description, {
-            fontSize: '14px', color: RUS.textDim,
+        this.add.text(width / 2, 55, loc.description, {
+            fontSize: '13px', color: RUS.textDim,
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 1,
             wordWrap: { width: width - 80 },
         }).setOrigin(0.5, 0);
+
+        // Дата и время (п.13)
+        if (timeState) {
+            this.add.text(width / 2, 80, `📅 ${formatDateTime(timeState)}`, {
+                fontSize: '11px', color: '#8ab4f8',
+                fontFamily: 'Georgia, serif',
+                stroke: '#000', strokeThickness: 1,
+                backgroundColor: '#00000088', padding: { x: 6, y: 3 },
+            }).setOrigin(0.5, 0).setDepth(100);
+        }
 
         // ----- HUD -----
         const player = this.registry.get('player');
