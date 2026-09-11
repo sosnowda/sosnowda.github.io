@@ -34,41 +34,8 @@ export class InteriorScene extends Phaser.Scene {
         }
         this.interior = interior;
 
-        // ----- Фон интерьера — деревянные стены + пол -----
-        // Стены (тёмное дерево)
+        // ----- Фон интерьера — запасной цвет (если текстуры не загрузились) -----
         this.cameras.main.setBackgroundColor(RUS.panel);
-        // Пол
-        const floorGfx = this.add.graphics();
-        floorGfx.fillStyle(0x5a3820, 1);
-        floorGfx.fillRect(0, 100, width, height - 100);
-        // Доски пола
-        for (let y = 100; y < height; y += 32) {
-            floorGfx.lineStyle(1, 0x3a2410, 1);
-            floorGfx.lineBetween(0, y, width, y);
-        }
-        for (let x = 0; x < width; x += 96) {
-            floorGfx.lineStyle(1, 0x3a2410, 1);
-            floorGfx.lineBetween(x, 100, x, height);
-        }
-
-        // Стены (верхняя часть)
-        const wallGfx = this.add.graphics();
-        wallGfx.fillStyle(0x4a3018, 1);
-        wallGfx.fillRect(0, 0, width, 100);
-        // Брёвна стен
-        for (let y = 0; y < 100; y += 16) {
-            wallGfx.lineStyle(2, 0x2a1808, 1);
-            wallGfx.lineBetween(0, y, width, y);
-        }
-
-        // Окно (декорация)
-        const winGfx = this.add.graphics();
-        winGfx.fillStyle(0x1a2a3a, 1);
-        winGfx.fillRect(width - 200, 20, 120, 60);
-        winGfx.lineStyle(3, 0x2a1808, 1);
-        winGfx.strokeRect(width - 200, 20, 120, 60);
-        winGfx.lineBetween(width - 140, 20, width - 140, 80);
-        winGfx.lineBetween(width - 200, 50, width - 80, 50);
 
         // ----- Заголовок интерьера -----
         this.add.text(width / 2, 20, interior.name, {
@@ -159,65 +126,113 @@ export class InteriorScene extends Phaser.Scene {
     addDecorations(interior) {
         const { width, height } = this.scale;
         const decor = interior.decor || [];
+        const ts = 32;
+
+        // Текстура деревянного пола по всей нижней части
+        if (this.textures.exists('int_floor_0')) {
+            for (let x = 0; x < width; x += ts) {
+                for (let y = 100; y < height; y += ts) {
+                    const v = ((x + y) / ts) % 2;
+                    this.add.image(x + ts / 2, y + ts / 2, `int_floor_${v}`).setOrigin(0.5).setDepth(0);
+                }
+            }
+        }
+        // Стены (верхняя часть)
+        if (this.textures.exists('int_wall')) {
+            for (let x = 0; x < width; x += ts) {
+                for (let y = 0; y < 100; y += ts) {
+                    this.add.image(x + ts / 2, y + ts / 2, 'int_wall').setOrigin(0.5).setDepth(0);
+                }
+            }
+        }
+        // Окно
+        if (this.textures.exists('int_window')) {
+            this.add.image(width - 140, 50, 'int_window').setScale(2).setDepth(0);
+        }
 
         if (interior.id === 'tavern') {
             // Барная стойка
-            this.add.rectangle(width * 0.5, height * 0.4, 200, 30, 0x6a4020)
-                .setStrokeStyle(2, 0x3a2010);
+            if (this.textures.exists('int_deco_bar')) {
+                this.add.image(width * 0.5, height * 0.45, 'int_deco_bar').setScale(1.5).setDepth(5);
+            }
             // Бочки
-            this.add.circle(width * 0.85, height * 0.35, 30, 0x8a5a20)
-                .setStrokeStyle(2, 0x3a2010);
-            this.add.circle(width * 0.9, height * 0.35, 30, 0x8a5a20)
-                .setStrokeStyle(2, 0x3a2010);
-            // Камин
-            this.add.rectangle(60, height * 0.4, 80, 60, 0x2a1a10)
-                .setStrokeStyle(3, 0x1a0a05);
-            // Огонь в камине
-            const fire = this.add.image(60, height * 0.42, 'deco_campfire').setScale(1.5);
-            this.tweens.add({
-                targets: fire,
-                scaleX: { from: 1.4, to: 1.6 },
-                scaleY: { from: 1.4, to: 1.6 },
-                duration: 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            });
+            if (this.textures.exists('int_deco_barrel')) {
+                this.add.image(width * 0.85, height * 0.4, 'int_deco_barrel').setScale(1.5).setDepth(5);
+                this.add.image(width * 0.92, height * 0.4, 'int_deco_barrel').setScale(1.5).setDepth(5);
+            }
+            // Камин с анимированным огнём
+            if (this.textures.exists('int_deco_fireplace')) {
+                this.add.image(80, height * 0.45, 'int_deco_fireplace').setScale(1.2).setDepth(5);
+            }
+            if (this.textures.exists('int_fire_0')) {
+                const fire = this.add.image(80, height * 0.5, 'int_fire_0').setScale(2).setDepth(6);
+                let fireFrame = 0;
+                this.time.addEvent({
+                    delay: 100,
+                    callback: () => {
+                        fireFrame = (fireFrame + 1) % 4;
+                        fire.setTexture(`int_fire_${fireFrame}`);
+                    },
+                    loop: true,
+                });
+            }
+            // Столы и стулья
+            if (this.textures.exists('int_deco_table')) {
+                this.add.image(width * 0.25, height * 0.65, 'int_deco_table').setScale(1).setDepth(5);
+                this.add.image(width * 0.75, height * 0.7, 'int_deco_table').setScale(1).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_chair')) {
+                this.add.image(width * 0.25 - 30, height * 0.65, 'int_deco_chair').setScale(1).setDepth(5);
+                this.add.image(width * 0.75 + 30, height * 0.7, 'int_deco_chair').setScale(1).setDepth(5);
+            }
         } else if (interior.id === 'blacksmith') {
             // Наковальня
-            this.add.rectangle(width * 0.5, height * 0.5, 60, 40, 0x2a2a2a)
-                .setStrokeStyle(2, 0x1a1a1a);
-            // Горн
+            if (this.textures.exists('int_deco_anvil')) {
+                this.add.image(width * 0.5, height * 0.55, 'int_deco_anvil').setScale(1.5).setDepth(5);
+            }
+            // Горн с огнём
             this.add.rectangle(width * 0.85, height * 0.4, 100, 80, 0x4a2a10)
-                .setStrokeStyle(2, 0x2a1a05);
-            // Огонь в горне
-            const forge = this.add.image(width * 0.85, height * 0.42, 'deco_campfire').setScale(1.8);
-            this.tweens.add({
-                targets: forge,
-                scaleX: { from: 1.7, to: 1.9 },
-                scaleY: { from: 1.7, to: 1.9 },
-                duration: 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            });
+                .setStrokeStyle(2, 0x2a1a05).setDepth(4);
+            if (this.textures.exists('int_fire_0')) {
+                const forge = this.add.image(width * 0.85, height * 0.42, 'int_fire_0').setScale(2.5).setDepth(5);
+                let fireFrame = 0;
+                this.time.addEvent({
+                    delay: 80,
+                    callback: () => {
+                        fireFrame = (fireFrame + 1) % 4;
+                        forge.setTexture(`int_fire_${fireFrame}`);
+                    },
+                    loop: true,
+                });
+            }
             // Оружие на стене
             this.add.text(width * 0.2, 80, '⚔ 🔨 🛡', {
                 fontSize: '32px',
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setDepth(10);
         } else if (interior.id === 'elder_house') {
-            // Стол с бумагами
-            this.add.rectangle(width * 0.5, height * 0.5, 150, 40, 0x6a4020)
-                .setStrokeStyle(2, 0x3a2010);
-            // Свеча
-            this.add.circle(width * 0.5, height * 0.42, 6, 0xffcc40);
-            this.add.circle(width * 0.5, height * 0.42, 3, 0xffff80);
-            // Иконы в углу
-            this.add.text(width - 80, height * 0.4, '✝', {
-                fontSize: '48px', color: '#c9a14a',
-            }).setOrigin(0.5);
+            // Стол
+            if (this.textures.exists('int_deco_table')) {
+                this.add.image(width * 0.5, height * 0.55, 'int_deco_table').setScale(1.2).setDepth(5);
+            }
+            // Свеча на столе
+            if (this.textures.exists('int_deco_candle')) {
+                this.add.image(width * 0.5, height * 0.45, 'int_deco_candle').setScale(1.5).setDepth(6);
+            }
+            // Икона в углу
+            if (this.textures.exists('int_deco_icon_wall')) {
+                this.add.image(width - 80, height * 0.4, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
+            }
         } else {
-            // Обычный дом — кровать + стол
-            this.add.rectangle(width * 0.5, height * 0.5, 100, 50, 0x6a4020)
-                .setStrokeStyle(2, 0x3a2010);
-            // Кровать
-            this.add.rectangle(width * 0.85, height * 0.5, 80, 60, 0x4a3a30)
-                .setStrokeStyle(2, 0x2a1a10);
-            this.add.rectangle(width * 0.85, height * 0.5 - 10, 80, 20, 0xe8d7a8);
+            // Обычный дом — кровать + стол + икона
+            if (this.textures.exists('int_deco_table')) {
+                this.add.image(width * 0.4, height * 0.55, 'int_deco_table').setScale(1).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_bed')) {
+                this.add.image(width * 0.8, height * 0.55, 'int_deco_bed').setScale(1).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_icon_wall')) {
+                this.add.image(width - 80, height * 0.4, 'int_deco_icon_wall').setScale(1).setDepth(5);
+            }
         }
     }
 

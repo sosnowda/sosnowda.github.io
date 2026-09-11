@@ -26,6 +26,7 @@ export function tileTexture(t, x, y) {
         case '#': return `tile_rock_${(x * 11 + y * 17) % 2}`;
         case 'H': return `tile_house_wall_${(x + y) % 3}`;
         case 'R': return `tile_house_roof_${(x * 2 + y) % 2}`;
+        case 'G': return `tile_gate`;
         default: return 'tile_grass_0';
     }
 }

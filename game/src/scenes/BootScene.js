@@ -65,6 +65,25 @@ export class BootScene extends Phaser.Scene {
         this.load.image('particle_spark', 'assets/effects/particle_spark.png');
         this.load.image('particle_dust', 'assets/effects/particle_dust.png');
 
+        // ----- ИНТЕРЬЕРНЫЕ ТАЙЛЫ И ДЕКОРАЦИИ (для InteriorScene) -----
+        for (let v = 0; v < 2; v++) this.load.image(`int_floor_${v}`, `assets/interiors/floor_wood_${v}.png`);
+        this.load.image('int_wall', 'assets/interiors/wall_wood.png');
+        this.load.image('int_window', 'assets/interiors/window.png');
+        this.load.image('int_door_back', 'assets/interiors/door_back.png');
+        // Декорации интерьера
+        ['table', 'chair', 'candle', 'fireplace', 'anvil', 'bed', 'icon_wall', 'bar', 'barrel'].forEach((d) => {
+            this.load.image(`int_deco_${d}`, `assets/interiors/deco_${d}.png`);
+        });
+        // Анимированный огонь (4 кадра)
+        for (let f = 0; f < 4; f++) this.load.image(`int_fire_${f}`, `assets/effects/fire_${f}.png`);
+
+        // ----- ТАЙЛЫ ЛОКАЦИЙ (для LocationScene) -----
+        for (let v = 0; v < 2; v++) this.load.image(`tile_forest_dense_${v}`, `assets/tiles/forest_dense_${v}.png`);
+        for (let v = 0; v < 2; v++) this.load.image(`tile_road_${v}`, `assets/tiles/road_${v}.png`);
+        for (let f = 0; f < 3; f++) this.load.image(`tile_river_${f}`, `assets/tiles/river_${f}.png`);
+        for (let v = 0; v < 2; v++) this.load.image(`tile_field_${v}`, `assets/tiles/field_${v}.png`);
+        this.load.image('tile_gate', 'assets/tiles/gate.png');
+
         // Запасная частица (для совместимости со старым кодом)
         const pg = this.make.graphics({ add: false });
         pg.fillStyle(0xffffff, 1);

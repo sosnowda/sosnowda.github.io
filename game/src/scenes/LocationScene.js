@@ -35,7 +35,7 @@ export class LocationScene extends Phaser.Scene {
         const loc = FORK_LOCATIONS.find(l => l.id === this.locationId);
         const state = getHuntState(this.registry);
 
-        // ----- Фон локации -----
+        // ----- Фон локации — устанавливаем базовый цвет -----
         this.cameras.main.setBackgroundColor(LOCATION_BG[this.locationId] || 0x1a2a1a);
         this.drawLocationBackground(this.locationId, width, height);
 
@@ -111,63 +111,87 @@ export class LocationScene extends Phaser.Scene {
      */
     drawLocationBackground(locId, width, height) {
         const gfx = this.add.graphics();
+
         if (locId === 'forest') {
-            // Лес — тёмный зелёный фон + деревья
+            // Лес — тёмный зелёный фон + много деревьев
+            gfx.fillStyle(0x1a3a1a, 1);
+            gfx.fillRect(0, 80, width, height - 80);
+            gfx.setDepth(0);
+            // Травянистый узор
+            gfx.fillStyle(0x2a5a2a, 0.5);
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 120);
+                gfx.fillRect(x, y, 4, 4);
+            }
+            // Деревья (20 шт для густоты)
             for (let i = 0; i < 20; i++) {
                 const x = Math.random() * width;
                 const y = 100 + Math.random() * (height - 150);
-                const scale = 2 + Math.random() * 2;
-                this.add.image(x, y, `tile_forest_${i % 2}`).setScale(scale).setOrigin(0.5, 0.7).setAlpha(0.8);
+                this.add.image(x, y, `tile_forest_${i % 2}`).setScale(3).setOrigin(0.5, 0.7).setDepth(2);
             }
         } else if (locId === 'road') {
-            // Тракт — коричневая дорога
+            // Тракт — коричневый фон + тропы
             gfx.fillStyle(0x6a4a2a, 1);
-            gfx.fillRect(width / 2 - 100, 100, 200, height - 100);
-            // Камни
-            for (let i = 0; i < 15; i++) {
-                const x = width / 2 - 80 + Math.random() * 160;
-                const y = 120 + Math.random() * (height - 150);
-                this.add.image(x, y, `tile_rock_${i % 2}`).setScale(1.5);
-            }
-            // Деревья по бокам
-            for (let i = 0; i < 10; i++) {
-                const x = (i % 2 === 0) ? Math.random() * 200 : width - Math.random() * 200;
-                const y = 100 + Math.random() * (height - 150);
-                this.add.image(x, y, `tile_forest_${i % 2}`).setScale(2.5).setOrigin(0.5, 0.7);
-            }
-        } else if (locId === 'river') {
-            // Река — синяя вода
-            gfx.fillStyle(0x3a6b8c, 1);
-            gfx.fillRect(0, height * 0.5, width, height * 0.5);
-            // Анимированные волны
+            gfx.fillRect(0, 80, width, height - 80);
+            gfx.setDepth(0);
+            // Тёмные пятна
+            gfx.fillStyle(0x4a3a1a, 0.6);
             for (let i = 0; i < 30; i++) {
                 const x = Math.random() * width;
-                const y = height * 0.5 + Math.random() * (height * 0.5);
-                const water = this.add.image(x, y, `tile_water_${i % 3}`).setScale(1.5);
-                this.tweens.add({
-                    targets: water,
-                    x: x + 20,
-                    duration: 2000 + Math.random() * 2000,
-                    yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-                });
+                const y = 100 + Math.random() * (height - 120);
+                gfx.fillCircle(x, y, 3);
             }
-            // Берег
+            // Камни
+            for (let i = 0; i < 12; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 150);
+                this.add.image(x, y, `tile_rock_${i % 2}`).setScale(2).setDepth(2);
+            }
+            // Деревья по бокам
+            for (let i = 0; i < 8; i++) {
+                const x = (i % 2 === 0) ? Math.random() * 200 : width - Math.random() * 200;
+                const y = 100 + Math.random() * (height - 150);
+                this.add.image(x, y, `tile_forest_${i % 2}`).setScale(3).setOrigin(0.5, 0.7).setDepth(3);
+            }
+        } else if (locId === 'river') {
+            // Река — синий фон
+            gfx.fillStyle(0x3a6b8c, 1);
+            gfx.fillRect(0, 80, width, height - 80);
+            gfx.setDepth(0);
+            // Волны
+            gfx.fillStyle(0x6a9bbc, 0.5);
+            for (let i = 0; i < 40; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 120);
+                gfx.fillRect(x, y, 8, 2);
+            }
+            // Берег сверху
             gfx.fillStyle(0x6a4a2a, 1);
-            gfx.fillRect(0, height * 0.5 - 20, width, 20);
+            gfx.fillRect(0, 80, width, 20);
+            gfx.setDepth(1);
             // Камыши
             for (let i = 0; i < 10; i++) {
                 const x = Math.random() * width;
-                this.add.image(x, height * 0.5 - 10, 'tile_forest_0').setScale(1.5).setOrigin(0.5, 1);
+                this.add.image(x, 100, 'tile_forest_0').setScale(2).setOrigin(0.5, 1).setDepth(2);
             }
         } else if (locId === 'field') {
-            // Поле — высокая трава
+            // Поле — светлый зелёный фон
             gfx.fillStyle(0x6a8a3a, 1);
-            gfx.fillRect(0, 100, width, height - 100);
-            // Стебли
-            for (let i = 0; i < 40; i++) {
+            gfx.fillRect(0, 80, width, height - 80);
+            gfx.setDepth(0);
+            // Стебли ржи (травянистые точки)
+            gfx.fillStyle(0x8aaa4a, 0.7);
+            for (let i = 0; i < 100; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 120);
+                gfx.fillRect(x, y, 2, 6);
+            }
+            // Колышущиеся стебли
+            for (let i = 0; i < 15; i++) {
                 const x = Math.random() * width;
                 const y = 100 + Math.random() * (height - 150);
-                const stem = this.add.image(x, y, 'tile_grass_0').setScale(2);
+                const stem = this.add.image(x, y, 'tile_grass_0').setScale(2.5).setDepth(2);
                 this.tweens.add({
                     targets: stem,
                     angle: { from: -5, to: 5 },
