@@ -110,6 +110,18 @@ export class VillageScene extends Phaser.Scene {
                 ease: 'Sine.easeInOut',
             });
             this.doors.push({ x: doorX, y: doorY, interiorId: b.interiorId, label, marker: doorMarker });
+
+            // ----- Ограда и грядки для жилых домов (п.7) -----
+            if (b.interiorId === 'villager_house_1' || b.interiorId === 'villager_house_2') {
+                this.addYardAndGarden(b, ts);
+            }
+        });
+
+        // ----- Ограда для общественных зданий (староста, таверна, кузница, церковь) -----
+        BUILDINGS.forEach(b => {
+            if (b.interiorId !== 'villager_house_1' && b.interiorId !== 'villager_house_2') {
+                this.addPublicFence(b, ts);
+            }
         });
 
         // ----- Метка ворот -----
@@ -213,6 +225,76 @@ export class VillageScene extends Phaser.Scene {
             if (this.tutorial) this.tutorial.destroyAll();
             if (this.virtualControls) this.virtualControls.destroy();
         });
+    }
+
+    /**
+     * Добавить двор с оградой и грядками к жилому дому (п.7).
+     */
+    addYardAndGarden(b, ts) {
+        const baseX = b.col * ts;
+        const baseY = (b.row + b.h) * ts;  // под домом
+
+        // Грядки перед домом (2×3)
+        for (let gy = 0; gy < 2; gy++) {
+            for (let gx = 0; gx < 3; gx++) {
+                const px = baseX + gx * ts + ts / 2;
+                const py = baseY + gy * ts + ts / 2;
+                if (this.textures.exists('tile_garden_0')) {
+                    const v = (gx + gy) % 3;
+                    this.add.image(px, py, `tile_garden_${v}`)
+                        .setScale(ts / 32)
+                        .setDepth(3);
+                }
+            }
+        }
+
+        // Ограда: горизонтальная снизу грядок
+        const fenceY = baseY + 2 * ts;
+        for (let fx = 0; fx < b.w + 1; fx++) {
+            const px = baseX + fx * ts + ts / 2;
+            if (this.textures.exists('tile_fence_h')) {
+                this.add.image(px, fenceY, 'tile_fence_h')
+                    .setScale(ts / 32)
+                    .setDepth(3);
+            }
+        }
+        // Вертикальные ограды по бокам двора
+        for (let fy = 0; fy < 2; fy++) {
+            const py = baseY + fy * ts + ts / 2;
+            // Левая сторона
+            if (this.textures.exists('tile_fence_v')) {
+                this.add.image(baseX - ts / 2, py, 'tile_fence_v')
+                    .setScale(ts / 32)
+                    .setDepth(3);
+                this.add.image(baseX + (b.w + 1) * ts - ts / 2, py, 'tile_fence_v')
+                    .setScale(ts / 32)
+                    .setDepth(3);
+            }
+        }
+        // Углы
+        if (this.textures.exists('tile_fence_corner')) {
+            this.add.image(baseX - ts / 2, fenceY, 'tile_fence_corner')
+                .setScale(ts / 32).setDepth(3);
+            this.add.image(baseX + (b.w + 1) * ts - ts / 2, fenceY, 'tile_fence_corner')
+                .setScale(ts / 32).setDepth(3);
+        }
+    }
+
+    /**
+     * Добавить простую ограду к общественному зданию (п.7).
+     */
+    addPublicFence(b, ts) {
+        const baseX = b.col * ts;
+        const baseY = (b.row + b.h) * ts;
+        // Только горизонтальная ограда перед зданием
+        for (let fx = 0; fx < b.w; fx++) {
+            const px = baseX + fx * ts + ts / 2;
+            if (this.textures.exists('tile_fence_h')) {
+                this.add.image(px, baseY, 'tile_fence_h')
+                    .setScale(ts / 32)
+                    .setDepth(3);
+            }
+        }
     }
 
     /**
@@ -400,7 +482,9 @@ export class VillageScene extends Phaser.Scene {
         if (this.busyDialog || !this.nearestInteractable) return;
         ActionLog.add(this.registry, `Игрок взаимодействует с: ${this.nearestInteractable.label}.`);
         if (this.nearestInteractable.type === 'door') {
-            this.scene.start('Interior', { interiorId: this.nearestInteractable.interiorId, from: 'Village' });
+            // Пункт 8: интерьер открывается отдельным окном поверх деревни
+            this.scene.pause();
+            this.scene.launch('Interior', { interiorId: this.nearestInteractable.interiorId, from: 'Village' });
         } else if (this.nearestInteractable.type === 'gate') {
             this.scene.start('Fork');
         }

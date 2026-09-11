@@ -70,12 +70,20 @@ export class BootScene extends Phaser.Scene {
         this.load.image('int_wall', 'assets/interiors/wall_wood.png');
         this.load.image('int_window', 'assets/interiors/window.png');
         this.load.image('int_door_back', 'assets/interiors/door_back.png');
-        // Декорации интерьера
-        ['table', 'chair', 'candle', 'fireplace', 'anvil', 'bed', 'icon_wall', 'bar', 'barrel'].forEach((d) => {
+        // Декорации интерьера (базовые + новые)
+        ['table', 'chair', 'candle', 'fireplace', 'anvil', 'bed', 'icon_wall', 'bar', 'barrel',
+         'loom', 'shelf', 'hay', 'firewood', 'analogion', 'bench', 'cradle', 'spinning', 'chest'
+        ].forEach((d) => {
             this.load.image(`int_deco_${d}`, `assets/interiors/deco_${d}.png`);
         });
         // Анимированный огонь (4 кадра)
         for (let f = 0; f < 4; f++) this.load.image(`int_fire_${f}`, `assets/effects/fire_${f}.png`);
+
+        // ----- ОГРАДЫ И ГРЯДКИ (для деревни) -----
+        this.load.image('tile_fence_h', 'assets/tiles/fence_h.png');
+        this.load.image('tile_fence_v', 'assets/tiles/fence_v.png');
+        this.load.image('tile_fence_corner', 'assets/tiles/fence_corner.png');
+        for (let v = 0; v < 3; v++) this.load.image(`tile_garden_${v}`, `assets/tiles/garden_bed_${v}.png`);
 
         // ----- ТАЙЛЫ ЛОКАЦИЙ (для LocationScene) -----
         for (let v = 0; v < 2; v++) this.load.image(`tile_forest_dense_${v}`, `assets/tiles/forest_dense_${v}.png`);

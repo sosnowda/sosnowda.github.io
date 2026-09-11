@@ -168,7 +168,13 @@ export class InteriorScene extends Phaser.Scene {
 
         // ----- Кнопка "Выйти" -----
         createButton(this, width / 2 + 360, height - 50, 'Выйти', () => {
-            this.scene.start(this.from);
+            // Пункт 8: возобновляем Village вместо полного перехода
+            this.scene.stop();
+            if (this.scene.isPaused(this.from)) {
+                this.scene.resume(this.from);
+            } else {
+                this.scene.start(this.from);
+            }
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
             fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
@@ -485,16 +491,14 @@ export class InteriorScene extends Phaser.Scene {
         }
 
         if (interior.id === 'tavern') {
-            // Барная стойка
+            // Таверна: барная стойка, бочки, камин, столы, скамьи, сундук
             if (this.textures.exists('int_deco_bar')) {
                 this.add.image(width * 0.5, height * 0.45, 'int_deco_bar').setScale(1.5).setDepth(5);
             }
-            // Бочки
             if (this.textures.exists('int_deco_barrel')) {
                 this.add.image(width * 0.85, height * 0.4, 'int_deco_barrel').setScale(1.5).setDepth(5);
                 this.add.image(width * 0.92, height * 0.4, 'int_deco_barrel').setScale(1.5).setDepth(5);
             }
-            // Камин с анимированным огнём
             if (this.textures.exists('int_deco_fireplace')) {
                 this.add.image(80, height * 0.45, 'int_deco_fireplace').setScale(1.2).setDepth(5);
             }
@@ -503,28 +507,31 @@ export class InteriorScene extends Phaser.Scene {
                 let fireFrame = 0;
                 this.time.addEvent({
                     delay: 100,
-                    callback: () => {
-                        fireFrame = (fireFrame + 1) % 4;
-                        fire.setTexture(`int_fire_${fireFrame}`);
-                    },
+                    callback: () => { fireFrame = (fireFrame + 1) % 4; fire.setTexture(`int_fire_${fireFrame}`); },
                     loop: true,
                 });
             }
-            // Столы и стулья
             if (this.textures.exists('int_deco_table')) {
                 this.add.image(width * 0.25, height * 0.65, 'int_deco_table').setScale(1).setDepth(5);
                 this.add.image(width * 0.75, height * 0.7, 'int_deco_table').setScale(1).setDepth(5);
             }
-            if (this.textures.exists('int_deco_chair')) {
-                this.add.image(width * 0.25 - 30, height * 0.65, 'int_deco_chair').setScale(1).setDepth(5);
-                this.add.image(width * 0.75 + 30, height * 0.7, 'int_deco_chair').setScale(1).setDepth(5);
+            if (this.textures.exists('int_deco_bench')) {
+                this.add.image(width * 0.25 - 40, height * 0.65, 'int_deco_bench').setScale(1).setDepth(5);
+                this.add.image(width * 0.75 + 40, height * 0.7, 'int_deco_bench').setScale(1).setDepth(5);
+            }
+            // Полка с горшками за стойкой
+            if (this.textures.exists('int_deco_shelf')) {
+                this.add.image(width * 0.5, height * 0.25, 'int_deco_shelf').setScale(1.2).setDepth(5);
+            }
+            // Сундук у входа
+            if (this.textures.exists('int_deco_chest')) {
+                this.add.image(width * 0.15, height * 0.75, 'int_deco_chest').setScale(1).setDepth(5);
             }
         } else if (interior.id === 'blacksmith') {
-            // Наковальня
+            // Кузница: наковальня, горн, поленница, оружие, сундук
             if (this.textures.exists('int_deco_anvil')) {
                 this.add.image(width * 0.5, height * 0.55, 'int_deco_anvil').setScale(1.5).setDepth(5);
             }
-            // Горн с огнём
             this.add.rectangle(width * 0.85, height * 0.4, 100, 80, 0x4a2a10)
                 .setStrokeStyle(2, 0x2a1a05).setDepth(4);
             if (this.textures.exists('int_fire_0')) {
@@ -532,62 +539,101 @@ export class InteriorScene extends Phaser.Scene {
                 let fireFrame = 0;
                 this.time.addEvent({
                     delay: 80,
-                    callback: () => {
-                        fireFrame = (fireFrame + 1) % 4;
-                        forge.setTexture(`int_fire_${fireFrame}`);
-                    },
+                    callback: () => { fireFrame = (fireFrame + 1) % 4; forge.setTexture(`int_fire_${fireFrame}`); },
                     loop: true,
                 });
             }
-            // Оружие на стене
-            this.add.text(width * 0.2, 80, '⚔ 🔨 🛡', {
-                fontSize: '32px',
-            }).setOrigin(0.5).setDepth(10);
+            // Поленница дров у горна
+            if (this.textures.exists('int_deco_firewood')) {
+                this.add.image(width * 0.95, height * 0.6, 'int_deco_firewood').setScale(1.2).setDepth(5);
+            }
+            // Сундук с готовой продукцией
+            if (this.textures.exists('int_deco_chest')) {
+                this.add.image(width * 0.15, height * 0.65, 'int_deco_chest').setScale(1).setDepth(5);
+            }
+            this.add.text(width * 0.2, 80, '⚔ 🔨 🛡', { fontSize: '32px' }).setOrigin(0.5).setDepth(10);
         } else if (interior.id === 'elder_house') {
-            // Стол
+            // Дом старосты: стол, свеча, икона, сундук с документами, лавка
             if (this.textures.exists('int_deco_table')) {
                 this.add.image(width * 0.5, height * 0.55, 'int_deco_table').setScale(1.2).setDepth(5);
             }
-            // Свеча на столе
             if (this.textures.exists('int_deco_candle')) {
                 this.add.image(width * 0.5, height * 0.45, 'int_deco_candle').setScale(1.5).setDepth(6);
             }
-            // Икона в углу
             if (this.textures.exists('int_deco_icon_wall')) {
                 this.add.image(width - 80, height * 0.4, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
             }
-        } else {
-            // Обычный дом — кровать + стол + икона
-            if (this.textures.exists('int_deco_table')) {
-                this.add.image(width * 0.4, height * 0.55, 'int_deco_table').setScale(1).setDepth(5);
+            if (this.textures.exists('int_deco_bench')) {
+                this.add.image(width * 0.2, height * 0.7, 'int_deco_bench').setScale(1).setDepth(5);
             }
-            if (this.textures.exists('int_deco_bed')) {
-                this.add.image(width * 0.8, height * 0.55, 'int_deco_bed').setScale(1).setDepth(5);
-            }
-            if (this.textures.exists('int_deco_icon_wall')) {
-                this.add.image(width - 80, height * 0.4, 'int_deco_icon_wall').setScale(1).setDepth(5);
+            if (this.textures.exists('int_deco_chest')) {
+                this.add.image(width * 0.8, height * 0.7, 'int_deco_chest').setScale(1).setDepth(5);
             }
         } else if (interior.id === 'church') {
-            // Церковь — алтарь, иконостас, свечи
-            // Алтарь (большой стол)
+            // Церковь: алтарь, иконостас, свечи, аналой, крест
             if (this.textures.exists('int_deco_table')) {
                 this.add.image(width * 0.5, height * 0.4, 'int_deco_table').setScale(1.5).setDepth(5);
             }
-            // Иконостас — несколько икон на стене
             if (this.textures.exists('int_deco_icon_wall')) {
                 this.add.image(width * 0.25, height * 0.3, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
                 this.add.image(width * 0.5, height * 0.25, 'int_deco_icon_wall').setScale(1.8).setDepth(5);
                 this.add.image(width * 0.75, height * 0.3, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
             }
-            // Свечи на алтаре
             if (this.textures.exists('int_deco_candle')) {
                 this.add.image(width * 0.42, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
                 this.add.image(width * 0.58, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
             }
-            // Крест над алтарём
+            // Аналой (подставка для икон/книг)
+            if (this.textures.exists('int_deco_analogion')) {
+                this.add.image(width * 0.5, height * 0.6, 'int_deco_analogion').setScale(1.2).setDepth(5);
+            }
             this.add.text(width * 0.5, height * 0.15, '✝', {
                 fontSize: '48px', color: '#c9a14a',
             }).setOrigin(0.5).setDepth(10);
+        } else if (interior.id === 'villager_house_1') {
+            // Дом крестьянина Авдея: стол, лавка, кровать, поленница, стог сена
+            if (this.textures.exists('int_deco_table')) {
+                this.add.image(width * 0.4, height * 0.55, 'int_deco_table').setScale(1).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_bench')) {
+                this.add.image(width * 0.4 - 50, height * 0.55, 'int_deco_bench').setScale(1).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_bed')) {
+                this.add.image(width * 0.8, height * 0.55, 'int_deco_bed').setScale(1).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_firewood')) {
+                this.add.image(width * 0.15, height * 0.7, 'int_deco_firewood').setScale(1).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_hay')) {
+                this.add.image(width * 0.9, height * 0.75, 'int_deco_hay').setScale(1).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_icon_wall')) {
+                this.add.image(width - 80, height * 0.4, 'int_deco_icon_wall').setScale(1).setDepth(5);
+            }
+        } else if (interior.id === 'villager_house_2') {
+            // Дом вдовы Марфы: кровать, прялка, икона, колыбель, полка с травами
+            if (this.textures.exists('int_deco_bed')) {
+                this.add.image(width * 0.8, height * 0.55, 'int_deco_bed').setScale(1).setDepth(5);
+            }
+            // Прялка — символ женского труда
+            if (this.textures.exists('int_deco_spinning')) {
+                this.add.image(width * 0.3, height * 0.55, 'int_deco_spinning').setScale(1.2).setDepth(5);
+            }
+            // Колыбель
+            if (this.textures.exists('int_deco_cradle')) {
+                this.add.image(width * 0.5, height * 0.6, 'int_deco_cradle').setScale(1).setDepth(5);
+            }
+            // Полка с горшками (травы, снадобья)
+            if (this.textures.exists('int_deco_shelf')) {
+                this.add.image(width * 0.15, height * 0.5, 'int_deco_shelf').setScale(1).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_icon_wall')) {
+                this.add.image(width - 80, height * 0.4, 'int_deco_icon_wall').setScale(1.2).setDepth(5);
+            }
+            // Свеча
+            if (this.textures.exists('int_deco_candle')) {
+                this.add.image(width * 0.15, height * 0.65, 'int_deco_candle').setScale(1.2).setDepth(6);
+            }
         }
     }
 
