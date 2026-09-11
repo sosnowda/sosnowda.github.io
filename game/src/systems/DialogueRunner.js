@@ -64,6 +64,9 @@ export class DialogueRunner {
         if (displayText === '...' && this.scene._lastAskResult && this.scene._lastAskResult.message) {
             displayText = this.scene._lastAskResult.message;
         }
+        // Заменяем {address} на половую форму обращения (п.16)
+        const address = this._getPlayerAddress();
+        displayText = displayText.replace(/\{address\}/g, address);
 
         this._currentDialog = createDialog(
             this.scene,
@@ -86,6 +89,22 @@ export class DialogueRunner {
         }
         // Для диалогов без NPC (например, рассказчик) — используем narrator
         return 'portrait_narrator';
+    }
+
+    /**
+     * Получить пол игрока для учёта в репликах (п.16).
+     */
+    _getPlayerGender() {
+        const player = this.scene.registry.get('player');
+        return player ? (player.gender || 'male') : 'male';
+    }
+
+    /**
+     * Получить половую форму обращения к игроку.
+     */
+    _getPlayerAddress() {
+        const gender = this._getPlayerGender();
+        return gender === 'female' ? 'путница' : 'путник';
     }
 
     _finish() {

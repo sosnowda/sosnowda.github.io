@@ -601,7 +601,7 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             }
         };
 
-        const btn = createButton(scene, 0, 0, btnConfig.text, wrappedCallback, {
+        const btn = createButton(scene, 0, 0, `${index + 1}. ${btnConfig.text}`, wrappedCallback, {
             // Тёмно-красный/коричневый фон под пергамент
             backgroundColor: isPrimary ? 0x8B2C1A : 0x5a4030,
             hoverColor: isPrimary ? 0xB53925 : 0x6a5040,
