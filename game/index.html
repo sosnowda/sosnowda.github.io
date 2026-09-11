@@ -44,7 +44,11 @@ window.addEventListener('load', function() {
         import('./src/scenes/BootScene.js'),
         import('./src/scenes/TitleScene.js'),
         import('./src/scenes/VillageScene.js'),
+        import('./src/scenes/InteriorScene.js'),
+        import('./src/scenes/ForkScene.js'),
+        import('./src/scenes/LocationScene.js'),
         import('./src/scenes/CombatScene.js'),
+        import('./src/scenes/EndScene.js'),
         import('./src/scenes/CharacterScene.js'),
     ]).then(function(modules) {
         var scenes = modules.map(function(m) {

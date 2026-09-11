@@ -18,15 +18,25 @@ export const ENEMY_TEMPLATES = {
         spriteKey: 'enemy_wolf',
         color: 0x6b6b6b,
     },
+    // Вор — главный антагонист, сильнее обычного разбойника
+    thief: {
+        name: 'Вор-иконокрад',
+        stats: { STR: 60, CON: 60, SIZ: 55, DEX: 70, INT: 60, POW: 50, CHA: 40 },
+        weapon: { name: 'Кривой кинжал', dice: { min: 1, max: 8 }, bonus: 2 },
+        attackSkillKey: 'sword',
+        spriteKey: 'enemy_bandit',
+        color: 0x222222,
+    },
 };
 
 // Создать боевую единицу-врага из шаблона.
 export function spawnEnemy(key) {
-    const t = ENEMY_TEMPLATES[key];
+    const t = ENEMY_TEMPLATES[key] || ENEMY_TEMPLATES.bandit;
     const c = createCharacter(t.name, t.stats);
     c.weapon = t.weapon;
     c.attackSkill = (typeof t.attackSkill === 'number') ? t.attackSkill : c.skills[t.attackSkillKey];
     c.spriteKey = t.spriteKey;
     c.color = t.color;
+    c.isThief = (key === 'thief');
     return c;
 }

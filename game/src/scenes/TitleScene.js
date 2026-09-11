@@ -3,6 +3,8 @@ import { RUS } from '../config/RusTheme.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { createCharacter } from '../systems/Character.js';
+import { ActionLog } from '../data/actionLog.js';
+import { initThiefHunt } from '../data/thief.js';
 
 export class TitleScene extends Phaser.Scene {
     constructor() {
@@ -136,12 +138,26 @@ export class TitleScene extends Phaser.Scene {
 
     newGame() {
         const p = createCharacter('Путник');
+        // Стартовый инвентарь и золото
+        p.gold = 20;
         const q = {
-            elderTalked: false, merchantTalked: false, soldierTalked: false,
-            banditDefeated: false, hasHerb: false,
+            elderTalked: false,
+            merchantTalked: false,
+            soldierTalked: false,
+            banditDefeated: false,
+            hasHerb: true,  // стартовая трава
+            tutorialStep: 0,
+            currentObjective: 'Вор украл икону! Поговори со старостой',
+            chestsOpened: [],
+            hoursPassed: 0,
+            gold: 20,
         };
         this.registry.set('player', p);
         this.registry.set('quest', q);
+        // Инициализация охоты за вором (выбирает случайную локацию)
+        initThiefHunt(this.registry);
+        // Лог действий
+        ActionLog.init(this.registry);
         this.saveManager.saveGame(0, { player: p, quest: q }, 'Поход');
         this.scene.start('Village');
     }

@@ -1,23 +1,27 @@
-// Описание мира: карта деревни, NPC, точки интереса и декорации.
+// Описание мира: карта деревни с 5 зданиями и воротами на выход.
 // Символы карты:
-//   '.' — трава (рандомный вариант), ',' — тропа (рандомный вариант),
-//   '~' — вода (анимированная), 'T' — лес, '#' — камень,
-//   'H' — стена дома, 'R' — крыша дома, 'W' — колодец (декорация),
-//   'F' — костёр (декорация), 'f' — забор (декорация).
-// Проходимые: '.', ',', 'F', 'f'. Непроходимые: 'T', '~', '#', 'H', 'R', 'W'.
+//   '.' — трава, ',' — тропа, '~' — вода, 'T' — лес, '#' — камень,
+//   'H' — стена дома, 'R' — крыша дома (непроходимые),
+//   'D' — дверь (проходима, запускает вход в интерьер),
+//   'G' — ворота на выход (проходима, запускает переход на развилку),
+//   'F' — костёр (декорация), 'f' — забор (декорация), 'W' — колодец.
+
+import { BUILDINGS, VILLAGE_GATE } from './interiors.js';
 
 export const MAP_W = 26;
 export const MAP_H = 18;
 
 export const SOLID = new Set(['T', '~', '#', 'H', 'R', 'W']);
+export const DOOR = new Set(['D']);
+export const GATE = new Set(['G']);
+export const INTERACTIVE = new Set(['D', 'G']);
 
 // Возвращает ключ текстуры для символа тайла.
-// Для травы/тропы/леса/камня рандомно выбирает вариант — карта становится живее.
 export function tileTexture(t, x, y) {
     switch (t) {
         case '.': return `tile_grass_${(x * 7 + y * 13) % 4}`;
         case ',': return `tile_path_${((x + y) % 2 === 0) ? 0 : 1}`;
-        case '~': return `tile_water_0`; // анимация управляется в VillageScene
+        case '~': return `tile_water_0`;
         case 'T': return `tile_forest_${(x * 3 + y * 5) % 2}`;
         case '#': return `tile_rock_${(x * 11 + y * 17) % 2}`;
         case 'H': return `tile_house_wall_${(x + y) % 3}`;
@@ -26,71 +30,97 @@ export function tileTexture(t, x, y) {
     }
 }
 
-// Построение сетки карты (программно, чтобы не считать символы вручную).
+// Построение сетки карты с 5 зданиями и воротами.
 export function buildMap() {
     const grid = [];
     for (let y = 0; y < MAP_H; y++) {
         const row = [];
         for (let x = 0; x < MAP_W; x++) {
             let t = '.';
-            if (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1) t = 'T'; // лес по периметру
+            // Лес по периметру
+            if (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1) t = 'T';
             row.push(t);
         }
         grid.push(row);
     }
 
-    // Река справа (разделяет деревню и лес разбойников)
+    // Дорога-крест от ворот к центру
+    // Вертикальная дорога (от ворот вглубь деревни)
     for (let y = 1; y < MAP_H - 1; y++) {
-        grid[y][18] = '~';
-        grid[y][19] = '~';
+        if (grid[y][12] === '.') grid[y][12] = ',';
+        if (grid[y][13] === '.') grid[y][13] = ',';
     }
-    // Мост через реку на девятой строке
-    grid[9][18] = ',';
-    grid[9][19] = ',';
+    // Горизонтальная дорога
+    for (let x = 1; x < MAP_W - 1; x++) {
+        if (grid[9][x] === '.') grid[9][x] = ',';
+        if (grid[10][x] === '.') grid[10][x] = ',';
+    }
 
-    // Дома (блоки 2×2: верхняя строка = крыша 'R', нижняя = стена 'H')
-    const placeHouse = (cx, cy) => {
-        // Верхняя часть — крыша
-        grid[cy][cx] = 'R'; grid[cy][cx + 1] = 'R';
-        // Нижняя часть — стена (с окном/дверью в случайном варианте)
-        grid[cy + 1][cx] = 'H';
-        grid[cy + 1][cx + 1] = 'H';
-    };
-    placeHouse(3, 3);   // дом старейшины
-    placeHouse(8, 5);   // дом купца
-    placeHouse(5, 10);  // амбар
-    placeHouse(11, 8);  // клеть
+    // Размещаем здания
+    BUILDINGS.forEach(b => {
+        // Верхняя часть — крыша 'R', нижняя — стена 'H', в центре нижней строки — дверь 'D'
+        for (let dy = 0; dy < b.h; dy++) {
+            for (let dx = 0; dx < b.w; dx++) {
+                const x = b.col + dx;
+                const y = b.row + dy;
+                if (!grid[y] || grid[y][x] === undefined) continue;
+                if (dy === 0) grid[y][x] = 'R';
+                else grid[y][x] = 'H';
+            }
+        }
+        // Дверь — в центре нижней стены
+        const doorX = b.col + Math.floor(b.w / 2);
+        const doorY = b.row + b.h - 1;
+        if (grid[doorY]) grid[doorY][doorX] = 'D';
 
-    // Несколько деревьев внутри для атмосферы
-    const trees = [[14, 4], [16, 6], [15, 12], [20, 14], [7, 14], [13, 15]];
-    trees.forEach(([x, y]) => { if (grid[y] && grid[y][x] === '.') grid[y][x] = 'T'; });
+        // Тропинка от двери к основной дороге
+        // Прокладываем тропу вниз (или вверх) до ближайшей дороги
+        let pathY = doorY + 1;
+        while (pathY < MAP_H && grid[pathY] && grid[pathY][doorX] !== ',') {
+            if (grid[pathY][doorX] === '.' || grid[pathY][doorX] === 'T') {
+                grid[pathY][doorX] = ',';
+            }
+            pathY++;
+        }
+    });
 
-    // Декорации (отдельный список — рисуются поверх тайлов)
-    // 'W' — колодец (2×2), 'F' — костёр, 'f' — забор
-    // Эти символы НЕ помещаем в grid — используем DECORATIONS ниже,
-    // чтобы сохранить проходимость (декорации отдельно добавляются в SOLID при необходимости).
+    // Ворота на восточной границе
+    grid[VILLAGE_GATE.row][MAP_W - 1] = 'G';
+
+    // Несколько деревьев для атмосферы (не блокируя дороги)
+    const trees = [[2, 3], [3, 8], [7, 14], [15, 13], [18, 6], [21, 5]];
+    trees.forEach(([x, y]) => {
+        if (grid[y] && grid[y][x] === '.') grid[y][x] = 'T';
+    });
+
+    // Колодец в центре деревни
+    grid[7][14] = 'W';
+    grid[7][15] = 'W';
+    grid[8][14] = 'W';
+    grid[8][15] = 'W';
 
     return grid;
 }
 
-// Декорации: { type, col, row, solid }
-// type: 'well' (2×2), 'campfire', 'fence'
-export const DECORATIONS = [
-    { type: 'well', col: 13, row: 9, solid: true },      // центр деревни
-    { type: 'campfire', col: 7, row: 8, solid: false },  // у дома купца
-    { type: 'fence', col: 6, row: 7, solid: false },
-    { type: 'fence', col: 7, row: 7, solid: false },
-    { type: 'fence', col: 8, row: 7, solid: false },
-];
+// Сопоставление двери с интерьером
+export function doorInteriorId(col, row) {
+    for (const b of BUILDINGS) {
+        const doorX = b.col + Math.floor(b.w / 2);
+        const doorY = b.row + b.h - 1;
+        if (col === doorX && row === doorY) return b.interiorId;
+    }
+    return null;
+}
+
+// Является ли тайл воротами?
+export function isGate(col, row) {
+    return col === MAP_W - 1 && row === VILLAGE_GATE.row;
+}
 
 // NPC: col/row — координаты тайла; sprite — ключ текстуры; dialogue — id диалога.
-// combat:true означает, что взаимодействие начинает бой.
-export const NPCS = [
-    { id: 'elder',    name: 'Старейшина',   col: 5,  row: 6,  sprite: 'npc_elder',    dialogue: 'elder',    color: 0xdddddd, portrait: 'portrait_elder' },
-    { id: 'merchant', name: 'Купец',        col: 9,  row: 8,  sprite: 'npc_merchant', dialogue: 'merchant', color: 0xd4a017, portrait: 'portrait_merchant' },
-    { id: 'soldier',  name: 'Раненый воин', col: 4,  row: 12, sprite: 'npc_soldier',  dialogue: 'soldier',  color: 0x9c2b2b, portrait: 'portrait_soldier' },
-    { id: 'bandit',   name: 'Разбойник',    col: 22, row: 9,  sprite: 'npc_bandit',   dialogue: 'bandit',   color: 0x333333, portrait: 'portrait_bandit' },
-];
+// В новой версии NPC живут внутри интерьеров, а не на карте деревни.
+// На карте деревни их нет — только здания.
+export const NPCS = [];
 
-export const PLAYER_START = { col: 3, row: 15 };
+export const PLAYER_START = { col: 13, row: 15 };
 export const LOCATION_NAME = 'Деревня Русь';

@@ -7,6 +7,8 @@ import { spawnEnemy } from '../data/characters.js';
 import { createButton, createFloatingText } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
+import { ActionLog } from '../data/actionLog.js';
+import { winGame, loseHeroDead } from '../data/thief.js';
 
 export class CombatScene extends Phaser.Scene {
     constructor() {
@@ -396,11 +398,18 @@ export class CombatScene extends Phaser.Scene {
 
     endCombatVictory() {
         const q = this.registry.get('quest');
-        if (this.npcId === 'bandit') q.banditDefeated = true;
-        q.currentObjective = 'Вернись к старейшине с иконой';
+        // Если это был вор — победа в игре
+        const isThiefFight = this.enemies.some(e => e.isThief) || this.npcId === 'thief';
+        if (isThiefFight) {
+            winGame(this.registry);
+            ActionLog.add(this.registry, `Бой с вором выигран. Вор повержен!`);
+        } else if (this.npcId === 'bandit') {
+            q.banditDefeated = true;
+        }
+        q.currentObjective = isThiefFight ? 'Победа! Икона возвращена!' : 'Враг повержен';
         this.autosave();
         this.busy = true;
-        this.pushLog('Враг повержен! Ты одержал победу.');
+        this.pushLog(isThiefFight ? 'Вор повержен! Икона твоя!' : 'Враг повержен! Ты одержал победу.');
         if (this.audioManager) this.audioManager.playLevelUp();
         // Эффект победы — золотые частицы
         const emitter = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
@@ -412,17 +421,34 @@ export class CombatScene extends Phaser.Scene {
             tint: 0xffcc40,
         });
         emitter.explode(30);
-        this.time.delayedCall(900, () => {
+        this.time.delayedCall(1500, () => {
             emitter.destroy();
-            this.scene.start('Village');
+            // Переход в EndScene при победе над вором, иначе в Village
+            if (isThiefFight) {
+                this.scene.start('End');
+            } else {
+                this.scene.start('Village');
+            }
         });
     }
 
     endCombatDefeat() {
         this.busy = true;
         this.pushLog('Ты пал в бою...');
+        // Если бой с вором — поражение в игре
+        const isThiefFight = this.enemies.some(e => e.isThief) || this.npcId === 'thief';
+        if (isThiefFight) {
+            loseHeroDead(this.registry);
+            ActionLog.add(this.registry, `Бой с вором проигран. Герой пал.`);
+        }
         // Затемнение
         this.cameras.main.fade(900, 0, 0, 0);
-        this.time.delayedCall(900, () => this.scene.start('Title'));
+        this.time.delayedCall(1000, () => {
+            if (isThiefFight) {
+                this.scene.start('End');
+            } else {
+                this.scene.start('Title');
+            }
+        });
     }
 }

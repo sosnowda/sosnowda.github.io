@@ -4,7 +4,11 @@
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { VillageScene } from './scenes/VillageScene.js';
+import { InteriorScene } from './scenes/InteriorScene.js';
+import { ForkScene } from './scenes/ForkScene.js';
+import { LocationScene } from './scenes/LocationScene.js';
 import { CombatScene } from './scenes/CombatScene.js';
+import { EndScene } from './scenes/EndScene.js';
 import { CharacterScene } from './scenes/CharacterScene.js';
 
 const config = {
@@ -20,7 +24,17 @@ const config = {
         default: 'arcade',
         arcade: { gravity: { x: 0, y: 0 }, debug: false },
     },
-    scene: [BootScene, TitleScene, VillageScene, CombatScene, CharacterScene],
+    scene: [
+        BootScene,
+        TitleScene,
+        VillageScene,
+        InteriorScene,
+        ForkScene,
+        LocationScene,
+        CombatScene,
+        EndScene,
+        CharacterScene,
+    ],
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
