@@ -147,11 +147,11 @@ export class VillageScene extends Phaser.Scene {
             ease: 'Sine.easeInOut',
         });
 
-        // ----- Игрок -----
+        // ----- Игрок (п.9: уменьшен в 2 раза) -----
         this.player = this.registry.get('player');
         const ps = PLAYER_START;
         this.playerObj = this.physics.add.sprite(ps.col * ts + ts / 2, ps.row * ts + ts / 2, this.player.sprite || 'player');
-        this.playerObj.setScale(ts / 32 * 1.5);
+        this.playerObj.setScale(ts / 32 * 0.75);  // было 1.5, теперь 0.75 (в 2 раза меньше)
         this.playerObj.setCollideWorldBounds(true);
         this.playerObj.play(`${this.player.sprite || 'player'}_idle_down`);
         this.physics.add.collider(this.playerObj, this.solids);
@@ -161,41 +161,35 @@ export class VillageScene extends Phaser.Scene {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasd = this.input.keyboard.addKeys('W,A,S,D');
         this.input.keyboard.on('keydown-E', () => this.tryInteract());
-        // Также стрелки вверх/вниз — фикс п.7: используем Space как альтернативу
         this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
         this.busyDialog = false;
         this.lastDir = 'down';
         this.lastStepTime = 0;
         this.stepInterval = 350;
 
-        // ----- HUD (сверху, тонкая полоска) -----
-        // Левый блок: HP/MP/Меч/Деньги — компактнее, чтобы не перекрывать здания
-        this.hud = this.add.text(8, 6, '', {
-            fontSize: '13px', color: RUS.text, backgroundColor: '#000000cc', padding: { x: 6, y: 4 },
-            stroke: '#000', strokeThickness: 2,
-        }).setScrollFactor(0).setDepth(100);
+        // П.25: F1 — окно помощи
+        this.input.keyboard.on('keydown-F1', () => {
+            this.scene.pause();
+            this.scene.launch('Help');
+        });
+        // П.26: ESC — главное меню
+        this.input.keyboard.on('keydown-ESC', () => {
+            this.scene.start('Title');
+        });
 
-        // Под HUD — дата и время (п.13,14)
-        this.dateTimeText = this.add.text(8, 30, '', {
-            fontSize: '12px', color: '#8ab4f8', backgroundColor: '#000000cc', padding: { x: 6, y: 3 },
-            stroke: '#000', strokeThickness: 2,
-        }).setScrollFactor(0).setDepth(100);
+        // ----- СТАТУС-БАР (п.10: горизонтальный бар в самом верху) -----
+        // Единая строка со всеми статусами
+        this.statusBar = this.add.rectangle(0, 0, this.scale.width, 28, 0x000000, 0.85)
+            .setOrigin(0).setScrollFactor(0).setDepth(100);
+        this.statusText = this.add.text(6, 4, '', {
+            fontSize: '12px', color: RUS.text,
+            fontFamily: 'Arial, sans-serif',
+            stroke: '#000', strokeThickness: 1,
+        }).setScrollFactor(0).setDepth(101);
 
-        // Текущая цель квеста
-        this.objectiveText = this.add.text(8, 52, '', {
+        // Цель квеста (под статус-баром)
+        this.objectiveText = this.add.text(8, 30, '', {
             fontSize: '12px', color: '#c9a14a', backgroundColor: '#000000cc', padding: { x: 6, y: 3 },
-            stroke: '#000', strokeThickness: 2,
-        }).setScrollFactor(0).setDepth(100);
-
-        // Счётчик ходов (ещё ниже)
-        this.turnsText = this.add.text(8, 74, '', {
-            fontSize: '12px', color: '#ff8060', backgroundColor: '#000000cc', padding: { x: 6, y: 3 },
-            stroke: '#000', strokeThickness: 2,
-        }).setScrollFactor(0).setDepth(100);
-
-        // Репутация в деревне (п.1)
-        this.repText = this.add.text(8, 96, '', {
-            fontSize: '12px', color: '#c0c0c0', backgroundColor: '#000000cc', padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
         }).setScrollFactor(0).setDepth(100);
 
@@ -309,19 +303,28 @@ export class VillageScene extends Phaser.Scene {
      */
     createTopMenu() {
         const { width } = this.scale;
-        // Кнопка "Персонаж" — справа сверху, под названием деревни
-        const charBtnX = width - 80;
-        const charBtnY = 36;
-        const charBtn = this.add.rectangle(charBtnX, charBtnY, 140, 26, 0x4a3520, 0.95)
+        // Кнопки в статус-баре (п.10): справа вверху, в пределах бара (y=14)
+        const btnY = 14;
+        const btnW = 90, btnH = 20;
+
+        // Кнопка "Персонаж"
+        const charBtnX = width - 200;
+        const charBtn = this.add.rectangle(charBtnX, btnY, btnW, btnH, 0x4a3520, 0.95)
             .setStrokeStyle(1, 0xC9A961)
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0)
-            .setDepth(100);
-        const charText = this.add.text(charBtnX, charBtnY, '📜 Персонаж', {
-            fontSize: '13px', color: '#E8DCC4',
+            .setDepth(101);
+        const charText = this.add.text(charBtnX, btnY, '📜 Персонаж', {
+            fontSize: '11px', color: '#E8DCC4',
             stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
         charBtn.on('pointerup', () => {
+            // П.13: если персонаж не выбран — переход к созданию
+            const p = this.registry.get('player');
+            if (!p) {
+                this.scene.start('CharacterSelection');
+                return;
+            }
             ActionLog.add(this.registry, 'Открыл меню персонажа.');
             this.scene.pause();
             this.scene.launch('Character', { from: 'Village' });
@@ -329,19 +332,23 @@ export class VillageScene extends Phaser.Scene {
         charBtn.on('pointerover', () => charBtn.setFillStyle(0x5a4530, 1));
         charBtn.on('pointerout', () => charBtn.setFillStyle(0x4a3520, 0.95));
 
-        // Кнопка "Инвентарь" — рядом
-        const invBtnX = width - 80;
-        const invBtnY = 66;
-        const invBtn = this.add.rectangle(invBtnX, invBtnY, 140, 26, 0x4a3520, 0.95)
+        // Кнопка "Инвентарь"
+        const invBtnX = width - 100;
+        const invBtn = this.add.rectangle(invBtnX, btnY, btnW, btnH, 0x4a3520, 0.95)
             .setStrokeStyle(1, 0xC9A961)
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0)
-            .setDepth(100);
-        const invText = this.add.text(invBtnX, invBtnY, '🎒 Инвентарь', {
-            fontSize: '13px', color: '#E8DCC4',
+            .setDepth(101);
+        const invText = this.add.text(invBtnX, btnY, '🎒 Инвентарь', {
+            fontSize: '11px', color: '#E8DCC4',
             stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
         invBtn.on('pointerup', () => {
+            const p = this.registry.get('player');
+            if (!p) {
+                this.scene.start('CharacterSelection');
+                return;
+            }
             ActionLog.add(this.registry, 'Открыл инвентарь.');
             this.scene.pause();
             this.scene.launch('Character', { from: 'Village', tab: 'inventory' });
@@ -421,8 +428,8 @@ export class VillageScene extends Phaser.Scene {
             if (now - this.lastStepTime > this.stepInterval) {
                 this.audioManager.playStep();
                 this.lastStepTime = now;
-                // Продвигаем время (1 шаг = ~5 игровых минут, п.4)
-                tickTime(this.registry, 5);
+                // Продвигаем время (п.3: 1:20 — 20x медленнее, было 5 мин, теперь 0.25 мин)
+                tickTime(this.registry, 0.25);
             }
         } else {
             this.playerObj.anims.pause();
@@ -480,15 +487,25 @@ export class VillageScene extends Phaser.Scene {
         const p = this.player;
         if (!p) return;
         const q = this.registry.get('quest') || {};
-        // Используем реальные деньги Руси
         const moneyStr = formatMoney(p.dengas || 0);
-        this.hud.setText(`❤ ${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  ⚔${p.skills.sword}%  💰${moneyStr}`);
-        
-        // Дата и время (п.13,14)
         const timeState = getTime(this.registry);
+        const villageRep = getVillageRep(this.registry);
+        const repLevel = getReputationLevel(villageRep);
+        const turnsLeft = (q.turnLimit || 12) - (q.turnsUsed || 0);
+        
+        // Единый статус-бар (п.10): HP | MP | Меч | Деньги | Дата | Ходы | Репутация
+        let statusLine = `❤${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  ⚔${p.skills.sword}%  💰${moneyStr}`;
         if (timeState) {
-            this.dateTimeText.setText(`📅 ${formatDateTime(timeState)}`);
-            // Обновляем overlay дня/ночи
+            statusLine += `  📅${formatDateTime(timeState)}`;
+        }
+        if (turnsLeft > 0 && !q.thiefDefeated && !q.thiefEscaped) {
+            statusLine += `  ⏳${turnsLeft}ход`;
+        }
+        statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
+        this.statusText.setText(statusLine);
+        
+        // Обновляем overlay дня/ночи
+        if (timeState) {
             const overlay = getDayNightOverlay(timeState);
             if (this.dayNightOverlay) {
                 this.dayNightOverlay.setFillStyle(overlay.color, overlay.alpha);
@@ -498,21 +515,6 @@ export class VillageScene extends Phaser.Scene {
         if (q.currentObjective) {
             this.objectiveText.setText(`◆ ${q.currentObjective}`);
         }
-        const turnsLeft = (q.turnLimit || 12) - (q.turnsUsed || 0);
-        if (turnsLeft > 0 && !q.thiefDefeated && !q.thiefEscaped) {
-            this.turnsText.setText(`⏳ Ходов: ${turnsLeft}`);
-            if (turnsLeft <= 3) this.turnsText.setColor('#ff4040');
-            else if (turnsLeft <= 6) this.turnsText.setColor('#ffaa40');
-            else this.turnsText.setColor('#ff8060');
-        } else {
-            this.turnsText.setVisible(false);
-        }
-        
-        // Репутация в деревне (п.1)
-        const villageRep = getVillageRep(this.registry);
-        const repLevel = getReputationLevel(villageRep);
-        this.repText.setText(`⭐ Репутация: ${villageRep > 0 ? '+' : ''}${villageRep} (${repLevel.name})`);
-        this.repText.setColor(repLevel.color);
     }
 
     tryInteract() {

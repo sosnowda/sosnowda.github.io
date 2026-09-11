@@ -83,10 +83,17 @@ export class CharacterScene extends Phaser.Scene {
      */
     drawStatsTab(p, q) {
         const { width } = this.scale;
+        // П.13: показываем только текущего персонажа
+        if (!p) {
+            this.add.text(width / 2, 200, 'Персонаж не выбран.\nНачните новую игру.', {
+                fontSize: '20px', color: RUS.text, align: 'center',
+            }).setOrigin(0.5);
+            return;
+        }
+
         // Характеристики (2 колонки)
         const charLines = CHARACTER_KEYS.slice(0, 4).map(c => `${c.name}: ${p[c.key]}`);
         const charLines2 = CHARACTER_KEYS.slice(4).map(c => `${c.name}: ${p[c.key]}`);
-        // Добавляем производные
         charLines.push('—');
         charLines.push(`HP: ${p.HP}/${p.HPmax}`);
         charLines.push(`MP: ${p.MP}/${p.MPmax}`);
@@ -96,8 +103,9 @@ export class CharacterScene extends Phaser.Scene {
         const colX2 = width / 2 + 40;
         const top = 160;
 
+        // П.12: жёлтые заголовки вместо чёрных
         this.add.text(colX, top, 'Характеристики (BRP)', {
-            fontSize: '18px', color: RUS.border, fontStyle: 'bold',
+            fontSize: '18px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
         this.add.text(colX, top + 30, charLines.join('\n'), {
@@ -107,7 +115,7 @@ export class CharacterScene extends Phaser.Scene {
 
         // Навыки по категориям
         this.add.text(colX2, top, 'Навыки', {
-            fontSize: '18px', color: RUS.border, fontStyle: 'bold',
+            fontSize: '18px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
 
@@ -131,9 +139,9 @@ export class CharacterScene extends Phaser.Scene {
             skillY += 6;
         });
 
-        // Снаряжение
-        this.add.text(colX, top + 130, 'Снаряжение:', {
-            fontSize: '16px', color: RUS.border, fontStyle: 'bold',
+        // П.11: снаряжение — исправлен текст, не налезает
+        this.add.text(colX, top + 140, 'Снаряжение:', {
+            fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
         const weapon = WEAPONS[p.weaponId] || { name: 'Кулаки' };
