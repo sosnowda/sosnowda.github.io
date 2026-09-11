@@ -287,4 +287,72 @@ export const DIALOGUES = {
             },
         },
     },
+
+    // === СВЯЩЕННИК (Отец Савватий) — церковь ===
+    priest: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Отец Савватий',
+                text: 'Мир тебе, чадо. Что привело тебя в дом Божий? Может, хочешь исповедаться или помолиться?',
+                choices: [
+                    { text: 'Расскажи про украденную икону', next: 'about_icon' },
+                    { text: 'Спросить про вора', next: 'ask_thief' },
+                    { text: 'Попросить денег', next: 'ask_money' },
+                    { text: 'Помолиться', next: 'pray' },
+                    { text: 'Спасибо, батюшка.', end: true },
+                ],
+            },
+            about_icon: {
+                speaker: 'Отец Савватий',
+                text: 'Ох, горе нам! Ночью вор забрался в церковь и украл чудотворную икону Богородицы Одигитрии. Ей более ста лет, её написал монах-иконописец из Киево-Печерской лавры. Без неё деревня потеряла благословение Божье. Найди вора и верни святыню! Возьми задание у меня, если хочешь помочь.',
+                action: (scene) => {
+                    const q = scene.registry.get('quest');
+                    q.elderTalked = true; // отмечаем, что игрок узнал о краже
+                    q.currentObjective = 'Найди вора: спроси жителей или поищи следы за воротами';
+                    ActionLog.add(scene.registry, 'Поговорил с батюшкой о краже иконы.');
+                },
+                choices: [{ text: 'Я найду её, батюшка!', end: true }],
+            },
+            ask_thief: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'priest', 'Отец Савватий');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'priest', 'Отец Савватий');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            pray: {
+                speaker: 'Отец Савватий',
+                text: 'Помолимся вместе, чадо. Господи, помилуй и сохрани раба Твоего...',
+                action: (scene) => {
+                    const p = scene.registry.get('player');
+                    p.MP = Math.min(p.MPmax, p.MP + 2);
+                    ActionLog.add(scene.registry, 'Помолился в церкви (+2 MP).');
+                },
+                choices: [{ text: 'Аминь.', end: true }],
+            },
+            ask_result: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                choices: [
+                    { text: 'Спасибо, батюшка.', end: true },
+                ],
+            },
+        },
+    },
 };

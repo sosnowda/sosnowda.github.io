@@ -42,17 +42,22 @@ export class CharacterSelectionScene extends Phaser.Scene {
             fontSize: 18, padding: { left: 24, right: 24, top: 12, bottom: 12 },
         });
 
-        // 4 готовых героя в ряд
-        const cardW = 280;
-        const cardH = 320;
-        const gap = 20;
-        const totalW = cardW * 4 + gap * 3;
+        // 8 готовых героев в сетке 4×2 (4 архетипа × 2 пола)
+        const cardW = 240;
+        const cardH = 280;
+        const gapX = 16;
+        const gapY = 16;
+        const cols = 4;
+        const totalW = cardW * cols + gapX * (cols - 1);
         const startX = (width - totalW) / 2 + cardW / 2;
-        const cardY = 270;
+        const startY = 260;
 
         PRESET_HEROES.forEach((hero, i) => {
-            const x = startX + i * (cardW + gap);
-            this.drawHeroCard(x, cardY, cardW, cardH, hero, () => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const x = startX + col * (cardW + gapX);
+            const y = startY + row * (cardH + gapY);
+            this.drawHeroCard(x, y, cardW, cardH, hero, () => {
                 this.selectHero(hero, false);
             });
         });

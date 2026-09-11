@@ -108,17 +108,17 @@ export function formatMoney(dengas) {
 }
 
 // === ПРЕДУСТАНОВЛЕННЫЕ ГЕРОИ ===
-// 4 архетипа с характеристиками в рамках BRP SRD (15..90 каждая)
+// 8 архетипов: 4 архетипа × 2 пола (мужчина и женщина)
 export const PRESET_HEROES = [
+    // === СЛЕДОПЫТ ===
     {
-        id: 'ranger',
+        id: 'ranger_m',
         name: 'Олекса',
         archetype: 'Следопыт',
         gender: 'male',
         sprite: 'player',
         description: 'Хорошие навыки разведки и чтения следов, средние боевые, слабое общение.',
         stats: { STR: 45, CON: 60, SIZ: 45, DEX: 70, INT: 70, POW: 55, CHA: 35, APP: 45 },
-        // Следопыт: высокие spot/track/survival, средние бой, низкие oratory/persuade
         skillOverrides: {
             spot: 70, track: 75, survival: 70, listen: 65,
             sword: 45, bow: 55, brawl: 40, dodge: 50,
@@ -130,14 +130,32 @@ export const PRESET_HEROES = [
         startDengas: 35,
     },
     {
-        id: 'warrior',
+        id: 'ranger_f',
+        name: 'Забава',
+        archetype: 'Следопыт',
+        gender: 'female',
+        sprite: 'npc_merchant',
+        description: 'Хорошие навыки разведки и чтения следов, средние боевые, слабое общение.',
+        stats: { STR: 40, CON: 55, SIZ: 40, DEX: 75, INT: 70, POW: 55, CHA: 35, APP: 50 },
+        skillOverrides: {
+            spot: 72, track: 78, survival: 72, listen: 68,
+            sword: 42, bow: 60, brawl: 38, dodge: 55,
+            oratory: 28, persuade: 32, fast_talk: 22, intimidate: 30,
+            medicine: 38, ride: 48,
+        },
+        startWeapon: 'bow',
+        startArmor: 'leather',
+        startDengas: 35,
+    },
+    // === ВОИН ===
+    {
+        id: 'warrior_m',
         name: 'Добрыня',
         archetype: 'Воин',
         gender: 'male',
         sprite: 'player',
         description: 'Слабые навыки розыска и общения, но отличные боевые навыки.',
         stats: { STR: 80, CON: 75, SIZ: 70, DEX: 55, INT: 40, POW: 50, CHA: 35, APP: 50 },
-        // Воин: высокие бой, низкие spot/track/oratory
         skillOverrides: {
             sword: 80, brawl: 75, spear: 70, dodge: 55, bow: 35,
             spot: 30, track: 20, survival: 35, listen: 30,
@@ -149,14 +167,50 @@ export const PRESET_HEROES = [
         startDengas: 15,
     },
     {
-        id: 'detective',
+        id: 'warrior_f',
+        name: 'Радмира',
+        archetype: 'Воин',
+        gender: 'female',
+        sprite: 'npc_merchant',
+        description: 'Слабые навыки розыска и общения, но отличные боевые навыки.',
+        stats: { STR: 70, CON: 70, SIZ: 55, DEX: 65, INT: 45, POW: 50, CHA: 40, APP: 55 },
+        skillOverrides: {
+            sword: 78, brawl: 70, spear: 68, dodge: 60, bow: 40,
+            spot: 35, track: 25, survival: 38, listen: 32,
+            oratory: 22, persuade: 28, fast_talk: 18, intimidate: 55,
+            medicine: 18, ride: 52,
+        },
+        startWeapon: 'sword',
+        startArmor: 'chain',
+        startDengas: 15,
+    },
+    // === СЫЩИК ===
+    {
+        id: 'detective_m',
+        name: 'Ярополк',
+        archetype: 'Сыщик',
+        gender: 'male',
+        sprite: 'player',
+        description: 'Хорошие навыки общения и поиска улик в разговорах, средние боевые.',
+        stats: { STR: 45, CON: 50, SIZ: 45, DEX: 55, INT: 80, POW: 60, CHA: 70, APP: 55 },
+        skillOverrides: {
+            oratory: 72, persuade: 78, fast_talk: 62, intimidate: 38,
+            spot: 68, track: 52, listen: 72,
+            sword: 42, brawl: 38, dodge: 52, bow: 28,
+            survival: 48, medicine: 42, ride: 32,
+        },
+        startWeapon: 'knife',
+        startArmor: 'padded',
+        startDengas: 60,
+    },
+    {
+        id: 'detective_f',
         name: 'Бирута',
         archetype: 'Сыщик',
         gender: 'female',
-        sprite: 'npc_elder',
+        sprite: 'npc_merchant',
         description: 'Хорошие навыки общения и поиска улик в разговорах, средние боевые.',
         stats: { STR: 40, CON: 50, SIZ: 40, DEX: 60, INT: 80, POW: 60, CHA: 75, APP: 65 },
-        // Сыщик: высокие oratory/persuade/spot, средние бой
         skillOverrides: {
             oratory: 75, persuade: 80, fast_talk: 65, intimidate: 40,
             spot: 70, track: 55, listen: 75,
@@ -167,12 +221,13 @@ export const PRESET_HEROES = [
         startArmor: 'padded',
         startDengas: 60,
     },
+    // === ПРИКЛЮЧЕНЕЦ ===
     {
-        id: 'adventurer',
-        name: 'Милонега',
+        id: 'adventurer_m',
+        name: 'Ратибор',
         archetype: 'Приключенец',
-        gender: 'female',
-        sprite: 'npc_merchant',
+        gender: 'male',
+        sprite: 'player',
         description: 'Все навыки среднего уровня — универсал.',
         stats: { STR: 55, CON: 55, SIZ: 50, DEX: 60, INT: 60, POW: 60, CHA: 60, APP: 55 },
         skillOverrides: {
@@ -180,6 +235,24 @@ export const PRESET_HEROES = [
             oratory: 55, persuade: 55, fast_talk: 50, intimidate: 45,
             spot: 55, track: 50, listen: 55,
             survival: 55, medicine: 50, ride: 50,
+        },
+        startWeapon: 'sword',
+        startArmor: 'leather',
+        startDengas: 40,
+    },
+    {
+        id: 'adventurer_f',
+        name: 'Милонега',
+        archetype: 'Приключенец',
+        gender: 'female',
+        sprite: 'npc_merchant',
+        description: 'Все навыки среднего уровня — универсал.',
+        stats: { STR: 50, CON: 55, SIZ: 45, DEX: 62, INT: 60, POW: 60, CHA: 62, APP: 58 },
+        skillOverrides: {
+            sword: 55, bow: 52, brawl: 48, spear: 50, dodge: 52,
+            oratory: 56, persuade: 56, fast_talk: 51, intimidate: 44,
+            spot: 55, track: 50, listen: 56,
+            survival: 55, medicine: 51, ride: 50,
         },
         startWeapon: 'sword',
         startArmor: 'leather',

@@ -71,6 +71,19 @@ export const INTERIORS = {
         description: 'Тихий дом. У окна сидит пожилая женщина, перебирая чётки.',
         decor: ['bed', 'icon'],
     },
+
+    // Церковь со священником — выдаёт основное задание (поиск иконы)
+    church: {
+        id: 'church',
+        name: 'Церковь Рождества Богородицы',
+        npcId: 'priest',
+        npcName: 'Отец Савватий',
+        npcSprite: 'npc_elder',
+        portrait: 'portrait_elder',
+        dialogueId: 'priest',
+        description: 'Небольшая деревянная церковь с резным иконостасом. Пахнет ладаном и воском. У алтаря молится седой священник.',
+        decor: ['altar', 'icons', 'candles'],
+    },
 };
 
 // Координаты зданий в деревне (col, row — верхний-левый угол двери)
@@ -78,6 +91,7 @@ export const BUILDINGS = [
     { interiorId: 'elder_house', col: 4, row: 4, w: 3, h: 3, label: 'Староста' },
     { interiorId: 'tavern', col: 10, row: 4, w: 3, h: 3, label: 'Таверна' },
     { interiorId: 'blacksmith', col: 16, row: 4, w: 3, h: 3, label: 'Кузница' },
+    { interiorId: 'church', col: 20, row: 11, w: 3, h: 3, label: 'Церковь' },
     { interiorId: 'villager_house_1', col: 4, row: 11, w: 3, h: 3, label: 'Дом Авдея' },
     { interiorId: 'villager_house_2', col: 10, row: 11, w: 3, h: 3, label: 'Дом Марфы' },
 ];

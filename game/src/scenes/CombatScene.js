@@ -18,6 +18,7 @@ export class CombatScene extends Phaser.Scene {
     init(data) {
         this.enemyKeys = (data && data.enemyKeys) || ['bandit'];
         this.npcId = (data && data.npcId) || null;
+        this.fromLocation = (data && data.fromLocation) || null;
     }
 
     create() {
@@ -104,16 +105,56 @@ export class CombatScene extends Phaser.Scene {
         const mk = (x, y, label, cb, bg, hover) => createButton(
             this, x, y, label, () => { if (this.busy) return; cb(); },
             {
-                backgroundColor: bg, hoverColor: hover, textColor: RUS.text, fontSize: 18,
-                padding: { left: 18, right: 18, top: 12, bottom: 12 },
+                backgroundColor: bg, hoverColor: hover, textColor: RUS.text, fontSize: 16,
+                padding: { left: 14, right: 14, top: 10, bottom: 10 },
                 cornerRadius: 8,
             },
         );
         const y = height - 50;
-        mk(width / 2 - 280, y, '⚔ Мечом', () => this.playerAttack('sword'), RUS.accent, RUS.accentLight);
-        mk(width / 2 - 95, y, '➶ Луком', () => this.playerAttack('bow'), 0x3a6b8c, 0x4a7b9c);
-        mk(width / 2 + 95, y, 'Уклон', () => this.dodge(), 0x4a6a4a, 0x5a7a5a);
-        mk(width / 2 + 280, y, 'Трава', () => this.useHerb(), 0x6a5a2a, 0x7a6a3a);
+        mk(width / 2 - 320, y, '⚔ Мечом', () => this.playerAttack('sword'), RUS.accent, RUS.accentLight);
+        mk(width / 2 - 160, y, '➶ Луком', () => this.playerAttack('bow'), 0x3a6b8c, 0x4a7b9c);
+        mk(width / 2, y, 'Уклон', () => this.dodge(), 0x4a6a4a, 0x5a7a5a);
+        mk(width / 2 + 160, y, 'Трава', () => this.useHerb(), 0x6a5a2a, 0x7a6a3a);
+        mk(width / 2 + 320, y, '🏃 Бежать', () => this.flee(), 0x2a2a5a, 0x3a3a6a);
+    }
+
+    /**
+     * Побег из боя (п.3).
+     * Проверка навыка Dodge. При успехе — возврат в Village/Fork.
+     * При провале — пропуск хода.
+     * Счётчик ходов до побега вора продолжает тикать (вор ближе к побегу).
+     */
+    flee() {
+        const dodgeSkill = this.player.skills.dodge || 25;
+        const res = skillCheck(dodgeSkill);
+        this.busy = true;
+
+        if (res.result === 'critical' || res.result === 'success') {
+            this.pushLog(`Ты успешно бежал с поля боя (бросок ${res.roll})!`);
+            if (this.audioManager) this.audioManager.playSwordMiss();
+            // Тратим 2 хода за побег (вор ближе к побегу)
+            const q = this.registry.get('quest') || {};
+            q.turnsUsed = (q.turnsUsed || 0) + 2;
+            this.registry.set('quest', q);
+            ActionLog.add(this.registry, `Побег из боя. Потеряно 2 хода (бросок ${res.roll}, успех).`);
+            this.time.delayedCall(1000, () => {
+                // Возврат в предыдущую сцену
+                if (this.fromLocation) {
+                    this.scene.start('Fork');
+                } else {
+                    this.scene.start('Village');
+                }
+            });
+        } else {
+            this.pushLog(`Не удалось сбежать (бросок ${res.roll})! Враг атакует.`);
+            if (this.audioManager) this.audioManager.playDamageTaken();
+            // Тратим 1 ход за неудачный побег
+            const q = this.registry.get('quest') || {};
+            q.turnsUsed = (q.turnsUsed || 0) + 1;
+            this.registry.set('quest', q);
+            ActionLog.add(this.registry, `Неудачный побег из боя. Потерян 1 ход (бросок ${res.roll}, провал).`);
+            this.time.delayedCall(800, () => this.enemyTurn());
+        }
     }
 
     pushLog(msg) {

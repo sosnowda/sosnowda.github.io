@@ -262,7 +262,7 @@ export function askMoneyForHelp(registry, npcId, npcName) {
     // Модификатор в зависимости от NPC
     // Староста — больше всего даст, купец/тавернщик — средне, крестьяне — мало
     const npcGenerosity = {
-        elder: 1.5, blacksmith: 0.8, tavernkeeper: 1.0,
+        elder: 1.5, priest: 0.7, blacksmith: 0.8, tavernkeeper: 1.0,
         peasant1: 0.4, widow: 0.3,
     }[npcId] || 0.5;
 
