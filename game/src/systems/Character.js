@@ -113,7 +113,7 @@ export const PRESET_HEROES = [
     // === СЛЕДОПЫТ ===
     {
         id: 'ranger_m',
-        name: 'Олекса',
+        name: 'Гаврила',
         archetype: 'Следопыт',
         gender: 'male',
         sprite: 'player',
@@ -205,7 +205,7 @@ export const PRESET_HEROES = [
     },
     {
         id: 'detective_f',
-        name: 'Бирута',
+        name: 'Предслава',
         archetype: 'Сыщик',
         gender: 'female',
         sprite: 'npc_merchant',
@@ -397,8 +397,8 @@ export function createRandomHero(patternId, customName) {
     
     // Случайное имя по полу
     const gender = Math.random() < 0.5 ? 'male' : 'female';
-    const maleNames = ['Олекса', 'Добрыня', 'Ярополк', 'Ратибор', 'Боян', 'Ставр', 'Мирослав', 'Творимир'];
-    const femaleNames = ['Бирута', 'Милонега', 'Забава', 'Радмира', 'Предслава', 'Любава', 'Неслава', 'Горислава'];
+    const maleNames = ['Добрыня', 'Ярополк', 'Ратибор', 'Боян', 'Ставр', 'Мирослав', 'Творимир', 'Гаврила'];
+    const femaleNames = ['Милонега', 'Забава', 'Радмира', 'Предслава', 'Любава', 'Неслава', 'Горислава', 'Вера'];
     const name = customName || (gender === 'male' ? maleNames[randInt(0, maleNames.length - 1)] : femaleNames[randInt(0, femaleNames.length - 1)]);
     
     // Случайное стартовое оружие и доспех

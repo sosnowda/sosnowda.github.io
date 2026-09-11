@@ -46,6 +46,7 @@ export class VillageScene extends Phaser.Scene {
 
         // ----- Отрисовка тайлов карты -----
         // П.7: Используем buildingTileTexture для уникальных стилей зданий
+        // ВАЖНО: проверяем существование текстуры, иначе fallback на tileTexture
         for (let y = 0; y < MAP_H; y++) {
             for (let x = 0; x < MAP_W; x++) {
                 const t = this.map[y][x];
@@ -59,11 +60,22 @@ export class VillageScene extends Phaser.Scene {
                         break;
                     }
                 }
-                const texKey = buildingId ? buildingTileTexture(t, x, y, buildingId) : tileTexture(t, x, y);
+                let texKey;
+                if (buildingId) {
+                    texKey = buildingTileTexture(t, x, y, buildingId);
+                    // Проверяем существование текстуры, fallback если нет
+                    if (!this.textures.exists(texKey)) {
+                        texKey = tileTexture(t, x, y);
+                    }
+                } else {
+                    texKey = tileTexture(t, x, y);
+                }
                 const img = this.add.image(px, py, texKey);
                 img.setScale(ts / 32);
                 if (SOLID.has(t)) {
-                    this.solids.create(px, py, texKey).setScale(ts / 32).refreshBody();
+                    // Для solids используем надёжную текстуру
+                    const solidTex = this.textures.exists(texKey) ? texKey : tileTexture(t, x, y);
+                    this.solids.create(px, py, solidTex).setScale(ts / 32).refreshBody();
                 }
             }
         }
@@ -192,26 +204,46 @@ export class VillageScene extends Phaser.Scene {
         });
 
         // П.16,23: ЛКМ на здании — подойти и войти
-        // П.24: ПКМ на здании — показать информацию
         this.input.on('pointerdown', (pointer) => {
             if (this.busyDialog) return;
-            const worldPoint = pointer.positionToCamera(this.cameras.main);
+            const worldX = pointer.worldX;
+            const worldY = pointer.worldY;
             const ts = this.tileSize;
-            const tx = Math.floor(worldPoint.x / ts);
-            const ty = Math.floor(worldPoint.y / ts);
+            const tx = Math.floor(worldX / ts);
+            const ty = Math.floor(worldY / ts);
 
-            // Проверяем, кликнул ли на дверь здания
+            let targetBuilding = null;
             const interiorId = doorInteriorId(tx, ty);
-            if (intereriorId) {
+            if (interiorId) {
+                targetBuilding = { interiorId, doorX: tx, doorY: ty };
+            } else {
+                for (const b of BUILDINGS) {
+                    if (tx >= b.col && tx < b.col + b.w && ty >= b.row && ty < b.row + b.h) {
+                        targetBuilding = { interiorId: b.interiorId, doorX: b.col + Math.floor(b.w / 2), doorY: b.row + b.h - 1 };
+                        break;
+                    }
+                }
+            }
+            if (targetBuilding) {
                 if (pointer.rightButtonDown()) {
-                    // П.24: ПКМ — показать информацию о здании
-                    this.showBuildingInfo(interiorId);
+                    this.showBuildingInfo(targetBuilding.interiorId);
                 } else {
-                    // П.16,23: ЛКМ — подойти к двери и войти
-                    this.walkToAndEnter(interiorId, tx, ty);
+                    this.walkToAndEnter(targetBuilding.interiorId, targetBuilding.doorX, targetBuilding.doorY);
                 }
                 return;
             }
+        });
+
+        this.input.on('pointermove', (pointer) => {
+            if (this.busyDialog) { this.hideBuildingTooltip(); return; }
+            const tx = Math.floor(pointer.worldX / this.tileSize);
+            const ty = Math.floor(pointer.worldY / this.tileSize);
+            let hoverBuilding = null;
+            for (const b of BUILDINGS) {
+                if (tx >= b.col && tx < b.col + b.w && ty >= b.row && ty < b.row + b.h) { hoverBuilding = b; break; }
+            }
+            if (hoverBuilding) { this.showBuildingTooltip(hoverBuilding, pointer.x, pointer.y); }
+            else { this.hideBuildingTooltip(); }
         });
 
         // ----- СТАТУС-БАР (п.10: горизонтальный бар в самом верху) -----
@@ -711,6 +743,41 @@ export class VillageScene extends Phaser.Scene {
                 this.scene.pause();
                 this.scene.launch('Interior', { interiorId: interiorId, from: 'Village' });
             });
+        }
+    }
+
+    // П.5: Поп-ап тултип при наведении курсора на здание
+    showBuildingTooltip(building, screenX, screenY) {
+        if (!this.buildingTooltip) {
+            this.buildingTooltip = this.add.container(0, 0).setScrollFactor(0).setDepth(200);
+            const bg = this.add.rectangle(0, 0, 220, 70, 0x000000, 0.85)
+                .setStrokeStyle(1, 0xC9A961);
+            this.buildingTooltipText = this.add.text(0, 0, '', {
+                fontSize: '11px', color: '#E8DCC4',
+                fontFamily: 'Arial, sans-serif',
+                stroke: '#000', strokeThickness: 1,
+                align: 'left',
+            }).setOrigin(0.5);
+            this.buildingTooltip.add(bg);
+            this.buildingTooltip.add(this.buildingTooltipText);
+        }
+        const interior = INTERIORS[building.interiorId];
+        if (!interior) return;
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        const npcRep = getNpcRep(this.registry, interior.npcId);
+        const repLevel = getReputationLevel(npcRep);
+        const timeState = getTime(this.registry);
+        const hour = timeState ? timeState.hour : 12;
+        const activity = this.npcData ? getNpcActivity(this.npcData, hour) : 'занят';
+        const text = `${interior.name}\n${npcName}\nРеп: ${npcRep > 0 ? '+' : ''}${npcRep} (${repLevel.name})\n${activity}`;
+        this.buildingTooltipText.setText(text);
+        this.buildingTooltip.setPosition(screenX + 110, screenY + 35);
+        this.buildingTooltip.setVisible(true);
+    }
+
+    hideBuildingTooltip() {
+        if (this.buildingTooltip) {
+            this.buildingTooltip.setVisible(false);
         }
     }
 

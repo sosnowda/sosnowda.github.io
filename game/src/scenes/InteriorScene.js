@@ -71,8 +71,14 @@ export class InteriorScene extends Phaser.Scene {
 
         // ----- NPC в интерьере -----
         const npcSpriteKey = (this.npcData && this.npcData.sprite) || interior.npcSprite;
-        this.npcSprite = this.add.sprite(width * 0.65, height * 0.55, npcSpriteKey, 0).setScale(2.5);
-        this.npcSprite.play(`${npcSpriteKey}_idle_down`);
+        // П.6: Проверяем существование текстуры
+        const finalSpriteKey = this.textures.exists(npcSpriteKey) ? npcSpriteKey : 'npc_elder';
+        this.npcSprite = this.add.sprite(width * 0.65, height * 0.55, finalSpriteKey).setScale(2.5).setDepth(5);
+        // Проверяем существование анимации
+        const animKey = `${finalSpriteKey}_idle_down`;
+        if (this.anims.exists(animKey)) {
+            this.npcSprite.play(animKey);
+        }
         // Лёгкое дыхание
         this.tweens.add({
             targets: this.npcSprite,
