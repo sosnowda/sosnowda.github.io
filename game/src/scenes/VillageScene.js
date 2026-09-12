@@ -2,7 +2,7 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import {
-    buildMap, SOLID, tileTexture, buildingTileTexture, doorInteriorId, isGate,
+    buildMap, SOLID, tileTexture, doorInteriorId, isGate,
     PLAYER_START, MAP_W, MAP_H, getVillageName,
 } from '../data/world.js';
 import { BUILDINGS, VILLAGE_GATE, INTERIORS } from '../data/interiors.js';
@@ -45,37 +45,21 @@ export class VillageScene extends Phaser.Scene {
         this.solids = this.physics.add.staticGroup();
 
         // ----- Отрисовка тайлов карты -----
-        // П.7: Используем buildingTileTexture для уникальных стилей зданий
-        // ВАЖНО: проверяем существование текстуры, иначе fallback на tileTexture
         for (let y = 0; y < MAP_H; y++) {
             for (let x = 0; x < MAP_W; x++) {
                 const t = this.map[y][x];
                 const px = x * ts + ts / 2;
                 const py = y * ts + ts / 2;
-                // Определяем, к какому зданию относится тайл
-                let buildingId = null;
-                for (const b of BUILDINGS) {
-                    if (x >= b.col && x < b.col + b.w && y >= b.row && y < b.row + b.h) {
-                        buildingId = b.interiorId;
-                        break;
-                    }
-                }
-                let texKey;
-                if (buildingId) {
-                    texKey = buildingTileTexture(t, x, y, buildingId);
-                    // Проверяем существование текстуры, fallback если нет
-                    if (!this.textures.exists(texKey)) {
-                        texKey = tileTexture(t, x, y);
-                    }
-                } else {
-                    texKey = tileTexture(t, x, y);
-                }
-                const img = this.add.image(px, py, texKey);
+                const texKey = tileTexture(t, x, y);
+                // Проверяем существование текстуры, fallback на траву
+                const safeTex = this.textures.exists(texKey) ? texKey : 'tile_grass_0';
+                const img = this.add.image(px, py, safeTex);
                 img.setScale(ts / 32);
                 if (SOLID.has(t)) {
-                    // Для solids используем надёжную текстуру
-                    const solidTex = this.textures.exists(texKey) ? texKey : tileTexture(t, x, y);
-                    this.solids.create(px, py, solidTex).setScale(ts / 32).refreshBody();
+                    // Создаём НЕВИДИМЫЙ физический объект для коллизий
+                    const solid = this.solids.create(px, py, safeTex);
+                    solid.setScale(ts / 32).refreshBody();
+                    solid.setVisible(false);  // скрываем — отрисовка уже через add.image
                 }
             }
         }
@@ -257,9 +241,10 @@ export class VillageScene extends Phaser.Scene {
         this.statusBar = this.add.rectangle(0, 0, this.scale.width, 28, 0x000000, 0.85)
             .setOrigin(0).setScrollFactor(0).setDepth(100);
         this.statusText = this.add.text(6, 4, '', {
-            fontSize: '12px', color: RUS.text,
+            fontSize: '11px', color: RUS.text,
             fontFamily: 'Arial, sans-serif',
             stroke: '#000', strokeThickness: 1,
+            wordWrap: { width: this.scale.width - 220 },
         }).setScrollFactor(0).setDepth(101);
 
         // Цель квеста (под статус-баром)
@@ -740,13 +725,14 @@ export class VillageScene extends Phaser.Scene {
     showBuildingTooltip(building, screenX, screenY) {
         if (!this.buildingTooltip) {
             this.buildingTooltip = this.add.container(0, 0).setScrollFactor(0).setDepth(200);
-            const bg = this.add.rectangle(0, 0, 220, 70, 0x000000, 0.85)
+            const bg = this.add.rectangle(0, 0, 240, 80, 0x000000, 0.9)
                 .setStrokeStyle(1, 0xC9A961);
             this.buildingTooltipText = this.add.text(0, 0, '', {
-                fontSize: '11px', color: '#E8DCC4',
+                fontSize: '10px', color: '#E8DCC4',
                 fontFamily: 'Arial, sans-serif',
                 stroke: '#000', strokeThickness: 1,
                 align: 'left',
+                wordWrap: { width: 220 },
             }).setOrigin(0.5);
             this.buildingTooltip.add(bg);
             this.buildingTooltip.add(this.buildingTooltipText);
@@ -761,7 +747,10 @@ export class VillageScene extends Phaser.Scene {
         const activity = this.npcData ? getNpcActivity(this.npcData, hour) : 'занят';
         const text = `${interior.name}\n${npcName}\nРеп: ${npcRep > 0 ? '+' : ''}${npcRep} (${repLevel.name})\n${activity}`;
         this.buildingTooltipText.setText(text);
-        this.buildingTooltip.setPosition(screenX + 110, screenY + 35);
+        // Не выходим за правый край экрана
+        const tx = Math.min(screenX + 120, this.scale.width - 130);
+        const ty = Math.min(screenY + 40, this.scale.height - 90);
+        this.buildingTooltip.setPosition(tx, ty);
         this.buildingTooltip.setVisible(true);
     }
 

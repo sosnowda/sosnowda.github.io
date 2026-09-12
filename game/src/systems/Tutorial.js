@@ -35,28 +35,28 @@ export class Tutorial {
         const hints = [
             {
                 title: 'Беженец',
-                text: 'Ты пришёл в незнакомую деревню. Осмотрись и найди приют.',
+                text: 'Ты пришёл в незнакомую деревню. Найди приют и работу.',
                 icon: '🏠',
                 duration: 5000,
                 position: 'top',
             },
             {
                 title: 'Движение',
-                text: 'WASD или стрелки — двигайся по деревне',
+                text: 'WASD или стрелки — движение по деревне',
                 icon: '⬆⬇⬅➡',
                 duration: 4000,
                 position: 'top',
             },
             {
-                title: 'Взаимодействие',
-                text: 'Подойди к зданию и нажми E, чтобы войти и познакомиться с жителями',
+                title: 'Действие',
+                text: 'ЛКМ на здании — войти. E — взаимодействие',
                 icon: 'E',
                 duration: 4000,
                 position: 'top',
             },
             {
                 title: 'Цель',
-                text: 'Жители тебе незнакомы. Поговори с ними, чтобы узнать их имена и найти работу.',
+                text: 'Поговори с жителями, чтобы узнать их имена',
                 icon: '◆',
                 duration: 5000,
                 position: 'top',
@@ -72,45 +72,46 @@ export class Tutorial {
 
     _showHint(hint, onComplete) {
         const { width } = this.scene.scale;
-        const y = 120;
+        const y = 130;
 
         // Контейнер подсказки
         const container = this.scene.add.container(width / 2, y);
         container.setScrollFactor(0).setDepth(200);
 
-        // Фон
-        const bgWidth = 460;
-        const bgHeight = 70;
+        // Фон — шире, чтобы текст точно влезал
+        const bgWidth = Math.min(width - 40, 520);
+        const bgHeight = 80;
         const bg = this.scene.add.graphics();
-        bg.fillStyle(0x000000, 0.8);
+        bg.fillStyle(0x000000, 0.85);
         bg.fillRoundedRect(-bgWidth / 2, -bgHeight / 2, bgWidth, bgHeight, 12);
         bg.lineStyle(2, 0xc9a14a, 1);
         bg.strokeRoundedRect(-bgWidth / 2, -bgHeight / 2, bgWidth, bgHeight, 12);
         container.add(bg);
 
         // Иконка
-        const icon = this.scene.add.text(-bgWidth / 2 + 30, 0, hint.icon, {
-            fontSize: '24px',
+        const icon = this.scene.add.text(-bgWidth / 2 + 25, 0, hint.icon, {
+            fontSize: '22px',
             color: '#c9a14a',
             fontStyle: 'bold',
         }).setOrigin(0.5);
         container.add(icon);
 
         // Заголовок
-        const title = this.scene.add.text(-bgWidth / 2 + 70, -16, hint.title, {
-            fontSize: '16px',
+        const title = this.scene.add.text(-bgWidth / 2 + 55, -18, hint.title, {
+            fontSize: '15px',
             color: '#c9a14a',
             fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
         }).setOrigin(0, 0.5);
         container.add(title);
 
-        // Текст
-        const text = this.scene.add.text(-bgWidth / 2 + 70, 12, hint.text, {
-            fontSize: '14px',
+        // Текст — с wordWrap, чтобы не выходил за рамки
+        const text = this.scene.add.text(-bgWidth / 2 + 55, 8, hint.text, {
+            fontSize: '12px',
             color: '#f3e9d2',
             fontFamily: 'Georgia, serif',
-        }).setOrigin(0, 0.5);
+            wordWrap: { width: bgWidth - 80 },
+        }).setOrigin(0, 0);
         container.add(text);
 
         // Анимация появления
