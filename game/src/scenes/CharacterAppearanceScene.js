@@ -1,43 +1,87 @@
-// CharacterAppearanceScene.js — простая сцена выбора внешности персонажа.
-// П.11: Открывается после выбора героя (пресет или случайный).
-// П.4: Игрок выбирает цвета (волосы, одежда, кожа) — применяется как tint к спрайту.
+// CharacterAppearanceScene.js — расширенная сцена выбора внешности персонажа.
+// П.1-3: Больше вариантов кастомизации, раздельные куртка/штаны, готовые пресеты.
 //
-// Это упрощённая версия LPC-генератора: вместо сложного композитинга слоёв
-// используем tint существующего спрайта 'player' (или 'npc_*' по выбору архетипа).
+// Регионы спрайта 64×64 (idle_down):
+//   y = 0..14   — волосы (макушка)
+//   y = 14..26  — лицо/кожа
+//   y = 26..42  — куртка (верхняя часть тела)
+//   y = 42..64  — штаны (нижняя часть тела)
 
 import { RUS } from '../config/RusTheme.js';
 import { createButton } from '../utils/ui.js';
 
 // Палитры цветов (Phaser tint — 0xRRGGBB)
 const SKIN_COLORS = [
-    { name: 'Светлая',   tint: 0xffe0c0 },
-    { name: 'Загорелая', tint: 0xe0b888 },
-    { name: 'Смуглая',   tint: 0xc89868 },
-    { name: 'Тёмная',    tint: 0x8a5e3a },
+    { name: 'Светлая',     tint: 0xffe0c0 },
+    { name: 'Бледная',     tint: 0xf0d0b0 },
+    { name: 'Загорелая',   tint: 0xe0b888 },
+    { name: 'Смуглая',     tint: 0xc89868 },
+    { name: 'Тёмная',      tint: 0xa07050 },
+    { name: 'Очень тёмная', tint: 0x8a5e3a },
 ];
 
 const HAIR_COLORS = [
-    { name: 'Чёрные',    tint: 0x2a1a0e },
+    { name: 'Чёрные',      tint: 0x2a1a0e },
     { name: 'Тёмно-русые', tint: 0x5a3a1e },
-    { name: 'Русые',     tint: 0x8a6a3e },
-    { name: 'Светлые',   tint: 0xc8a868 },
-    { name: 'Рыжие',     tint: 0xa04020 },
-    { name: 'Седые',     tint: 0xc0c0c0 },
+    { name: 'Русые',       tint: 0x8a6a3e },
+    { name: 'Светло-русые', tint: 0xa88858 },
+    { name: 'Светлые',     tint: 0xc8a868 },
+    { name: 'Блонд',       tint: 0xe8c878 },
+    { name: 'Рыжие',       tint: 0xa04020 },
+    { name: 'Тёмно-рыжие', tint: 0x80301a },
+    { name: 'Каштановые',  tint: 0x6a4220 },
+    { name: 'Седые',       tint: 0xc0c0c0 },
+    { name: 'Белые',       tint: 0xe8e8e8 },
+    { name: 'Синие (маг)', tint: 0x3a4a8a },
 ];
 
-const CLOTH_COLORS = [
-    { name: 'Красный',   tint: 0x8c2f1d },
-    { name: 'Синий',     tint: 0x2a4a6a },
-    { name: 'Зелёный',   tint: 0x3a5a3a },
-    { name: 'Коричневый', tint: 0x5a3a22 },
-    { name: 'Серый',     tint: 0x4a4a4a },
-    { name: 'Бордовый',  tint: 0x5a1a3a },
-    { name: 'Охра',      tint: 0x8a6a2a },
-    { name: 'Чёрный',    tint: 0x2a2a2a },
+// П.2: Куртка и штаны — раздельные палитры
+const JACKET_COLORS = [
+    { name: 'Красная',     tint: 0x8c2f1d },
+    { name: 'Тёмно-красная', tint: 0x6a2010 },
+    { name: 'Синяя',       tint: 0x2a4a6a },
+    { name: 'Тёмно-синяя', tint: 0x1a2a4a },
+    { name: 'Зелёная',     tint: 0x3a5a3a },
+    { name: 'Тёмно-зелёная', tint: 0x2a3a2a },
+    { name: 'Коричневая',  tint: 0x5a3a22 },
+    { name: 'Тёмно-коричневая', tint: 0x3a2212 },
+    { name: 'Серая',       tint: 0x4a4a4a },
+    { name: 'Бордовая',    tint: 0x5a1a3a },
+    { name: 'Охра',        tint: 0x8a6a2a },
+    { name: 'Чёрная',      tint: 0x2a2a2a },
+    { name: 'Белая',       tint: 0xc8c8c8 },
+    { name: 'Фиолетовая',  tint: 0x4a2a5a },
+    { name: 'Бирюзовая',   tint: 0x2a6a6a },
+    { name: 'Оранжевая',   tint: 0xa85a1a },
+];
+
+const PANTS_COLORS = [
+    { name: 'Чёрные',      tint: 0x2a2a2a },
+    { name: 'Тёмно-серые', tint: 0x3a3a3a },
+    { name: 'Серые',       tint: 0x5a5a5a },
+    { name: 'Коричневые',  tint: 0x4a2a1a },
+    { name: 'Тёмно-коричневые', tint: 0x2a1a0a },
+    { name: 'Синие',       tint: 0x2a3a5a },
+    { name: 'Зелёные',     tint: 0x2a4a2a },
+    { name: 'Бежевые',     tint: 0x8a7a5a },
+    { name: 'Белые',       tint: 0xc8c8c8 },
+    { name: 'Бордовые',    tint: 0x4a1a2a },
+];
+
+// П.3: Готовые пресеты внешнего вида
+const PRESETS = [
+    { name: 'Купец',     sprite: 'npc_merchant', skin: 1, hair: 4, jacket: 6,  pants: 3 },
+    { name: 'Воин',      sprite: 'npc_soldier',  skin: 2, hair: 0, jacket: 0,  pants: 0 },
+    { name: 'Старейшина', sprite: 'npc_elder',   skin: 0, hair: 8, jacket: 7,  pants: 4 },
+    { name: 'Крестьянин', sprite: 'player',      skin: 2, hair: 1, jacket: 6,  pants: 4 },
+    { name: 'Путник',    sprite: 'player',       skin: 1, hair: 2, jacket: 10, pants: 0 },
+    { name: 'Дружинник', sprite: 'npc_soldier',  skin: 3, hair: 0, jacket: 1,  pants: 0 },
+    { name: 'Священник', sprite: 'npc_elder',    skin: 0, hair: 9, jacket: 12, pants: 0 },
+    { name: 'Торговец',  sprite: 'npc_merchant', skin: 1, hair: 3, jacket: 10, pants: 7 },
 ];
 
 const SPRITE_VARIANTS = [
-    { name: 'Путник (муж)', key: 'player' },
+    { name: 'Путник',     key: 'player' },
     { name: 'Старейшина', key: 'npc_elder' },
     { name: 'Купец',      key: 'npc_merchant' },
     { name: 'Воин',       key: 'npc_soldier' },
@@ -57,7 +101,8 @@ export class CharacterAppearanceScene extends Phaser.Scene {
         this.selectedSprite = (this.player && this.player.sprite) || 'player';
         this.skinIdx = 0;
         this.hairIdx = 0;
-        this.clothIdx = 0;
+        this.jacketIdx = 0;  // П.2: куртка (вместо clothIdx)
+        this.pantsIdx = 0;   // П.2: штаны (новое)
 
         // Заголовок
         this.add.text(width / 2, 30, '🎨 Настройка внешности', {
@@ -171,28 +216,52 @@ export class CharacterAppearanceScene extends Phaser.Scene {
             this.hairCircles.push(circle);
         });
 
-        // === Цвет одежды (справа, низ) ===
-        y += 60;
-        this.add.text(rightX, y, 'Цвет одежды:', {
+        // === П.2: Цвет куртки (справа, середина-низ) ===
+        y += 50;
+        this.add.text(rightX, y, 'Цвет куртки:', {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
         y += 30;
-        this.clothCircles = [];
-        CLOTH_COLORS.forEach((c, i) => {
-            const col = i % 4;
-            const row = Math.floor(i / 4);
-            const cx = rightX - 75 + col * 50;
-            const cy = y + 15 + row * 50;
-            const circle = this.add.circle(cx, cy, 18, c.tint)
+        this.jacketCircles = [];
+        JACKET_COLORS.forEach((c, i) => {
+            const col = i % 8;
+            const row = Math.floor(i / 8);
+            const cx = rightX - 175 + col * 50;
+            const cy = y + 15 + row * 45;
+            const circle = this.add.circle(cx, cy, 16, c.tint)
                 .setStrokeStyle(2, 0xc9a14a);
             circle.setInteractive({ useHandCursor: true });
             circle.on('pointerdown', () => {
-                this.clothIdx = i;
+                this.jacketIdx = i;
                 this.updatePreview();
                 this.highlightSelection();
             });
-            this.clothCircles.push(circle);
+            this.jacketCircles.push(circle);
+        });
+
+        // === П.2: Цвет штанов (справа, низ) ===
+        y += 95;
+        this.add.text(rightX, y, 'Цвет штанов:', {
+            fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
+            stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5);
+        y += 30;
+        this.pantsCircles = [];
+        PANTS_COLORS.forEach((c, i) => {
+            const col = i % 5;
+            const row = Math.floor(i / 5);
+            const cx = rightX - 100 + col * 50;
+            const cy = y + 15 + row * 45;
+            const circle = this.add.circle(cx, cy, 16, c.tint)
+                .setStrokeStyle(2, 0xc9a14a);
+            circle.setInteractive({ useHandCursor: true });
+            circle.on('pointerdown', () => {
+                this.pantsIdx = i;
+                this.updatePreview();
+                this.highlightSelection();
+            });
+            this.pantsCircles.push(circle);
         });
 
         // Подписи цветов под палитрами
@@ -202,17 +271,45 @@ export class CharacterAppearanceScene extends Phaser.Scene {
         this.hairLabel = this.add.text(rightX, height / 2 + 100, '', {
             fontSize: '13px', color: RUS.text,
         }).setOrigin(0.5);
-        this.clothLabel = this.add.text(rightX, height / 2 + 120, '', {
+        this.jacketLabel = this.add.text(rightX, height / 2 + 120, '', {
             fontSize: '13px', color: RUS.text,
         }).setOrigin(0.5);
+        this.pantsLabel = this.add.text(rightX, height / 2 + 140, '', {
+            fontSize: '13px', color: RUS.text,
+        }).setOrigin(0.5);
+
+        // === П.3: Готовые пресеты (внизу слева) ===
+        const presetX = 150;
+        const presetY = height - 280;
+        this.add.text(presetX, presetY, 'Готовые варианты:', {
+            fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
+            stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5);
+        PRESETS.forEach((p, i) => {
+            const col = i % 2;
+            const row = Math.floor(i / 2);
+            const px = presetX - 80 + col * 160;
+            const py = presetY + 30 + row * 32;
+            createButton(this, px, py, p.name, () => {
+                this.selectedSprite = p.sprite;
+                this.skinIdx = p.skin;
+                this.hairIdx = p.hair;
+                this.jacketIdx = p.jacket;
+                this.pantsIdx = p.pants;
+                this.updatePreview();
+                this.highlightSelection();
+            }, {
+                backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
+                fontSize: 12, padding: { left: 8, right: 8, top: 5, bottom: 5 },
+            });
+        });
 
         // === Кнопка "Случайно" ===
         createButton(this, width / 2, height - 110, '🎲 Случайный облик', () => {
             this.skinIdx = Math.floor(Math.random() * SKIN_COLORS.length);
             this.hairIdx = Math.floor(Math.random() * HAIR_COLORS.length);
-            this.clothIdx = Math.floor(Math.random() * CLOTH_COLORS.length);
-            // П.1-2: НЕ меняем selectedSprite при случайной генерации —
-            // это避免 сброса через scene.restart(). Только цвета.
+            this.jacketIdx = Math.floor(Math.random() * JACKET_COLORS.length);
+            this.pantsIdx = Math.floor(Math.random() * PANTS_COLORS.length);
             this.updatePreview();
             this.highlightSelection();
         }, {
@@ -242,12 +339,13 @@ export class CharacterAppearanceScene extends Phaser.Scene {
 
     /**
      * Обновить превью — перерисовать canvas с раздельными tint-регионами.
-     * П.1-2: Каждый цвет (волосы/кожа/одежда) применяется к своему региону спрайта.
+     * П.1-2: Каждый цвет (волосы/кожа/куртка/штаны) применяется к своему региону спрайта.
      *
      * Регионы (для спрайта 64×64, idle_down):
      *   y = 0..14   — волосы (макушка)
      *   y = 14..26  — лицо/кожа
-     *   y = 26..64  — тело/одежда
+     *   y = 26..42  — куртка (верхняя часть тела)
+     *   y = 42..64  — штаны (нижняя часть тела)
      */
     updatePreview() {
         // Перерисовываем canvas-текстуру
@@ -266,7 +364,8 @@ export class CharacterAppearanceScene extends Phaser.Scene {
     generateCompositeTexture() {
         const skinTint = SKIN_COLORS[this.skinIdx].tint;
         const hairTint = HAIR_COLORS[this.hairIdx].tint;
-        const clothTint = CLOTH_COLORS[this.clothIdx].tint;
+        const jacketTint = JACKET_COLORS[this.jacketIdx].tint;
+        const pantsTint = PANTS_COLORS[this.pantsIdx].tint;
 
         // Получаем базовый спрайт (нужен frame 0 = idle_down)
         const baseKey = this.textures.exists(this.selectedSprite) ? this.selectedSprite : 'player';
@@ -302,10 +401,13 @@ export class CharacterAppearanceScene extends Phaser.Scene {
         // 3. tint кожи к середине (y = 14..26) — лицо
         this.applyRegionTint(ctx, 0, 14, FS, 12, skinTint, 0.7);
 
-        // 4. tint одежды к нижней части (y = 26..64) — тело
-        this.applyRegionTint(ctx, 0, 26, FS, 38, clothTint, 0.75);
+        // П.2: 4. tint куртки к верхней части тела (y = 26..42)
+        this.applyRegionTint(ctx, 0, 26, FS, 16, jacketTint, 0.75);
 
-        // 5. Регистрируем canvas как Phaser-текстуру
+        // П.2: 5. tint штанов к нижней части тела (y = 42..64)
+        this.applyRegionTint(ctx, 0, 42, FS, 22, pantsTint, 0.75);
+
+        // 6. Регистрируем canvas как Phaser-текстуру
         this.textures.addCanvas('preview_composite', canvas);
     }
 
@@ -337,21 +439,25 @@ export class CharacterAppearanceScene extends Phaser.Scene {
     updateLabels() {
         if (this.skinLabel) this.skinLabel.setText(`Кожа: ${SKIN_COLORS[this.skinIdx].name}`);
         if (this.hairLabel) this.hairLabel.setText(`Волосы: ${HAIR_COLORS[this.hairIdx].name}`);
-        if (this.clothLabel) this.clothLabel.setText(`Одежда: ${CLOTH_COLORS[this.clothIdx].name}`);
+        if (this.jacketLabel) this.jacketLabel.setText(`Куртка: ${JACKET_COLORS[this.jacketIdx].name}`);
+        if (this.pantsLabel) this.pantsLabel.setText(`Штаны: ${PANTS_COLORS[this.pantsIdx].name}`);
     }
 
     /**
      * Подсветить выбранные кружки (более толстая обводка).
      */
     highlightSelection() {
-        this.skinCircles.forEach((c, i) => {
+        if (this.skinCircles) this.skinCircles.forEach((c, i) => {
             c.setStrokeStyle(i === this.skinIdx ? 4 : 2, i === this.skinIdx ? 0xffffff : 0xc9a14a);
         });
-        this.hairCircles.forEach((c, i) => {
+        if (this.hairCircles) this.hairCircles.forEach((c, i) => {
             c.setStrokeStyle(i === this.hairIdx ? 4 : 2, i === this.hairIdx ? 0xffffff : 0xc9a14a);
         });
-        this.clothCircles.forEach((c, i) => {
-            c.setStrokeStyle(i === this.clothIdx ? 4 : 2, i === this.clothIdx ? 0xffffff : 0xc9a14a);
+        if (this.jacketCircles) this.jacketCircles.forEach((c, i) => {
+            c.setStrokeStyle(i === this.jacketIdx ? 4 : 2, i === this.jacketIdx ? 0xffffff : 0xc9a14a);
+        });
+        if (this.pantsCircles) this.pantsCircles.forEach((c, i) => {
+            c.setStrokeStyle(i === this.pantsIdx ? 4 : 2, i === this.pantsIdx ? 0xffffff : 0xc9a14a);
         });
     }
 
@@ -377,7 +483,8 @@ export class CharacterAppearanceScene extends Phaser.Scene {
             this.player.appearance = {
                 skin: SKIN_COLORS[this.skinIdx],
                 hair: HAIR_COLORS[this.hairIdx],
-                cloth: CLOTH_COLORS[this.clothIdx],
+                jacket: JACKET_COLORS[this.jacketIdx],
+                pants: PANTS_COLORS[this.pantsIdx],
             };
             this.player.name = this.charName;
             this.registry.set('player', this.player);
@@ -404,7 +511,8 @@ export class CharacterAppearanceScene extends Phaser.Scene {
     generatePlayerCompositeTexture() {
         const skinTint = SKIN_COLORS[this.skinIdx].tint;
         const hairTint = HAIR_COLORS[this.hairIdx].tint;
-        const clothTint = CLOTH_COLORS[this.clothIdx].tint;
+        const jacketTint = JACKET_COLORS[this.jacketIdx].tint;
+        const pantsTint = PANTS_COLORS[this.pantsIdx].tint;
 
         const baseKey = this.textures.exists(this.selectedSprite) ? this.selectedSprite : 'player';
         const baseTex = this.textures.get(baseKey);
@@ -431,10 +539,11 @@ export class CharacterAppearanceScene extends Phaser.Scene {
             return;
         }
 
-        // Те же регионы, что в превью
+        // Те же регионы, что в превью (волосы/кожа/куртка/штаны)
         this.applyRegionTint(ctx, 0, 0, FS, 14, hairTint, 0.8);
         this.applyRegionTint(ctx, 0, 14, FS, 12, skinTint, 0.7);
-        this.applyRegionTint(ctx, 0, 26, FS, 38, clothTint, 0.75);
+        this.applyRegionTint(ctx, 0, 26, FS, 16, jacketTint, 0.75);
+        this.applyRegionTint(ctx, 0, 42, FS, 22, pantsTint, 0.75);
 
         this.textures.addCanvas('player_composite', canvas);
     }

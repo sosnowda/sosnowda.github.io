@@ -172,8 +172,8 @@ export class VillageScene extends Phaser.Scene {
             // Обычный sprite с анимациями
             this.playerObj = this.physics.add.sprite(ps.col * ts + ts / 2, ps.row * ts + ts / 2, this.player.sprite || 'player');
             // П.4: Применяем tint одежды (если игрок настроил внешность)
-            if (this.player.appearance && this.player.appearance.cloth) {
-                this.playerObj.setTint(this.player.appearance.cloth.tint);
+            if (this.player.appearance && this.player.appearance.jacket) {
+                this.playerObj.setTint(this.player.appearance.jacket.tint);
             }
             this.playerObj.play(`${this.player.sprite || 'player'}_idle_down`);
         }

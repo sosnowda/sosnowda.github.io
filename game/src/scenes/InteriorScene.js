@@ -120,8 +120,8 @@ export class InteriorScene extends Phaser.Scene {
         const safePlayerKey = this.textures.exists(playerTextureKey) ? playerTextureKey : 'player';
         this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, safePlayerKey, 0).setScale(2.5);
         // П.4: Применяем tint одежды только если НЕ композит (композит уже имеет все цвета)
-        if (!useComposite && this.player && this.player.appearance && this.player.appearance.cloth) {
-            this.playerSprite.setTint(this.player.appearance.cloth.tint);
+        if (!useComposite && this.player && this.player.appearance && this.player.appearance.jacket) {
+            this.playerSprite.setTint(this.player.appearance.jacket.tint);
         }
         // Анимация idle_right — только если НЕ композит (у композита нет анимаций)
         if (!useComposite) {
