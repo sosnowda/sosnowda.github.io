@@ -270,6 +270,9 @@ export class VillageScene extends Phaser.Scene {
         // ----- Кнопки меню сверху (Пункт 9) -----
         this.createTopMenu();
 
+        // ----- Домашние животные (LPC Style Farm Animals) -----
+        this.spawnFarmAnimals();
+
         this.prompt = this.add.text(this.scale.width / 2, this.scale.height - 40, '', {
             fontSize: '16px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 10, y: 5 },
             stroke: '#000', strokeThickness: 2,
@@ -896,5 +899,164 @@ export class VillageScene extends Phaser.Scene {
 
     autosave() {
         // Сохранение отключено (одноразовая игра)
+    }
+
+    /**
+     * Домашние животные (LPC Style Farm Animals).
+     * Спавнит несколько животных (коровы, овцы, куры, свиньи) в разных местах
+     * деревни. Они бродят и иногда едят траву.
+     */
+    spawnFarmAnimals() {
+        const ts = this.tileSize;
+        this.animals = [];
+
+        // Карта спавна: тип животного, позиция в тайлах, диапазон блуждания
+        const spawnList = [
+            // На пастбище (правый верхний угол карты)
+            { type: 'cow',    col: MAP_W - 4, row: 3,  range: 3 },
+            { type: 'cow',    col: MAP_W - 6, row: 5,  range: 3 },
+            { type: 'sheep',  col: MAP_W - 3, row: 6,  range: 3 },
+            { type: 'sheep',  col: MAP_W - 5, row: 4,  range: 3 },
+            // Куры у жилых домов
+            { type: 'chicken',col: 8,          row: MAP_H - 5, range: 2 },
+            { type: 'chicken',col: 12,         row: MAP_H - 4, range: 2 },
+            { type: 'chicken',col: 5,          row: MAP_H - 3, range: 2 },
+            // Свинья у кузницы
+            { type: 'pig',    col: 16,         row: MAP_H - 4, range: 2 },
+            // Лама у таверны
+            { type: 'llama',  col: 20,         row: MAP_H - 5, range: 2 },
+        ];
+
+        spawnList.forEach((s) => {
+            // Проверяем, что спавн-точка не в стене
+            const px = s.col * ts + ts / 2;
+            const py = s.row * ts + ts / 2;
+            const walkKey = `animal_${s.type}_walk`;
+            if (!this.textures.exists(walkKey)) return;
+
+            // Стартовый кадр: 'down idle' = frame 1 для chicken (compact),
+            // frame 6 для остальных (7 cols × 4 rows, idle в конце каждого ряда)
+            const tex = this.textures.get(walkKey);
+            const isCompact = (tex.source[0].width / 64 === 2);
+            const initialFrame = isCompact ? 1 : 6;
+
+            const animal = this.physics.add.sprite(px, py, walkKey, initialFrame);
+            animal.setScale(ts / 32 * 0.6);  // меньше тайла
+            animal.setCollideWorldBounds(true);
+            // Не сталкивается с твёрдыми тайлами (для простоты — пусть ходят сквозь)
+            // Столкновение с игроком отключаем (животные не блокируют)
+            animal.body.setImmovable(true);
+            animal.setData('type', s.type);
+            animal.setData('range', s.range);
+            animal.setData('homeCol', s.col);
+            animal.setData('homeRow', s.row);
+            animal.setData('state', 'idle');
+            animal.setData('stateTimer', 1000 + Math.random() * 3000);
+            animal.setData('dir', 'down');
+
+            // Начальная анимация
+            animal.play(`${walkKey}_idle_down`);
+
+            this.animals.push(animal);
+        });
+
+        // Таймер смены состояний животных
+        this.animalTimer = this.time.addEvent({
+            delay: 100,  // 10 раз в секунду обновляем
+            callback: this.updateAnimals,
+            callbackScope: this,
+            loop: true,
+        });
+    }
+
+    /**
+     * Обновление состояния животных: idle / walk / eat.
+     */
+    updateAnimals() {
+        if (!this.animals) return;
+        const ts = this.tileSize;
+        const dt = 100;  // мс
+
+        this.animals.forEach((a) => {
+            if (!a || !a.active) return;
+            let timer = a.getData('stateTimer') - dt;
+            a.setData('stateTimer', timer);
+
+            const state = a.getData('state');
+            const walkKey = `animal_${a.getData('type')}_walk`;
+
+            if (state === 'idle' && timer <= 0) {
+                // Переходим в walk или eat
+                const r = Math.random();
+                if (r < 0.6) {
+                    a.setData('state', 'walk');
+                    a.setData('stateTimer', 1500 + Math.random() * 2500);
+                    // Случайное направление
+                    const dirs = ['down', 'left', 'right', 'up'];
+                    const dir = dirs[Math.floor(Math.random() * dirs.length)];
+                    a.setData('dir', dir);
+                    a.play(`${walkKey}_${dir}`, true);
+                    // Скорость
+                    const speed = a.getData('type') === 'chicken' ? 40 : 25;
+                    const v = this.dirToVelocity(dir, speed);
+                    a.setVelocity(v.x, v.y);
+                } else {
+                    a.setData('state', 'eat');
+                    a.setData('stateTimer', 2000 + Math.random() * 2000);
+                    a.setVelocity(0, 0);
+                    const eatKey = `animal_${a.getData('type')}_eat`;
+                    if (this.anims.exists(eatKey)) {
+                        a.play(eatKey, true);
+                    } else {
+                        a.play(`${walkKey}_idle_down`, true);
+                    }
+                }
+            } else if (state === 'walk' && timer <= 0) {
+                // Возврат в idle
+                a.setData('state', 'idle');
+                a.setData('stateTimer', 1000 + Math.random() * 2000);
+                a.setVelocity(0, 0);
+                a.play(`${walkKey}_idle_${a.getData('dir')}`, true);
+            } else if (state === 'eat' && timer <= 0) {
+                a.setData('state', 'idle');
+                a.setData('stateTimer', 800 + Math.random() * 1500);
+                a.play(`${walkKey}_idle_down`, true);
+            }
+
+            // Проверка границы блуждания — если ушёл слишком далеко, разворачиваем
+            if (state === 'walk') {
+                const homeCol = a.getData('homeCol');
+                const homeRow = a.getData('homeRow');
+                const range = a.getData('range');
+                const curCol = Math.floor(a.x / ts);
+                const curRow = Math.floor(a.y / ts);
+                if (Math.abs(curCol - homeCol) > range || Math.abs(curRow - homeRow) > range) {
+                    // Разворот к дому
+                    const dx = homeCol - curCol;
+                    const dy = homeRow - curRow;
+                    let newDir;
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        newDir = dx > 0 ? 'right' : 'left';
+                    } else {
+                        newDir = dy > 0 ? 'down' : 'up';
+                    }
+                    a.setData('dir', newDir);
+                    a.play(`${walkKey}_${newDir}`, true);
+                    const speed = a.getData('type') === 'chicken' ? 40 : 25;
+                    const v = this.dirToVelocity(newDir, speed);
+                    a.setVelocity(v.x, v.y);
+                }
+            }
+        });
+    }
+
+    dirToVelocity(dir, speed) {
+        switch (dir) {
+            case 'down':  return { x: 0, y: speed };
+            case 'up':    return { x: 0, y: -speed };
+            case 'left':  return { x: -speed, y: 0 };
+            case 'right': return { x: speed, y: 0 };
+            default:      return { x: 0, y: 0 };
+        }
     }
 }

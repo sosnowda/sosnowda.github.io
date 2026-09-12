@@ -53,8 +53,14 @@ export class CombatScene extends Phaser.Scene {
         }
 
         // ----- Игрок -----
-        this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, 'player', 0).setScale(2.5);
-        this.playerSprite.play('player_idle_down');
+        // Используем Fantasy Knight (aamatniekss) — side-view рыцарь.
+        // Если у игрока есть sprite='player_custom' (создан через LPC),
+        // в бою всё равно показываем рыцаря (боевая сцена — side-view).
+        this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, 'knight_idle', 0);
+        this.playerSprite.setScale(2.5);
+        this.playerSprite.play('knight_idle');
+        // Зеркалим по горизонтали — рыцарь смотрит вправо, а нам нужно влево (к врагам)
+        this.playerSprite.setFlipX(true);
         // Лёгкое покачивание
         this.tweens.add({
             targets: this.playerSprite,
@@ -62,7 +68,7 @@ export class CombatScene extends Phaser.Scene {
             duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         });
         // Имя игрока
-        this.add.text(this.playerSprite.x, this.playerSprite.y + 80, this.player.name, {
+        this.add.text(this.playerSprite.x, this.playerSprite.y + 100, this.player.name, {
             fontSize: '16px', color: RUS.text,
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(20);
@@ -73,8 +79,20 @@ export class CombatScene extends Phaser.Scene {
         this.enemies.forEach((e, i) => {
             const y = height * 0.35 + (n > 1 ? i * (height * 0.3) : height * 0.18);
             const x = width * 0.72 + (n > 1 ? (i % 2) * 60 - 30 : 0);
-            const sp = this.add.sprite(x, y, e.spriteKey, 0).setScale(2.5);
-            sp.play(`${e.spriteKey}_idle_down`);
+            let sp;
+            if (e.spriteKey === 'enemy_wolf' && this.textures.exists('wolf_combat')) {
+                // Используем LPC Wolf для врага-волка
+                sp = this.add.sprite(x, y, 'wolf_combat', 0).setScale(2.5);
+                sp.play('wolf_idle');
+            } else if (this.textures.exists(`${e.spriteKey}_idle_down`)) {
+                // Стандартный спрайт (bandit и т.п.) — top-down
+                sp = this.add.sprite(x, y, e.spriteKey, 0).setScale(2.5);
+                sp.play(`${e.spriteKey}_idle_down`);
+            } else {
+                // Fallback на рыцаря (для других врагов тоже используем knight_c2)
+                sp = this.add.sprite(x, y, 'knight_idle_c2', 0).setScale(2.5);
+                sp.play('knight_c2_idle');
+            }
             // Покачивание врага
             this.tweens.add({
                 targets: sp,
@@ -82,7 +100,7 @@ export class CombatScene extends Phaser.Scene {
                 duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
                 delay: i * 200,
             });
-            const nm = this.add.text(sp.x, sp.y + 70, e.name, {
+            const nm = this.add.text(sp.x, sp.y + 90, e.name, {
                 fontSize: '15px', color: '#ffb3a0',
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(20);
@@ -286,6 +304,17 @@ export class CombatScene extends Phaser.Scene {
         if (!target) { this.endCombatVictory(); return; }
 
         const targetSprite = this.enemySprites.find(x => x.combatant === target).sprite;
+
+        // Воспроизводим анимацию атаки рыцаря (выбираем случайно из 3 вариантов)
+        const attackAnims = ['knight_attack1', 'knight_attack2', 'knight_attack_cmb'];
+        const chosen = attackAnims[Math.floor(Math.random() * attackAnims.length)];
+        if (this.anims.exists(chosen)) {
+            this.playerSprite.play(chosen);
+            // По завершении — возвращаемся в idle
+            this.playerSprite.once('animationcomplete', () => {
+                this.playerSprite.play('knight_idle');
+            });
+        }
 
         // Анимация подхода игрока
         this.playLunge(this.playerSprite, targetSprite, () => {

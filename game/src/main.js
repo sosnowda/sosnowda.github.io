@@ -4,6 +4,7 @@
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { CharacterSelectionScene } from './scenes/CharacterSelectionScene.js';
+import { CharacterGeneratorScene } from './scenes/CharacterGeneratorScene.js';
 import { VillageScene } from './scenes/VillageScene.js';
 import { InteriorScene } from './scenes/InteriorScene.js';
 import { ForkScene } from './scenes/ForkScene.js';
@@ -29,6 +30,7 @@ const config = {
         BootScene,
         TitleScene,
         CharacterSelectionScene,
+        CharacterGeneratorScene,
         VillageScene,
         InteriorScene,
         ForkScene,

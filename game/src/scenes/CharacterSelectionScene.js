@@ -45,6 +45,14 @@ export class CharacterSelectionScene extends Phaser.Scene {
             fontSize: 18, padding: { left: 24, right: 24, top: 12, bottom: 12 },
         });
 
+        // Кнопка "Свой персонаж (LPC)" — переход в CharacterGenerator
+        createButton(this, width / 2 + 280, 90, '🎨 Свой облик', () => {
+            this.scene.start('CharacterGenerator');
+        }, {
+            backgroundColor: 0x4a3a5a, hoverColor: 0x5a4a6a, textColor: RUS.text,
+            fontSize: 14, padding: { left: 18, right: 18, top: 12, bottom: 12 },
+        });
+
         // 8 готовых героев в сетке 4×2 (4 архетипа × 2 пола)
         const cardW = 240;
         const cardH = 280;
