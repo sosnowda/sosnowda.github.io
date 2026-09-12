@@ -158,17 +158,27 @@ export class VillageScene extends Phaser.Scene {
         });
 
         // ----- Игрок (п.9: уменьшен в 2 раза) -----
-        // П.4: Используем спрайт и tint из player.appearance (если задан).
+        // П.1-2: Если игрок настроил внешность через генератор — используем
+        // композитную текстуру 'player_composite' как image (с раздельными tint-регионами).
+        // Иначе — обычный sprite с tint одежды.
         this.player = this.registry.get('player');
         const ps = PLAYER_START;
-        this.playerObj = this.physics.add.sprite(ps.col * ts + ts / 2, ps.row * ts + ts / 2, this.player.sprite || 'player');
-        // П.4: Применяем tint одежды (если игрок настроил внешность)
-        if (this.player.appearance && this.player.appearance.cloth) {
-            this.playerObj.setTint(this.player.appearance.cloth.tint);
+        const useComposite = this.player && this.player.useComposite && this.textures.exists('player_composite');
+        if (useComposite) {
+            // Используем image с композитной текстурой (статичный кадр, без анимации)
+            this.playerObj = this.physics.add.sprite(ps.col * ts + ts / 2, ps.row * ts + ts / 2, 'player_composite');
+            // Анимации нет — но добавим эффект дыхания через tween
+        } else {
+            // Обычный sprite с анимациями
+            this.playerObj = this.physics.add.sprite(ps.col * ts + ts / 2, ps.row * ts + ts / 2, this.player.sprite || 'player');
+            // П.4: Применяем tint одежды (если игрок настроил внешность)
+            if (this.player.appearance && this.player.appearance.cloth) {
+                this.playerObj.setTint(this.player.appearance.cloth.tint);
+            }
+            this.playerObj.play(`${this.player.sprite || 'player'}_idle_down`);
         }
         this.playerObj.setScale(ts / 32 * 0.75);  // было 1.5, теперь 0.75 (в 2 раза меньше)
         this.playerObj.setCollideWorldBounds(true);
-        this.playerObj.play(`${this.player.sprite || 'player'}_idle_down`);
         this.physics.add.collider(this.playerObj, this.solids);
         this.cameras.main.startFollow(this.playerObj, true, 0.1, 0.1);
 
@@ -609,7 +619,10 @@ export class VillageScene extends Phaser.Scene {
                 dir = vx < 0 ? 'left' : 'right';
             }
             if (dir !== this.lastDir || !this.playerObj.anims.isPlaying) {
-                this.playerObj.play(`${this.player.sprite || 'player'}_walk_${dir}`, true);
+                // П.1-2: Если используем композит — анимаций нет, только меняем lastDir
+                if (!this.player.useComposite) {
+                    this.playerObj.play(`${this.player.sprite || 'player'}_walk_${dir}`, true);
+                }
                 this.lastDir = dir;
             }
             const now = this.time.now;
@@ -620,8 +633,11 @@ export class VillageScene extends Phaser.Scene {
                 tickTime(this.registry, 0.25);
             }
         } else {
-            this.playerObj.anims.pause();
-            this.playerObj.play(`${this.player.sprite || 'player'}_idle_${this.lastDir}`, true);
+            // П.1-2: Если композит — не вызываем play/anims
+            if (!this.player.useComposite) {
+                this.playerObj.anims.pause();
+                this.playerObj.play(`${this.player.sprite || 'player'}_idle_${this.lastDir}`, true);
+            }
         }
         this.playerObj.setVelocity(v.x, v.y);
 

@@ -74,6 +74,8 @@ export class CharacterAppearanceScene extends Phaser.Scene {
             }).setOrigin(0.5, 0);
 
         // === Превью спрайта (центр) ===
+        // П.1-2: Используем image вместо sprite — показывает canvas-текстуру
+        // с раздельными tint-регионами (волосы/кожа/одежда).
         this.previewX = width / 2;
         this.previewY = height / 2 - 20;
         // Рамка
@@ -83,17 +85,14 @@ export class CharacterAppearanceScene extends Phaser.Scene {
             fontSize: '13px', color: RUS.textDim,
         }).setOrigin(0.5);
 
-        // Спрайт-превью
-        this.previewSprite = this.add.sprite(this.previewX, this.previewY, this.selectedSprite, 0);
-        this.previewSprite.setScale(2.5);
-        // Анимация idle
-        const animKey = `${this.selectedSprite}_idle_down`;
-        if (this.anims.exists(animKey)) {
-            this.previewSprite.play(animKey);
-        }
+        // П.1-2: Сначала генерируем canvas-текстуру, потом создаём image.
+        // Это гарантия, что 'preview_composite' существует к моменту создания image.
+        this.generateCompositeTexture();
+        this.previewImage = this.add.image(this.previewX, this.previewY, 'preview_composite');
+        this.previewImage.setScale(3);
         // Покачивание
         this.tweens.add({
-            targets: this.previewSprite,
+            targets: this.previewImage,
             y: { from: this.previewY, to: this.previewY - 4 },
             duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         });
@@ -212,13 +211,10 @@ export class CharacterAppearanceScene extends Phaser.Scene {
             this.skinIdx = Math.floor(Math.random() * SKIN_COLORS.length);
             this.hairIdx = Math.floor(Math.random() * HAIR_COLORS.length);
             this.clothIdx = Math.floor(Math.random() * CLOTH_COLORS.length);
-            const variants = SPRITE_VARIANTS.length;
-            const idx = Math.floor(Math.random() * variants);
-            this.selectedSprite = SPRITE_VARIANTS[idx].key;
+            // П.1-2: НЕ меняем selectedSprite при случайной генерации —
+            // это避免 сброса через scene.restart(). Только цвета.
             this.updatePreview();
             this.highlightSelection();
-            // Обновляем цвета кнопок типа персонажа
-            this.refreshSpriteButtons();
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
             fontSize: 16, padding: { left: 24, right: 24, top: 10, bottom: 10 },
@@ -245,27 +241,103 @@ export class CharacterAppearanceScene extends Phaser.Scene {
     }
 
     /**
-     * Обновить превью — применить tint к спрайту.
+     * Обновить превью — перерисовать canvas с раздельными tint-регионами.
+     * П.1-2: Каждый цвет (волосы/кожа/одежда) применяется к своему региону спрайта.
+     *
+     * Регионы (для спрайта 64×64, idle_down):
+     *   y = 0..14   — волосы (макушка)
+     *   y = 14..26  — лицо/кожа
+     *   y = 26..64  — тело/одежда
      */
     updatePreview() {
-        // Меняем текстуру спрайта
-        if (this.textures.exists(this.selectedSprite)) {
-            this.previewSprite.setTexture(this.selectedSprite);
-            const animKey = `${this.selectedSprite}_idle_down`;
-            if (this.anims.exists(animKey)) {
-                this.previewSprite.play(animKey);
-            }
+        // Перерисовываем canvas-текстуру
+        this.generateCompositeTexture();
+        // Обновляем image превью
+        if (this.previewImage) {
+            this.previewImage.setTexture('preview_composite');
         }
-        // Композитный tint: смешиваем кожу, волосы, одежду
-        // Phaser tint работает как мультипликативный фильтр — нельзя применить 3 цвета одновременно.
-        // Решение: используем только цвет одежды как основной tint (самый заметный).
-        const clothTint = CLOTH_COLORS[this.clothIdx].tint;
-        this.previewSprite.setTint(clothTint);
-
         // Обновляем подписи
-        this.skinLabel.setText(`Кожа: ${SKIN_COLORS[this.skinIdx].name}`);
-        this.hairLabel.setText(`Волосы: ${HAIR_COLORS[this.hairIdx].name}`);
-        this.clothLabel.setText(`Одежда: ${CLOTH_COLORS[this.clothIdx].name}`);
+        this.updateLabels();
+    }
+
+    /**
+     * Создать/пересоздать canvas-текстуру 'preview_composite' с раздельными tint-регионами.
+     */
+    generateCompositeTexture() {
+        const skinTint = SKIN_COLORS[this.skinIdx].tint;
+        const hairTint = HAIR_COLORS[this.hairIdx].tint;
+        const clothTint = CLOTH_COLORS[this.clothIdx].tint;
+
+        // Получаем базовый спрайт (нужен frame 0 = idle_down)
+        const baseKey = this.textures.exists(this.selectedSprite) ? this.selectedSprite : 'player';
+        const baseTex = this.textures.get(baseKey);
+        if (!baseTex || !baseTex.source || !baseTex.source[0]) {
+            console.warn('Базовый спрайт не найден:', baseKey);
+            return;
+        }
+        const baseImage = baseTex.source[0].image;
+
+        // Создаём canvas 64×64
+        const FS = 64;
+        if (this.textures.exists('preview_composite')) {
+            this.textures.remove('preview_composite');
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = FS;
+        canvas.height = FS;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        // 1. Рисуем базовый спрайт целиком (frame 0 — первый кадр)
+        try {
+            ctx.drawImage(baseImage, 0, 0, FS, FS, 0, 0, FS, FS);
+        } catch (e) {
+            console.warn('Не удалось нарисовать базовый спрайт:', e);
+            return;
+        }
+
+        // 2. tint волос к верхней части (y = 0..14) — макушка
+        this.applyRegionTint(ctx, 0, 0, FS, 14, hairTint, 0.8);
+
+        // 3. tint кожи к середине (y = 14..26) — лицо
+        this.applyRegionTint(ctx, 0, 14, FS, 12, skinTint, 0.7);
+
+        // 4. tint одежды к нижней части (y = 26..64) — тело
+        this.applyRegionTint(ctx, 0, 26, FS, 38, clothTint, 0.75);
+
+        // 5. Регистрируем canvas как Phaser-текстуру
+        this.textures.addCanvas('preview_composite', canvas);
+    }
+
+    /**
+     * Применить tint к региону canvas через source-atop + clip.
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {number} x, y, w, h — регион
+     * @param {number} tint — цвет в формате 0xRRGGBB
+     * @param {number} alpha — сила применения (0..1)
+     */
+    applyRegionTint(ctx, x, y, w, h, tint, alpha) {
+        ctx.save();
+        // Clip-регион
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        ctx.clip();
+        // source-atop: рисуем только там, где уже есть непрозрачные пиксели
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.globalAlpha = alpha;
+        const hex = '#' + tint.toString(16).padStart(6, '0');
+        ctx.fillStyle = hex;
+        ctx.fillRect(x, y, w, h);
+        ctx.restore();
+    }
+
+    /**
+     * Обновить текстовые подписи цветов.
+     */
+    updateLabels() {
+        if (this.skinLabel) this.skinLabel.setText(`Кожа: ${SKIN_COLORS[this.skinIdx].name}`);
+        if (this.hairLabel) this.hairLabel.setText(`Волосы: ${HAIR_COLORS[this.hairIdx].name}`);
+        if (this.clothLabel) this.clothLabel.setText(`Одежда: ${CLOTH_COLORS[this.clothIdx].name}`);
     }
 
     /**
@@ -283,18 +355,6 @@ export class CharacterAppearanceScene extends Phaser.Scene {
         });
     }
 
-    /**
-     * Обновить цвета кнопок выбора типа спрайта.
-     */
-    refreshSpriteButtons() {
-        // Удаляем старые кнопки и перерисовываем
-        this.children.list.filter(c => c.depth === 0 && c.type === 'Container' &&
-            c.y >= this.spriteBtnY && c.y < this.spriteBtnY + SPRITE_VARIANTS.length * 40)
-            .forEach(c => c.destroy());
-        // Простое решение: перезапускаем сцену
-        this.scene.restart();
-    }
-
     editName() {
         const newName = window.prompt('Введите имя персонажа:', this.charName);
         if (newName && newName.trim().length > 0) {
@@ -308,6 +368,7 @@ export class CharacterAppearanceScene extends Phaser.Scene {
 
     /**
      * Подтвердить выбор и начать игру.
+     * Создаёт композитную текстуру 'player_composite' для использования в игре.
      */
     confirmAppearance() {
         // Сохраняем выбор в player
@@ -321,7 +382,60 @@ export class CharacterAppearanceScene extends Phaser.Scene {
             this.player.name = this.charName;
             this.registry.set('player', this.player);
         }
+
+        // П.1-2: Создаём композитную текстуру 'player_composite' для игры.
+        // Это статичный кадр (frame 0 = idle_down) с раздельными tint-регионами.
+        // В VillageScene/InteriorScene будем использовать его как image (не sprite).
+        this.generatePlayerCompositeTexture();
+        // Помечаем player.useComposite = true, чтобы сцены знали, что использовать композит
+        if (this.player) {
+            this.player.useComposite = this.textures.exists('player_composite');
+            this.registry.set('player', this.player);
+        }
+
         // Переход в деревню
         this.scene.start('Village');
+    }
+
+    /**
+     * Создать композитную текстуру 'player_composite' для использования в игре.
+     * Использует те же цвета, что и превью.
+     */
+    generatePlayerCompositeTexture() {
+        const skinTint = SKIN_COLORS[this.skinIdx].tint;
+        const hairTint = HAIR_COLORS[this.hairIdx].tint;
+        const clothTint = CLOTH_COLORS[this.clothIdx].tint;
+
+        const baseKey = this.textures.exists(this.selectedSprite) ? this.selectedSprite : 'player';
+        const baseTex = this.textures.get(baseKey);
+        if (!baseTex || !baseTex.source || !baseTex.source[0]) {
+            console.warn('Базовый спрайт не найден для композита:', baseKey);
+            return;
+        }
+        const baseImage = baseTex.source[0].image;
+
+        const FS = 64;
+        if (this.textures.exists('player_composite')) {
+            this.textures.remove('player_composite');
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = FS;
+        canvas.height = FS;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        try {
+            ctx.drawImage(baseImage, 0, 0, FS, FS, 0, 0, FS, FS);
+        } catch (e) {
+            console.warn('Не удалось создать player_composite:', e);
+            return;
+        }
+
+        // Те же регионы, что в превью
+        this.applyRegionTint(ctx, 0, 0, FS, 14, hairTint, 0.8);
+        this.applyRegionTint(ctx, 0, 14, FS, 12, skinTint, 0.7);
+        this.applyRegionTint(ctx, 0, 26, FS, 38, clothTint, 0.75);
+
+        this.textures.addCanvas('player_composite', canvas);
     }
 }

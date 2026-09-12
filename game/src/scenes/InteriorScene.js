@@ -112,22 +112,26 @@ export class InteriorScene extends Phaser.Scene {
 
         // ----- Игрок (слева от NPC) -----
         // П.6: Используем спрайт игрока из реестра, а не жёстко 'player'.
-        // Если игрок создан через пресет или генератор — будет его спрайт.
+        // П.1-2: Если игрок настроил внешность — используем композитную текстуру 'player_composite'
+        // (с раздельными tint-регионами для волос/кожи/одежды).
         this.player = this.registry.get('player');
-        const playerSpriteKey = (this.player && this.player.sprite) || 'player';
-        const safePlayerKey = this.textures.exists(playerSpriteKey) ? playerSpriteKey : 'player';
+        const useComposite = this.player && this.player.useComposite && this.textures.exists('player_composite');
+        const playerTextureKey = useComposite ? 'player_composite' : ((this.player && this.player.sprite) || 'player');
+        const safePlayerKey = this.textures.exists(playerTextureKey) ? playerTextureKey : 'player';
         this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, safePlayerKey, 0).setScale(2.5);
-        // П.4: Применяем tint одежды (если игрок настроил внешность)
-        if (this.player && this.player.appearance && this.player.appearance.cloth) {
+        // П.4: Применяем tint одежды только если НЕ композит (композит уже имеет все цвета)
+        if (!useComposite && this.player && this.player.appearance && this.player.appearance.cloth) {
             this.playerSprite.setTint(this.player.appearance.cloth.tint);
         }
-        // Анимация idle_right — если существует, иначе idle_down
-        const idleRightKey = `${safePlayerKey}_idle_right`;
-        const idleDownKey = `${safePlayerKey}_idle_down`;
-        if (this.anims.exists(idleRightKey)) {
-            this.playerSprite.play(idleRightKey);
-        } else if (this.anims.exists(idleDownKey)) {
-            this.playerSprite.play(idleDownKey);
+        // Анимация idle_right — только если НЕ композит (у композита нет анимаций)
+        if (!useComposite) {
+            const idleRightKey = `${safePlayerKey}_idle_right`;
+            const idleDownKey = `${safePlayerKey}_idle_down`;
+            if (this.anims.exists(idleRightKey)) {
+                this.playerSprite.play(idleRightKey);
+            } else if (this.anims.exists(idleDownKey)) {
+                this.playerSprite.play(idleDownKey);
+            }
         }
         this.tweens.add({
             targets: this.playerSprite,
