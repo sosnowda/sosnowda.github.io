@@ -425,6 +425,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
             `Пришёл в незнакомую деревню ${villageName}. ` +
             `Дата: ${startDate.day}.${startDate.month + 1}.${startDate.yearFromChrist} от Р.Х.`
         );
-        this.scene.start('Village');
+        // П.11: После выбора героя — переход в генератор внешности, а не сразу в деревню.
+        this.scene.start('CharacterAppearance');
     }
 }

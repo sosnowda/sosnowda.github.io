@@ -52,8 +52,12 @@ export class InteriorScene extends Phaser.Scene {
         // Отображаемое имя: до знакомства — «старик священник», после — «Отец Савватий (священник)»
         const displayName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
 
-        // ----- Фон интерьера — запасной цвет (если текстуры не загрузились) -----
-        this.cameras.main.setBackgroundColor(RUS.panel);
+        // ----- Фон интерьера — ЯВНО коричневый, без зависимости от setBackgroundColor -----
+        // П.5 (4-й раз!): рисуем непрозрачный коричневый прямоугольник на весь экран
+        // ПОВЕРХ любого фона canvas, чтобы исключить любую «зелёную сетку».
+        this.cameras.main.setBackgroundColor(0x2e2118);
+        this.add.rectangle(0, 0, width, height, 0x2e2118, 1)
+            .setOrigin(0, 0).setDepth(-10);
 
         // ----- Заголовок интерьера -----
         this.add.text(width / 2, 20, interior.name, {
@@ -86,16 +90,45 @@ export class InteriorScene extends Phaser.Scene {
             scaleY: { from: 2.5, to: 2.45 },
             duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         });
+        // П.7: NPC интерактивен — ЛКМ запускает разговор
+        this.npcSprite.setInteractive({ useHandCursor: true });
+        this.npcSprite.on('pointerdown', (pointer) => {
+            // Только ЛКМ
+            if (pointer.leftButtonDown() && !this.busyDialog) {
+                this.talkToNpc(interior);
+            }
+        });
         // Имя NPC — динамическое (п.2-5)
         this.npcNameText = this.add.text(this.npcSprite.x, this.npcSprite.y + 80, displayName, {
             fontSize: '16px', color: RUS.text,
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(20);
+        // П.7: Подсказка «нажмите, чтобы поговорить»
+        this.add.text(this.npcSprite.x, this.npcSprite.y - 80, '💬 Нажми, чтобы поговорить', {
+            fontSize: '11px', color: '#c9a14a',
+            backgroundColor: '#00000088', padding: { x: 6, y: 3 },
+            stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setDepth(20);
 
         // ----- Игрок (слева от NPC) -----
+        // П.6: Используем спрайт игрока из реестра, а не жёстко 'player'.
+        // Если игрок создан через пресет или генератор — будет его спрайт.
         this.player = this.registry.get('player');
-        this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, 'player', 0).setScale(2.5);
-        this.playerSprite.play('player_idle_right');
+        const playerSpriteKey = (this.player && this.player.sprite) || 'player';
+        const safePlayerKey = this.textures.exists(playerSpriteKey) ? playerSpriteKey : 'player';
+        this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, safePlayerKey, 0).setScale(2.5);
+        // П.4: Применяем tint одежды (если игрок настроил внешность)
+        if (this.player && this.player.appearance && this.player.appearance.cloth) {
+            this.playerSprite.setTint(this.player.appearance.cloth.tint);
+        }
+        // Анимация idle_right — если существует, иначе idle_down
+        const idleRightKey = `${safePlayerKey}_idle_right`;
+        const idleDownKey = `${safePlayerKey}_idle_down`;
+        if (this.anims.exists(idleRightKey)) {
+            this.playerSprite.play(idleRightKey);
+        } else if (this.anims.exists(idleDownKey)) {
+            this.playerSprite.play(idleDownKey);
+        }
         this.tweens.add({
             targets: this.playerSprite,
             y: { from: height * 0.55, to: height * 0.55 - 3 },
@@ -131,173 +164,98 @@ export class InteriorScene extends Phaser.Scene {
 
         this.updateHUD();
 
-        // ----- Кнопка "Поговорить" -----
-        createButton(this, width / 2 - 200, height - 50, 'Поговорить', () => {
-            // Проверка готовности NPC говорить (п.2,3,4,5)
-            const timeState = getTime(this.registry);
-            const hour = timeState ? timeState.hour : 12;
-            const npcBusy = false; // В интерьере NPC всегда доступен, занятость проверяется по расписанию
-            const talkCheck = checkNpcWillingToTalk(this.registry, interior.npcId, { npcBusy });
-            
-            // Пункт 4: При крайней вражде — NPC нападает
-            if (talkCheck.willAttack) {
-                createDialog(this, 'Нападение!',
-                    `${getNpcDisplayName(this.registry, interior.npcId)} бросается на тебя с кулаками!`,
-                    [{ text: 'Драться!', callback: () => {
-                        this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
-                    }}],
-                    { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait }
-                );
-                return;
-            }
-            
-            // Пункт 3: Отказ говорить при низкой репутации
-            if (!talkCheck.canTalk) {
-                createDialog(this, 'Отказ', talkCheck.message,
-                    [{ text: 'Понятно', callback: () => {} }],
-                    { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait }
-                );
-                return;
-            }
-            
-            const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
-            ActionLog.add(this.registry, `Поговорил с ${npcName} в «${interior.name}».`);
+        // ============================================================
+        // П.8: ВСЕ КНОПКИ ДЕЙСТВИЙ — В ОДНУ СТРОКУ, БЕЗ ПЕРЕКРЫТИЙ
+        // ============================================================
+        const btnY = height - 50;
+        const btnW = 130;
+        const btnGap = 8;
 
-            // При первом разговоре — знакомство (п.5): NPC представляется
-            if (this.npcData && !this.npcData.met) {
-                meetNpc(this.registry, interior.npcId);
-                ActionLog.add(this.registry, `Познакомился с ${this.npcData.knownDescription}.`);
-                const newName = getNpcDisplayName(this.registry, interior.npcId);
-                this.npcNameText.setText(newName);
-            }
-
-            this.activeNpc = {
-                id: interior.npcId,
-                name: this.npcData ? (this.npcData.met ? this.npcData.name : npcName) : interior.npcName,
-                portrait: (this.npcData && this.npcData.portrait) || interior.portrait,
-            };
-            this.busyDialog = true;
-            this.dialogue.run(interior.dialogueId, () => {
-                this.busyDialog = false;
-                const end = checkGameEnd(this.registry);
-                if (end) this.scene.start('End');
-            });
-        }, {
-            backgroundColor: RUS.accent, hoverColor: RUS.accentLight, textColor: RUS.text,
-            fontSize: 16, padding: { left: 18, right: 18, top: 10, bottom: 10 },
-            cornerRadius: 8,
-        });
-
-        // ----- Кнопка "Попросить денег" (одноразовая, п.16) -----
-        createButton(this, width / 2 - 60, height - 50, 'Просить денег', () => {
-            this.askMoneyFromNpc(interior);
-        }, {
-            backgroundColor: 0x6a5a2a, hoverColor: 0x7a6a3a, textColor: RUS.text,
-            fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
-            cornerRadius: 8,
-        });
-
-        // ----- Кнопка "Взять задание" (процедурный генератор, п.5-8) -----
-        createButton(this, width / 2 + 80, height - 50, '📜 Задание', () => {
-            this.offerQuest(interior);
-        }, {
-            backgroundColor: 0x2a4a6a, hoverColor: 0x3a5a7a, textColor: RUS.text,
-            fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
-            cornerRadius: 8,
-        });
-
-        // ----- Кнопка "Подарить" (п.10) -----
-        createButton(this, width / 2 + 220, height - 50, '🎁 Подарить', () => {
-            this.showGiftMenu(interior);
-        }, {
-            backgroundColor: 0x5a2a5a, hoverColor: 0x6a3a6a, textColor: RUS.text,
-            fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
-            cornerRadius: 8,
-        });
-
-        // ----- Кнопка "Похвалить" (п.11) -----
-        createButton(this, width / 2 + 360, height - 50, '💬 Похвалить', () => {
-            this.complimentNpc(interior);
-        }, {
-            backgroundColor: 0x2a5a5a, hoverColor: 0x3a6a6a, textColor: RUS.text,
-            fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
-            cornerRadius: 8,
-        });
-
-        // ----- Кнопка "Угрожать" (п.7-10) -----
-        createButton(this, width / 2 - 200, height - 90, '😠 Угрожать', () => {
-            this.threatenNpc(interior);
-        }, {
-            backgroundColor: 0x5a1a1a, hoverColor: 0x6a2a2a, textColor: RUS.text,
-            fontSize: 14, padding: { left: 14, right: 14, top: 8, bottom: 8 },
-            cornerRadius: 8,
-        });
-
-        // ----- Кнопка "Свататься" (п.1) — только при высокой репутации -----
         const player = this.registry.get('player');
         const npcRepValue = getNpcRep(this.registry, interior.npcId);
         const villageRepValue = getVillageRep(this.registry);
-        // Показываем кнопку только если есть шанс на брак
-        if (npcRepValue >= 50 && villageRepValue >= 30 && this.npcData && this.npcData.gender !== player.gender) {
-            createButton(this, width / 2 + 80, height - 90, '💍 Свататься', () => {
-                this.proposeMarriage(interior);
-            }, {
-                backgroundColor: 0x5a2a5a, hoverColor: 0x6a3a6a, textColor: RUS.text,
-                fontSize: 14, padding: { left: 14, right: 14, top: 8, bottom: 8 },
-                cornerRadius: 8,
-            });
-        }
 
-        // ----- Кнопка "Угостить всех" — только в таверне (п.9) -----
-        if (interior.id === 'tavern') {
-            createButton(this, width / 2 - 200, height - 90, '🍺 Угостить всех выпивкой (20 д.)', () => {
-                this.treatEveryone(interior);
-            }, {
-                backgroundColor: 0x6a5a2a, hoverColor: 0x7a6a3a, textColor: RUS.text,
-                fontSize: 14, padding: { left: 14, right: 14, top: 8, bottom: 8 },
-                cornerRadius: 8,
-            });
+        const buttons = [];
+        buttons.push({ label: '\u{1F4AC} Поговорить', bg: RUS.accent, hover: RUS.accentLight, cb: () => this.talkToNpc(interior) });
+        buttons.push({ label: '\u{1F4B0} Просить денег', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.askMoneyFromNpc(interior) });
+        buttons.push({ label: '\u{1F4DC} Задание', bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.offerQuest(interior) });
+        buttons.push({ label: '\u{1F381} Подарить', bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.showGiftMenu(interior) });
+        buttons.push({ label: '\u{1F44D} Похвалить', bg: 0x2a5a5a, hover: 0x3a6a6a, cb: () => this.complimentNpc(interior) });
+        buttons.push({ label: '\u{1F620} Угрожать', bg: 0x5a1a1a, hover: 0x6a2a2a, cb: () => this.threatenNpc(interior) });
+        if (this.npcData && this.npcData.gender !== player.gender && npcRepValue >= 50 && villageRepValue >= 30) {
+            buttons.push({ label: '\u{1F48D} Свататься', bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.proposeMarriage(interior) });
         }
-
-        // ----- Кнопка "Торговля" (только для таверны и кузницы) -----
         if (interior.id === 'tavern') {
-            createButton(this, width / 2 + 220, height - 50, 'Купить еды', () => {
-                this.showTavernShop();
-            }, {
-                backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
-                fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
-                cornerRadius: 8,
-            });
+            buttons.push({ label: '\u{1F37B} Угостить (20\u0434)', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.treatEveryone(interior) });
+            buttons.push({ label: '\u{1F6D2} Купить еды', bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showTavernShop() });
         } else if (interior.id === 'blacksmith') {
-            createButton(this, width / 2 + 220, height - 50, 'Купить оружие', () => {
-                this.showBlacksmithShop('weapon');
-            }, {
-                backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
-                fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
-                cornerRadius: 8,
-            });
+            buttons.push({ label: '\u{1F6D2} Купить оружие', bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
         }
-
-        // ----- Кнопка "Выйти" -----
         const exitAction = () => {
             this.scene.stop();
-            if (this.scene.isPaused(this.from)) {
-                this.scene.resume(this.from);
-            } else {
-                this.scene.start(this.from);
-            }
+            if (this.scene.isPaused(this.from)) this.scene.resume(this.from);
+            else this.scene.start(this.from);
         };
-        createButton(this, width / 2 + 400, height - 50, 'Выйти', exitAction, {
-            backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
-            fontSize: 14, padding: { left: 14, right: 14, top: 10, bottom: 10 },
-            cornerRadius: 8,
+        buttons.push({ label: '\u{1F6AA} Выйти', bg: 0x4a3520, hover: 0x5a4530, cb: exitAction });
+
+        const totalW = buttons.length * btnW + (buttons.length - 1) * btnGap;
+        const startX = (width - totalW) / 2 + btnW / 2;
+        buttons.forEach((b, i) => {
+            const x = startX + i * (btnW + btnGap);
+            createButton(this, x, btnY, b.label, b.cb, {
+                backgroundColor: b.bg, hoverColor: b.hover, textColor: RUS.text,
+                fontSize: 12, padding: { left: 6, right: 6, top: 10, bottom: 10 },
+                cornerRadius: 6,
+            });
         });
 
-        // П.5: ESC — выход из здания
         this.input.keyboard.on('keydown-ESC', exitAction);
-
         this.busyDialog = false;
     }
+
+    /**
+     * П.7: Общий метод разговора с NPC — используется и кнопкой, и кликом по спрайту.
+     */
+    talkToNpc(interior) {
+        if (this.busyDialog) return;
+        const talkCheck = checkNpcWillingToTalk(this.registry, interior.npcId, { npcBusy: false });
+        if (talkCheck.willAttack) {
+            createDialog(this, 'Нападение!',
+                `${getNpcDisplayName(this.registry, interior.npcId)} бросается на тебя с кулаками!`,
+                [{ text: 'Драться!', callback: () => {
+                    this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
+                }}],
+                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait }
+            );
+            return;
+        }
+        if (!talkCheck.canTalk) {
+            createDialog(this, 'Отказ', talkCheck.message,
+                [{ text: 'Понятно', callback: () => {} }],
+                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait }
+            );
+            return;
+        }
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        ActionLog.add(this.registry, `Поговорил с ${npcName} в «${interior.name}».`);
+        if (this.npcData && !this.npcData.met) {
+            meetNpc(this.registry, interior.npcId);
+            ActionLog.add(this.registry, `Познакомился с ${this.npcData.knownDescription}.`);
+            this.npcNameText.setText(getNpcDisplayName(this.registry, interior.npcId));
+        }
+        this.activeNpc = {
+            id: interior.npcId,
+            name: this.npcData ? (this.npcData.met ? this.npcData.name : npcName) : interior.npcName,
+            portrait: (this.npcData && this.npcData.portrait) || interior.portrait,
+        };
+        this.busyDialog = true;
+        this.dialogue.run(interior.dialogueId, () => {
+            this.busyDialog = false;
+            const end = checkGameEnd(this.registry);
+            if (end) this.scene.start('End');
+        });
+    }
+
 
     /**
      * Попросить денег у NPC (п.16) — одноразовое действие.
@@ -896,32 +854,45 @@ export class InteriorScene extends Phaser.Scene {
 
     /**
      * Добавить декорации в зависимости от типа интерьера.
+     * П.5 (4-й раз!): Пол и стены рисуем НАДЁЖНО — сначала заливаем прямоугольниками
+     * коричневый фон, потом поверх — тайлы 32×32. Это исключает любую «зелёную сетку».
      */
     addDecorations(interior) {
         const { width, height } = this.scale;
         const decor = interior.decor || [];
         const ts = 32;
 
-        // Текстура деревянного пола по всей нижней части
+        // === ПОДЛОЖКА ПОЛА — коричневый прямоугольник на всю нижнюю часть ===
+        // Гарантирует, что даже если тайлы не загрузятся, будет коричневый пол, не зелёный.
+        const floorGfx = this.add.graphics().setDepth(-5);
+        floorGfx.fillStyle(0x3a2616, 1);  // тёмно-коричневый
+        floorGfx.fillRect(0, 100, width, height - 100);
+        // === ПОДЛОЖКА СТЕН — более светлый коричневый на верхнюю часть ===
+        floorGfx.fillStyle(0x5a3a22, 1);
+        floorGfx.fillRect(0, 0, width, 100);
+
+        // === Тайлы пола (если загружены) — поверх подложки ===
         if (this.textures.exists('int_floor_0')) {
             for (let x = 0; x < width; x += ts) {
                 for (let y = 100; y < height; y += ts) {
                     const v = ((x + y) / ts) % 2;
-                    this.add.image(x + ts / 2, y + ts / 2, `int_floor_${v}`).setOrigin(0.5).setDepth(0);
+                    this.add.image(x + ts / 2, y + ts / 2, `int_floor_${v}`)
+                        .setOrigin(0.5).setDepth(-4);
                 }
             }
         }
-        // Стены (верхняя часть)
+        // === Тайлы стен (если загружены) ===
         if (this.textures.exists('int_wall')) {
             for (let x = 0; x < width; x += ts) {
                 for (let y = 0; y < 100; y += ts) {
-                    this.add.image(x + ts / 2, y + ts / 2, 'int_wall').setOrigin(0.5).setDepth(0);
+                    this.add.image(x + ts / 2, y + ts / 2, 'int_wall')
+                        .setOrigin(0.5).setDepth(-4);
                 }
             }
         }
         // Окно
         if (this.textures.exists('int_window')) {
-            this.add.image(width - 140, 50, 'int_window').setScale(2).setDepth(0);
+            this.add.image(width - 140, 50, 'int_window').setScale(2).setDepth(-3);
         }
 
         if (interior.id === 'tavern') {

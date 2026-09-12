@@ -4,7 +4,7 @@
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { CharacterSelectionScene } from './scenes/CharacterSelectionScene.js';
-import { CharacterGeneratorScene } from './scenes/CharacterGeneratorScene.js';
+import { CharacterAppearanceScene } from './scenes/CharacterAppearanceScene.js';
 import { VillageScene } from './scenes/VillageScene.js';
 import { InteriorScene } from './scenes/InteriorScene.js';
 import { ForkScene } from './scenes/ForkScene.js';
@@ -20,7 +20,8 @@ const config = {
     parent: 'game-container',
     width: 1280,
     height: 720,
-    backgroundColor: '#1b2a1f',
+    // П.5: Фон canvas — тёмно-коричневый (не зелёный!), чтобы избежать «зелёной сетки».
+    backgroundColor: '#2e2118',
     pixelArt: false,
     physics: {
         default: 'arcade',
@@ -30,7 +31,7 @@ const config = {
         BootScene,
         TitleScene,
         CharacterSelectionScene,
-        CharacterGeneratorScene,
+        CharacterAppearanceScene,
         VillageScene,
         InteriorScene,
         ForkScene,

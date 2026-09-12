@@ -171,7 +171,7 @@ export class CharacterScene extends Phaser.Scene {
 
         // Текущее снаряжение
         this.add.text(width / 2, top, 'Снаряжение', {
-            fontSize: '20px', color: RUS.border, fontStyle: 'bold',
+            fontSize: '20px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
 
@@ -184,7 +184,7 @@ export class CharacterScene extends Phaser.Scene {
 
         // Оружие для экипировки (список)
         this.add.text(width / 4, top + 70, 'Оружие (экипировать):', {
-            fontSize: '16px', color: RUS.border, fontStyle: 'bold',
+            fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
 
@@ -209,7 +209,7 @@ export class CharacterScene extends Phaser.Scene {
 
         // Доспехи для экипировки
         this.add.text(width * 3 / 4, top + 70, 'Доспехи (экипировать):', {
-            fontSize: '16px', color: RUS.border, fontStyle: 'bold',
+            fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
 
@@ -234,7 +234,7 @@ export class CharacterScene extends Phaser.Scene {
 
         // Предметы (травы, зелья и т.п.)
         this.add.text(width / 2, top + 320, 'Предметы:', {
-            fontSize: '16px', color: RUS.border, fontStyle: 'bold',
+            fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
 

@@ -8,7 +8,7 @@
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden}
-body{background:#1b2a1f;font-family:Arial,sans-serif}
+body{background:#2e2118;font-family:Arial,sans-serif}
 #game-container{width:100vw;height:100vh;position:relative}
 #loading-text{color:#c9a961;font-size:1.2rem;text-align:center;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
 #error-text{color:#c44;font-size:1rem;text-align:center;max-width:600px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:none}
@@ -44,7 +44,7 @@ window.addEventListener('load', function() {
         import('./src/scenes/BootScene.js'),
         import('./src/scenes/TitleScene.js'),
         import('./src/scenes/CharacterSelectionScene.js'),
-        import('./src/scenes/CharacterGeneratorScene.js'),
+        import('./src/scenes/CharacterAppearanceScene.js'),
         import('./src/scenes/VillageScene.js'),
         import('./src/scenes/InteriorScene.js'),
         import('./src/scenes/ForkScene.js'),
@@ -64,7 +64,7 @@ window.addEventListener('load', function() {
             parent: 'game-container',
             width: 1280,
             height: 720,
-            backgroundColor: '#1b2a1f',
+            backgroundColor: '#2e2118',
             pixelArt: false,
             physics: {
                 default: 'arcade',
