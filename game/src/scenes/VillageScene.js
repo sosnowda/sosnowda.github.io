@@ -15,8 +15,9 @@ import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd } from '../data/thief.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton } from '../utils/ui.js';
-import { tickTime, getTime, getDayNightOverlay, formatDateTime } from '../systems/TimeSystem.js';
-import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep } from '../data/reputation.js';
+import { tickTime, getTime, getDayNightOverlay, formatDateTime, getSeason } from '../systems/TimeSystem.js';
+import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
+import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, dayKeyOf } from '../data/chests.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
 
@@ -250,6 +251,10 @@ export class VillageScene extends Phaser.Scene {
         // ----- Живность: бабочки днём / светлячки ночью (атмосфера) -----
         this.createAmbientCritters(ts);
 
+        // ----- Полевые цветы/кочки и сундуки с лутом (раунд 11) -----
+        this.scatterFlowers(ts);
+        this.spawnChests(ts);
+
         // ----- Метка ворот -----
         const gatePx = (MAP_W - 1) * ts + ts / 2;
         const gatePy = VILLAGE_GATE.row * ts + ts / 2;
@@ -392,9 +397,10 @@ export class VillageScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 2,
         }).setScrollFactor(0).setDepth(100);
 
-        // Название деревни — справа сверху
+        // Название деревни — справа, НИЖЕ строки кнопок меню (баг раунда 11:
+        // при y=6 длинные названия вроде «Двинская слобода» наезжали на «Инвентарь»)
         const villageName = getVillageName();
-        this.add.text(this.scale.width - 8, 6, villageName, {
+        this.add.text(this.scale.width - 8, 34, villageName, {
             fontSize: '16px', color: RUS.textDim, backgroundColor: '#000000cc', padding: { x: 8, y: 4 },
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
@@ -808,6 +814,14 @@ export class VillageScene extends Phaser.Scene {
                         nearest = { type: 'door', interiorId, label: b ? b.label : 'Войти' };
                     }
                 }
+                const chestEntry = chestAt(cx, cy);
+                if (chestEntry) {
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        nearest = { type: 'chest', chest: chestEntry, label: `Открыть: ${chestEntry.label}` };
+                    }
+                }
                 if (isGate(cx, cy)) {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < bestDist) {
@@ -887,6 +901,16 @@ export class VillageScene extends Phaser.Scene {
                     f.y = f.homeY + Math.cos(now * 0.0009 + f.phase * 1.7) * 18;
                 });
             }
+
+            // Домашняя живность (куры/коровы) на ночь прячется по домам
+            if (this.farmAnimals) {
+                const day = 1 - dark;
+                this.farmAnimals.forEach(a => {
+                    if (!a || !a.active) return;
+                    a.setVisible(day > 0.3);
+                    a.setAlpha(Math.min(1, day * 1.5));
+                });
+            }
         }
         
         if (q.currentObjective) {
@@ -903,6 +927,11 @@ export class VillageScene extends Phaser.Scene {
             this.scene.launch('Interior', { interiorId: this.nearestInteractable.interiorId, from: 'Village' });
         } else if (this.nearestInteractable.type === 'gate') {
             this.scene.start('Fork');
+        } else if (this.nearestInteractable.type === 'chest') {
+            // nearestInteractable.chest — сырой объект из CHESTS; нужен отрисованный
+            // entry {data, img, marker} из this.chests
+            const entry = (this.chests || []).find(e => e.data.id === this.nearestInteractable.chest.id);
+            this.openChest(entry);
         }
     }
 
@@ -1198,108 +1227,291 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
-     * П.2: Спавн куриц в деревне — 4 штуки, бродят по траве.
-     * Используем text-эмодзи '🐔' как спрайт — надёжно, не зависит от PNG.
-     * Курицы перемещаются случайно, без анимаций (чтобы не «мелькали»).
+     * П.2 + раунд 11: домашняя живность деревни на LPC-спрайтах.
+     * Куры у амбара и у южной ленты, корова — на западе, у домов.
+     * Ночью прячутся (updateHUD по dark-коэффициенту).
      */
     spawnChickens() {
         const ts = this.tileSize;
-        this.chickens = [];
+        this.farmAnimals = [];
 
-        // 4 курицы в разных местах деревни (на траве, не на дорогах и не в дверях)
-        const positions = [
-            { col: 7,  row: 6 },
-            { col: 14, row: 7 },
-            { col: 18, row: 9 },
-            { col: 9,  row: 14 },
+        const defs = [
+            { tex: 'animal_chicken_walk', col: 20, row: 7,  scale: 0.8,  speed: 14, eatChance: 0.3 },
+            { tex: 'animal_chicken_walk', col: 22, row: 7,  scale: 0.8,  speed: 14, eatChance: 0.3 },
+            { tex: 'animal_chicken_walk', col: 21, row: 10, scale: 0.85, speed: 14, eatChance: 0.3 },
+            { tex: 'animal_chicken_walk', col: 9,  row: 14, scale: 0.8,  speed: 14, eatChance: 0.3 },
+            { tex: 'animal_cow_walk',     col: 8,  row: 12, scale: 1.35, speed: 8,  eatChance: 0.5 },
         ];
 
-        positions.forEach((pos, i) => {
-            const px = pos.col * ts + ts / 2;
-            const py = pos.row * ts + ts / 2;
-            // Создаём текст-спрайт с эмодзи курицы
-            const chicken = this.add.text(px, py, '🐔', {
-                fontSize: '24px',
-            }).setOrigin(0.5).setDepth(5);
-            // Сохраняем данные
-            chicken.setData('homeCol', pos.col);
-            chicken.setData('homeRow', pos.row);
-            chicken.setData('state', 'idle');
-            chicken.setData('stateTimer', 1500 + Math.random() * 2000);
-            chicken.setData('targetX', px);
-            chicken.setData('targetY', py);
-            chicken.setData('baseX', px);
-            chicken.setData('baseY', py);
-
-            this.chickens.push(chicken);
-
-            // Лёгкое покачивание (как дыхание)
-            this.tweens.add({
-                targets: chicken,
-                y: { from: py, to: py - 2 },
-                duration: 800 + Math.random() * 400,
-                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-                delay: i * 200,
-            });
+        defs.forEach((def) => {
+            if (!this.textures.exists(def.tex)) return;   // страховка от отсутствия ассета
+            const px = def.col * ts + ts / 2;
+            const py = def.row * ts + ts / 2;
+            const spr = this.add.sprite(px, py, def.tex, 0);
+            spr.setScale(def.scale);
+            spr.setData('homeCol', def.col);
+            spr.setData('homeRow', def.row);
+            spr.setData('state', 'idle');
+            spr.setData('stateTimer', 1200 + Math.random() * 2500);
+            spr.setData('targetX', px);
+            spr.setData('targetY', py);
+            spr.setData('speed', def.speed);
+            spr.setData('eatChance', def.eatChance);
+            spr.setData('tex', def.tex);
+            spr.setData('dir', 'down');
+            spr.play(`${def.tex}_idle_down`);
+            this.farmAnimals.push(spr);
         });
 
         // Таймер обновления состояний (раз в 500 мс — не мелькает)
-        this.chickenTimer = this.time.addEvent({
+        this.animalTimer = this.time.addEvent({
             delay: 500,
-            callback: this.updateChickens,
+            callback: this.updateFarmAnimals,
             callbackScope: this,
             loop: true,
         });
     }
 
     /**
-     * Обновление куриц: idle → walk → idle.
-     * Простая логика без физики — просто перемещаем text-спрайт.
+     * Обновление живности: idle → walk/eat → idle.
+     * Без физики — просто двигаем спрайты, Y-сортировка по глубине.
      */
-    updateChickens() {
-        if (!this.chickens) return;
+    updateFarmAnimals() {
+        if (!this.farmAnimals) return;
         const ts = this.tileSize;
         const dt = 500;
 
-        this.chickens.forEach((c) => {
-            if (!c || !c.active) return;
-            let timer = c.getData('stateTimer') - dt;
-            c.setData('stateTimer', timer);
-            const state = c.getData('state');
+        this.farmAnimals.forEach((a) => {
+            if (!a || !a.active) return;
+            const tex = a.getData('tex');
+            let timer = a.getData('stateTimer') - dt;
+            a.setData('stateTimer', timer);
+            const state = a.getData('state');
 
             if (state === 'idle' && timer <= 0) {
-                // Переходим в walk — выбираем новую цель рядом с домом
-                const homeCol = c.getData('homeCol');
-                const homeRow = c.getData('homeRow');
+                // Часть времени — «еда» (клевание/щипание травы), иначе прогулка
+                if (Math.random() < a.getData('eatChance') && this.textures.exists(`${tex}_eat`)) {
+                    a.play(`${tex}_eat`);
+                    a.setData('state', 'eat');
+                    a.setData('stateTimer', 1800 + Math.random() * 1500);
+                    return;
+                }
+                const homeCol = a.getData('homeCol');
+                const homeRow = a.getData('homeRow');
                 const newCol = homeCol + (Math.random() * 4 - 2);
                 const newRow = homeRow + (Math.random() * 4 - 2);
-                c.setData('targetX', newCol * ts + ts / 2);
-                c.setData('targetY', newRow * ts + ts / 2);
-                c.setData('state', 'walk');
-                c.setData('stateTimer', 2000 + Math.random() * 2000);
-            } else if (state === 'walk' && timer <= 0) {
-                // Возврат в idle
-                c.setData('state', 'idle');
-                c.setData('stateTimer', 1500 + Math.random() * 2500);
+                a.setData('targetX', newCol * ts + ts / 2);
+                a.setData('targetY', newRow * ts + ts / 2);
+                a.setData('state', 'walk');
+                a.setData('stateTimer', 2000 + Math.random() * 2000);
+            } else if ((state === 'walk' || state === 'eat') && timer <= 0) {
+                a.setData('state', 'idle');
+                a.setData('stateTimer', 1500 + Math.random() * 2500);
+                a.play(`${tex}_idle_${a.getData('dir') || 'down'}`);
             }
 
-            // Если в состоянии walk — плавно движемся к цели
             if (state === 'walk') {
-                const tx = c.getData('targetX');
-                const ty = c.getData('targetY');
-                const dx = tx - c.x;
-                const dy = ty - c.y;
+                const tx = a.getData('targetX');
+                const ty = a.getData('targetY');
+                const dx = tx - a.x;
+                const dy = ty - a.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 1) {
-                    // Скорость ~30 px/сек → 15 px за 500 мс
-                    const speed = 15;
-                    c.x += (dx / dist) * speed;
-                    c.y += (dy / dist) * speed;
+                    const speed = a.getData('speed');
+                    a.x += (dx / dist) * speed;
+                    a.y += (dy / dist) * speed;
+                    // Поворот мордочки по направлению движения
+                    const dir = Math.abs(dx) > Math.abs(dy)
+                        ? (dx > 0 ? 'right' : 'left')
+                        : (dy > 0 ? 'down' : 'up');
+                    if (dir !== a.getData('dir')) {
+                        a.setData('dir', dir);
+                        a.play(`${tex}_walk_${dir}`);
+                    }
+                } else {
+                    a.setData('state', 'idle');
+                    a.setData('stateTimer', 1500 + Math.random() * 2000);
+                    a.play(`${tex}_idle_${a.getData('dir') || 'down'}`);
                 }
             }
-            // Курицы тоже участвуют в Y-сортировке
-            c.setDepth(c.y / ts + 0.5);
+            // Живность участвует в Y-сортировке
+            a.setDepth(a.y / ts + 0.5);
         });
+    }
+
+    /**
+     * Раунд 11: сундуки с лутом. Отрисовка + восстановление состояния
+     * «открыт сегодня» (из q.chestsOpened). Искра над неоткрытыми.
+     */
+    spawnChests(ts) {
+        const q = this.registry.get('quest') || {};
+        const today = dayKeyOf(getTime(this.registry));
+
+        this.chests = CHESTS.map((chest) => {
+            const px = chest.col * ts + ts / 2;
+            const py = chest.row * ts + ts / 2;
+            const opened = isOpenedToday(q, chest.id, today);
+
+            // Мягкая тень под сундуком
+            this.add.ellipse(px, py + 10, 30, 9, 0x000000, 0.22).setDepth(chest.row + 0.4);
+            const img = this.add.image(px, py, opened ? 'chest_open' : 'chest_closed')
+                .setScale(ts / 24)      // 24px текстура → 48px тайл
+                .setDepth(chest.row + 0.45);
+
+            // Искра над неоткрытым сундуком (у редкого — ярче и крупнее)
+            let marker = null;
+            if (!opened) {
+                marker = this.add.image(px, py - 18, 'particle_spark')
+                    .setTint(chest.rare ? 0xffd700 : 0xc9a14a)
+                    .setDisplaySize(chest.rare ? 18 : 13, chest.rare ? 18 : 13)
+                    .setDepth(chest.row + 0.5);
+                this.tweens.add({
+                    targets: marker,
+                    alpha: { from: 0.55, to: 1 },
+                    y: { from: py - 18, to: py - 22 },
+                    duration: 900 + Math.random() * 300,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut',
+                });
+            }
+            return { data: chest, img, marker };
+        });
+    }
+
+    /**
+     * Раунд 11: открытие сундука — раз в игровой день на сундук.
+     * Лут по взвешенной таблице: деньги / яблоко (+2 HP) / медная иконка (+1 репутация).
+     */
+    openChest(entry) {
+        if (!entry || this.busyDialog) return;
+        const chest = entry.data;
+        const player = this.registry.get('player');
+        if (!player) return;
+
+        const q = this.registry.get('quest') || {};
+        const today = dayKeyOf(getTime(this.registry));
+
+        if (isOpenedToday(q, chest.id, today)) {
+            ActionLog.add(this.registry, `Заглянул в «${chest.label}» — уже обыскан сегодня.`);
+            this.showFloatingText(entry.img.x, entry.img.y - 26, 'Уже обыскан', '#b8a88a');
+            return;
+        }
+
+        markOpened(q, chest.id, today);
+        this.registry.set('quest', q);
+
+        // Крышка открывается, искра гаснет
+        entry.img.setTexture('chest_open');
+        if (entry.marker) {
+            entry.marker.destroy();
+            entry.marker = null;
+        }
+
+        // Лут
+        const loot = rollLoot(chest);
+        let msg = 'Пусто...';
+        if (loot.kind === 'money') {
+            const amount = Phaser.Math.Between(loot.min, loot.max);
+            player.dengas = (player.dengas || 0) + amount;
+            msg = lootDisplayName(loot, amount);
+            this.audioManager.playSound('sfx_button_click');
+        } else if (loot.kind === 'apple') {
+            player.HP = Math.min(player.HPmax || player.HP + 2, player.HP + 2);
+            msg = lootDisplayName(loot);
+            this.audioManager.playSound('sfx_heal');
+        } else if (loot.kind === 'icon_scrap') {
+            const res = changeVillageRep(this.registry, 1, 'Медная иконка из ларца');
+            msg = lootDisplayName(loot);
+            this.audioManager.playSound('sfx_level_up');
+            if (res && res.message) ActionLog.add(this.registry, res.message);
+        }
+        this.registry.set('player', player);
+        this.updateHUD();
+
+        // Эффекты: всплывающий текст + вспышка искр
+        this.showFloatingText(entry.img.x, entry.img.y - 26, msg, chest.rare ? '#ffd700' : '#e8cc7a');
+        const burst = this.add.particles(entry.img.x, entry.img.y, 'particle_spark', {
+            speed: { min: 40, max: 90 },
+            lifespan: 700,
+            scale: { start: 0.5, end: 0 },
+            tint: 0xe8cc7a,
+            emitting: false,
+        }).setDepth(150);
+        burst.explode(chest.rare ? 14 : 9);
+        this.time.delayedCall(1200, () => burst.destroy());
+
+        tickTime(this.registry, 5);
+        ActionLog.add(this.registry, `Обыскал «${chest.label}»: ${msg}.`);
+    }
+
+    /**
+     * Раунд 11: всплывающий текст над точкой (для лута и подсказок).
+     */
+    showFloatingText(x, y, text, color = '#e8cc7a') {
+        const t = this.add.text(x, y, text, {
+            fontSize: '13px', color, fontFamily: 'Arial, sans-serif',
+            stroke: '#000', strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(150);
+        this.tweens.add({
+            targets: t,
+            y: y - 34,
+            alpha: { from: 1, to: 0 },
+            duration: 1600,
+            ease: 'Cubic.easeOut',
+            onComplete: () => t.destroy(),
+        });
+    }
+
+    /**
+     * Раунд 11: полевые цветы и травяные кочки на травяных тайлах.
+     * Зимой прячутся (снег). Без коллизий — декорация глубины 0.3.
+     */
+    scatterFlowers(ts) {
+        this.flowers = [];
+        const timeState = getTime(this.registry);
+        const season = timeState ? getSeason(timeState.month) : 'summer';
+        const winter = season === 'winter';
+        const chestTiles = new Set(CHESTS.map(c => `${c.col},${c.row}`));
+
+        for (let y = 1; y < MAP_H - 1; y++) {
+            for (let x = 1; x < MAP_W - 1; x++) {
+                if (this.map[y][x] !== '.') continue;
+                if (chestTiles.has(`${x},${y}`)) continue;
+                const px = x * ts + ts / 2;
+                const py = y * ts + ts / 2;
+
+                if (Math.random() < 0.14) {
+                    // Кластер из 1-2 цветков
+                    const n = 1 + (Math.random() < 0.4 ? 1 : 0);
+                    for (let i = 0; i < n; i++) {
+                        const tex = `deco_flower_${Math.floor(Math.random() * 3)}`;
+                        const f = this.add.image(px + (Math.random() * 30 - 15), py + (Math.random() * 26 - 13), tex)
+                            .setScale(1.4 + Math.random() * 0.4)
+                            .setDepth(0.3);
+                        if (winter) f.setVisible(false);
+                        // Покачивание на ветру — примерно половине цветков
+                        if (Math.random() < 0.55) {
+                            this.tweens.add({
+                                targets: f,
+                                angle: { from: -4, to: 4 },
+                                duration: 1800 + Math.random() * 1600,
+                                yoyo: true,
+                                repeat: -1,
+                                ease: 'Sine.easeInOut',
+                            });
+                        }
+                        this.flowers.push(f);
+                    }
+                } else if (Math.random() < 0.08) {
+                    const g = this.add.image(px + (Math.random() * 24 - 12), py + (Math.random() * 24 - 12), 'deco_grass_tuft')
+                        .setScale(1.3 + Math.random() * 0.5)
+                        .setDepth(0.3);
+                    if (winter) g.setVisible(false);
+                    this.flowers.push(g);
+                }
+            }
+        }
     }
 
     dirToVelocity(dir, speed) {

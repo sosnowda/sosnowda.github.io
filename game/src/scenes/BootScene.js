@@ -172,6 +172,9 @@ export class BootScene extends Phaser.Scene {
         pg.generateTexture('particle', 8, 8);
         pg.destroy();
 
+        // ----- Процедурные текстуры (сундуки, цветы) — раунд 11 -----
+        this.createDecoTextures();
+
         // ----- АУДИО -----
         // SFX
         const sfxKeys = [
@@ -234,6 +237,72 @@ export class BootScene extends Phaser.Scene {
         }
 
         this.scene.start('Title');
+    }
+
+    /**
+     * Процедурные текстуры декора (раунд 11): сундуки (закрыт/открыт),
+     * полевые цветы 3 цветов и травяные кочки. Рисуются graphics-ом один раз
+     * при загрузке — никаких лишних сетевых запросов.
+     */
+    createDecoTextures() {
+        const g = this.make.graphics({ add: false });
+
+        // ===== Сундук закрытый (24×20): дубовые доски + кованая полоса + замок =====
+        g.clear();
+        g.fillStyle(0x6b4a2a, 1); g.fillRect(2, 8, 20, 10);          // корпус
+        g.fillStyle(0x7d5834, 1); g.fillRect(3, 9, 18, 3);           // светлее сверху
+        g.fillStyle(0x5a3d22, 1); g.fillRect(2, 16, 20, 2);          // тень снизу
+        g.fillStyle(0x4a3018, 1); g.fillRect(1, 6, 22, 4);           // крышка (прикрыта)
+        g.fillStyle(0x8a6438, 1); g.fillRect(2, 7, 20, 1);           // блик крышки
+        g.fillStyle(0x3d3d3d, 1); g.fillRect(10, 6, 4, 12);          // кованая полоса
+        g.fillStyle(0x5a5a5a, 1); g.fillRect(10, 6, 4, 1);           // блик полосы
+        g.fillStyle(0xc9a14a, 1); g.fillRect(11, 10, 2, 3);          // замок (латунь)
+        g.generateTexture('chest_closed', 24, 20);
+
+        // ===== Сундук открытый (24×22): крышка откинута, внутри поблёскивает =====
+        g.clear();
+        g.fillStyle(0x4a3018, 1); g.fillRect(1, 0, 22, 5);           // откинутая крышка
+        g.fillStyle(0x8a6438, 1); g.fillRect(1, 0, 22, 1);           // блик крышки
+        g.fillStyle(0x2a1a0e, 1); g.fillRect(2, 8, 20, 10);          // тёмный нутро
+        g.fillStyle(0x6b4a2a, 1); g.fillRect(2, 16, 20, 3);          // корпус ниже
+        g.fillStyle(0x5a3d22, 1); g.fillRect(2, 18, 20, 1);          // тень корпуса
+        g.fillStyle(0x3d3d3d, 1); g.fillRect(10, 0, 4, 5);           // полоса на крышке
+        g.fillStyle(0xc9a14a, 1); g.fillRect(6, 9, 2, 2);            // блеск монет
+        g.fillStyle(0xe8cc7a, 1); g.fillRect(14, 10, 3, 2);          // ещё блеск
+        g.fillStyle(0xc9a14a, 1); g.fillRect(9, 12, 2, 1);           // и ещё
+        g.generateTexture('chest_open', 24, 22);
+
+        // ===== Полевые цветы (10×12): стебель + лепестки вокруг серединки =====
+        const flowerColors = [
+            { petal: 0xf2f2e8, petal2: 0xd8d8c8, core: 0xd9a521 },   // 0 — ромашка
+            { petal: 0xc94f3d, petal2: 0xa63a2c, core: 0x2a2a2a },   // 1 — мак
+            { petal: 0xe8c84a, petal2: 0xc9a521, core: 0x8a6a10 },   // 2 — лютик
+        ];
+        flowerColors.forEach((c, i) => {
+            g.clear();
+            g.fillStyle(0x3f6b2f, 1); g.fillRect(4, 7, 2, 5);          // стебель
+            g.fillStyle(0x4d7d3a, 1); g.fillRect(2, 9, 2, 1);          // листик слева
+            g.fillStyle(0x4d7d3a, 1); g.fillRect(6, 8, 2, 1);          // листик справа
+            g.fillStyle(c.petal, 1);
+            g.fillRect(3, 1, 4, 4);                                     // шапка лепестков
+            g.fillRect(2, 2, 6, 2);
+            g.fillStyle(c.petal2, 1);
+            g.fillRect(3, 4, 4, 1);                                     // тень лепестков
+            g.fillStyle(c.core, 1);
+            g.fillRect(4, 2, 2, 2);                                     // серединка
+            g.generateTexture(`deco_flower_${i}`, 10, 12);
+        });
+
+        // ===== Травяная кочка (14×8): пучок тёмных травинок =====
+        g.clear();
+        g.fillStyle(0x2f5a24, 1);
+        g.fillRect(1, 5, 2, 3); g.fillRect(4, 3, 2, 5); g.fillRect(7, 4, 2, 4);
+        g.fillRect(10, 2, 2, 6); g.fillRect(6, 6, 4, 2);
+        g.fillStyle(0x3f6b2f, 1);
+        g.fillRect(2, 6, 2, 2); g.fillRect(5, 4, 2, 4); g.fillRect(11, 3, 2, 5);
+        g.generateTexture('deco_grass_tuft', 14, 8);
+
+        g.destroy();
     }
 
     /**
