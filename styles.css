@@ -969,3 +969,16 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
 .chronicle-strip::-webkit-scrollbar-track{background:rgba(0,0,0,0.25);border-radius:4px}
 .chronicle-strip::-webkit-scrollbar-thumb{background:rgba(201,169,97,0.55);border-radius:4px}
 @media (prefers-reduced-motion: reduce){.chronicle-card{transition:none}}
+
+/* ===== Производительность: content-visibility для нижних секций ===== */
+/* Секции ниже первого экрана не рендерятся, пока не приблизятся к вьюпорту —
+   быстрее первичная отрисовка и меньше работы для GPU на мобильных.
+   contain-intrinsic-size держит высоту предсказуемой (нет «прыжков» скролла). */
+#chronicle, #history, #maps, #brp, #tech, #systems,
+#trailer, #screenshots, #demo, #support {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 720px;
+}
+/* Внутри секций с горизонтальной лентой (хроника) авто-высоту задаём точнее */
+#chronicle { contain-intrinsic-size: auto 640px; }
+#trailer { contain-intrinsic-size: auto 560px; }

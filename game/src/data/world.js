@@ -1,37 +1,80 @@
 // Описание мира: карта деревни с 6 зданиями, воротами и дорожной сетью.
 // Символы карты:
-//   '.' — трава, 'S' — песочная дорога, ',' — тропа, '~' — вода,
-//   'T' — дерево (НЕ непроходимо, декорация), '#' — камень (непроходим),
+//   '.' — трава, 'S' — грунтовая дорожка (лента), 'B' — широкая песчаная улица,
+//   '~' — вода, 'T' — дерево (НЕПРОХОДИМО: ствол), '#' — камень (непроходим),
 //   'H' — стена дома (непроходим), 'R' — крыша дома (непроходим),
 //   'D' — дверь (проходима, вход в интерьер),
 //   'G' — ворота на выход (проходима, переход на развилку),
-//   'W' — колодец (непроходим, декорация).
+//   'W' — колодец (непроходим, анимированная декорация).
 
 import { BUILDINGS, VILLAGE_GATE } from './interiors.js';
 
 export const MAP_W = 26;
 export const MAP_H = 18;
 
-// ВАЖНО: деревья 'T' НЕ в SOLID — они декоративные, игрок проходит сквозь них.
-// Только стены, вода, камни и колодец блокируют движение.
-export const SOLID = new Set(['~', '#', 'H', 'R', 'W']);
+// ВАЖНО: деревья 'T' теперь НЕПРОХОДИМЫ (ствол) — раньше были декорацией,
+// и игрок «проходил сквозь дерево», что выглядело как сломанные коллизии.
+// Только дороги, трава, двери и ворота проходимы.
+export const SOLID = new Set(['~', '#', 'H', 'R', 'W', 'T']);
 export const DOOR = new Set(['D']);
 export const GATE = new Set(['G']);
 export const INTERACTIVE = new Set(['D', 'G']);
 
+// Проезжаемый символ? (для автотайла: сосед считается «дорогой»)
+export function isRoadChar(t) {
+    return t === 'S' || t === ',' || t === 'B' || t === 'G';
+}
+
+/**
+ * Автотайл дороги: выбираем текстуру по соседям, чтобы дорога выглядела
+ * НЕПРЕРЫВНОЙ ПЕСЧАНОЙ ЛЕНТОЙ (а не шахматной мешаниной H/V тайлов).
+ * Текстуры: path_0 — горизонталь, path_1 — вертикаль,
+ *           path_2 — угол (соединяет верх+лево при угле 0°),
+ *           path_3 — крест/перекрёсток.
+ * Возвращает { key, angle } — угол нужен для поворота угловой текстуры.
+ */
+export function roadTileSpec(x, y, grid) {
+    const road = (xx, yy) => {
+        const row = grid[yy];
+        if (!row) return false;
+        return isRoadChar(row[xx]);
+    };
+    const up = road(x, y - 1);
+    const down = road(x, y + 1);
+    const left = road(x - 1, y);
+    const right = road(x + 1, y);
+    const n = (up ? 1 : 0) + (down ? 1 : 0) + (left ? 1 : 0) + (right ? 1 : 0);
+
+    if (n >= 3) return { key: 'tile_path_3', angle: 0 };            // Т/крест
+    if (up && down) return { key: 'tile_path_1', angle: 0 };        // вертикаль
+    if (left && right) return { key: 'tile_path_0', angle: 0 };     // горизонталь
+    if (up && left) return { key: 'tile_path_2', angle: 0 };        // угол ↑←
+    if (up && right) return { key: 'tile_path_2', angle: 90 };      // угол ↑→
+    if (down && right) return { key: 'tile_path_2', angle: 180 };   // угол ↓→
+    if (down && left) return { key: 'tile_path_2', angle: 270 };    // угол ↓←
+    if (left || right) return { key: 'tile_path_0', angle: 0 };     // тупик гориз.
+    if (up || down) return { key: 'tile_path_1', angle: 0 };        // тупик верт.
+    return { key: 'tile_path_3', angle: 0 };                        // одиночный
+}
+
 // Возвращает ключ текстуры для символа тайла.
-export function tileTexture(t, x, y) {
+// grid — необязателен, но нужен дорогам ('S'/',') для автотайла.
+export function tileTexture(t, x, y, grid) {
     switch (t) {
         case '.': return `tile_grass_${(x * 7 + y * 13) % 4}`;
-        case 'S': return `tile_path_${((x + y) % 2 === 0) ? 0 : 1}`;
-        case ',': return `tile_path_${((x + y) % 2 === 0) ? 0 : 1}`;
-        case '~': return `tile_water_0`;
+        case 'S':
+        case ',':
+            if (grid) return roadTileSpec(x, y, grid).key;
+            return 'tile_path_0';
+        case 'B': return `tile_road_${(x * 5 + y * 3) % 2}`; // сплошной песок
+        case '~': return 'tile_water_0';
         case 'T': return `tile_forest_${(x * 3 + y * 5) % 2}`;
         case '#': return `tile_rock_${(x * 11 + y * 17) % 2}`;
         case 'H': return `tile_house_wall_${(x + y) % 3}`;
         case 'R': return `tile_house_roof_${(x * 2 + y) % 2}`;
-        case 'G': return `tile_gate`;
-        case 'W': return `tile_grass_0`;
+        case 'G': return 'tile_gate';
+        case 'W': return 'deco_well_0';
+        case 'D': return 'tile_house_wall_1'; // дверь в стене (спрайт дома ляжет поверх)
         default: return 'tile_grass_0';
     }
 }
@@ -41,7 +84,8 @@ export function buildingTileTexture(t, x, y, buildingId) {
     return tileTexture(t, x, y);
 }
 
-// Построение сетки карты с дорожной сетью, зданиями и деревьями.
+// Построение сетки карты: единая дорожная сеть (непрерывные песчаные ленты),
+// здания, колодец, камни и деревья.
 export function buildMap() {
     const grid = [];
     for (let y = 0; y < MAP_H; y++) {
@@ -52,16 +96,25 @@ export function buildMap() {
         grid.push(row);
     }
 
-    // === ДОРОЖНАЯ СЕТЬ (п.5: песочные дороги, единая сеть) ===
-    // Главная горизонтальная дорога через центр деревни (ряды 8-9)
-    for (let x = 1; x < MAP_W - 1; x++) {
-        grid[8][x] = 'S';
-        grid[9][x] = 'S';
+    const set = (x, y, c) => {
+        if (grid[y] && grid[y][x] !== undefined) grid[y][x] = c;
+    };
+
+    // === ДОРОЖНАЯ СЕТЬ (непрерывные ленты, без тупиков и обрывов) ===
+    // 1) Грунтовые ленты 'S': вертикальные переулки (колонки 2, 7, 13, 19, 23)
+    [2, 7, 13, 19, 23].forEach(col => {
+        for (let y = 2; y <= 16; y++) set(col, y, 'S');
+    });
+    // 2) Поперечные ленты: северная (ряд 2) и южная (ряд 16)
+    for (let x = 2; x <= 23; x++) {
+        set(x, 2, 'S');
+        set(x, 16, 'S');
     }
-    // Главная вертикальная дорога от ворот к центру (колонки 12-13)
-    for (let y = 1; y < MAP_H - 1; y++) {
-        grid[y][12] = 'S';
-        grid[y][13] = 'S';
+    // 3) Главная улица 'B' — широкое сплошное песчаное полотно (ряды 8-9).
+    //    Рисуется ПОВЕРХ переулков, чтобы на перекрёстках не было прорех.
+    for (let x = 1; x < MAP_W - 1; x++) {
+        grid[8][x] = 'B';
+        grid[9][x] = 'B';
     }
 
     // === РАЗМЕЩЕНИЕ ЗДАНИЙ ===
@@ -81,42 +134,34 @@ export function buildMap() {
         const doorY = b.row + b.h - 1;
         if (grid[doorY]) grid[doorY][doorX] = 'D';
 
-        // Песочная дорожка от двери к ближайшей дороге (п.5)
-        // Идём от двери вниз (или вверх) до первой дороги
+        // Песчаная дорожка от двери строго вниз до первой дороги.
+        // (Раньше дорожка могла уходить «в никуда» или обходить дом сверху —
+        // теперь вниз всегда есть переулок/южная лента, так что путь короткий
+        // и непрерывный.)
         let pathY = doorY + 1;
-        while (pathY < MAP_H && grid[pathY] && grid[pathY][doorX] !== 'S') {
-            if (grid[pathY][doorX] === '.') {
-                grid[pathY][doorX] = 'S';
-            }
+        while (pathY < MAP_H && !isRoadChar(grid[pathY][doorX])) {
+            if (grid[pathY][doorX] === '.') grid[pathY][doorX] = 'S';
             pathY++;
-        }
-        // Если дорога не найдена внизу — идём вверх
-        if (pathY >= MAP_H) {
-            pathY = doorY - 1;
-            while (pathY >= 0 && grid[pathY] && grid[pathY][doorX] !== 'S') {
-                if (grid[pathY][doorX] === '.') {
-                    grid[pathY][doorX] = 'S';
-                }
-                pathY--;
-            }
         }
     });
 
-    // === ДОПОЛНИТЕЛЬНЫЕ ДОРОЖКИ между зданиями ===
-    // Дорожка от верхних зданий к нижним (колонка 5, 11, 17, 21)
-    [5, 11, 17, 21].forEach(col => {
-        for (let y = 7; y <= 11; y++) {
-            if (grid[y] && grid[y][col] === '.') grid[y][col] = 'S';
-        }
+    // === КОЛОДЕЦ в центре деревни (между таверной и домом Марфы) ===
+    // Непроходим, отрисуется анимированным спрайтом deco_well_0..3.
+    set(10, 10, 'W');
+
+    // === КАМНИ для разнообразия (непроходимы, текстура rock_0/1) ===
+    [
+        [9, 3], [22, 5], [15, 12], [8, 13], [17, 15],
+    ].forEach(([x, y]) => {
+        if (grid[y] && grid[y][x] === '.') grid[y][x] = '#';
     });
 
     // === ВОРОТА на восточной границе ===
     grid[VILLAGE_GATE.row][MAP_W - 1] = 'G';
-    // Дорожка к воротам
-    grid[VILLAGE_GATE.row][MAP_W - 2] = 'S';
+    // Полотно главной улицы уже доходит до колонки 24, ворота в колонке 25.
 
-    // === ДЕРЕВЬЯ (п.8: больше деревьев, НЕ непроходимые) ===
-    // Деревья по периметру, но НЕ блокируют движение
+    // === ДЕРЕВЬЯ (НЕПРОХОДИМЫ: ствол — честная коллизия) ===
+    // Деревья по периметру образуют естественную границу деревни.
     for (let x = 0; x < MAP_W; x++) {
         if (grid[0][x] === '.') grid[0][x] = 'T';
         if (grid[MAP_H - 1][x] === '.') grid[MAP_H - 1][x] = 'T';
@@ -125,7 +170,7 @@ export function buildMap() {
         if (grid[y][0] === '.') grid[y][0] = 'T';
         if (grid[y][MAP_W - 1] === '.') grid[y][MAP_W - 1] = 'T';
     }
-    // Отдельные деревья внутри деревни для атмосферы (п.8)
+    // Отдельные деревья внутри деревни для атмосферы
     const trees = [
         [2, 2], [3, 3], [7, 6], [14, 6], [18, 3], [22, 3],
         [2, 14], [7, 15], [14, 14], [18, 15], [22, 14],
@@ -136,11 +181,56 @@ export function buildMap() {
         if (grid[y] && grid[y][x] === '.') grid[y][x] = 'T';
     });
 
-    // === КОЛОДЕЦ в центре деревни ===
-    // Убираем колодец из SOLID — делаем его декорацией, а не препятствием
-    // (он рисуется отдельно в VillageScene, здесь оставляем траву)
-
     return grid;
+}
+
+/**
+ * Проверка карты (QA коллизий и проходимости): BFS от точки старта игрока.
+ * Возвращает список проблем: недостижимые двери, ворота, дорожные ленты.
+ * Вызывается в VillageScene.create() — проблемы попадают в console.warn.
+ */
+export function validateMap(grid) {
+    const passable = (x, y) => {
+        if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
+        return !SOLID.has(grid[y][x]);
+    };
+
+    const seen = new Set([`${PLAYER_START.col},${PLAYER_START.row}`]);
+    const queue = [[PLAYER_START.col, PLAYER_START.row]];
+    while (queue.length) {
+        const [x, y] = queue.shift();
+        [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dx, dy]) => {
+            const nx = x + dx;
+            const ny = y + dy;
+            const k = `${nx},${ny}`;
+            if (!seen.has(k) && passable(nx, ny)) {
+                seen.add(k);
+                queue.push([nx, ny]);
+            }
+        });
+    }
+
+    const problems = [];
+    BUILDINGS.forEach(b => {
+        const doorX = b.col + Math.floor(b.w / 2);
+        const doorY = b.row + b.h - 1;
+        if (!seen.has(`${doorX},${doorY}`)) {
+            problems.push(`дверь «${b.label}» (${doorX},${doorY}) недостижима`);
+        }
+    });
+    if (!seen.has(`${MAP_W - 1},${VILLAGE_GATE.row}`)) {
+        problems.push('ворота на восточной границе недостижимы');
+    }
+    // Каждая дорожка 'S' должна быть достижима (нет висящих лент)
+    let orphanRoads = 0;
+    for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+            if (grid[y][x] === 'S' && !seen.has(`${x},${y}`)) orphanRoads++;
+        }
+    }
+    if (orphanRoads > 0) problems.push(`отрезанных дорожных тайлов: ${orphanRoads}`);
+
+    return { reachable: seen, problems };
 }
 
 // Сопоставление двери с интерьером

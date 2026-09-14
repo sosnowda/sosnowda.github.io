@@ -2,7 +2,7 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import {
-    buildMap, SOLID, tileTexture, doorInteriorId, isGate,
+    buildMap, SOLID, tileTexture, roadTileSpec, validateMap, doorInteriorId, isGate,
     PLAYER_START, MAP_W, MAP_H, getVillageName,
 } from '../data/world.js';
 import { BUILDINGS, VILLAGE_GATE, INTERIORS } from '../data/interiors.js';
@@ -44,17 +44,43 @@ export class VillageScene extends Phaser.Scene {
         this.map = buildMap();
         this.solids = this.physics.add.staticGroup();
 
+        // ----- QA коллизий и проходимости: BFS-проверка карты -----
+        const validation = validateMap(this.map);
+        if (validation.problems.length) {
+            console.warn('[Деревня] Проблемы проходимости:', validation.problems);
+        }
+
         // ----- Отрисовка тайлов карты -----
+        // «Высокие» объекты (деревья, камни, колодец) получают Y-сортировку
+        // (глубина = строка тайла): игрок за ними рисуется ПОЗАДИ, перед ними — ПЕРЕД.
+        this.wellTiles = [];
         for (let y = 0; y < MAP_H; y++) {
             for (let x = 0; x < MAP_W; x++) {
                 const t = this.map[y][x];
                 const px = x * ts + ts / 2;
                 const py = y * ts + ts / 2;
-                const texKey = tileTexture(t, x, y);
+                let texKey, angle = 0;
+                if (t === 'S' || t === ',') {
+                    // Автотайл дороги: непрерывная песчаная лента (H/V/угол/крест)
+                    const spec = roadTileSpec(x, y, this.map);
+                    texKey = spec.key;
+                    angle = spec.angle;
+                } else {
+                    texKey = tileTexture(t, x, y, this.map);
+                }
                 // Проверяем существование текстуры, fallback на траву
                 const safeTex = this.textures.exists(texKey) ? texKey : 'tile_grass_0';
+                if (!this.textures.exists(texKey)) angle = 0;
                 const img = this.add.image(px, py, safeTex);
                 img.setScale(ts / 32);
+                if (angle) img.setAngle(angle);
+                // Y-сортировка высоких объектов; земля (трава/дороги/вода) — глубина 0
+                if (t === 'T' || t === '#' || t === 'W') {
+                    img.setDepth(y + 0.4);
+                } else {
+                    img.setDepth(0);
+                }
+                if (t === 'W') this.wellTiles.push({ img, x, y });
                 if (SOLID.has(t)) {
                     // Создаём НЕВИДИМЫЙ физический объект для коллизий
                     const solid = this.solids.create(px, py, safeTex);
@@ -62,6 +88,23 @@ export class VillageScene extends Phaser.Scene {
                     solid.setVisible(false);  // скрываем — отрисовка уже через add.image
                 }
             }
+        }
+
+        // ----- Анимация колодца (deco_well_0..3) -----
+        if (this.wellTiles.length) {
+            let wellFrame = 0;
+            this.time.addEvent({
+                delay: 260,
+                loop: true,
+                callback: () => {
+                    wellFrame = (wellFrame + 1) % 4;
+                    this.wellTiles.forEach(w => {
+                        if (this.textures.exists(`deco_well_${wellFrame}`)) {
+                            w.img.setTexture(`deco_well_${wellFrame}`);
+                        }
+                    });
+                },
+            });
         }
 
         // ----- Анимация воды -----
@@ -91,23 +134,56 @@ export class VillageScene extends Phaser.Scene {
         });
 
         // ----- Подсветка дверей и ворот -----
+        // Спрайты домов: рисованные избы (deco_house_0..3) вместо плоских
+        // двухтекстурных коробок. Крыльцо/окна/труба уже «запечены» в спрайте.
+        const HOUSE_SPRITE_BY_ID = {
+            elder_house: 'deco_house_3',
+            tavern: 'deco_house_1',
+            blacksmith: 'deco_house_2',
+            villager_house_1: 'deco_house_0',
+            villager_house_2: 'deco_house_2',
+        };
         this.doors = [];
         BUILDINGS.forEach(b => {
             const doorX = b.col + Math.floor(b.w / 2);
             const doorY = b.row + b.h - 1;
             const px = doorX * ts + ts / 2;
             const py = doorY * ts + ts / 2;
-            // Метка здания над дверью
+
+            // Метка здания над дверью (глубина 20 — поверх спрайта дома)
             const label = this.add.text(b.col * ts + b.w * ts / 2, (b.row - 1) * ts - 10, b.label, {
                 fontSize: '14px', color: RUS.text, backgroundColor: '#00000088',
                 padding: { x: 6, y: 3 },
                 stroke: '#000', strokeThickness: 2,
-            }).setOrigin(0.5).setDepth(10);
-            // Золотой кружок над дверью
+            }).setOrigin(0.5).setDepth(20);
+
+            // ----- Дом спрайтом + тень (псевдо-2.5D: Y-сортировка) -----
+            const sprKey = b.interiorId === 'church'
+                ? 'deco_church_building'
+                : HOUSE_SPRITE_BY_ID[b.interiorId];
+            const cx = b.col * ts + b.w * ts / 2;
+            const cy = b.row * ts + b.h * ts / 2;
+            const bottomRow = b.row + b.h;                 // строка под домом
+            const usedSprite = sprKey && this.textures.exists(sprKey);
+            if (usedSprite) {
+                // Тень у основания дома (мягкий овал)
+                this.add.ellipse(cx, bottomRow * ts - 4, b.w * ts * 0.94, ts * 0.6, 0x000000, 0.25)
+                    .setDepth(bottomRow - 0.7);
+                this.add.image(cx, cy, sprKey)
+                    .setDisplaySize(b.w * ts + 8, b.h * ts + 6)
+                    .setDepth(bottomRow - 0.5);            // Y-сортировка: игрок ниже дома — перед домом
+            } else {
+                // Fallback: старые тайлы + нарисованная дверь
+                this.add.rectangle(px, py + 4, ts * 0.44, ts * 0.68, 0x3a2417)
+                    .setStrokeStyle(2, 0x1f140c)
+                    .setDepth(bottomRow - 0.5);
+            }
+
+            // Золотой кружок над дверью (глубина 20 — поверх спрайта дома)
             const doorMarker = this.add.image(px, py - ts, 'particle_spark')
                 .setTint(0xc9a14a)
                 .setDisplaySize(20, 20)
-                .setDepth(10);
+                .setDepth(20);
             this.tweens.add({
                 targets: doorMarker,
                 alpha: { from: 0.7, to: 1 },
@@ -119,8 +195,8 @@ export class VillageScene extends Phaser.Scene {
             });
             this.doors.push({ x: doorX, y: doorY, interiorId: b.interiorId, label, marker: doorMarker });
 
-            // ----- П.7: Уникальные детали зданий -----
-            this.addBuildingDetails(b, ts);
+            // ----- П.7: Уникальные детали зданий (без дублей со спрайтом) -----
+            this.addBuildingDetails(b, ts, usedSprite);
 
             // ----- Ограда и грядки для жилых домов (п.6) -----
             if (b.interiorId === 'villager_house_1' || b.interiorId === 'villager_house_2') {
@@ -142,11 +218,11 @@ export class VillageScene extends Phaser.Scene {
             fontSize: '16px', color: '#ff8060', backgroundColor: '#00000088',
             padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(10);
+        }).setOrigin(0.5).setDepth(20);
         const gateMarker = this.add.image(gatePx, gatePy - ts * 1.8, 'particle_spark')
             .setTint(0xff6040)
             .setDisplaySize(24, 24)
-            .setDepth(10);
+            .setDepth(20);
         this.tweens.add({
             targets: gateMarker,
             alpha: { from: 0.7, to: 1 },
@@ -178,8 +254,17 @@ export class VillageScene extends Phaser.Scene {
             this.playerObj.play(`${this.player.sprite || 'player'}_idle_down`);
         }
         this.playerObj.setScale(ts / 32 * 0.75);  // было 1.5, теперь 0.75 (в 2 раза меньше)
+        // ЧЕСТНЫЙ ХИТБОКС: кадр спрайта 64×64, сам персонаж занимает ~24×24 в центре.
+        // Раньше тело было равно всему кадру (72×72 при текущем масштабе) — игрок
+        // «упирался» в невидимые стены там, где визуально свободно проходил.
+        if (this.playerObj.body) {
+            this.playerObj.body.setSize(24, 24, true);
+        }
         this.playerObj.setCollideWorldBounds(true);
         this.physics.add.collider(this.playerObj, this.solids);
+        // Псевдо-2.5D: глубина игрока зависит от Y — за домами/деревьями он ЗА,
+        // перед ними — ПЕРЕД (Y-сортировка)
+        this.playerObj.setDepth(this.playerObj.y / ts);
         this.cameras.main.startFollow(this.playerObj, true, 0.1, 0.1);
 
         // ----- Управление -----
@@ -309,14 +394,23 @@ export class VillageScene extends Phaser.Scene {
 
     /**
      * П.7: Уникальные детали для каждого здания.
+     * usedSprite — дом отрисован спрайтом: пропускаем графику, дублирующую спрайт
+     * (купол церкви уже «запечён» в deco_church_building).
      */
-    addBuildingDetails(b, ts) {
+    addBuildingDetails(b, ts, usedSprite = false) {
         const cx = b.col * ts + b.w * ts / 2;
         const topY = b.row * ts;
 
         if (b.interiorId === 'church') {
-            // Церковь: луковка купола + крест + звонница
-            // Купол (луковка) — круг + треугольник
+            if (usedSprite) {
+                // Спрайт уже с золотым куполом — только крест над ним
+                this.add.text(cx, topY - 6, '✝', {
+                    fontSize: '20px', color: '#c9a14a',
+                    stroke: '#000', strokeThickness: 2,
+                }).setOrigin(0.5).setDepth(9);
+                return;
+            }
+            // Fallback (без спрайта): купол-луковка + крест + звонница
             const domeY = topY - ts * 0.6;
             const dome = this.add.graphics();
             dome.fillStyle(0x8b7355, 1);
@@ -397,86 +491,90 @@ export class VillageScene extends Phaser.Scene {
     /**
      * Добавить двор с оградой, грядками и КАЛИТКОЙ к жилому дому (п.6).
      * Калитка — проход в ограде перед дверью, через который игрок может войти.
+     * Ограда и грядки теперь С ЧЕСТНЫМИ КОЛЛИЗИЯМИ (solid-тела), а тайлы,
+     * занятые дорогой/дверью, не перекрываются декором.
      */
     addYardAndGarden(b, ts) {
-        const baseX = b.col * ts;
-        const baseY = (b.row + b.h) * ts;  // под домом
-        const doorX = b.col + Math.floor(b.w / 2);  // колонка двери
+        const doorX = b.col + Math.floor(b.w / 2);
+        const topRow = b.row + b.h;        // первая строка двора (грядки)
+        const fenceRow = topRow + 1;       // строка ограды с калиткой
+        const mapChar = (x, y) => (this.map[y] && this.map[y][x] !== undefined) ? this.map[y][x] : null;
+        const isFree = (x, y) => mapChar(x, y) === '.';  // декор только на траве
 
-        // Грядки перед домом (2×3) — по бокам от дорожки к двери
-        for (let gy = 0; gy < 2; gy++) {
-            for (let gx = 0; gx < b.w + 1; gx++) {
-                // Пропускаем колонку двери — там дорожка
-                if (gx === Math.floor(b.w / 2) || gx === Math.floor(b.w / 2) + 1) continue;
-                const px = baseX + gx * ts + ts / 2;
-                const py = baseY + gy * ts + ts / 2;
-                if (this.textures.exists('tile_garden_0')) {
-                    const v = (gx + gy) % 3;
-                    this.add.image(px, py, `tile_garden_${v}`)
-                        .setScale(ts / 32)
-                        .setDepth(3);
-                }
+        const addSolid = (px, py) => {
+            const solid = this.solids.create(px, py, 'tile_fence_h');
+            solid.setScale(ts / 32).refreshBody();
+            solid.setVisible(false);
+        };
+
+        // Грядки перед домом — по бокам от дорожки к двери (1 ряд)
+        for (let gx = 0; gx < b.w; gx++) {
+            const col = b.col + gx;
+            if (col === doorX) continue;             // дорожка к двери
+            if (!isFree(col, topRow)) continue;      // не перекрываем дорогу
+            const px = col * ts + ts / 2;
+            const py = topRow * ts + ts / 2;
+            if (this.textures.exists('tile_garden_0')) {
+                const v = (gx + topRow) % 3;
+                this.add.image(px, py, `tile_garden_${v}`)
+                    .setScale(ts / 32)
+                    .setDepth(topRow + 0.3);
+                // Грядки непроходимы — не топчем посадки
+                addSolid(px, py);
             }
         }
 
-        // Ограда: горизонтальная снизу грядок
-        // П.6: В ограде оставляем КАЛИТКУ — проём перед дверью (1 тайл)
-        const fenceY = baseY + 2 * ts;
-        for (let fx = 0; fx < b.w + 1; fx++) {
-            // Пропускаем тайл калитки — перед дверью
-            if (fx === Math.floor(b.w / 2)) continue;
-            const px = baseX + fx * ts + ts / 2;
-            if (this.textures.exists('tile_fence_h')) {
-                this.add.image(px, fenceY, 'tile_fence_h')
+        // Ограда перед двором с КАЛИТКОЙ напротив двери
+        for (let gx = 0; gx < b.w; gx++) {
+            const col = b.col + gx;
+            if (col === doorX) continue;             // калитка — проход к двери
+            if (!isFree(col, fenceRow)) continue;    // не перекрываем дорогу
+            const px = col * ts + ts / 2;
+            const py = fenceRow * ts + ts / 2;
+            const isEdge = (gx === 0 || gx === b.w - 1);
+            const tex = isEdge && this.textures.exists('tile_fence_corner')
+                ? 'tile_fence_corner'
+                : 'tile_fence_h';
+            if (this.textures.exists(tex)) {
+                this.add.image(px, py, tex)
                     .setScale(ts / 32)
-                    .setDepth(3);
+                    .setDepth(fenceRow + 0.3);
+                addSolid(px, py);                    // ограда непроходима
             }
         }
 
-        // Вертикальные ограды по бокам двора
-        for (let fy = 0; fy < 2; fy++) {
-            const py = baseY + fy * ts + ts / 2;
-            if (this.textures.exists('tile_fence_v')) {
-                this.add.image(baseX - ts / 2, py, 'tile_fence_v')
-                    .setScale(ts / 32)
-                    .setDepth(3);
-                this.add.image(baseX + (b.w + 1) * ts - ts / 2, py, 'tile_fence_v')
-                    .setScale(ts / 32)
-                    .setDepth(3);
-            }
-        }
-        // Углы
-        if (this.textures.exists('tile_fence_corner')) {
-            this.add.image(baseX - ts / 2, fenceY, 'tile_fence_corner')
-                .setScale(ts / 32).setDepth(3);
-            this.add.image(baseX + (b.w + 1) * ts - ts / 2, fenceY, 'tile_fence_corner')
-                .setScale(ts / 32).setDepth(3);
-        }
-
-        // Калитка — декоративный столбик с двух сторон от прохода
-        const gateX = baseX + Math.floor(b.w / 2) * ts + ts / 2;
+        // Калитка — декоративные столбики по бокам от прохода
+        const gateX = doorX * ts + ts / 2;
         if (this.textures.exists('tile_fence_v')) {
-            // Два коротких столбика по бокам от калитки
-            this.add.image(gateX - ts / 3, fenceY, 'tile_fence_v')
-                .setScale(ts / 32 * 0.7).setDepth(4);
-            this.add.image(gateX + ts / 3, fenceY, 'tile_fence_v')
-                .setScale(ts / 32 * 0.7).setDepth(4);
+            this.add.image(gateX - ts / 3, fenceRow * ts + ts / 2, 'tile_fence_v')
+                .setScale(ts / 32 * 0.7).setDepth(fenceRow + 0.4);
+            this.add.image(gateX + ts / 3, fenceRow * ts + ts / 2, 'tile_fence_v')
+                .setScale(ts / 32 * 0.7).setDepth(fenceRow + 0.4);
         }
     }
 
     /**
-     * Добавить простую ограду к общественному зданию (п.7).
+     * Добавить ограду к общественному зданию (п.7).
+     * С проёмом напротив двери и честными коллизиями.
      */
     addPublicFence(b, ts) {
-        const baseX = b.col * ts;
-        const baseY = (b.row + b.h) * ts;
-        // Только горизонтальная ограда перед зданием
-        for (let fx = 0; fx < b.w; fx++) {
-            const px = baseX + fx * ts + ts / 2;
+        const doorX = b.col + Math.floor(b.w / 2);
+        const fenceRow = b.row + b.h;      // строка сразу под зданием
+        const mapChar = (x, y) => (this.map[y] && this.map[y][x] !== undefined) ? this.map[y][x] : null;
+
+        for (let gx = 0; gx < b.w; gx++) {
+            const col = b.col + gx;
+            if (col === doorX) continue;             // проём напротив двери
+            if (mapChar(col, fenceRow) !== '.') continue; // не перекрываем дорогу
+            const px = col * ts + ts / 2;
+            const py = fenceRow * ts + ts / 2;
             if (this.textures.exists('tile_fence_h')) {
-                this.add.image(px, baseY, 'tile_fence_h')
+                this.add.image(px, py, 'tile_fence_h')
                     .setScale(ts / 32)
-                    .setDepth(3);
+                    .setDepth(fenceRow + 0.3);
+                const solid = this.solids.create(px, py, 'tile_fence_h');
+                solid.setScale(ts / 32).refreshBody();
+                solid.setVisible(false);
             }
         }
     }
@@ -640,6 +738,8 @@ export class VillageScene extends Phaser.Scene {
             }
         }
         this.playerObj.setVelocity(v.x, v.y);
+        // Псевдо-2.5D: обновляем глубину игрока по его Y-позиции каждый кадр
+        this.playerObj.setDepth(this.playerObj.y / this.tileSize);
 
         this.updateNearestInteractable();
         this.updateHUD();
@@ -932,12 +1032,12 @@ export class VillageScene extends Phaser.Scene {
         const ts = this.tileSize;
         this.chickens = [];
 
-        // 4 курицы в разных местах деревни (на траве, не на дорогах)
+        // 4 курицы в разных местах деревни (на траве, не на дорогах и не в дверях)
         const positions = [
             { col: 7,  row: 6 },
             { col: 14, row: 7 },
             { col: 18, row: 9 },
-            { col: 5,  row: 13 },
+            { col: 9,  row: 14 },
         ];
 
         positions.forEach((pos, i) => {
@@ -1023,6 +1123,8 @@ export class VillageScene extends Phaser.Scene {
                     c.y += (dy / dist) * speed;
                 }
             }
+            // Курицы тоже участвуют в Y-сортировке
+            c.setDepth(c.y / ts + 0.5);
         });
     }
 

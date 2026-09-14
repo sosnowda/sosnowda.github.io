@@ -46,4 +46,5 @@ const config = {
     },
 };
 
-new Phaser.Game(config);
+// Экспорт в window — для отладки и QA (agent-browser / console)
+window.game = new Phaser.Game(config);

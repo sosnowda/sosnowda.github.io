@@ -79,7 +79,8 @@ window.addEventListener('load', function() {
         };
 
         loadingEl.style.display = 'none';
-        new Phaser.Game(config);
+        // Экспорт в window — для отладки и автоматизированного QA
+        window.game = new Phaser.Game(config);
     }).catch(function(err) {
         console.error('Ошибка загрузки игры:', err);
         showError('Ошибка: ' + err.message);
