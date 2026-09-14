@@ -534,9 +534,28 @@
         /* ===== АДАПТИВНОСТЬ ===== */
         @media (max-width: 768px) {
             .header-inner {
-                flex-direction: column;
-                text-align: center;
-                gap: 0.8rem;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                justify-content: space-between;
+                align-items: center;
+                gap: 0.6rem;
+                position: relative;
+            }
+            .logo {
+                font-size: 1.1rem;
+                white-space: nowrap;
+            }
+            .logo-icon {
+                font-size: 1.4rem;
+            }
+            .mobile-menu-toggle {
+                display: block;
+                border-radius: 8px;
+                margin-right: -10px;
+            }
+            .mobile-menu-toggle:focus-visible {
+                outline: 2px solid var(--gold);
+                outline-offset: 2px;
             }
             .nav-links {
                 justify-content: center;
@@ -588,6 +607,14 @@
             }
             .container {
                 padding: 0 16px;
+            }
+            /* Однострочная полоса сбора средств на узких экранах */
+            .fund-bar {
+                font-size: 0.72rem;
+                padding: 0.45rem 10px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
         }
     
@@ -929,3 +956,16 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
 .demo-frame-wrap {
     margin-top: 1rem;
 }
+
+/* ===== Хроника 1400–1505 ===== */
+.chronicle-strip{display:flex;gap:1rem;overflow-x:auto;padding:0.5rem 0 1.25rem;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(201,169,97,0.55) rgba(0,0,0,0.25)}
+.chronicle-card{flex:0 0 250px;scroll-snap-align:start;background:linear-gradient(160deg,rgba(201,169,97,0.09),rgba(0,0,0,0.18));border:1px solid rgba(201,169,97,0.35);border-radius:12px;padding:1.1rem 1.2rem;transition:transform .25s ease,border-color .25s ease}
+.chronicle-card:hover{transform:translateY(-4px);border-color:var(--gold)}
+.chronicle-year{font-family:'Prata',serif;font-size:1.5rem;color:var(--gold);line-height:1}
+.chronicle-event{font-weight:700;margin:0.45rem 0 0.4rem;color:#e8dcc0;font-size:0.95rem}
+.chronicle-text{font-size:0.85rem;color:var(--text-dim);line-height:1.5}
+.chronicle-hint{text-align:center;font-size:0.8rem;color:var(--text-dim);opacity:0.7;margin-top:0.25rem}
+.chronicle-strip::-webkit-scrollbar{height:8px}
+.chronicle-strip::-webkit-scrollbar-track{background:rgba(0,0,0,0.25);border-radius:4px}
+.chronicle-strip::-webkit-scrollbar-thumb{background:rgba(201,169,97,0.55);border-radius:4px}
+@media (prefers-reduced-motion: reduce){.chronicle-card{transition:none}}

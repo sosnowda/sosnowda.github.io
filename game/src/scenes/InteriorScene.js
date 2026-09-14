@@ -879,8 +879,12 @@ export class InteriorScene extends Phaser.Scene {
         if (this.textures.exists('int_floor_0')) {
             for (let x = 0; x < width; x += ts) {
                 for (let y = 100; y < height; y += ts) {
-                    const v = ((x + y) / ts) % 2;
-                    this.add.image(x + ts / 2, y + ts / 2, `int_floor_${v}`)
+                    // ФИКС «зелёной сетки» (была дробь 100/32 → int_floor_1.125 → __MISSING):
+                    // вариант вычисляем по ЦЕЛОЧИСЛЕННЫМ индексам тайла, а не по пикселям.
+                    const v = (Math.floor(x / ts) + Math.floor(y / ts)) % 2;
+                    const key = `int_floor_${v}`;
+                    if (!this.textures.exists(key)) continue;
+                    this.add.image(x + ts / 2, y + ts / 2, key)
                         .setOrigin(0.5).setDepth(-4);
                 }
             }

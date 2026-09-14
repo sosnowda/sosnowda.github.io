@@ -103,15 +103,16 @@
                 <span class="hamburger" aria-hidden="true"></span>
             </button>
             <nav aria-label="Основная навигация">
-                <ul class="nav-links" id="nav-menu" role="menubar">
-                    <li role="none"><a href="#about" role="menuitem">Об игре</a></li>
-                    <li role="none"><a href="#trailer" role="menuitem">Видео</a></li>
-                    <li role="none"><a href="#screenshots" role="menuitem">Скриншоты</a></li>
-                    <li role="none"><a href="#brp" role="menuitem">BRP d100</a></li>
-                    <li role="none"><a href="#tech" role="menuitem">Технологии</a></li>
-                    <li role="none"><a href="#history" role="menuitem">История</a></li>
-                    <li role="none"><a href="#systems" role="menuitem">Особенности</a></li>
-                    <li role="none"><a href="#demo" role="menuitem">Демо</a></li>
+                <ul class="nav-links" id="nav-menu">
+                    <li><a href="#about">Об игре</a></li>
+                    <li><a href="#chronicle">Хроника</a></li>
+                    <li><a href="#trailer">Видео</a></li>
+                    <li><a href="#screenshots">Скриншоты</a></li>
+                    <li><a href="#brp">BRP d100</a></li>
+                    <li><a href="#tech">Технологии</a></li>
+                    <li><a href="#history">История</a></li>
+                    <li><a href="#systems">Особенности</a></li>
+                    <li><a href="#demo">Демо</a></li>
                 </ul>
             </nav>
         </div>
@@ -191,6 +192,77 @@
     
 
     <!-- ИСТОРИЯ -->
+    <!-- ХРОНИКА 1400–1505 -->
+    <section class="section" id="chronicle" aria-labelledby="chronicle-heading">
+        <div class="container">
+            <div class="section-label">Летопись событий</div>
+            <h2 id="chronicle-heading">Хроника 1400–1505</h2>
+            <p style="text-align: center; color: var(--text-dim); max-width: 700px; margin: 0 auto 2rem;">
+                Ключевые события эпохи — от нашествия Едигея до конца правления Ивана III.
+                Сценарий «Поход за утраченной иконой» вплетён в эту летопись: слухи о великих битвах
+                доходят до деревни вместе с торговыми обозами.
+            </p>
+            <div class="chronicle-strip" role="region" aria-label="События хроники 1400–1505, прокручивается горизонтально" tabindex="0">
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1408</div>
+                    <div class="chronicle-event">Нашествие Едигея</div>
+                    <div class="chronicle-text">Ордынский эмир Едигей разоряет северные земли, но Москву взять не смог.</div>
+                </div>
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1410</div>
+                    <div class="chronicle-event">Грюнвальдская битва</div>
+                    <div class="chronicle-text">Польша и Литва разбивают Тевтонский орден. Слухи о битве доходят до Руси.</div>
+                </div>
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1425</div>
+                    <div class="chronicle-event">Начало феодальной войны</div>
+                    <div class="chronicle-text">Смерть Василия I — спор Василия II и Юрия Звенигородского за великое княжение.</div>
+                </div>
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1440</div>
+                    <div class="chronicle-event">Рождение Ивана III</div>
+                    <div class="chronicle-text">Будущий «Государь всея Руси» появляется на свет в год падения Византийских императоров.</div>
+                </div>
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1448</div>
+                    <div class="chronicle-event">Автокефалия Русской церкви</div>
+                    <div class="chronicle-text">Собор русских епископов ставит митрополита Иону без Константинополя.</div>
+                </div>
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1453</div>
+                    <div class="chronicle-event">Падение Константинополя</div>
+                    <div class="chronicle-text">Византия погибает под ударами османов. Русь осознаёт себя последней православной державой.</div>
+                </div>
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1462</div>
+                    <div class="chronicle-event">Иван III на престоле</div>
+                    <div class="chronicle-text">Начало 43-летнего правления, изменившего карту Восточной Европы.</div>
+                </div>
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1471</div>
+                    <div class="chronicle-event">Битва на Шелони</div>
+                    <div class="chronicle-text">Москва побеждает Новгород. Падение независимости вольного города.</div>
+                </div>
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1480</div>
+                    <div class="chronicle-event">Стояние на Угре</div>
+                    <div class="chronicle-text">Конец Ордынского ига — 240 лет зависимости завершаются без битвы.</div>
+                </div>
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1497</div>
+                    <div class="chronicle-event">Судебник Ивана III</div>
+                    <div class="chronicle-text">Первый единый законник Русского государства. Юрьев день для крестьян.</div>
+                </div>
+                <div class="chronicle-card">
+                    <div class="chronicle-year">1505</div>
+                    <div class="chronicle-event">Конец эпохи</div>
+                    <div class="chronicle-text">Смерть Ивана III. Государство, выросшее втрое, переходит к Василию III.</div>
+                </div>
+            </div>
+            <p class="chronicle-hint" aria-hidden="true">← Листайте ленту — события идут по годам →</p>
+        </div>
+    </section>
+
     <section class="section" id="history">
         <div class="container">
             <div class="section-label">Исторический контекст</div>
@@ -557,7 +629,8 @@
             Короткое промо-видео о «Летописях Руси XV века» — концепция, атмосфера, геймплей.
         </p>
         <div style="max-width:900px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);border:2px solid var(--gold);">
-            <video controls preload="none" poster="assets/images/title.jpg" style="width:100%;display:block;">
+            <video controls preload="none" poster="assets/images/title.webp" style="width:100%;display:block;">
+                <source src="assets/video/promo.webm" type="video/webm">
                 <source src="assets/video/promo.mp4" type="video/mp4">
                 Ваш браузер не поддерживает видео. <a href="assets/video/promo.mp4">Скачать промо</a>.
             </video>
@@ -574,28 +647,28 @@
             Кадры из браузерного демо — деревня, интерьеры, бой, создание персонажа и локации.
         </p>
         <div class="screenshots-grid">
-            <div class="screenshot-card" data-src="assets/screenshots/01-title.png">
-                <img src="assets/screenshots/01-title.png" alt="Главное меню игры" loading="lazy">
+            <div class="screenshot-card" data-src="assets/screenshots/01-title.webp">
+                <img src="assets/screenshots/01-title.webp" alt="Главное меню игры" loading="lazy">
                 <div class="screenshot-caption">Главное меню</div>
             </div>
-            <div class="screenshot-card" data-src="assets/screenshots/02-village.png">
-                <img src="assets/screenshots/02-village.png" alt="Деревня — вид сверху" loading="lazy">
+            <div class="screenshot-card" data-src="assets/screenshots/02-village.webp">
+                <img src="assets/screenshots/02-village.webp" alt="Деревня — вид сверху" loading="lazy">
                 <div class="screenshot-caption">Деревня</div>
             </div>
-            <div class="screenshot-card" data-src="assets/screenshots/03-interior.png">
-                <img src="assets/screenshots/03-interior.png" alt="Интерьер дома — диалог с NPC" loading="lazy">
+            <div class="screenshot-card" data-src="assets/screenshots/03-interior.webp">
+                <img src="assets/screenshots/03-interior.webp" alt="Интерьер дома — диалог с NPC" loading="lazy">
                 <div class="screenshot-caption">Диалог с NPC</div>
             </div>
-            <div class="screenshot-card" data-src="assets/screenshots/04-combat.png">
-                <img src="assets/screenshots/04-combat.png" alt="Боевая сцена BRP d100" loading="lazy">
+            <div class="screenshot-card" data-src="assets/screenshots/04-combat.webp">
+                <img src="assets/screenshots/04-combat.webp" alt="Боевая сцена BRP d100" loading="lazy">
                 <div class="screenshot-caption">Боевая сцена</div>
             </div>
-            <div class="screenshot-card" data-src="assets/screenshots/05-character.png">
-                <img src="assets/screenshots/05-character.png" alt="Создание персонажа" loading="lazy">
+            <div class="screenshot-card" data-src="assets/screenshots/05-character.webp">
+                <img src="assets/screenshots/05-character.webp" alt="Создание персонажа" loading="lazy">
                 <div class="screenshot-caption">Создание персонажа</div>
             </div>
-            <div class="screenshot-card" data-src="assets/screenshots/06-locations.png">
-                <img src="assets/screenshots/06-locations.png" alt="Локации — река, мельница, пасека" loading="lazy">
+            <div class="screenshot-card" data-src="assets/screenshots/06-locations.webp">
+                <img src="assets/screenshots/06-locations.webp" alt="Тёмный лес — исследование локаций" loading="lazy">
                 <div class="screenshot-caption">Локации</div>
             </div>
         </div>

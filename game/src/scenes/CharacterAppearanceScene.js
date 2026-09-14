@@ -173,109 +173,70 @@ export class CharacterAppearanceScene extends Phaser.Scene {
         this.spriteBtnY = y;
 
         // === Выбор цвета кожи (справа, верх) ===
-        const rightX = width - 150;
+        // Палитры привязаны к ПРАВОМУ краю канваса (раньше ряды волос/кожи/куртки
+        // уезжали за x=1280, а легенда налезала на кружки штанов).
+        const rightX = width - 150;        // якорь подписей секций
+        const rightAnchor = width - 155;   // x последнего кружка в ряду
+        const colStep = 50;
+        const paletteRow = (colors, topY, perRow, onPick) => {
+            const circles = [];
+            colors.forEach((c, i) => {
+                const col = i % perRow;
+                const row = Math.floor(i / perRow);
+                const cx = rightAnchor - (perRow - 1 - col) * colStep;
+                const cy = topY + row * 45;
+                const circle = this.add.circle(cx, cy, 16, c.tint)
+                    .setStrokeStyle(2, 0xc9a14a);
+                circle.setInteractive({ useHandCursor: true });
+                circle.on('pointerdown', () => {
+                    onPick(i);
+                    this.updatePreview();
+                    this.highlightSelection();
+                });
+                circles.push(circle);
+            });
+            return circles;
+        };
+
         y = 130;
         this.add.text(rightX, y, 'Цвет кожи:', {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
-        y += 30;
-        // Палитра — 4 кружка в ряд
-        this.skinCircles = [];
-        SKIN_COLORS.forEach((c, i) => {
-            const cx = rightX - 75 + i * 50;
-            const circle = this.add.circle(cx, y + 15, 18, c.tint)
-                .setStrokeStyle(2, 0xc9a14a);
-            circle.setInteractive({ useHandCursor: true });
-            circle.on('pointerdown', () => {
-                this.skinIdx = i;
-                this.updatePreview();
-                this.highlightSelection();
-            });
-            this.skinCircles.push(circle);
-        });
+        this.skinCircles = paletteRow(SKIN_COLORS, y + 45, 6, i => { this.skinIdx = i; });
 
-        // === Цвет волос (справа, середина) ===
-        y += 60;
+        // === Цвет волос (справа, середина) — 2 ряда по 6 ===
+        y = 220;
         this.add.text(rightX, y, 'Цвет волос:', {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
-        y += 30;
-        this.hairCircles = [];
-        HAIR_COLORS.forEach((c, i) => {
-            const cx = rightX - 125 + i * 50;
-            const circle = this.add.circle(cx, y + 15, 18, c.tint)
-                .setStrokeStyle(2, 0xc9a14a);
-            circle.setInteractive({ useHandCursor: true });
-            circle.on('pointerdown', () => {
-                this.hairIdx = i;
-                this.updatePreview();
-                this.highlightSelection();
-            });
-            this.hairCircles.push(circle);
-        });
+        this.hairCircles = paletteRow(HAIR_COLORS, y + 45, 6, i => { this.hairIdx = i; });
 
-        // === П.2: Цвет куртки (справа, середина-низ) ===
-        y += 50;
+        // === П.2: Цвет куртки (справа, середина-низ) — 2 ряда по 8 ===
+        y = 360;
         this.add.text(rightX, y, 'Цвет куртки:', {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
-        y += 30;
-        this.jacketCircles = [];
-        JACKET_COLORS.forEach((c, i) => {
-            const col = i % 8;
-            const row = Math.floor(i / 8);
-            const cx = rightX - 175 + col * 50;
-            const cy = y + 15 + row * 45;
-            const circle = this.add.circle(cx, cy, 16, c.tint)
-                .setStrokeStyle(2, 0xc9a14a);
-            circle.setInteractive({ useHandCursor: true });
-            circle.on('pointerdown', () => {
-                this.jacketIdx = i;
-                this.updatePreview();
-                this.highlightSelection();
-            });
-            this.jacketCircles.push(circle);
-        });
+        this.jacketCircles = paletteRow(JACKET_COLORS, y + 45, 8, i => { this.jacketIdx = i; });
 
-        // === П.2: Цвет штанов (справа, низ) ===
-        y += 95;
+        // === П.2: Цвет штанов (справа, низ) — 2 ряда по 5 ===
+        y = 505;
         this.add.text(rightX, y, 'Цвет штанов:', {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
-        y += 30;
-        this.pantsCircles = [];
-        PANTS_COLORS.forEach((c, i) => {
-            const col = i % 5;
-            const row = Math.floor(i / 5);
-            const cx = rightX - 100 + col * 50;
-            const cy = y + 15 + row * 45;
-            const circle = this.add.circle(cx, cy, 16, c.tint)
-                .setStrokeStyle(2, 0xc9a14a);
-            circle.setInteractive({ useHandCursor: true });
-            circle.on('pointerdown', () => {
-                this.pantsIdx = i;
-                this.updatePreview();
-                this.highlightSelection();
-            });
-            this.pantsCircles.push(circle);
-        });
+        this.pantsCircles = paletteRow(PANTS_COLORS, y + 45, 5, i => { this.pantsIdx = i; });
 
-        // Подписи цветов под палитрами
-        this.skinLabel = this.add.text(rightX, height / 2 + 80, '', {
-            fontSize: '13px', color: RUS.text,
+        // Легенда выбранных цветов — 2 строки ПОД превью (не пересекается с палитрами)
+        this.legendLine1 = this.add.text(this.previewX, this.previewY + 165, '', {
+            fontSize: '13px', color: RUS.text, align: 'center',
+            stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
-        this.hairLabel = this.add.text(rightX, height / 2 + 100, '', {
-            fontSize: '13px', color: RUS.text,
-        }).setOrigin(0.5);
-        this.jacketLabel = this.add.text(rightX, height / 2 + 120, '', {
-            fontSize: '13px', color: RUS.text,
-        }).setOrigin(0.5);
-        this.pantsLabel = this.add.text(rightX, height / 2 + 140, '', {
-            fontSize: '13px', color: RUS.text,
+        this.legendLine2 = this.add.text(this.previewX, this.previewY + 188, '', {
+            fontSize: '13px', color: RUS.text, align: 'center',
+            stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
 
         // === П.3: Готовые пресеты (внизу слева) ===
@@ -437,10 +398,12 @@ export class CharacterAppearanceScene extends Phaser.Scene {
      * Обновить текстовые подписи цветов.
      */
     updateLabels() {
-        if (this.skinLabel) this.skinLabel.setText(`Кожа: ${SKIN_COLORS[this.skinIdx].name}`);
-        if (this.hairLabel) this.hairLabel.setText(`Волосы: ${HAIR_COLORS[this.hairIdx].name}`);
-        if (this.jacketLabel) this.jacketLabel.setText(`Куртка: ${JACKET_COLORS[this.jacketIdx].name}`);
-        if (this.pantsLabel) this.pantsLabel.setText(`Штаны: ${PANTS_COLORS[this.pantsIdx].name}`);
+        if (this.legendLine1) {
+            this.legendLine1.setText(`Кожа: ${SKIN_COLORS[this.skinIdx].name}  ·  Волосы: ${HAIR_COLORS[this.hairIdx].name}`);
+        }
+        if (this.legendLine2) {
+            this.legendLine2.setText(`Куртка: ${JACKET_COLORS[this.jacketIdx].name}  ·  Штаны: ${PANTS_COLORS[this.pantsIdx].name}`);
+        }
     }
 
     /**

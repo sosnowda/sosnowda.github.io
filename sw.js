@@ -1,11 +1,12 @@
 /* Service Worker — Летописи Руси XV века
    Network-first для HTML/CSS/JS, cache-first для ассетов игры.
 
-   v5 — релиз патча: шрифты Prata+PT Serif, og-image, reveal без no-JS-пустоты. Предыдущее:
+   v6 — релиз: хроника, реальные скриншоты webp, фикс пола интерьеров (зелёная сетка), фикс сцены внешности. → шрифты Prata+PT Serif, og-image, reveal без no-JS-пустоты;
+
 v4 — добавлено кеширование /game/assets/ (cache-first).
    Сцены игры (/game/src/) НЕ кешируются — для горячей перезагрузки. */
 
-var CACHE_NAME = 'chronicles-ruthenia-v5';
+var CACHE_NAME = 'chronicles-ruthenia-v6';
 var GAME_ASSETS_CACHE = 'game-assets-v1';
 
 self.addEventListener('install', function (event) {
