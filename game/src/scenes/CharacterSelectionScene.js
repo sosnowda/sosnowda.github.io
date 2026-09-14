@@ -55,13 +55,13 @@ export class CharacterSelectionScene extends Phaser.Scene {
 
         // 8 готовых героев в сетке 4×2 (4 архетипа × 2 пола)
         const cardW = 240;
-        const cardH = 280;
+        const cardH = 252;
         const gapX = 16;
         const gapY = 16;
         const cols = 4;
         const totalW = cardW * cols + gapX * (cols - 1);
         const startX = (width - totalW) / 2 + cardW / 2;
-        const startY = 260;
+        const startY = 256;
 
         PRESET_HEROES.forEach((hero, i) => {
             const col = i % cols;
@@ -74,13 +74,13 @@ export class CharacterSelectionScene extends Phaser.Scene {
         });
 
         // Подсказка снизу
-        this.add.text(width / 2, height - 80, 'Выберите готового героя или сгенерируйте случайного', {
+        this.add.text(width / 2, height - 56, 'Выберите готового героя или сгенерируйте случайного', {
             fontSize: '14px', color: RUS.textDim,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
 
         // Кнопка "Назад"
-        createButton(this, 100, height - 40, '◀ Назад', () => {
+        createButton(this, 100, height - 26, '◀ Назад', () => {
             this.scene.start('Title');
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
@@ -122,10 +122,10 @@ export class CharacterSelectionScene extends Phaser.Scene {
         }).setOrigin(0.5, 0);
         container.add(desc);
 
-        // Ключевые навыки (3-4 верхних)
+        // Ключевые навыки (3 верхних) — старт строго после фактической высоты описания
         const topSkills = Object.entries(hero.skillOverrides)
-            .sort((a, b) => b[1] - a[1]).slice(0, 4);
-        let skillY = -h / 2 + 170;
+            .sort((a, b) => b[1] - a[1]).slice(0, 3);
+        let skillY = -h / 2 + 90 + desc.height + 14;
         topSkills.forEach(([key, val]) => {
             const skillDef = SKILLS.find(s => s.key === key);
             if (skillDef) {
@@ -141,7 +141,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         // Стартовое снаряжение
         const armor = ARMORS[hero.startArmor];
         const weapon = WEAPONS[hero.startWeapon];
-        const gear = this.add.text(0, h / 2 - 50,
+        const gear = this.add.text(0, h / 2 - 26,
             `⚔ ${weapon.name}\n🛡 ${armor.name}`, {
             fontSize: '12px', color: '#c9a14a', align: 'center',
             stroke: '#000', strokeThickness: 1,

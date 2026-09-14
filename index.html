@@ -22,7 +22,8 @@
     <meta property="og:description" content="Текстовая повествовательная RPG про Русь XV века с LLM-Нарратором, RAG-базой и BRP d100.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://sosnowda.github.io/">
-    <meta property="og:image" content="https://sosnowda.github.io/assets/images/title.jpg">
+    <meta property="og:image" content="https://sosnowda.github.io/assets/images/og-image.jpg">
+    <meta property="og:image:alt" content="Летописи Руси XV века — титульная картинка">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:locale" content="ru_RU">
@@ -32,22 +33,25 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Летописи Руси XV века — AI-narrative RPG">
     <meta name="twitter:description" content="Текстовая RPG про Русь XV века с LLM-Нарратором и BRP d100.">
-    <meta name="twitter:image" content="https://sosnowda.github.io/assets/images/title.jpg">
+    <meta name="twitter:image" content="https://sosnowda.github.io/assets/images/og-image.jpg">
     <meta name="twitter:image:alt" content="Летописи Руси XV века — титульная картинка">
 
     <!-- Canonical -->
     <link rel="canonical" href="https://sosnowda.github.io/">
 
     <!-- Preload критических ресурсов -->
-    <link rel="preload" href="assets/images/title.jpg" as="image" fetchpriority="high">
+    <link rel="preload" href="assets/images/title.webp" as="image" fetchpriority="high">
     <link rel="preload" href="styles.css" as="style">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prata&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
 
     <!-- JSON-LD -->
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"VideoGame","name":"Летописи Руси XV века","description":"AI-narrative RPG про Русь 1400-1505.","genre":["RPG","Historical","AI"],"applicationCategory":"Game","operatingSystem":"Web Browser, Windows","url":"https://sosnowda.github.io/","image":"https://sosnowda.github.io/assets/images/title.jpg","author":{"@type":"Person","name":"sosnowda"},"softwareVersion":"0.1.0-alpha","offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"}}
+    {"@context":"https://schema.org","@type":"VideoGame","name":"Летописи Руси XV века","description":"AI-narrative RPG про Русь 1400-1505.","genre":["RPG","Historical","AI"],"applicationCategory":"Game","operatingSystem":"Web Browser, Windows","url":"https://sosnowda.github.io/","image":"https://sosnowda.github.io/assets/images/og-image.jpg","author":{"@type":"Person","name":"sosnowda"},"softwareVersion":"0.1.0-alpha","offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"}}
     </script>
 
     <link rel="stylesheet" href="styles.css">
@@ -115,6 +119,7 @@
 
     <!-- HERO -->
     <section class="hero">
+        <h1 style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;">Летописи Руси XV века — The Chronicles of Ruthenia</h1>
         <div class="hero-image-wrap">
             <picture>
                 <source srcset="assets/images/title.webp" type="image/webp">

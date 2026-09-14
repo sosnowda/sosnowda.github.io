@@ -44,8 +44,15 @@ function rollD100() {
     }, 700);
 }
 
-// Анимация появления секций при скролле
+// Флаг наличия JS: reveal-анимации применяются только если JS работает.
+// Без JS страница полностью видима (прогрессивное улучшение).
+document.documentElement.classList.add('js');
+
+// Анимация появления секций при скролле (no-JS safe + prefers-reduced-motion)
 document.addEventListener('DOMContentLoaded', function() {
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || !('IntersectionObserver' in window)) return; // контент просто виден
+
     var sections = document.querySelectorAll('section, .feature-card, .epoch-card, .detailed-item, .map-card');
     var observer = new IntersectionObserver(function(entries) {
         entries.forEach(function(entry) {
@@ -56,6 +63,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
     sections.forEach(function(el) {
+        // Прячем только то, что ещё НЕ во вьюпорте — первый экран всегда виден
+        var rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) return;
         el.style.opacity = '0';
         el.style.transform = 'translateY(30px)';
         el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';

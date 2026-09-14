@@ -46,9 +46,9 @@ export class TitleScene extends Phaser.Scene {
         const by = 270;
         this.makeButton(width / 2, by, 'Новая игра', 0x8B2C1A, 0xB53925, () => this.scene.start('CharacterSelection'));
         this.makeButton(width / 2, by + 68, 'Персонаж', 0x4a3520, 0x5a4530, () => this.scene.start('Character', { from: 'Title' }));
-        this.makeButton(width / 2, by + 136, '❓ Помощь', 0x2e4a6a, 0x3a5a8a, () => this.showHelp());
-        this.makeButton(width / 2, by + 204, '⚙ Настройки', 0x2a4a2a, 0x3a5a3a, () => this.showSettings());
-        this.makeButton(width / 2, by + 272, 'О игре', 0x2e4a6a, 0x3a5a8a, () => this.about());
+        this.makeButton(width / 2, by + 136, '❓ Помощь', 0x6b5320, 0x7d6428, () => this.showHelp());
+        this.makeButton(width / 2, by + 204, '⚙ Настройки', 0x4f4a1e, 0x5f5a26, () => this.showSettings());
+        this.makeButton(width / 2, by + 272, 'О игре', 0x54382a, 0x644536, () => this.about());
         
         // П.26: ESC — переключение в главное меню и обратно
         this.input.keyboard.on('keydown-ESC', () => {
