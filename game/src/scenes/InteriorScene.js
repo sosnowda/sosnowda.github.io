@@ -966,7 +966,19 @@ export class InteriorScene extends Phaser.Scene {
             }
             this.add.text(width * 0.2, 80, '⚔ 🔨 🛡', { fontSize: '32px' }).setOrigin(0.5).setDepth(10);
         } else if (interior.id === 'elder_house') {
-            // Дом старосты: стол, свеча, икона, сундук с документами, лавка
+            // Дом старосты: стол, свеча, икона, сундук с документами, лавка, ПЕЧЬ
+            if (this.textures.exists('int_deco_fireplace')) {
+                this.add.image(80, height * 0.5, 'int_deco_fireplace').setScale(1.2).setDepth(5);
+            }
+            if (this.textures.exists('int_fire_0')) {
+                const oven = this.add.image(80, height * 0.55, 'int_fire_0').setScale(2).setDepth(6);
+                let ovenFrame = 0;
+                this.time.addEvent({
+                    delay: 110,
+                    loop: true,
+                    callback: () => { ovenFrame = (ovenFrame + 1) % 4; oven.setTexture(`int_fire_${ovenFrame}`); },
+                });
+            }
             if (this.textures.exists('int_deco_table')) {
                 this.add.image(width * 0.5, height * 0.55, 'int_deco_table').setScale(1.2).setDepth(5);
             }
@@ -1004,7 +1016,23 @@ export class InteriorScene extends Phaser.Scene {
                 fontSize: '48px', color: '#c9a14a',
             }).setOrigin(0.5).setDepth(10);
         } else if (interior.id === 'villager_house_1') {
-            // Дом крестьянина Авдея: стол, лавка, кровать, поленница, стог сена
+            // Дом крестьянина Авдея: стол, лавка, кровать, поленница, стог сена, ПЕЧЬ
+            // Русская печь с живым огнём — сердце избы
+            if (this.textures.exists('int_deco_fireplace')) {
+                this.add.image(80, height * 0.45, 'int_deco_fireplace').setScale(1.2).setDepth(5);
+            }
+            if (this.textures.exists('int_fire_0')) {
+                const oven = this.add.image(80, height * 0.5, 'int_fire_0').setScale(2).setDepth(6);
+                let ovenFrame = 0;
+                this.time.addEvent({
+                    delay: 100,
+                    loop: true,
+                    callback: () => { ovenFrame = (ovenFrame + 1) % 4; oven.setTexture(`int_fire_${ovenFrame}`); },
+                });
+                // Тёплый отсвет печи на полу
+                this.add.ellipse(80, height * 0.62, 150, 44, 0xff9a3c, 0.14)
+                    .setBlendMode(Phaser.BlendModes.ADD).setDepth(4);
+            }
             if (this.textures.exists('int_deco_table')) {
                 this.add.image(width * 0.4, height * 0.55, 'int_deco_table').setScale(1).setDepth(5);
             }
@@ -1024,7 +1052,22 @@ export class InteriorScene extends Phaser.Scene {
                 this.add.image(width - 80, height * 0.4, 'int_deco_icon_wall').setScale(1).setDepth(5);
             }
         } else if (interior.id === 'villager_house_2') {
-            // Дом вдовы Марфы: кровать, прялка, икона, колыбель, полка с травами
+            // Дом вдовы Марфы: кровать, прялка, икона, колыбель, полка с травами, ПЕЧЬ
+            // Печь — у неё греются и готовят
+            if (this.textures.exists('int_deco_fireplace')) {
+                this.add.image(80, height * 0.45, 'int_deco_fireplace').setScale(1.2).setDepth(5);
+            }
+            if (this.textures.exists('int_fire_0')) {
+                const oven = this.add.image(80, height * 0.5, 'int_fire_0').setScale(2).setDepth(6);
+                let ovenFrame = 0;
+                this.time.addEvent({
+                    delay: 120,
+                    loop: true,
+                    callback: () => { ovenFrame = (ovenFrame + 1) % 4; oven.setTexture(`int_fire_${ovenFrame}`); },
+                });
+                this.add.ellipse(80, height * 0.62, 150, 44, 0xff9a3c, 0.14)
+                    .setBlendMode(Phaser.BlendModes.ADD).setDepth(4);
+            }
             if (this.textures.exists('int_deco_bed')) {
                 this.add.image(width * 0.8, height * 0.55, 'int_deco_bed').setScale(1).setDepth(5);
             }

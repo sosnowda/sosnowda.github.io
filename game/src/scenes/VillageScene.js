@@ -204,6 +204,36 @@ export class VillageScene extends Phaser.Scene {
             }
         });
 
+        // ----- Дым из труб (атмосфера, §3 village-visual-upgrade) -----
+        this.smokeBuildings = BUILDINGS.map(b => ({
+            x: b.col * ts + b.w * ts / 2 + ts * 0.42,   // трубы в спрайтах смещены вправо от центра
+            y: b.row * ts - ts * 0.12,
+            depth: b.row + b.h + 1,
+        }));
+        this.time.addEvent({
+            delay: 620,
+            loop: true,
+            callback: () => {
+                // раз в тик дымит ОДНО случайное здание — дым редкий и живой
+                const b = Phaser.Utils.Array.GetRandom(this.smokeBuildings);
+                this.puffSmoke(b.x, b.y, b.depth);
+            },
+        });
+
+        // ----- Ночное свечение окон (тёплый свет в темноте) -----
+        this.windowGlows = [];
+        BUILDINGS.forEach(b => {
+            const bottomRow = b.row + b.h;
+            const cx = b.col * ts + b.w * ts / 2;
+            const wallY = (bottomRow - 1.5) * ts;      // зона стены спрайта
+            [-0.75, 0.75].forEach(dx => {
+                const glow = this.add.rectangle(cx + dx * ts, wallY, 12, 15, 0xffc866, 0)
+                    .setBlendMode(Phaser.BlendModes.ADD)
+                    .setDepth(bottomRow - 0.4);
+                this.windowGlows.push(glow);
+            });
+        });
+
         // ----- Ограда для общественных зданий (староста, таверна, кузница, церковь) -----
         BUILDINGS.forEach(b => {
             if (b.interiorId !== 'villager_house_1' && b.interiorId !== 'villager_house_2') {
@@ -815,6 +845,16 @@ export class VillageScene extends Phaser.Scene {
                 this.dayNightOverlay.setFillStyle(overlay.color, overlay.alpha);
             }
         }
+
+        // Ночное свечение окон: чем темнее, тем ярче тёплый свет в окнах
+        if (this.windowGlows && timeState) {
+            const h = timeState.hour;
+            let dark = 0;
+            if (h >= 21 || h < 5) dark = 1;
+            else if (h >= 18) dark = (h - 18) / 3;   // 18→0 … 21→1
+            else if (h < 8) dark = (8 - h) / 3;      // 5→1 … 8→0
+            this.windowGlows.forEach(g => g.setAlpha(dark * 0.38));
+        }
         
         if (q.currentObjective) {
             this.objectiveText.setText(`◆ ${q.currentObjective}`);
@@ -885,7 +925,31 @@ export class VillageScene extends Phaser.Scene {
         }
     }
 
-    // П.24: Показать информацию о здании
+    /**
+     * Клуб дыма из трубы: медленно всплывает, расширяется и тает.
+     */
+    puffSmoke(x, y, depth) {
+        if (!this.textures.exists('particle_dust')) return;
+        const smoke = this.add.image(x + Phaser.Math.Between(-4, 4), y, 'particle_dust')
+            .setTint(0xcfc8bd)
+            .setAlpha(0.4)
+            .setScale(0.5)
+            .setDepth(depth);
+        this.tweens.add({
+            targets: smoke,
+            y: y - Phaser.Math.Between(34, 52),
+            x: x + Phaser.Math.Between(-14, 14),
+            alpha: 0,
+            scale: 1.15,
+            duration: 2600,
+            ease: 'Sine.easeOut',
+            onComplete: () => smoke.destroy(),
+        });
+    }
+
+    /**
+     * П.24: Показать информацию о здании
+     */
     showBuildingInfo(interiorId) {
         const interior = INTERIORS[interiorId];
         if (!interior) return;
