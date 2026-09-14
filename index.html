@@ -27,6 +27,7 @@
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:locale" content="ru_RU">
+    <meta property="og:locale:alternate" content="en_US">
     <meta property="og:site_name" content="Летописи Руси XV века">
 
     <!-- Twitter Card -->
@@ -36,8 +37,11 @@
     <meta name="twitter:image" content="https://sosnowda.github.io/assets/images/og-image.jpg">
     <meta name="twitter:image:alt" content="Летописи Руси XV века — титульная картинка">
 
-    <!-- Canonical -->
+    <!-- Canonical + языковые версии -->
     <link rel="canonical" href="https://sosnowda.github.io/">
+    <link rel="alternate" hreflang="ru" href="https://sosnowda.github.io/">
+    <link rel="alternate" hreflang="en" href="https://sosnowda.github.io/en/">
+    <link rel="alternate" hreflang="x-default" href="https://sosnowda.github.io/">
 
     <!-- Preload критических ресурсов -->
     <link rel="preload" href="assets/images/title.webp" as="image" fetchpriority="high">
@@ -113,6 +117,12 @@
                     <li><a href="#history">История</a></li>
                     <li><a href="#systems">Особенности</a></li>
                     <li><a href="#demo">Демо</a></li>
+                    <li class="lang-item">
+                        <span class="lang-switch" role="group" aria-label="Выбор языка">
+                            <a href="/" hreflang="ru" lang="ru" class="lang-link active" aria-current="true">RU</a>
+                            <a href="en/" hreflang="en" lang="en" class="lang-link">EN</a>
+                        </span>
+                    </li>
                 </ul>
             </nav>
         </div>

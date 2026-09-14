@@ -173,3 +173,34 @@ git push
 ## Лендинг
 11. **Scrollspy** — активный раздел навигации подсвечивается золотом с подчёркиванием (IntersectionObserver + aria-current), focus-visible обводка на пунктах меню.
 12. **sw.js** — кэш поднят до `chronicles-ruthenia-v9`.
+
+---
+
+## Раунд 10 — EN-версия лендинга + scrollspy-fix (2026-09-15)
+
+1. **EN-версия лендинга** — `en/index.html` (новый файл)
+   - Полный перевод всех 13 секций: about, chronicle (11 карточек), history, maps (SVG-карта: 10 маркеров с data-desc на английском), BRP, tech, systems, trailer, screenshots, demo, support, footer.
+   - `lang="en"`, canonical `https://sosnowda.github.io/en/`, og:locale `en_US` + `og:locale:alternate ru_RU`, JSON-LD с `inLanguage`.
+   - Честное примечание в секции Demo: «in-game text is currently in Russian; full English localization is planned».
+   - Все ассеты по относительным путям `../` (картинки, видео, CSS, JS, игра).
+
+2. **hreflang + язык** — `index.html`, `en/index.html`, `sitemap.xml`
+   - На обеих страницах: `<link rel="alternate" hreflang="ru|en|x-default">`, canonical, og:locale:alternate.
+   - sitemap.xml: добавлен `/en/` с xhtml:link-альтернейтами (три языка-альтернейта на каждый URL).
+
+3. **Переключатель RU/EN в шапке** — `index.html`, `en/index.html`, `styles.css`
+   - Компактная «пилюля» в конце навигации (в мобильном меню тоже), активный язык залит золотым градиентом; классы `.lang-switch`/`.lang-link` с переопределением специфичности `.nav-links a`.
+   - aria-label «Выбор языка / Language selection», aria-current на активном.
+
+4. **Фикс scrollspy** — `main.js`
+   - Было: активная секция выбиралась по максимуму intersectionRatio → высокие секции («История») проигрывали коротким соседям («Скриншоты» подсвечивалась при скролле к «Истории»).
+   - Стало: детерминированный rAF-обработчик scroll/resize — активна последняя секция, чей верх прошёл порог 140px под шапкой; цели сортируются по позиции в DOM (порядок ссылок в меню ≠ порядок секций).
+
+5. **Локализация JS-строк по языку страницы** — `main.js`
+   - d100: «Бросаем…/Удача!/Особый!/Успех/Провал!» ↔ «Rolling…/Luck!/Special!/Success/Failure!» (по `document.documentElement.lang`).
+   - SVG-карта: «Опасность: низкая/средняя/высокая» ↔ «Danger: low/medium/high».
+
+6. **SW-регистрация на подпапках** — `main.js`
+   - `register('sw.js')` → `register('/sw.js')` — иначе на `/en/` SW не регистрировался (относительный путь = `/en/sw.js`).
+
+7. **SW v9 → v10** — `sw.js` (инвалидация кэша HTML/CSS/JS после релиза).

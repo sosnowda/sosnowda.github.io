@@ -1,20 +1,31 @@
-// Плавная прокрутка по якорям
+// Плавная прокрутка по якорям (раунд 10: content-visibility-safe)
 document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
     anchor.addEventListener('click', function(e) {
-        var target = document.querySelector(this.getAttribute('href'));
+        var id = this.getAttribute('href').slice(1);
+        var target = id && document.getElementById(id);
         if (target) {
             e.preventDefault();
+            // Обновляем hash (глубокие ссылки и история браузера) без прыжка
+            history.pushState(null, '', '#' + id);
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Секции с content-visibility дорендериваются после прыжка и
+            // сдвигают цель — запускаем коррекцию позиционирования.
+            if (typeof window.__anchorSettle === 'function') window.__anchorSettle();
         }
+        // href="#" (логотип) — нативный переход вверх без исключений
     });
 });
 
 // Service Worker (PWA)
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(function(){});
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
 }
 
 // Интерактивный дайс d100
+// Локализация результатов по языку документа (страница EN — /en/)
+var D100_I18N = (document.documentElement.lang || 'ru').toLowerCase().indexOf('ru') === 0
+    ? { rolling: 'Бросаем…', luck: 'Удача!', special: 'Особый!', success: 'Успех', fail: 'Провал!', tail: ' (выпало {r} из 100)' }
+    : { rolling: 'Rolling…', luck: 'Luck!', special: 'Special!', success: 'Success', fail: 'Failure!', tail: ' (rolled {r} of 100)' };
 var d100IsRolling = false;
 function rollD100() {
     if (d100IsRolling) return;
@@ -27,17 +38,17 @@ function rollD100() {
     void sphere.offsetWidth;
     sphere.classList.add('rolling');
     result.textContent = '?';
-    degree.textContent = 'Бросаем…';
+    degree.textContent = D100_I18N.rolling;
     degree.style.color = '';
     setTimeout(function() {
         var roll = Math.floor(Math.random() * 100) + 1;
         var deg, cls;
-        if (roll <= 5) { deg = 'Удача!'; cls = 'crit'; }
-        else if (roll <= 20) { deg = 'Особый!'; cls = 'special'; }
-        else if (roll <= 95) { deg = 'Успех'; cls = 'success'; }
-        else { deg = 'Провал!'; cls = 'fail'; }
+        if (roll <= 5) { deg = D100_I18N.luck; cls = 'crit'; }
+        else if (roll <= 20) { deg = D100_I18N.special; cls = 'special'; }
+        else if (roll <= 95) { deg = D100_I18N.success; cls = 'success'; }
+        else { deg = D100_I18N.fail; cls = 'fail'; }
         result.textContent = roll;
-        degree.textContent = deg + ' (выпало ' + roll + ' из 100)';
+        degree.textContent = deg + D100_I18N.tail.replace('{r}', roll);
         degree.style.color = (cls === 'crit' || cls === 'special') ? '#e0c078' : (cls === 'fail' ? '#c44' : '');
         sphere.classList.remove('rolling');
         d100IsRolling = false;
@@ -81,28 +92,116 @@ document.addEventListener('DOMContentLoaded', function() {
         var sec = document.getElementById(a.getAttribute('href').slice(1));
         if (sec) spyTargets.push({ link: a, sec: sec });
     });
-    if ('IntersectionObserver' in window && spyTargets.length) {
-        var ratios = {};
-        var pickActive = function() {
-            var best = null, bestR = 0;
-            Object.keys(ratios).forEach(function(id) {
-                if (ratios[id] > bestR) { bestR = ratios[id]; best = id; }
-            });
+    if (spyTargets.length) {
+        // Порядок ссылок в меню не совпадает с порядком секций в документе —
+        // сортируем цели по позиции в DOM, иначе «последняя прошедшая» считается неверно.
+        spyTargets.sort(function(x, y) {
+            return x.sec.compareDocumentPosition(y.sec) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+        });
+        var spyTicking = false;
+        var setActive = function(id) {
             spyTargets.forEach(function(t) {
-                var on = t.sec.id === best;
+                var on = t.sec.id === id;
                 t.link.classList.toggle('active', on);
                 if (on) t.link.setAttribute('aria-current', 'true');
                 else t.link.removeAttribute('aria-current');
             });
         };
-        var spy = new IntersectionObserver(function(entries) {
-            entries.forEach(function(en) {
-                ratios[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0;
-            });
-            pickActive();
-        }, { threshold: [0.05, 0.2, 0.45], rootMargin: '-70px 0px -25% 0px' });
-        spyTargets.forEach(function(t) { spy.observe(t.sec); });
+        // Детерминированный spy: активна последняя секция, чей верх прошёл
+        // порог под шапкой. В отличие от intersectionRatio не зависит от
+        // высоты секций (высокие секции раньше «проигрывали» коротким соседям).
+        var spyUpdate = function() {
+            spyTicking = false;
+            var offset = 140; // высота шапки + запас
+            var current = spyTargets[0].sec.id;
+            for (var i = 0; i < spyTargets.length; i++) {
+                if (spyTargets[i].sec.getBoundingClientRect().top <= offset) {
+                    current = spyTargets[i].sec.id;
+                }
+            }
+            setActive(current);
+        };
+        // «Хвостовые» пересчёты: при прыжке по якорю пропущенные секции с
+        // content-visibility:auto дорендериваются ПОСЛЕ прыжка и сдвигают
+        // контент под фиксированной позицией скролла — событие scroll уже
+        // не придёт. Две отложенные коррекции ловят финальное состояние.
+        var spyTrail1 = 0, spyTrail2 = 0;
+        var spyQueue = function() {
+            if (!spyTicking) {
+                spyTicking = true;
+                requestAnimationFrame(spyUpdate);
+            }
+            clearTimeout(spyTrail1);
+            clearTimeout(spyTrail2);
+            spyTrail1 = setTimeout(spyUpdate, 160);
+            spyTrail2 = setTimeout(spyUpdate, 480);
+        };
+        window.addEventListener('scroll', spyQueue, { passive: true });
+        window.addEventListener('resize', spyQueue, { passive: true });
+        window.addEventListener('load', function() {
+            spyUpdate();
+            setTimeout(spyUpdate, 600);
+        });
+        spyUpdate();
     }
+
+    // ============================================================
+    // КОРРЕКЦИЯ ЯКОРНОЙ НАВИГАЦИИ (content-visibility, раунд 10)
+    // Секции ниже первого экрана с content-visibility:auto при прыжке по
+    // якорю рендерятся ПОСЛЕ прыжка и сдвигают цель вниз на сотни пикселей —
+    // браузер остаётся на оценочной позиции. Повторно наводим на цель,
+    // пока раскладка не устаканится. Ручной скролл пользователя отменяет.
+    // ============================================================
+    (function () {
+        var anchorTimers = [];
+        var anchorCancelled = false;
+        function correctAnchor() {
+            if (anchorCancelled) return;
+            var hash = location.hash;
+            if (!hash || hash.length < 2) return;
+            var target = document.getElementById(decodeURIComponent(hash.slice(1)));
+            if (!target) return;
+            var margin = parseInt(getComputedStyle(target).scrollMarginTop, 10) || 0;
+            var top = target.getBoundingClientRect().top;
+            if (Math.abs(top - margin) > 4) {
+                window.scrollTo({ top: window.scrollY + top - margin, behavior: 'instant' });
+            }
+        }
+        function scheduleSettle() {
+            anchorCancelled = false;
+            anchorTimers.forEach(clearTimeout);
+            // Ранние прыжки: раскладка догружается (картинки, шрифты,
+            // content-visibility) и после короткого окна коррекций.
+            // Растянутое расписание + перезапуск по load (ниже) добивают цель.
+            anchorTimers = [80, 260, 550, 900, 1400, 2000, 2700, 3500].map(function (d) {
+                return setTimeout(correctAnchor, d);
+            });
+        }
+        window.addEventListener('hashchange', scheduleSettle);
+        window.addEventListener('popstate', scheduleSettle); // назад/вперёд при pushState-навигации
+        window.addEventListener('load', function () {
+            if (location.hash && location.hash.length > 1) scheduleSettle();
+        });
+        // Экспорт для обработчика якорных кликов (выше) — он preventDefault-ит,
+        // поэтому hashchange не срабатывает и коррекцию нужно звать напрямую
+        window.__anchorSettle = scheduleSettle;
+        // Клик по якорной ссылке той же страницы (hash может не измениться)
+        document.addEventListener('click', function (e) {
+            var node = e.target;
+            while (node && node !== document) {
+                if (node.tagName === 'A' && (node.getAttribute('href') || '').charAt(0) === '#') {
+                    scheduleSettle();
+                    return;
+                }
+                node = node.parentNode;
+            }
+        });
+        // Ручной скролл пользователя отменяет коррекцию до следующего перехода
+        ['wheel', 'touchstart'].forEach(function (evt) {
+            window.addEventListener(evt, function () { anchorCancelled = true; }, { passive: true });
+        });
+        scheduleSettle(); // прямая загрузка с #hash в URL
+    })();
 
     // ============================================================
     // УВЕЛИЧЕНИЕ КАРТ ПРИ КЛИКЕ (LIGHTBOX)
@@ -367,8 +466,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (panelTitle) panelTitle.textContent = (marker.getAttribute('data-icon') || '') + ' ' + (marker.getAttribute('data-name') || '');
         if (panelDesc) panelDesc.textContent = marker.getAttribute('data-desc') || '';
         if (panelDanger) {
+            var isRu = (document.documentElement.lang || 'ru').toLowerCase().indexOf('ru') === 0;
             var d = marker.getAttribute('data-danger') || 'low';
-            panelDanger.textContent = d === 'medium' ? '⚠ Опасность: средняя' : (d === 'high' ? '☠ Опасность: высокая' : '✓ Опасность: низкая');
+            panelDanger.textContent = isRu
+                ? (d === 'medium' ? '⚠ Опасность: средняя' : (d === 'high' ? '☠ Опасность: высокая' : '✓ Опасность: низкая'))
+                : (d === 'medium' ? '⚠ Danger: medium' : (d === 'high' ? '☠ Danger: high' : '✓ Danger: low'));
             panelDanger.className = 'rus-map-danger rus-danger-' + d;
         }
         // Достижение для Метрики: интересуются картой мира
