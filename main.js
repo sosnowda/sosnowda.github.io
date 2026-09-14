@@ -73,6 +73,38 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ============================================================
+    // SCROLLSPY: подсветка активного раздела в навигации (раунд 9)
+    // ============================================================
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav-links a[href^="#"]'));
+    var spyTargets = [];
+    navLinks.forEach(function(a) {
+        var sec = document.getElementById(a.getAttribute('href').slice(1));
+        if (sec) spyTargets.push({ link: a, sec: sec });
+    });
+    if ('IntersectionObserver' in window && spyTargets.length) {
+        var ratios = {};
+        var pickActive = function() {
+            var best = null, bestR = 0;
+            Object.keys(ratios).forEach(function(id) {
+                if (ratios[id] > bestR) { bestR = ratios[id]; best = id; }
+            });
+            spyTargets.forEach(function(t) {
+                var on = t.sec.id === best;
+                t.link.classList.toggle('active', on);
+                if (on) t.link.setAttribute('aria-current', 'true');
+                else t.link.removeAttribute('aria-current');
+            });
+        };
+        var spy = new IntersectionObserver(function(entries) {
+            entries.forEach(function(en) {
+                ratios[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0;
+            });
+            pickActive();
+        }, { threshold: [0.05, 0.2, 0.45], rootMargin: '-70px 0px -25% 0px' });
+        spyTargets.forEach(function(t) { spy.observe(t.sec); });
+    }
+
+    // ============================================================
     // УВЕЛИЧЕНИЕ КАРТ ПРИ КЛИКЕ (LIGHTBOX)
     // ============================================================
     var mapImages = document.querySelectorAll('.map-card img');

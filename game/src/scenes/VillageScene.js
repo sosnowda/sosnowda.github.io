@@ -142,6 +142,7 @@ export class VillageScene extends Phaser.Scene {
             blacksmith: 'deco_house_2',
             villager_house_1: 'deco_house_0',
             villager_house_2: 'deco_house_2',
+            barn: 'deco_house_1',            // амбар — та же клеть, что и таверна (свой декор отличит)
         };
         this.doors = [];
         BUILDINGS.forEach(b => {
@@ -160,7 +161,9 @@ export class VillageScene extends Phaser.Scene {
             // ----- Дом спрайтом + тень (псевдо-2.5D: Y-сортировка) -----
             const sprKey = b.interiorId === 'church'
                 ? 'deco_church_building'
-                : HOUSE_SPRITE_BY_ID[b.interiorId];
+                : b.interiorId === 'chapel'
+                    ? 'deco_chapel'                        // узкая часовня с главкой (64×80)
+                    : HOUSE_SPRITE_BY_ID[b.interiorId];
             const cx = b.col * ts + b.w * ts / 2;
             const cy = b.row * ts + b.h * ts / 2;
             const bottomRow = b.row + b.h;                 // строка под домом
@@ -205,11 +208,14 @@ export class VillageScene extends Phaser.Scene {
         });
 
         // ----- Дым из труб (атмосфера, §3 village-visual-upgrade) -----
-        this.smokeBuildings = BUILDINGS.map(b => ({
-            x: b.col * ts + b.w * ts / 2 + ts * 0.42,   // трубы в спрайтах смещены вправо от центра
-            y: b.row * ts - ts * 0.12,
-            depth: b.row + b.h + 1,
-        }));
+        // Амбар и часовня без труб — дымит только жильё и очаги.
+        this.smokeBuildings = BUILDINGS
+            .filter(b => b.interiorId !== 'barn' && b.interiorId !== 'chapel')
+            .map(b => ({
+                x: b.col * ts + b.w * ts / 2 + ts * 0.42,   // трубы в спрайтах смещены вправо от центра
+                y: b.row * ts - ts * 0.12,
+                depth: b.row + b.h + 1,
+            }));
         this.time.addEvent({
             delay: 620,
             loop: true,
@@ -240,6 +246,9 @@ export class VillageScene extends Phaser.Scene {
                 this.addPublicFence(b, ts);
             }
         });
+
+        // ----- Живность: бабочки днём / светлячки ночью (атмосфера) -----
+        this.createAmbientCritters(ts);
 
         // ----- Метка ворот -----
         const gatePx = (MAP_W - 1) * ts + ts / 2;
@@ -854,6 +863,30 @@ export class VillageScene extends Phaser.Scene {
             else if (h >= 18) dark = (h - 18) / 3;   // 18→0 … 21→1
             else if (h < 8) dark = (8 - h) / 3;      // 5→1 … 8→0
             this.windowGlows.forEach(g => g.setAlpha(dark * 0.38));
+
+            // Бабочки — на дне (светло), светлячки — ночью (темно)
+            if (this.butterflies) {
+                const day = 1 - dark;
+                this.butterflies.forEach(b => {
+                    b.setVisible(day > 0.25);
+                    b.setAlpha(day);
+                });
+            }
+            if (this.fireflies) {
+                const now = this.time.now;
+                this.fireflies.forEach(f => {
+                    if (dark <= 0.35) {
+                        f.setVisible(false);
+                        return;
+                    }
+                    f.setVisible(true);
+                    // Пульс: гаснут и разгораются вразнобой, параллельно лёгкий дрейф
+                    const pulse = 0.35 + 0.55 * Math.sin(now * f.pulseSpeed + f.phase);
+                    f.setAlpha(dark * Math.max(0, pulse));
+                    f.x = f.homeX + Math.sin(now * 0.0011 + f.phase) * 26;
+                    f.y = f.homeY + Math.cos(now * 0.0009 + f.phase * 1.7) * 18;
+                });
+            }
         }
         
         if (q.currentObjective) {
@@ -926,6 +959,77 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
+     * Живность деревни: бабочки днём, светлячки ночью.
+     * Видимость переключается в updateHUD() по «dark»-коэффициенту времени суток.
+     */
+    createAmbientCritters(ts) {
+        // --- Текстура бабочки (крохотные крылышки, 10×8) ---
+        if (!this.textures.exists('critter_butterfly')) {
+            const g = this.add.graphics();
+            g.fillStyle(0xffffff, 1);
+            g.fillTriangle(0, 4, 5, 0, 5, 8);      // левое крыло
+            g.fillTriangle(10, 4, 5, 0, 5, 8);     // правое крыло
+            g.generateTexture('critter_butterfly', 10, 8);
+            g.destroy();
+        }
+
+        // --- Бабочки (5 шт): порхают над травой и грядками днём ---
+        this.butterflies = [];
+        const tints = [0xf6e7a8, 0xe8c9e0, 0xd8e6c8];
+        for (let i = 0; i < 5; i++) {
+            const bx = Phaser.Math.Between(3, (MAP_W - 3)) * ts;
+            const by = Phaser.Math.Between(4, (MAP_H - 4)) * ts;
+            const b = this.add.image(bx, by, 'critter_butterfly')
+                .setTint(tints[i % tints.length])
+                .setAlpha(1)
+                .setDepth(15)
+                .setScale(1.2);
+            // Порхание: «восьмёрка» — плавный дрейф + взмахи крыльев (flipX мигание)
+            this.tweens.add({
+                targets: b,
+                x: bx + Phaser.Math.Between(-70, 70),
+                y: by + Phaser.Math.Between(-50, 50),
+                duration: Phaser.Math.Between(2200, 3800),
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+            this.tweens.add({
+                targets: b,
+                scaleX: { from: 1.2, to: 0.55 },   // «взмах» крыльев
+                duration: 160,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+            this.butterflies.push(b);
+        }
+
+        // --- Светлячки (10 шт): зелёные искры над травой, пульсируют ночью ---
+        // Пульс считаем в updateHUD() по синусоиде фазы — без отдельных твинов.
+        this.fireflies = [];
+        if (this.textures.exists('particle')) {
+            for (let i = 0; i < 10; i++) {
+                const fx = Phaser.Math.Between(2, (MAP_W - 2)) * ts;
+                const fy = Phaser.Math.Between(3, (MAP_H - 3)) * ts;
+                const f = this.add.image(fx, fy, 'particle')
+                    .setTint(0xc8e86a)
+                    .setBlendMode(Phaser.BlendModes.ADD)
+                    .setAlpha(0)
+                    .setDepth(15)
+                    .setScale(0.6);
+                f.phase = Math.random() * Math.PI * 2;      // фаза пульса
+                f.pulseSpeed = 0.0025 + Math.random() * 0.003; // индивидуальная скорость
+                f.driftAngle = Math.random() * Math.PI * 2;   // случайный дрейф
+                f.homeX = fx;
+                f.homeY = fy;
+                f.setVisible(false);
+                this.fireflies.push(f);
+            }
+        }
+    }
+
+    /**
      * Клуб дыма из трубы: медленно всплывает, расширяется и тает.
      */
     puffSmoke(x, y, depth) {
@@ -953,17 +1057,23 @@ export class VillageScene extends Phaser.Scene {
     showBuildingInfo(interiorId) {
         const interior = INTERIORS[interiorId];
         if (!interior) return;
-        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
-        const npcRep = getNpcRep(this.registry, interior.npcId);
-        const repLevel = getReputationLevel(npcRep);
-        const timeState = getTime(this.registry);
-        const hour = timeState ? timeState.hour : 12;
-        const activity = this.npcData ? getNpcActivity(this.npcData, hour) : 'занят';
-        
-        const info = `${interior.name}\n` +
-            `NPC: ${npcName}\n` +
-            `Личная репутация: ${npcRep > 0 ? '+' : ''}${npcRep} (${repLevel.name})\n` +
-            `Сейчас: ${activity}`;
+        // Здания без NPC (часовня, амбар): показываем описание вместо «репутации незнакомца»
+        const noNpc = interior.noNpc || !interior.npcId;
+        let info;
+        if (noNpc) {
+            info = `${interior.name}\n\n${interior.description || ''}`;
+        } else {
+            const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+            const npcRep = getNpcRep(this.registry, interior.npcId);
+            const repLevel = getReputationLevel(npcRep);
+            const timeState = getTime(this.registry);
+            const hour = timeState ? timeState.hour : 12;
+            const activity = this.npcData ? getNpcActivity(this.npcData, hour) : 'занят';
+            info = `${interior.name}\n` +
+                `NPC: ${npcName}\n` +
+                `Личная репутация: ${npcRep > 0 ? '+' : ''}${npcRep} (${repLevel.name})\n` +
+                `Сейчас: ${activity}`;
+        }
         
         // Показываем как всплывающую подсказку
         const { width, height } = this.scale;

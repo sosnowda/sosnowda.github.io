@@ -10,7 +10,7 @@ import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd, askMoneyForHelp, askElderAdvance } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
 import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion } from '../data/questGenerator.js';
-import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
+import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
 import {
     checkNpcWillingToTalk, getNpcRep, getReputationLevel,
@@ -18,7 +18,7 @@ import {
     applyQuestCompleteBonus, applyThreat, willNpcAttack, willNpcRefuseTrade,
     getPriceModifier, getRewardModifier,
     canMarry, marry, getMarriageCost, getMarriageNpcRepThreshold, getMarriageVillageRepThreshold,
-    getVillageRep,
+    getVillageRep, changeVillageRep,
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 
@@ -67,48 +67,55 @@ export class InteriorScene extends Phaser.Scene {
         }).setOrigin(0.5, 0).setDepth(50);
 
         // ----- Описание интерьера -----
+        // Раунд 9: перенос по ширине 42% — длинные описания не наезжают на окна
         this.add.text(20, 60, interior.description, {
             fontSize: '14px', color: RUS.textDim,
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 1,
+            wordWrap: { width: width * 0.42 },
         }).setOrigin(0, 0).setDepth(50);
 
         // ----- NPC в интерьере -----
-        const npcSpriteKey = (this.npcData && this.npcData.sprite) || interior.npcSprite;
-        // П.6: Проверяем существование текстуры
-        const finalSpriteKey = this.textures.exists(npcSpriteKey) ? npcSpriteKey : 'npc_elder';
-        this.npcSprite = this.add.sprite(width * 0.65, height * 0.55, finalSpriteKey).setScale(2.5).setDepth(5);
-        // Проверяем существование анимации
-        const animKey = `${finalSpriteKey}_idle_down`;
-        if (this.anims.exists(animKey)) {
-            this.npcSprite.play(animKey);
-        }
-        // Лёгкое дыхание
-        this.tweens.add({
-            targets: this.npcSprite,
-            scaleX: { from: 2.5, to: 2.55 },
-            scaleY: { from: 2.5, to: 2.45 },
-            duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-        });
-        // П.7: NPC интерактивен — ЛКМ запускает разговор
-        this.npcSprite.setInteractive({ useHandCursor: true });
-        this.npcSprite.on('pointerdown', (pointer) => {
-            // Только ЛКМ
-            if (pointer.leftButtonDown() && !this.busyDialog) {
-                this.talkToNpc(interior);
+        // Часовня и амбар — БЕЗ NPC (ограблена / работник на поле):
+        // вместо него — декор-центр и особый набор действий в кнопках.
+        const hasNpc = !interior.noNpc && !!interior.npcId;
+        if (hasNpc) {
+            const npcSpriteKey = (this.npcData && this.npcData.sprite) || interior.npcSprite;
+            // П.6: Проверяем существование текстуры
+            const finalSpriteKey = this.textures.exists(npcSpriteKey) ? npcSpriteKey : 'npc_elder';
+            this.npcSprite = this.add.sprite(width * 0.65, height * 0.55, finalSpriteKey).setScale(2.5).setDepth(5);
+            // Проверяем существование анимации
+            const animKey = `${finalSpriteKey}_idle_down`;
+            if (this.anims.exists(animKey)) {
+                this.npcSprite.play(animKey);
             }
-        });
-        // Имя NPC — динамическое (п.2-5)
-        this.npcNameText = this.add.text(this.npcSprite.x, this.npcSprite.y + 80, displayName, {
-            fontSize: '16px', color: RUS.text,
-            stroke: '#000', strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(20);
-        // П.7: Подсказка «нажмите, чтобы поговорить»
-        this.add.text(this.npcSprite.x, this.npcSprite.y - 80, '💬 Нажми, чтобы поговорить', {
-            fontSize: '11px', color: '#c9a14a',
-            backgroundColor: '#00000088', padding: { x: 6, y: 3 },
-            stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5).setDepth(20);
+            // Лёгкое дыхание
+            this.tweens.add({
+                targets: this.npcSprite,
+                scaleX: { from: 2.5, to: 2.55 },
+                scaleY: { from: 2.5, to: 2.45 },
+                duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+            // П.7: NPC интерактивен — ЛКМ запускает разговор
+            this.npcSprite.setInteractive({ useHandCursor: true });
+            this.npcSprite.on('pointerdown', (pointer) => {
+                // Только ЛКМ
+                if (pointer.leftButtonDown() && !this.busyDialog) {
+                    this.talkToNpc(interior);
+                }
+            });
+            // Имя NPC — динамическое (п.2-5)
+            this.npcNameText = this.add.text(this.npcSprite.x, this.npcSprite.y + 80, displayName, {
+                fontSize: '16px', color: RUS.text,
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(20);
+            // П.7: Подсказка «нажмите, чтобы поговорить»
+            this.add.text(this.npcSprite.x, this.npcSprite.y - 80, '💬 Нажми, чтобы поговорить', {
+                fontSize: '11px', color: '#c9a14a',
+                backgroundColor: '#00000088', padding: { x: 6, y: 3 },
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0.5).setDepth(20);
+        }
 
         // ----- Игрок (слева от NPC) -----
         // П.6: Используем спрайт игрока из реестра, а не жёстко 'player'.
@@ -151,7 +158,9 @@ export class InteriorScene extends Phaser.Scene {
         }
 
         // ----- HUD -----
-        this.hud = this.add.text(16, height - 60, '', {
+        // Раунд 9: y = height-88 — НАД рядом кнопок (при 7 кнопках строка кнопок
+        // начинается с x≈160 и перекрывала HUD на height-60)
+        this.hud = this.add.text(16, height - 88, '', {
             fontSize: '14px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
         }).setDepth(100);
@@ -180,20 +189,31 @@ export class InteriorScene extends Phaser.Scene {
         const villageRepValue = getVillageRep(this.registry);
 
         const buttons = [];
-        buttons.push({ label: '\u{1F4AC} Поговорить', bg: RUS.accent, hover: RUS.accentLight, cb: () => this.talkToNpc(interior) });
-        buttons.push({ label: '\u{1F4B0} Просить денег', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.askMoneyFromNpc(interior) });
-        buttons.push({ label: '\u{1F4DC} Задание', bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.offerQuest(interior) });
-        buttons.push({ label: '\u{1F381} Подарить', bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.showGiftMenu(interior) });
-        buttons.push({ label: '\u{1F44D} Похвалить', bg: 0x2a5a5a, hover: 0x3a6a6a, cb: () => this.complimentNpc(interior) });
-        buttons.push({ label: '\u{1F620} Угрожать', bg: 0x5a1a1a, hover: 0x6a2a2a, cb: () => this.threatenNpc(interior) });
-        if (this.npcData && this.npcData.gender !== player.gender && npcRepValue >= 50 && villageRepValue >= 30) {
-            buttons.push({ label: '\u{1F48D} Свататься', bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.proposeMarriage(interior) });
-        }
-        if (interior.id === 'tavern') {
-            buttons.push({ label: '\u{1F37B} Угостить (20\u0434)', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.treatEveryone(interior) });
-            buttons.push({ label: '\u{1F6D2} Купить еды', bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showTavernShop() });
-        } else if (interior.id === 'blacksmith') {
-            buttons.push({ label: '\u{1F6D2} Купить оружие', bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
+        if (hasNpc) {
+            buttons.push({ label: '\u{1F4AC} Поговорить', bg: RUS.accent, hover: RUS.accentLight, cb: () => this.talkToNpc(interior) });
+            buttons.push({ label: '\u{1F4B0} Просить денег', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.askMoneyFromNpc(interior) });
+            buttons.push({ label: '\u{1F4DC} Задание', bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.offerQuest(interior) });
+            buttons.push({ label: '\u{1F381} Подарить', bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.showGiftMenu(interior) });
+            buttons.push({ label: '\u{1F44D} Похвалить', bg: 0x2a5a5a, hover: 0x3a6a6a, cb: () => this.complimentNpc(interior) });
+            buttons.push({ label: '\u{1F620} Угрожать', bg: 0x5a1a1a, hover: 0x6a2a2a, cb: () => this.threatenNpc(interior) });
+            if (this.npcData && this.npcData.gender !== player.gender && npcRepValue >= 50 && villageRepValue >= 30) {
+                buttons.push({ label: '\u{1F48D} Свататься', bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.proposeMarriage(interior) });
+            }
+            if (interior.id === 'tavern') {
+                buttons.push({ label: '\u{1F37B} Угостить (20\u0434)', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.treatEveryone(interior) });
+                buttons.push({ label: '\u{1F6D2} Купить еды', bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showTavernShop() });
+            } else if (interior.id === 'blacksmith') {
+                buttons.push({ label: '\u{1F6D2} Купить оружие', bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
+            }
+        } else if (interior.id === 'chapel') {
+            // Часовня: богомолье вместо разговора
+            buttons.push({ label: '\u{1F64F} Помолиться', bg: RUS.accent, hover: RUS.accentLight, cb: () => this.prayInChapel() });
+            buttons.push({ label: '\u{1F56F} Пожертвовать (5\u0434)', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.donateInChapel() });
+            buttons.push({ label: '\u{1F50D} Осмотреть киот', bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectChapelKiot() });
+        } else if (interior.id === 'barn') {
+            // Амбар: подённая работа
+            buttons.push({ label: '\u{2692} Работать (1 час)', bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInBarn() });
+            buttons.push({ label: '\u{1F33E} Осмотреть зерно', bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectBarnGrain() });
         }
         const exitAction = () => {
             this.scene.stop();
@@ -856,8 +876,176 @@ export class InteriorScene extends Phaser.Scene {
         }).setDepth(202);
     }
 
+    // ================================================================
+    // Раунд 9: Часовня — богомолье, пожертвования, осмотр места кражи
+    // ================================================================
+
+    // Ключ игрового дня (для «раз в день»-ограничений)
+    dayKey() {
+        const t = getTime(this.registry);
+        return t ? `${t.yearFromChrist}-${t.month}-${t.day}` : 'unknown';
+    }
+
     /**
-     * Добавить декорации в зависимости от типа интерьера.
+     * Молитва в часовне: +Воля (MP), один раз в игровой день.
+     * Забирает 15 минут времени.
+     */
+    prayInChapel() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        tickTime(this.registry, 15);
+
+        const q = this.registry.get('quest') || {};
+        const today = this.dayKey();
+        if (q.prayerDay === today) {
+            ActionLog.add(this.registry, 'Помолился в часовне (уже молился сегодня).');
+            createDialog(this, 'Молитва', 'Ты снова стоишь перед пустым киотом. Сердце уже нашло покой утром — сегодня больше не нужно.', [
+                { text: 'Аминь.', callback: () => {} },
+            ]);
+            return;
+        }
+        q.prayerDay = today;
+        this.registry.set('quest', q);
+
+        const gain = Phaser.Math.Between(3, 8);
+        player.MP = Math.min(player.MPmax || player.MP + gain, player.MP + gain);
+        this.registry.set('player', player);
+        this.updateHUD();
+        ActionLog.add(this.registry, `Помолился в часовне — Воля +${gain}.`);
+
+        createDialog(this, 'Молитва',
+            'Ты опускаешься на колени перед пустым киотом. Вопреки горю, отделявшему деревню от святого, в тишине часовни приходит покой.\n\nВоля восстановлена: +' + gain + '.',
+            [{ text: 'Встать с колен.', callback: () => {} }]);
+    }
+
+    /**
+     * Пожертвование на свечи и ладан: −5 д., +1 к репутации в деревне.
+     * Не чаще одного раза в игровой день.
+     */
+    donateInChapel() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+
+        const q = this.registry.get('quest') || {};
+        const today = this.dayKey();
+        if (q.donationDay === today) {
+            createDialog(this, 'Пожертвование', 'Ты уже жертвовал сегодня. Свечей куплено на всю неделю вперёд.', [
+                { text: 'Ну ладно.', callback: () => {} },
+            ]);
+            return;
+        }
+        if ((player.dengas || 0) < 5) {
+            createDialog(this, 'Пожертвование', 'В мошне пусто — не до пожертвований. Заработай в амбаре или помоги деревне.', [
+                { text: 'Приду позже.', callback: () => {} },
+            ]);
+            return;
+        }
+        player.dengas -= 5;
+        this.registry.set('player', player);
+        q.donationDay = today;
+        this.registry.set('quest', q);
+        const res = changeVillageRep(this.registry, 1, 'Пожертвование в часовне');
+        tickTime(this.registry, 10);
+        this.updateHUD();
+        ActionLog.add(this.registry, 'Пожертвовал 5 д. в часовне — деревня это помнит (+1 репутация).');
+
+        createDialog(this, 'Пожертвование',
+            'Ты кладёшь пять денег на блюдо у входа. «На свечи и ладан», — говоришь тихо. Казначей церкви будет рад.\n\n' +
+            (res && res.message ? res.message : 'Репутация в деревне +1.'),
+            [{ text: 'Низко поклониться иконам.', callback: () => {} }]);
+    }
+
+    /**
+     * Осмотр киота: уникальная улика по делу о краже (один раз за игру).
+     */
+    inspectChapelKiot() {
+        if (this.busyDialog) return;
+        const q = this.registry.get('quest') || {};
+        tickTime(this.registry, 10);
+
+        if (q.chapelInspected) {
+            createDialog(this, 'Пустой киот', 'Больше тут ничего не изменилось: ниша без иконы, воск на полу, верёвка.', [
+                { text: 'Уйти от киота.', callback: () => {} },
+            ]);
+            return;
+        }
+        q.chapelInspected = true;
+        if (!q.cluesGathered) q.cluesGathered = [];
+        const clue = 'На полу часовни — капли стеарина и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в часовне горела свеча.';
+        q.cluesGathered.push({ npcId: 'chapel', npcName: 'Часовня', clue });
+        this.registry.set('quest', q);
+        ActionLog.add(this.registry, 'Осмотрел киот в часовне — нашёл улику (воск, верёвка с узлами).');
+
+        createDialog(this, 'Осмотр киота',
+            'Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли стеарина, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\n' +
+            'Вор был не один — и нёс святыню бережно. Это стоит рассказать старосте.\n\nУлика добавлена к делу.',
+            [{ text: 'Запомнить.', callback: () => {} }]);
+    }
+
+    // ================================================================
+    // Раунд 9: Амбар — подённая работа и общее зерно
+    // ================================================================
+
+    /**
+     * Подённая работа (молотьба): 1 час времени, −4 здоровья, +3..6 денег,
+     * 15% шанс найти монетку в соломе. При истощении (HP ≤ 5) отказ.
+     */
+    workInBarn() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+
+        if ((player.HP || 0) <= 5) {
+            createDialog(this, 'Силы кончились', 'Руки не поднимаются на цеп. Нужно поесть и отдохнуть в таверне, прежде чем браться за работу.', [
+                { text: 'Справедливо...', callback: () => {} },
+            ]);
+            return;
+        }
+        tickTime(this.registry, 60);
+        player.HP = Math.max(1, (player.HP || 1) - 4);
+        const wage = Phaser.Math.Between(3, 6);
+        let bonus = 0;
+        let bonusMsg = '';
+        if (Math.random() < 0.15) {
+            bonus = Phaser.Math.Between(2, 4);
+            bonusMsg = '\n\nВ соломе блеснула чужая монетка — видать, обронил кто-то из работников. Она твоя: +' + bonus + ' д.';
+        }
+        player.dengas = (player.dengas || 0) + wage + bonus;
+        this.registry.set('player', player);
+        this.updateHUD();
+        ActionLog.add(this.registry, `Отработал час в амбаре: +${wage + bonus} д., усталость −4 HP.`);
+
+        createDialog(this, 'Подённая работа',
+            'Час за цепом и лопатой: снопы, веяние, мешки. Спина гудит, но в мошне звенит.\n\n' +
+            'Заработано: +' + wage + ' д. Усталость: −4 здоровья.' + bonusMsg,
+            [{ text: 'Отдышаться.', callback: () => {} }]);
+    }
+
+    /**
+     * Осмотр зерна: атмосферная деталь + редкий съедобный бонус.
+     */
+    inspectBarnGrain() {
+        if (this.busyDialog) return;
+        tickTime(this.registry, 10);
+        const player = this.registry.get('player');
+        let extra = '';
+        if (Math.random() < 0.2 && player && (player.HP || 0) < (player.HPmax || 10)) {
+            player.HP = Math.min(player.HPmax || player.HP + 2, player.HP + 2);
+            this.registry.set('player', player);
+            this.updateHUD();
+            extra = '\n\nВ закромах нашлась горсть сушёных яблок — хозяева не обидятся. +2 здоровья.';
+            ActionLog.add(this.registry, 'Подкрепился сушёными яблоками в амбаре: +2 HP.');
+        }
+        const mice = ['мышь-хвостунья черкнула за мешками', 'воробей вылетел в слуховое окно', 'кот-невидимка оставил следы на пшенице'];
+        createDialog(this, 'Осмотр зерна',
+            'Закрома полны: рожь, пшеница, горох. Зерно в амбре сухое, не сопрело — стараниями общины.\n\n' +
+            'Мимо ' + mice[Phaser.Math.Between(0, mice.length - 1)] + '.' + extra,
+            [{ text: 'Довольно.', callback: () => {} }]);
+    }
+
+    /**
      * П.5 (4-й раз!): Пол и стены рисуем НАДЁЖНО — сначала заливаем прямоугольниками
      * коричневый фон, потом поверх — тайлы 32×32. Это исключает любую «зелёную сетку».
      */
@@ -865,6 +1053,22 @@ export class InteriorScene extends Phaser.Scene {
         const { width, height } = this.scale;
         const decor = interior.decor || [];
         const ts = 32;
+
+        // === Раунд 9: инфраструктура света ===
+        // Собираем источники света (печь, свечи, лампада, камин),
+        // в конце рендерим тёплые пятна: днём — лёгкая база, ночью — ярко.
+        this._lightSources = [];
+        const timeState = getTime(this.registry);
+        const hour = timeState ? timeState.hour : 12;
+        let daylight = 0;                 // насколько ярко за окном (для столбов света)
+        let dark = 0;                     // насколько темно в доме (для отсветов огня)
+        if (hour >= 8 && hour < 17) daylight = 1;
+        else if (hour >= 6 && hour < 8) daylight = (hour - 6) / 2;
+        else if (hour >= 17 && hour < 19) daylight = 1 - (hour - 17) / 2;
+        if (hour >= 21 || hour < 5) dark = 1;
+        else if (hour >= 18) dark = (hour - 18) / 3;
+        else if (hour < 8) dark = (8 - hour) / 3;
+        this._interiorDark = dark;
 
         // === ПОДЛОЖКА ПОЛА — коричневый прямоугольник на всю нижнюю часть ===
         // Гарантирует, что даже если тайлы не загрузятся, будет коричневый пол, не зелёный.
@@ -898,9 +1102,32 @@ export class InteriorScene extends Phaser.Scene {
                 }
             }
         }
-        // Окно
+        // === Окна (2 шт) с дневным светом и ночным синим стеклом ===
+        // x = 62% и 84% — свободная зона стены (левее описание, в центре дата)
         if (this.textures.exists('int_window')) {
-            this.add.image(width - 140, 50, 'int_window').setScale(2).setDepth(-3);
+            const winY = 50;
+            [width * 0.62, width * 0.84].forEach(wx => {
+                const win = this.add.image(wx, winY, 'int_window').setScale(2).setDepth(-3);
+                // Ночью стекло темнеет и синеет
+                if (dark > 0.15) {
+                    const c = Phaser.Display.Color.IntegerToColor(0xffffff);
+                    const n = Phaser.Display.Color.IntegerToColor(0x3d4f73);
+                    const mixed = Phaser.Display.Color.Interpolate.ColorWithColor(c, n, 100, Math.min(100, dark * 100));
+                    win.setTint(Phaser.Display.Color.GetColor(mixed.r, mixed.g, mixed.b));
+                }
+                // Дневной столб света из окна на пол (ADD) — гаснет к ночи
+                if (daylight > 0.05) {
+                    const shaft = this.add.graphics().setDepth(-2);
+                    shaft.fillStyle(0xfff0c0, 0.16 * daylight);
+                    shaft.fillPoints([
+                        { x: wx - 30, y: winY + 18 },
+                        { x: wx + 30, y: winY + 18 },
+                        { x: wx + 74, y: height - 96 },
+                        { x: wx - 6, y: height - 96 },
+                    ], true);
+                    shaft.setBlendMode(Phaser.BlendModes.ADD);
+                }
+            });
         }
 
         if (interior.id === 'tavern') {
@@ -923,6 +1150,7 @@ export class InteriorScene extends Phaser.Scene {
                     callback: () => { fireFrame = (fireFrame + 1) % 4; fire.setTexture(`int_fire_${fireFrame}`); },
                     loop: true,
                 });
+                this._lightSources.push({ x: 80, y: height * 0.55, w: 190, h: 60, a: 0.55 });
             }
             if (this.textures.exists('int_deco_table')) {
                 this.add.image(width * 0.25, height * 0.65, 'int_deco_table').setScale(1).setDepth(5);
@@ -955,6 +1183,7 @@ export class InteriorScene extends Phaser.Scene {
                     callback: () => { fireFrame = (fireFrame + 1) % 4; forge.setTexture(`int_fire_${fireFrame}`); },
                     loop: true,
                 });
+                this._lightSources.push({ x: width * 0.85, y: height * 0.5, w: 200, h: 64, a: 0.6 });
             }
             // Поленница дров у горна
             if (this.textures.exists('int_deco_firewood')) {
@@ -966,7 +1195,8 @@ export class InteriorScene extends Phaser.Scene {
             }
             this.add.text(width * 0.2, 80, '⚔ 🔨 🛡', { fontSize: '32px' }).setOrigin(0.5).setDepth(10);
         } else if (interior.id === 'elder_house') {
-            // Дом старосты: стол, свеча, икона, сундук с документами, лавка, ПЕЧЬ
+            // Дом старосты: стол, свеча, икона, сундук с документами, лавка, ПЕЧЬ,
+            // КРАСНЫЙ УГОЛ с лампадой (раунд 9)
             if (this.textures.exists('int_deco_fireplace')) {
                 this.add.image(80, height * 0.5, 'int_deco_fireplace').setScale(1.2).setDepth(5);
             }
@@ -978,22 +1208,82 @@ export class InteriorScene extends Phaser.Scene {
                     loop: true,
                     callback: () => { ovenFrame = (ovenFrame + 1) % 4; oven.setTexture(`int_fire_${ovenFrame}`); },
                 });
+                this._lightSources.push({ x: 80, y: height * 0.58, w: 180, h: 56, a: 0.55 });
             }
             if (this.textures.exists('int_deco_table')) {
                 this.add.image(width * 0.5, height * 0.55, 'int_deco_table').setScale(1.2).setDepth(5);
             }
             if (this.textures.exists('int_deco_candle')) {
                 this.add.image(width * 0.5, height * 0.45, 'int_deco_candle').setScale(1.5).setDepth(6);
+                this._lightSources.push({ x: width * 0.5, y: height * 0.47, w: 80, h: 30, a: 0.4 });
             }
-            if (this.textures.exists('int_deco_icon_wall')) {
-                this.add.image(width - 80, height * 0.4, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
-            }
+            // Красный угол — передний (восточный) угол с иконами и лампадой
+            this.addRedCorner(width - 80, height * 0.34);
             if (this.textures.exists('int_deco_bench')) {
                 this.add.image(width * 0.2, height * 0.7, 'int_deco_bench').setScale(1).setDepth(5);
             }
             if (this.textures.exists('int_deco_chest')) {
                 this.add.image(width * 0.8, height * 0.7, 'int_deco_chest').setScale(1).setDepth(5);
             }
+        } else if (interior.id === 'barn') {
+            // Амбар общины (раунд 9): снопы, мешки зерна, поленница, весы
+            if (this.textures.exists('int_deco_hay')) {
+                this.add.image(width * 0.2, height * 0.42, 'int_deco_hay').setScale(1.4).setDepth(5);
+                this.add.image(width * 0.78, height * 0.62, 'int_deco_hay').setScale(1.1).setDepth(5);
+            }
+            // Мешки зерна — рисованные (текстуры мешков нет)
+            const sackGfx = this.add.graphics().setDepth(5);
+            [[width * 0.38, height * 0.62], [width * 0.44, height * 0.58], [width * 0.62, height * 0.66]].forEach(([sx, sy]) => {
+                sackGfx.fillStyle(0xb89b6a, 1);
+                sackGfx.fillRoundedRect(sx - 22, sy - 26, 44, 52, 10);
+                sackGfx.fillStyle(0x8a7048, 1);
+                sackGfx.fillRoundedRect(sx - 8, sy - 30, 16, 8, 3);   // завязка
+                sackGfx.lineStyle(2, 0x6a5232, 1);
+                sackGfx.strokeRoundedRect(sx - 22, sy - 26, 44, 52, 10);
+            });
+            if (this.textures.exists('int_deco_barrel')) {
+                this.add.image(width * 0.9, height * 0.45, 'int_deco_barrel').setScale(1.3).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_firewood')) {
+                this.add.image(width * 0.08, height * 0.72, 'int_deco_firewood').setScale(1.2).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_shelf')) {
+                this.add.image(width * 0.55, height * 0.3, 'int_deco_shelf').setScale(1.1).setDepth(4);
+            }
+            // Инструменты на стене — между окнами
+            this.add.text(width * 0.72, 78, '⚔ 🪣', { fontSize: '26px' }).setOrigin(0.5).setDepth(10);
+        } else if (interior.id === 'chapel') {
+            // Часовня (раунд 9): ПУСТОЙ киот, свечи, аналой, красный угол, крест.
+            // Ограблена: место иконы — сюжетная точка (осмотр даёт улику).
+            // Пустой киот — рисованная ниша с золотой окантовкой
+            const kiot = this.add.graphics().setDepth(4);
+            const kx = width * 0.65, ky = height * 0.4;
+            kiot.fillStyle(0x1e130a, 1);                       // тёмная ниша
+            kiot.fillRoundedRect(kx - 52, ky - 74, 104, 148, 10);
+            kiot.lineStyle(3, 0xc9a14a, 1);                    // золотая окантовка
+            kiot.strokeRoundedRect(kx - 52, ky - 74, 104, 148, 10);
+            kiot.lineStyle(2, 0xc9a14a, 0.6);
+            kiot.strokeCircle(kx, ky - 22, 30);                // пустой нимб
+            // След от иконы: чуть более светлая «тень» в нише
+            kiot.fillStyle(0x2c1e10, 1);
+            kiot.fillRect(kx - 26, ky - 52, 52, 104);
+            this.add.text(kx, ky + 62, 'слово Божие — в сердцах', {
+                fontSize: '10px', color: '#8a7248', fontFamily: 'Georgia, serif',
+            }).setOrigin(0.5).setDepth(5);
+            if (this.textures.exists('int_deco_analogion')) {
+                this.add.image(width * 0.4, height * 0.6, 'int_deco_analogion').setScale(1.2).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_candle')) {
+                [0.3, 0.9].forEach(fx => {
+                    this.add.image(width * fx, height * 0.52, 'int_deco_candle').setScale(1.3).setDepth(5);
+                    this._lightSources.push({ x: width * fx, y: height * 0.54, w: 90, h: 34, a: 0.5 });
+                });
+            }
+            this.add.text(width * 0.5, height * 0.13, '✝', {
+                fontSize: '44px', color: '#c9a14a',
+            }).setOrigin(0.5).setDepth(10);
+            // Красный угол с лампадой — единственный огонёк после кражи
+            this.addRedCorner(width - 64, height * 0.3, true);
         } else if (interior.id === 'church') {
             // Церковь: алтарь, иконостас, свечи, аналой, крест
             if (this.textures.exists('int_deco_table')) {
@@ -1007,6 +1297,8 @@ export class InteriorScene extends Phaser.Scene {
             if (this.textures.exists('int_deco_candle')) {
                 this.add.image(width * 0.42, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
                 this.add.image(width * 0.58, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
+                this._lightSources.push({ x: width * 0.42, y: height * 0.37, w: 80, h: 30, a: 0.4 });
+                this._lightSources.push({ x: width * 0.58, y: height * 0.37, w: 80, h: 30, a: 0.4 });
             }
             // Аналой (подставка для икон/книг)
             if (this.textures.exists('int_deco_analogion')) {
@@ -1016,7 +1308,8 @@ export class InteriorScene extends Phaser.Scene {
                 fontSize: '48px', color: '#c9a14a',
             }).setOrigin(0.5).setDepth(10);
         } else if (interior.id === 'villager_house_1') {
-            // Дом крестьянина Авдея: стол, лавка, кровать, поленница, стог сена, ПЕЧЬ
+            // Дом крестьянина Авдея: стол, лавка, кровать, поленница, стог сена, ПЕЧЬ,
+            // КРАСНЫЙ УГОЛ (раунд 9)
             // Русская печь с живым огнём — сердце избы
             if (this.textures.exists('int_deco_fireplace')) {
                 this.add.image(80, height * 0.45, 'int_deco_fireplace').setScale(1.2).setDepth(5);
@@ -1029,9 +1322,7 @@ export class InteriorScene extends Phaser.Scene {
                     loop: true,
                     callback: () => { ovenFrame = (ovenFrame + 1) % 4; oven.setTexture(`int_fire_${ovenFrame}`); },
                 });
-                // Тёплый отсвет печи на полу
-                this.add.ellipse(80, height * 0.62, 150, 44, 0xff9a3c, 0.14)
-                    .setBlendMode(Phaser.BlendModes.ADD).setDepth(4);
+                this._lightSources.push({ x: 80, y: height * 0.56, w: 180, h: 56, a: 0.55 });
             }
             if (this.textures.exists('int_deco_table')) {
                 this.add.image(width * 0.4, height * 0.55, 'int_deco_table').setScale(1).setDepth(5);
@@ -1048,11 +1339,11 @@ export class InteriorScene extends Phaser.Scene {
             if (this.textures.exists('int_deco_hay')) {
                 this.add.image(width * 0.9, height * 0.75, 'int_deco_hay').setScale(1).setDepth(5);
             }
-            if (this.textures.exists('int_deco_icon_wall')) {
-                this.add.image(width - 80, height * 0.4, 'int_deco_icon_wall').setScale(1).setDepth(5);
-            }
+            // Красный угол вместо одинокой иконы (раунд 9)
+            this.addRedCorner(width - 72, height * 0.32);
         } else if (interior.id === 'villager_house_2') {
-            // Дом вдовы Марфы: кровать, прялка, икона, колыбель, полка с травами, ПЕЧЬ
+            // Дом вдовы Марфы: кровать, прялка, икона, колыбель, полка с травами, ПЕЧЬ,
+            // КРАСНЫЙ УГОЛ (раунд 9)
             // Печь — у неё греются и готовят
             if (this.textures.exists('int_deco_fireplace')) {
                 this.add.image(80, height * 0.45, 'int_deco_fireplace').setScale(1.2).setDepth(5);
@@ -1065,8 +1356,7 @@ export class InteriorScene extends Phaser.Scene {
                     loop: true,
                     callback: () => { ovenFrame = (ovenFrame + 1) % 4; oven.setTexture(`int_fire_${ovenFrame}`); },
                 });
-                this.add.ellipse(80, height * 0.62, 150, 44, 0xff9a3c, 0.14)
-                    .setBlendMode(Phaser.BlendModes.ADD).setDepth(4);
+                this._lightSources.push({ x: 80, y: height * 0.56, w: 180, h: 56, a: 0.55 });
             }
             if (this.textures.exists('int_deco_bed')) {
                 this.add.image(width * 0.8, height * 0.55, 'int_deco_bed').setScale(1).setDepth(5);
@@ -1083,14 +1373,76 @@ export class InteriorScene extends Phaser.Scene {
             if (this.textures.exists('int_deco_shelf')) {
                 this.add.image(width * 0.15, height * 0.5, 'int_deco_shelf').setScale(1).setDepth(5);
             }
-            if (this.textures.exists('int_deco_icon_wall')) {
-                this.add.image(width - 80, height * 0.4, 'int_deco_icon_wall').setScale(1.2).setDepth(5);
-            }
+            // Красный угол вместо одинокой иконы (раунд 9)
+            this.addRedCorner(width - 76, height * 0.32);
             // Свеча
             if (this.textures.exists('int_deco_candle')) {
                 this.add.image(width * 0.15, height * 0.65, 'int_deco_candle').setScale(1.2).setDepth(6);
+                this._lightSources.push({ x: width * 0.15, y: height * 0.67, w: 70, h: 26, a: 0.35 });
             }
         }
+
+        // === Раунд 9: тёплые пятна света от источников (день — слабо, ночь — ярко) ===
+        this.renderInteriorLights();
+    }
+
+    /**
+     * Красный угол — передний (восточный) угол избы с иконами:
+     * доска-киот, божница, вышитое полотенце (рукавичник) и мерцающая лампада.
+     * withNiche — усиленный вариант для часовни (дополнительная божница).
+     */
+    addRedCorner(x, y, withNiche = false) {
+        // Доска-киот под иконами
+        this.add.rectangle(x, y - 10, 66, 50, 0x4a2f18, 1)
+            .setStrokeStyle(2, 0x2a1a08).setDepth(4);
+        if (this.textures.exists('int_deco_icon_wall')) {
+            this.add.image(x, y - 12, 'int_deco_icon_wall').setScale(0.6).setDepth(5);
+        }
+        if (withNiche && this.textures.exists('int_deco_icon_wall')) {
+            // вторая икона рядом (в часовне)
+            this.add.image(x - 44, y - 8, 'int_deco_icon_wall').setScale(0.4).setDepth(5);
+        }
+        // Красное полотенце с орнаментом (graphics)
+        const towel = this.add.graphics().setDepth(6);
+        towel.fillStyle(0x9b1c1c, 1);
+        towel.fillRect(x + 24, y - 6, 14, 38);
+        towel.fillStyle(0xe8d9a0, 1);
+        towel.fillRect(x + 24, y + 26, 14, 6);          // светлая кайма внизу
+        for (let i = 0; i < 3; i++) {
+            towel.fillRect(x + 24, y + 4 + i * 8, 14, 2);   // орнамент-полоски
+        }
+        // Лампада — тёплый огонёк под иконами (мерцает)
+        const lamp = this.add.image(x - 22, y + 8, this.textures.exists('particle_spark') ? 'particle_spark' : 'particle')
+            .setTint(0xffb84d)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setDepth(7)
+            .setScale(0.5);
+        this.tweens.add({
+            targets: lamp,
+            alpha: { from: 0.55, to: 0.9 },
+            scale: { from: 0.45, to: 0.6 },
+            duration: Phaser.Math.Between(500, 800),
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
+        // Отсвет лампады на стене/полу — как источник ночного света
+        this._lightSources.push({ x: x - 20, y: y + 26, w: 80, h: 34, a: 0.45 });
+    }
+
+    /**
+     * Раунд 9: рисует тёплые эллипсы над оверлеем (глубина 96 > 95),
+     * имитируя свет от печей/свечей/лампад в тёмное время суток.
+     * Днём остаётся лёгкая база (живой огонь виден и при свете).
+     */
+    renderInteriorLights() {
+        const dark = this._interiorDark || 0;
+        (this._lightSources || []).forEach(src => {
+            const base = 0.06;
+            const alpha = Math.min(0.85, base + dark * src.a);
+            this.add.ellipse(src.x, src.y, src.w, src.h, 0xff9a3c, alpha)
+                .setBlendMode(Phaser.BlendModes.ADD).setDepth(96);
+        });
     }
 
     updateHUD() {

@@ -72,6 +72,37 @@ export const INTERIORS = {
         decor: ['bed', 'icon'],
     },
 
+    // Амбар общины — подённая работа (молотьба зерна) за деньги.
+    // Без NPC: кнопки «Работать» и «Осмотреть зерно» — особый набор действий.
+    barn: {
+        id: 'barn',
+        name: 'Амбар общины',
+        npcId: null,
+        npcName: 'Работник не показывается',
+        npcSprite: 'npc_merchant',
+        portrait: null,
+        dialogueId: null,
+        description: 'Снопы под потолком, мешки с зерном, пахнет сухой соломой и мышами. Община хранит здесь общее зерно — за молотьбу платят по копеечке.',
+        decor: ['hay', 'sacks', 'firewood', 'shelf'],
+        noNpc: true,
+    },
+
+    // Часовня Николая Чудотворца — ограблена (сюжет: украдена икона).
+    // Молитва восстанавливает Волю, пожертвование — репутация,
+    // осмотр киота даёт уникальную улику.
+    chapel: {
+        id: 'chapel',
+        name: 'Часовня Николая Чудотворца',
+        npcId: null,
+        npcName: '',
+        npcSprite: null,
+        portrait: null,
+        dialogueId: null,
+        description: 'Пустой киот у алтарной стены. На полу — капли стеарина и обрывок пеньковой верёвки. После кражи иконы здесь тихо и пахнет холодным воском.',
+        decor: ['empty_kiot', 'candles', 'analogion', 'icons'],
+        noNpc: true,
+    },
+
     // Церковь со священником — выдаёт основное задание (поиск иконы)
     church: {
         id: 'church',
@@ -87,13 +118,18 @@ export const INTERIORS = {
 };
 
 // Координаты зданий в деревне (col, row — верхний-левый угол двери)
+// Раунд 9: + Амбар (северо-восток) и Часовня (юг, между домом Марфы и церковью).
+// Двери и дорожки строятся автоматически в world.buildMap(),
+// проходимость проверяет validateMap() (BFS от спавна).
 export const BUILDINGS = [
     { interiorId: 'elder_house', col: 4, row: 4, w: 3, h: 3, label: 'Староста' },
     { interiorId: 'tavern', col: 10, row: 4, w: 3, h: 3, label: 'Таверна' },
     { interiorId: 'blacksmith', col: 16, row: 4, w: 3, h: 3, label: 'Кузница' },
-    { interiorId: 'church', col: 20, row: 11, w: 3, h: 3, label: 'Церковь' },
+    { interiorId: 'barn', col: 20, row: 4, w: 3, h: 3, label: 'Амбар' },
     { interiorId: 'villager_house_1', col: 4, row: 11, w: 3, h: 3, label: 'Дом Авдея' },
     { interiorId: 'villager_house_2', col: 10, row: 11, w: 3, h: 3, label: 'Дом Марфы' },
+    { interiorId: 'chapel', col: 15, row: 11, w: 3, h: 3, label: 'Часовня' },
+    { interiorId: 'church', col: 20, row: 11, w: 3, h: 3, label: 'Церковь' },
 ];
 
 // Ворота на выходе из деревни (правый край карты)

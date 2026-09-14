@@ -181,6 +181,18 @@
         .nav-links a:hover::after {
             width: 100%;
         }
+        /* Scrollspy (раунд 9): активный раздел подсвечен золотом с подчёркиванием */
+        .nav-links a.active {
+            color: var(--gold-bright);
+        }
+        .nav-links a.active::after {
+            width: 100%;
+        }
+        .nav-links a:focus-visible {
+            outline: 2px solid var(--gold);
+            outline-offset: 3px;
+            border-radius: 2px;
+        }
 
         /* ===== HERO СЕКЦИЯ ===== */
         .hero {background:none;
