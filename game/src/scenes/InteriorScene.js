@@ -21,6 +21,7 @@ import {
     getVillageRep, changeVillageRep,
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
+import { STASHES, isOpenedToday, markOpened, rollLoot, lootDisplayName } from '../data/chests.js';
 
 export class InteriorScene extends Phaser.Scene {
     constructor() {
@@ -181,7 +182,6 @@ export class InteriorScene extends Phaser.Scene {
         // П.8: ВСЕ КНОПКИ ДЕЙСТВИЙ — В ОДНУ СТРОКУ, БЕЗ ПЕРЕКРЫТИЙ
         // ============================================================
         const btnY = height - 50;
-        const btnW = 130;
         const btnGap = 8;
 
         const player = this.registry.get('player');
@@ -202,6 +202,8 @@ export class InteriorScene extends Phaser.Scene {
             if (interior.id === 'tavern') {
                 buttons.push({ label: '\u{1F37B} Угостить (20\u0434)', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.treatEveryone(interior) });
                 buttons.push({ label: '\u{1F6D2} Купить еды', bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showTavernShop() });
+                // Раунд 12: свой тюк, оставленный на сохранение у тавернщика
+                buttons.push({ label: '\u{1F392} Мой тюк', bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('tavern') });
             } else if (interior.id === 'blacksmith') {
                 buttons.push({ label: '\u{1F6D2} Купить оружие', bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
             }
@@ -214,6 +216,8 @@ export class InteriorScene extends Phaser.Scene {
             // Амбар: подённая работа
             buttons.push({ label: '\u{2692} Работать (1 час)', bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInBarn() });
             buttons.push({ label: '\u{1F33E} Осмотреть зерно', bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectBarnGrain() });
+            // Раунд 12: свой работничий узел в углу
+            buttons.push({ label: '\u{1F392} Мой узел', bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('barn') });
         }
         const exitAction = () => {
             this.scene.stop();
@@ -222,6 +226,10 @@ export class InteriorScene extends Phaser.Scene {
         };
         buttons.push({ label: '\u{1F6AA} Выйти', bg: 0x4a3520, hover: 0x5a4530, cb: exitAction });
 
+        // Раунд 12 ФИКС: в таверне теперь 10 кнопок — фиксированные 130px
+        // давали 1372px и обрезали «Выйти» за краем экрана. Ширина подстраивается:
+        // все кнопки гарантированно помещаются с полями 16px по бокам.
+        const btnW = Math.min(130, Math.floor((width - 32 - (buttons.length - 1) * btnGap) / buttons.length));
         const totalW = buttons.length * btnW + (buttons.length - 1) * btnGap;
         const startX = (width - totalW) / 2 + btnW / 2;
         buttons.forEach((b, i) => {
@@ -884,6 +892,51 @@ export class InteriorScene extends Phaser.Scene {
     dayKey() {
         const t = getTime(this.registry);
         return t ? `${t.yearFromChrist}-${t.month}-${t.day}` : 'unknown';
+    }
+
+    /**
+     * Раунд 12: домашний тайник («свой тюк») — раз в игровой день.
+     * Работает через q.chestsOpened (те же помощники, что у уличных сундуков).
+     * Лут скромный: перекус и мелочь. Забирает 5 минут.
+     */
+    openStash(stashKey) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const stash = STASHES[stashKey];
+        if (!stash) return;
+
+        const q = this.registry.get('quest') || {};
+        const today = this.dayKey();
+        if (isOpenedToday(q, stash.id, today)) {
+            createDialog(this, '\u{1F392} Твой тюк',
+                `Сегодня ты уже заглядывал в ${stash.label} — там больше ничего нет.`,
+                [{ text: 'Ладно', callback: () => {} }]);
+            return;
+        }
+        markOpened(q, stash.id, today);
+        this.registry.set('quest', q);
+
+        const loot = rollLoot(stash);
+        let msg = 'Пусто... только старая тряпица.';
+        if (loot.kind === 'money') {
+            const amount = Phaser.Math.Between(loot.min, loot.max);
+            player.dengas = (player.dengas || 0) + amount;
+            msg = lootDisplayName(loot, amount);
+            this.audioManager.playSound('sfx_button_click');
+        } else if (loot.kind === 'apple') {
+            player.HP = Math.min(player.HPmax || player.HP + 2, player.HP + 2);
+            msg = lootDisplayName(loot);
+            this.audioManager.playSound('sfx_heal');
+        }
+        this.registry.set('player', player);
+        this.updateHUD();
+        tickTime(this.registry, 5);
+        ActionLog.add(this.registry, `Заглянул в ${stash.label}: ${msg}.`);
+
+        createDialog(this, '\u{1F392} Твой тюк',
+            `Ты развязываешь узел и проверяешь припасы. ${stash.label} — тут всегда найдётся что-то пригодное.\n\n${msg}`,
+            [{ text: 'Прибрать узел', callback: () => {} }]);
     }
 
     /**

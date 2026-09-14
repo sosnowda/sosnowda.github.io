@@ -621,7 +621,15 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     dialog.add(contentText);
     if (portraitImg) dialog.add(portraitFrame);
     if (portraitImg) dialog.add(portraitImg);
-    actionContainers.forEach((btn) => dialog.add(btn));
+    actionContainers.forEach((btn) => {
+        // Раунд 12 ФИКС: кнопка наследует рендер от контейнера диалога
+        // (scrollFactor 0), но её собственный scrollFactor оставался 1 —
+        // хит-тест считал кнопку в мировых координатах, и при прокрученной
+        // камере (деревня: игрок у пруда/костра) клики промахивались мимо
+        // кнопок на величину скролла. Обнуляем — координаты совпадают.
+        if (typeof btn.setScrollFactor === 'function') btn.setScrollFactor(0);
+        dialog.add(btn);
+    });
 
     // ----- Раскладка содержимого -----
     const layout = () => {

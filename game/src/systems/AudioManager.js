@@ -292,7 +292,11 @@ export default class AudioManager {
     }
 
     playSound(key, config = {}) {
-        if (!this.sounds[key]) {
+        // Раунд 12 ФИКС: реальные SFX загружаются в this.realSounds (_loadRealSounds),
+        // а this.sounds никто не наполняет (addSound никем не вызывается) —
+        // поэтому каждый playSound('sfx_*') падал в warn «not found» без звука.
+        const sound = this.sounds[key] || this.realSounds[key];
+        if (!sound) {
             console.warn(`Sound "${key}" not found`);
             return;
         }
@@ -301,7 +305,7 @@ export default class AudioManager {
             volume: this.sfxMuted ? 0 : this.sfxVolume
         };
 
-        this.sounds[key].play({ ...defaultConfig, ...config });
+        sound.play({ ...defaultConfig, ...config });
     }
 
     // ==========================================

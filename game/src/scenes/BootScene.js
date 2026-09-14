@@ -302,6 +302,129 @@ export class BootScene extends Phaser.Scene {
         g.fillRect(2, 6, 2, 2); g.fillRect(5, 4, 2, 4); g.fillRect(11, 3, 2, 5);
         g.generateTexture('deco_grass_tuft', 14, 8);
 
+        // ============================================================
+        // РАУНД 12: пруд, причал, костёр, крест, камыш
+        // ============================================================
+
+        // ===== Мостки причала (32×32): доски поперёк хода + гвозди =====
+        g.clear();
+        g.fillStyle(0x7a5a34, 1); g.fillRect(0, 0, 32, 32);            // основа
+        // Доски (горизонтальные плашки с зазорами и волокнами)
+        for (let i = 0; i < 4; i++) {
+            const yy = i * 8;
+            g.fillStyle(0x8a6a40, 1); g.fillRect(0, yy, 32, 7);
+            g.fillStyle(0x9a7a4c, 1); g.fillRect(0, yy, 32, 1);        // блик сверху
+            g.fillStyle(0x6a4a2a, 1); g.fillRect(0, yy + 6, 32, 1);    // тень снизу
+            g.fillStyle(0x6a4a2a, 1);                                   // трещины волокон
+            g.fillRect(6 + (i * 7) % 12, yy + 2, 5, 1);
+            g.fillRect(20 - (i * 5) % 10, yy + 4, 4, 1);
+        }
+        // Кованые гвозди по краям досок
+        g.fillStyle(0x3d3d3d, 1);
+        g.fillRect(2, 3, 1, 1); g.fillRect(29, 3, 1, 1);
+        g.fillRect(2, 19, 1, 1); g.fillRect(29, 19, 1, 1);
+        g.generateTexture('tile_pier', 32, 32);
+
+        // ===== Костёр — основание (32×22): каменное кольцо + поленья =====
+        g.clear();
+        // Каменное кольцо (сером-бурые камни по кругу)
+        const stoneCol = [0x8a8078, 0x7a7068, 0x968c82];
+        const stones = [[2, 12], [6, 16], [12, 18], [19, 17], [25, 14], [27, 9], [22, 4], [15, 2], [8, 4], [4, 8]];
+        stones.forEach(([sx, sy], i) => {
+            g.fillStyle(stoneCol[i % 3], 1);
+            g.fillRect(sx, sy, 5, 4);
+            g.fillStyle(0xa89e92, 1);
+            g.fillRect(sx, sy, 5, 1);                                   // блик
+        });
+        // Поленья крест-накрест (тёмный дуб, обугленные концы)
+        g.fillStyle(0x4a3018, 1); g.fillRect(8, 10, 16, 4);            // полено 1
+        g.fillStyle(0x2a1a0e, 1); g.fillRect(8, 10, 4, 4);             // обугленный левый конец
+        g.fillStyle(0x5a4028, 1); g.fillRect(10, 11, 12, 1);           // волокно
+        g.fillStyle(0x4a3018, 1); g.fillRect(11, 13, 14, 4);           // полено 2
+        g.fillStyle(0x2a1a0e, 1); g.fillRect(22, 13, 3, 4);            // обугленный правый конец
+        g.fillStyle(0x5a4028, 1); g.fillRect(13, 14, 10, 1);           // волокно
+        // Угли между поленьями (тлеющие)
+        g.fillStyle(0xd95f2a, 1); g.fillRect(13, 11, 3, 2);
+        g.fillStyle(0xe87a3a, 1); g.fillRect(17, 12, 2, 1);
+        g.generateTexture('campfire_base', 32, 22);
+
+        // ===== Костёр — 3 кадра пламени (20×26), рисуются поверх основания =====
+        const flameFrames = [
+            // Кадр 0: язык пламени влево
+            { inner: [8, 10, 4, 12], mid: [6, 4, 8, 18], outer: [4, 0, 12, 22] },
+            // Кадр 1: пламя вверх (пик)
+            { inner: [8, 12, 4, 10], mid: [7, 6, 6, 16], outer: [5, 0, 10, 22] },
+            // Кадр 2: язык пламени вправо
+            { inner: [8, 10, 4, 12], mid: [7, 4, 7, 18], outer: [5, 0, 11, 22] },
+        ];
+        flameFrames.forEach((f, i) => {
+            g.clear();
+            // Внешний слой — тёмно-оранжевый
+            g.fillStyle(0xd95f2a, 1);
+            g.fillRect(f.outer[0], f.outer[1], f.outer[2], f.outer[3]);
+            // Средний — ярко-оранжевый (уже)
+            g.fillStyle(0xf08a2a, 1);
+            g.fillRect(f.mid[0], f.mid[1], f.mid[2], f.mid[3]);
+            // Внутренний — жёлтое ядро
+            g.fillStyle(0xf8c84a, 1);
+            g.fillRect(f.inner[0], f.inner[1], f.inner[2], f.inner[3]);
+            // Белая сердцевина у основания
+            g.fillStyle(0xfff0c0, 1);
+            g.fillRect(8, 18, 4, 4);
+            g.generateTexture(`campfire_flame_${i}`, 20, 26);
+        });
+
+        // ===== Каменный крест (22×34): замшелый валун-крест с резьбой =====
+        g.clear();
+        // Основание-подножие
+        g.fillStyle(0x6a6a60, 1); g.fillRect(3, 29, 16, 5);
+        g.fillStyle(0x7a7a70, 1); g.fillRect(3, 29, 16, 1);
+        // Столб
+        g.fillStyle(0x8a8a80, 1); g.fillRect(8, 8, 6, 22);
+        g.fillStyle(0x9a9a90, 1); g.fillRect(8, 8, 2, 22);             // блик слева
+        g.fillStyle(0x6a6a60, 1); g.fillRect(12, 8, 2, 22);            // тень справа
+        // Перекладина (верхняя короткая и средняя — православный стиль)
+        g.fillStyle(0x8a8a80, 1); g.fillRect(3, 4, 16, 5);
+        g.fillStyle(0x9a9a90, 1); g.fillRect(3, 4, 16, 1);
+        g.fillStyle(0x6a6a60, 1); g.fillRect(3, 7, 16, 2);
+        g.fillStyle(0x8a8a80, 1); g.fillRect(5, 11, 12, 4);            // вторая перекладина
+        g.fillStyle(0x9a9a90, 1); g.fillRect(5, 11, 12, 1);
+        // Резьба-зарубки на столбе
+        g.fillStyle(0x5a5a50, 1);
+        g.fillRect(10, 17, 2, 1); g.fillRect(10, 20, 2, 1); g.fillRect(10, 23, 2, 1);
+        // Мох у подножия и на плече перекладины
+        g.fillStyle(0x4d7d3a, 1);
+        g.fillRect(2, 31, 4, 2); g.fillRect(16, 30, 4, 3); g.fillRect(4, 4, 3, 2);
+        g.fillStyle(0x3f6b2f, 1);
+        g.fillRect(17, 32, 2, 1); g.fillRect(3, 32, 2, 1);
+        // Трещина
+        g.fillStyle(0x5a5a50, 1); g.fillRect(9, 13, 1, 4);
+        g.generateTexture('deco_cross', 22, 34);
+
+        // ===== Камыш (16×30): три стебля с рогозовыми шишками =====
+        g.clear();
+        // Стебель 1 (прямой, с шишкой)
+        g.fillStyle(0x4d6b2f, 1); g.fillRect(4, 8, 2, 22);
+        g.fillStyle(0x6a4a2a, 1); g.fillRect(3, 2, 4, 7);              // шишка рогоза
+        g.fillStyle(0x7d5834, 1); g.fillRect(3, 2, 4, 1);
+        // Стебель 2 (наклонён вправо — рисуем сегментами)
+        g.fillStyle(0x5d7d3a, 1);
+        g.fillRect(8, 24, 2, 6); g.fillRect(9, 18, 2, 7); g.fillRect(11, 14, 2, 5);
+        g.fillRect(13, 11, 2, 4);
+        g.fillStyle(0x7d9d4a, 1); g.fillRect(13, 11, 1, 4);            // блик
+        // Стебель 3 (короткий, без шишки)
+        g.fillStyle(0x4d6b2f, 1); g.fillRect(2, 16, 2, 14);
+        // Метёлка наверху стебля 2
+        g.fillStyle(0xc9b06a, 1); g.fillRect(14, 8, 1, 3);
+        g.generateTexture('deco_reed', 16, 30);
+
+        // ===== Лист кувшинки (16×10): зелёный диск с вырезом над водой =====
+        g.clear();
+        g.fillStyle(0x3f7d3a, 1); g.fillEllipse(8, 6, 16, 9);
+        g.fillStyle(0x4d8d44, 1); g.fillEllipse(7, 5, 10, 5);          // внутренний блик
+        g.fillStyle(0x2a5a2a, 1); g.fillRect(8, 2, 1, 4);              // вырез к центру
+        g.generateTexture('deco_lilypad', 16, 10);
+
         g.destroy();
     }
 

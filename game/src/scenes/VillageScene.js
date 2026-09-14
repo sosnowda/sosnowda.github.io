@@ -14,7 +14,7 @@ import { VirtualControls } from '../systems/VirtualControls.js';
 import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd } from '../data/thief.js';
 import { formatMoney } from '../systems/Character.js';
-import { createButton } from '../utils/ui.js';
+import { createButton, createDialog } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, formatDateTime, getSeason } from '../systems/TimeSystem.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
 import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, dayKeyOf } from '../data/chests.js';
@@ -76,7 +76,8 @@ export class VillageScene extends Phaser.Scene {
                 img.setScale(ts / 32);
                 if (angle) img.setAngle(angle);
                 // Y-сортировка высоких объектов; земля (трава/дороги/вода) — глубина 0
-                if (t === 'T' || t === '#' || t === 'W') {
+                // Раунд 12: крест 'X' тоже высокий (Y-сортировка за/перед игроком)
+                if (t === 'T' || t === '#' || t === 'W' || t === 'X') {
                     img.setDepth(y + 0.4);
                 } else {
                     img.setDepth(0);
@@ -254,6 +255,11 @@ export class VillageScene extends Phaser.Scene {
         // ----- Полевые цветы/кочки и сундуки с лутом (раунд 11) -----
         this.scatterFlowers(ts);
         this.spawnChests(ts);
+
+        // ----- Раунд 12: костёр, лампада креста и декор пруда -----
+        this.createCampfire(ts);
+        this.createCrossGlow(ts);
+        this.decoratePond(ts);
 
         // ----- Метка ворот -----
         const gatePx = (MAP_W - 1) * ts + ts / 2;
@@ -829,6 +835,30 @@ export class VillageScene extends Phaser.Scene {
                         nearest = { type: 'gate', label: 'Выйти из деревни' };
                     }
                 }
+
+                // ----- Раунд 12: костёр, рыбалка у пруда, каменный крест -----
+                const tile = (this.map[cy] && this.map[cy][cx] !== undefined) ? this.map[cy][cx] : null;
+                if (tile === 'F') {
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        nearest = { type: 'campfire', label: 'Отдохнуть у костра (1 час)' };
+                    }
+                }
+                if (tile === '~' || tile === 'P') {
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        nearest = { type: 'fish', label: 'Рыбалка' };
+                    }
+                }
+                if (tile === 'X') {
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        nearest = { type: 'cross', label: 'Помолиться у креста (1 час)' };
+                    }
+                }
             }
         }
 
@@ -911,6 +941,24 @@ export class VillageScene extends Phaser.Scene {
                     a.setAlpha(Math.min(1, day * 1.5));
                 });
             }
+
+            // Раунд 12: костёр — тёплый свет с живым мерцанием
+            if (this.campfireGlow) {
+                const nowGlow = this.time.now;
+                const flick = 0.85 + 0.15 * Math.sin(nowGlow * 0.011) * Math.sin(nowGlow * 0.007);
+                this.campfireGlow.setAlpha((0.10 + dark * 0.24) * flick);
+            }
+            // Раунд 12: лампада у каменного креста — тихий свет ночью
+            if (this.crossGlow) {
+                this.crossGlow.setAlpha(dark * 0.22);
+            }
+            // Раунд 12: зимний пруд — лёд, кувшинки спрятаны, камыш блёклый
+            if (this.waterTiles) {
+                const winter = getSeason(timeState.month) === 'winter';
+                this.waterTiles.forEach(w => w.img.setTint(winter ? 0xb8d4e8 : 0xffffff));
+                if (this.lilypads) this.lilypads.forEach(p => p.setVisible(!winter));
+                if (this.reeds) this.reeds.forEach(r => r.setAlpha(winter ? 0.75 : 1));
+            }
         }
         
         if (q.currentObjective) {
@@ -932,6 +980,12 @@ export class VillageScene extends Phaser.Scene {
             // entry {data, img, marker} из this.chests
             const entry = (this.chests || []).find(e => e.data.id === this.nearestInteractable.chest.id);
             this.openChest(entry);
+        } else if (this.nearestInteractable.type === 'campfire') {
+            this.restAtCampfire();
+        } else if (this.nearestInteractable.type === 'fish') {
+            this.goFishing();
+        } else if (this.nearestInteractable.type === 'cross') {
+            this.prayAtCross();
         }
     }
 
@@ -1239,7 +1293,8 @@ export class VillageScene extends Phaser.Scene {
             { tex: 'animal_chicken_walk', col: 20, row: 7,  scale: 0.8,  speed: 14, eatChance: 0.3 },
             { tex: 'animal_chicken_walk', col: 22, row: 7,  scale: 0.8,  speed: 14, eatChance: 0.3 },
             { tex: 'animal_chicken_walk', col: 21, row: 10, scale: 0.85, speed: 14, eatChance: 0.3 },
-            { tex: 'animal_chicken_walk', col: 9,  row: 14, scale: 0.8,  speed: 14, eatChance: 0.3 },
+            // Раунд 12: курица (9,14) переехала — на её месте теперь пруд
+            { tex: 'animal_chicken_walk', col: 12, row: 14, scale: 0.8,  speed: 14, eatChance: 0.3 },
             { tex: 'animal_cow_walk',     col: 8,  row: 12, scale: 1.35, speed: 8,  eatChance: 0.5 },
         ];
 
@@ -1289,17 +1344,27 @@ export class VillageScene extends Phaser.Scene {
             const state = a.getData('state');
 
             if (state === 'idle' && timer <= 0) {
-                // Часть времени — «еда» (клевание/щипание травы), иначе прогулка
-                if (Math.random() < a.getData('eatChance') && this.textures.exists(`${tex}_eat`)) {
-                    a.play(`${tex}_eat`);
+                // Часть времени — «еда» (клевание/щипание травы), иначе прогулка.
+                // Раунд 12 ФИКС: анимация еды называется animal_chicken_eat
+                // (без _walk), а не animal_chicken_walk_eat.
+                const eatAnim = `${tex.replace('_walk', '_eat')}`;
+                if (Math.random() < a.getData('eatChance') && this.anims.exists(eatAnim)) {
+                    a.play(eatAnim);
                     a.setData('state', 'eat');
                     a.setData('stateTimer', 1800 + Math.random() * 1500);
                     return;
                 }
                 const homeCol = a.getData('homeCol');
                 const homeRow = a.getData('homeRow');
-                const newCol = homeCol + (Math.random() * 4 - 2);
-                const newRow = homeRow + (Math.random() * 4 - 2);
+                let newCol = homeCol + (Math.random() * 4 - 2);
+                let newRow = homeRow + (Math.random() * 4 - 2);
+                // Раунд 12 ФИКС: животные не наступают на непроходимое
+                // (вода, камни, колодец, сундуки, крест) — цель прогулки
+                // проверяется по SOLID, при попадании остаётся на месте.
+                if (this.isSolidTile(newCol, newRow)) {
+                    newCol = homeCol;
+                    newRow = homeRow;
+                }
                 a.setData('targetX', newCol * ts + ts / 2);
                 a.setData('targetY', newRow * ts + ts / 2);
                 a.setData('state', 'walk');
@@ -1326,7 +1391,9 @@ export class VillageScene extends Phaser.Scene {
                         : (dy > 0 ? 'down' : 'up');
                     if (dir !== a.getData('dir')) {
                         a.setData('dir', dir);
-                        a.play(`${tex}_walk_${dir}`);
+                        // Раунд 12 ФИКС: у животных walk-анимации называются
+                        // animal_chicken_walk_down (без двойного _walk_).
+                        a.play(`${tex}_${dir}`);
                     }
                 } else {
                     a.setData('state', 'idle');
@@ -1443,6 +1510,258 @@ export class VillageScene extends Phaser.Scene {
 
         tickTime(this.registry, 5);
         ActionLog.add(this.registry, `Обыскал «${chest.label}»: ${msg}.`);
+    }
+
+    // ================================================================
+    // РАУНД 12: костёр, каменный крест, пруд с причалом и рыбалка
+    // ================================================================
+
+    /**
+     * Костёр у таверны (тайл 'F'): анимированное пламя из 3 кадров, тёплый
+     * свет с мерцанием (updateHUD), редкий дымок. Отдых — через tryInteract.
+     */
+    createCampfire(ts) {
+        const col = 12, row = 7;
+        const cx = col * ts + ts / 2;
+        const cy = row * ts + ts / 2;
+
+        // Мягкая тень под камнями
+        this.add.ellipse(cx, cy + 10, 42, 12, 0x000000, 0.22).setDepth(row + 0.3);
+        // Основание: каменное кольцо + поленья (тайл 'F' уже нарисовал траву)
+        this.add.image(cx, cy + 4, 'campfire_base').setScale(1.5).setDepth(row + 0.4);
+
+        // Пламя — 3 кадра поверх основания, ADD-режим для жара
+        this.campfireFlame = this.add.image(cx, cy - 6, 'campfire_flame_0')
+            .setScale(1.4)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setDepth(row + 0.5);
+        let flameFrame = 0;
+        this.time.addEvent({
+            delay: 180,
+            loop: true,
+            callback: () => {
+                flameFrame = (flameFrame + 1) % 3;
+                if (this.campfireFlame && this.textures.exists(`campfire_flame_${flameFrame}`)) {
+                    this.campfireFlame.setTexture(`campfire_flame_${flameFrame}`);
+                }
+            },
+        });
+
+        // Тёплый свет на земле — яркость задаётся в updateHUD (день/ночь + мерцание)
+        this.campfireGlow = this.add.ellipse(cx, cy + 6, 100, 54, 0xff9a3a, 0)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setDepth(row + 0.35);
+
+        // Дымок над костром (реже, чем из труб домов)
+        this.time.addEvent({
+            delay: 1400,
+            loop: true,
+            callback: () => this.puffSmoke(cx + 4, cy - 20, row + 0.6),
+        });
+    }
+
+    /**
+     * Каменный крест (3,12): «лампада» — мягкое золотое свечение у подножия
+     * ночью (альфа задаётся в updateHUD по dark-коэффициенту).
+     */
+    createCrossGlow(ts) {
+        const cx = 3 * ts + ts / 2;
+        const cy = 12 * ts + ts / 2;
+        this.crossGlow = this.add.ellipse(cx, cy + 8, 46, 18, 0xffc866, 0)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setDepth(12 + 0.35);
+    }
+
+    /**
+     * Декор пруда: камыш по берегам (с покачиванием) и кувшинки на воде.
+     * Камыш ищется автоматически: береговой тайл ('.'/'S') вплотную к воде;
+     * зимой камыш блёкнет, кувшинки прячутся (updateHUD).
+     */
+    decoratePond(ts) {
+        this.reeds = [];
+        this.lilypads = [];
+        const reedSpots = new Set();
+        for (let y = 1; y < MAP_H - 1; y++) {
+            for (let x = 1; x < MAP_W - 1; x++) {
+                if (this.map[y][x] !== '~') continue;
+                const px = x * ts + ts / 2;
+                const py = y * ts + ts / 2;
+                // Кувшинки: на части водных тайлов (не под причалом)
+                if ((x + y) % 2 === 0 || (x * 7 + y * 3) % 4 === 0) {
+                    this.lilypads.push(this.add.image(px - 8, py + 7, 'deco_lilypad')
+                        .setScale(1.4)
+                        .setDepth(y + 0.2));
+                }
+                // Камыш: соседний с водой берег, не на южной дороге (ряд 16)
+                [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dx, dy]) => {
+                    const bx = x + dx;
+                    const by = y + dy;
+                    const bt = (this.map[by] && this.map[by][bx] !== undefined) ? this.map[by][bx] : null;
+                    if (bt !== '.' && bt !== 'S') return;
+                    if (by >= MAP_H - 2) return;
+                    const key = `${bx},${by}`;
+                    if (reedSpots.has(key) || reedSpots.size >= 8) return;
+                    reedSpots.add(key);
+                    const reed = this.add.image(
+                        bx * ts + ts / 2 + dx * ts * 0.28,
+                        by * ts + ts / 2 + dy * ts * 0.28,
+                        'deco_reed'
+                    ).setScale(1.5).setDepth(by + 0.42);
+                    this.reeds.push(reed);
+                    this.tweens.add({
+                        targets: reed,
+                        angle: { from: -3, to: 3 },
+                        duration: 1500 + (bx * 137) % 600,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: 'Sine.easeInOut',
+                    });
+                });
+            }
+        }
+    }
+
+    /** Непроходим ли тайл (для блуждания живности). Вне карты — непроходим. */
+    isSolidTile(col, row) {
+        if (!this.map || !this.map[row] || this.map[row][col] === undefined) return true;
+        return SOLID.has(this.map[row][col]);
+    }
+
+    /**
+     * Раунд 12: отдых у костра — 1 час, HP и Воля до максимума (§5.4 роадмапа).
+     * Если силы полны — время не тратится.
+     */
+    restAtCampfire() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const hpMax = player.HPmax || player.HP;
+        const mpMax = player.MPmax || player.MP;
+        if (player.HP >= hpMax && player.MP >= mpMax) {
+            this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Ты полон сил', '#b8a88a');
+            ActionLog.add(this.registry, 'Погрелся у костра — силы и так полны.');
+            return;
+        }
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+        createDialog(this, '🔥 Костёр',
+            'Тёплый огонь разгоняет усталость. Присесть на минутку — а очнёшься через час крепкого сна.\n\nОтдохнуть у костра? (1 час — здоровье и Воля восстановятся полностью.)',
+            [
+                { text: 'Присесть у огня', callback: () => {
+                    close();
+                    this.cameras.main.fadeOut(700, 0, 0, 0);
+                    this.time.delayedCall(750, () => {
+                        tickTime(this.registry, 60);
+                        player.HP = hpMax;
+                        player.MP = mpMax;
+                        this.registry.set('player', player);
+                        this.updateHUD();
+                        this.audioManager.playSound('sfx_heal');
+                        ActionLog.add(this.registry, 'Отдохнул у костра — час крепкого сна, силы восстановились.');
+                        this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Силы восстановились', '#8fdc7a');
+                        this.cameras.main.fadeIn(700, 0, 0, 0);
+                    });
+                } },
+                { text: 'Не сейчас', callback: close },
+            ]);
+    }
+
+    /**
+     * Раунд 12: рыбалка у пруда (§5.1 роадмапа) — E у воды или на причале.
+     * Первый улов за день: свежая рыба +3 ❤, уходит 1 час. Повторно —
+     * «не клюёт», уходит 15 минут. Зимой — лунка во льду.
+     */
+    goFishing() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const q = this.registry.get('quest') || {};
+        const timeState = getTime(this.registry);
+        const today = dayKeyOf(timeState);
+        const winter = timeState ? getSeason(timeState.month) === 'winter' : false;
+        const caught = isOpenedToday(q, 'fish_daily', today);
+
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+        const title = winter ? '🎣 Лунка во льду' : '🎣 Рыбалка';
+
+        if (!caught) {
+            this.cameras.main.fadeOut(500, 0, 0, 0);
+            this.time.delayedCall(550, () => {
+                tickTime(this.registry, 60);
+                markOpened(q, 'fish_daily', today);
+                this.registry.set('quest', q);
+                const heal = 3;
+                player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
+                this.registry.set('player', player);
+                this.updateHUD();
+                this.audioManager.playSound('sfx_heal');
+                this.cameras.main.fadeIn(500, 0, 0, 0);
+                ActionLog.add(this.registry, winter
+                    ? 'Порыбачил через лунку — налим к ужину (+3 ❤).'
+                    : 'Наловил рыбы к обеду (+3 ❤).');
+                createDialog(this, title,
+                    (winter
+                        ? 'Прорубаешь лунку и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим. Ужин обеспечен.'
+                        : 'Забросил удочку с причала... Через час в корзине пара ершей и лещ. Свежая рыба — это силы.')
+                    + '\n\nСвежая рыба: +3 ❤.',
+                    [{ text: 'Взять улов', callback: close }]);
+            });
+        } else {
+            tickTime(this.registry, 15);
+            this.updateHUD();
+            ActionLog.add(this.registry, 'Порыбачил — клёв плохой.');
+            createDialog(this, title,
+                'Клюёт плохо: рыба сыта или уже видела твою наживку. Попробуй завтра.',
+                [{ text: 'Смотать удочку', callback: close }]);
+        }
+    }
+
+    /**
+     * Раунд 12: молитва у каменного креста — 1 час, +2..5 Воли, раз в день
+     * (тихая альтернатива часовне, §5.1 роадмапа).
+     */
+    prayAtCross() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const q = this.registry.get('quest') || {};
+        const today = dayKeyOf(getTime(this.registry));
+        if (isOpenedToday(q, 'cross_prayer', today)) {
+            this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Душа уже очистилась сегодня', '#b8a88a');
+            ActionLog.add(this.registry, 'Помолился у креста (уже молился сегодня).');
+            return;
+        }
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.time.delayedCall(550, () => {
+            tickTime(this.registry, 60);
+            markOpened(q, 'cross_prayer', today);
+            this.registry.set('quest', q);
+            const gain = Phaser.Math.Between(2, 5);
+            player.MP = Math.min(player.MPmax || player.MP + gain, player.MP + gain);
+            this.registry.set('player', player);
+            this.updateHUD();
+            this.audioManager.playSound('sfx_level_up');
+            // Золотые искры у подножия креста
+            const cx = 3 * this.tileSize + this.tileSize / 2;
+            const cy = 12 * this.tileSize + this.tileSize / 2;
+            const burst = this.add.particles(cx, cy, 'particle_spark', {
+                speed: { min: 18, max: 52 },
+                lifespan: 900,
+                scale: { start: 0.5, end: 0 },
+                tint: 0xffd700,
+                emitting: false,
+            }).setDepth(150);
+            burst.explode(10);
+            this.time.delayedCall(1300, () => burst.destroy());
+            this.cameras.main.fadeIn(500, 0, 0, 0);
+            ActionLog.add(this.registry, `Помолился у каменного креста — Воля +${gain}.`);
+            createDialog(this, '🕯 Молитва у креста',
+                `Древний крест у околицы помнит ещё прадедов. Ты кладёшь ладонь на тёплый камень, и тревога отпускает.\n\nВоля восстановлена: +${gain}.`,
+                [{ text: 'Поклониться кресту', callback: close }]);
+        });
     }
 
     /**

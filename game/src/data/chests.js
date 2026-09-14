@@ -65,6 +65,30 @@ export function chestAt(col, row) {
     return CHESTS.find(c => c.col === col && c.row === row) || null;
 }
 
+// Раунд 12: домашние тайники в интерьерах («свой тюк» — по одному в день).
+// Работают через те же q.chestsOpened + dayKey, что и уличные сундуки,
+// но открываются КНОПКОЙ в интерьере (InteriorScene), а не по E на карте.
+export const STASHES = {
+    tavern: {
+        id: 'stash_tavern',
+        label: 'твой тюк за лавкой',
+        // У тавернщика на сохранении: перекус и мелочь на дорогу
+        loot: [
+            { kind: 'apple', weight: 5 },
+            { kind: 'money', min: 1, max: 3, weight: 5 },
+        ],
+    },
+    barn: {
+        id: 'stash_barn',
+        label: 'твой узел в углу амбара',
+        // Работничий узел: хлеб да несколько монет за смену
+        loot: [
+            { kind: 'apple', weight: 6 },
+            { kind: 'money', min: 2, max: 4, weight: 4 },
+        ],
+    },
+};
+
 // Ключ игрового дня из timeState (та же формула, что в InteriorScene.dayKey)
 export function dayKeyOf(timeState) {
     return timeState
