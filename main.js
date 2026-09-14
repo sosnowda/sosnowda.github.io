@@ -151,3 +151,157 @@ document.addEventListener('DOMContentLoaded', function() {
         lbImg.style.cursor = '';
     });
 });
+
+// ============================================================
+// НОВЫЕ ФУНКЦИИ (улучшения сайта)
+// ============================================================
+
+// Гамбургер-меню для мобильных
+document.addEventListener('DOMContentLoaded', function() {
+    var toggle = document.querySelector('.mobile-menu-toggle');
+    var nav = document.querySelector('.nav-links');
+    if (toggle && nav) {
+        toggle.addEventListener('click', function() {
+            var isOpen = toggle.getAttribute('aria-expanded') === 'true';
+            toggle.setAttribute('aria-expanded', !isOpen);
+            nav.classList.toggle('open');
+        });
+        // Закрыть меню при клике на ссылку
+        nav.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function() {
+                toggle.setAttribute('aria-expanded', 'false');
+                nav.classList.remove('open');
+            });
+        });
+    }
+
+    // Lightbox для скриншотов
+    var screenshots = document.querySelectorAll('.screenshot-card');
+    if (screenshots.length > 0) {
+        var slb = document.createElement('div');
+        slb.className = 'screenshot-lightbox';
+        slb.innerHTML = '<span class="screenshot-lightbox-close" aria-label="Закрыть">×</span><img src="" alt="">';
+        document.body.appendChild(slb);
+        var slbImg = slb.querySelector('img');
+        var slbClose = slb.querySelector('.screenshot-lightbox-close');
+
+        screenshots.forEach(function(card) {
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', 'Открыть скриншот: ' + (card.querySelector('.screenshot-caption')?.textContent || ''));
+            card.addEventListener('click', function() {
+                var src = card.getAttribute('data-src');
+                slbImg.src = src;
+                slb.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            });
+            card.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    card.click();
+                }
+            });
+        });
+
+        function closeSlb() {
+            slb.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        slbClose.addEventListener('click', closeSlb);
+        slb.addEventListener('click', function(e) {
+            if (e.target === slb) closeSlb();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && slb.classList.contains('open')) closeSlb();
+        });
+    }
+
+    // Параллакс для hero-изображения
+    var heroImg = document.querySelector('.hero-image');
+    if (heroImg) {
+        var ticking = false;
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                window.requestAnimationFrame(function() {
+                    var scrolled = window.pageYOffset;
+                    if (scrolled < 600) {
+                        heroImg.style.transform = 'translateY(' + scrolled * 0.3 + 'px)';
+                    }
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+    }
+
+    // Золотые частицы на фоне (как в TitleScene игры)
+    var particleCanvas = document.createElement('canvas');
+    particleCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.4;';
+    particleCanvas.id = 'particles-canvas';
+    document.body.appendChild(particleCanvas);
+    var pctx = particleCanvas.getContext('2d');
+    function resizeCanvas() {
+        particleCanvas.width = window.innerWidth;
+        particleCanvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    var particles = [];
+    for (var i = 0; i < 30; i++) {
+        particles.push({
+            x: Math.random() * particleCanvas.width,
+            y: Math.random() * particleCanvas.height,
+            r: 1 + Math.random() * 2,
+            vy: 0.2 + Math.random() * 0.4,
+            alpha: 0.3 + Math.random() * 0.4
+        });
+    }
+
+    function animateParticles() {
+        pctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+        particles.forEach(function(p) {
+            pctx.beginPath();
+            pctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            pctx.fillStyle = 'rgba(201, 169, 97, ' + p.alpha + ')';
+            pctx.fill();
+            p.y += p.vy;
+            if (p.y > particleCanvas.height) {
+                p.y = -10;
+                p.x = Math.random() * particleCanvas.width;
+            }
+        });
+        requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    // Отслеживание событий для аналитики (Yandex.Metrika)
+    if (typeof ym === 'function') {
+        // Клик на запуск игры
+        document.querySelectorAll('a[href*="game/index.html"]').forEach(function(link) {
+            link.addEventListener('click', function() {
+                ym(112435792, 'reachGoal', 'game_launch');
+            });
+        });
+        // Бросок кубика d100
+        var d100 = document.getElementById('d100Dice');
+        if (d100) {
+            d100.addEventListener('click', function() {
+                ym(112435792, 'reachGoal', 'd100_roll');
+            });
+        }
+        // Открытие видео
+        var video = document.querySelector('#trailer video');
+        if (video) {
+            video.addEventListener('play', function() {
+                ym(112435792, 'reachGoal', 'video_play');
+            });
+        }
+        // Открытие скриншота
+        document.querySelectorAll('.screenshot-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+                ym(112435792, 'reachGoal', 'screenshot_view');
+            });
+        });
+    }
+});

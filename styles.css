@@ -745,3 +745,187 @@ footer{
   border-bottom:1px solid rgba(201,169,97,0.2) !important;
   text-shadow:0 1px 1px rgba(0,0,0,0.5) !important;
 }
+
+/* ===== НОВЫЕ СТИЛИ (улучшения сайта) ===== */
+
+/* Skip-link для доступности */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #c9a961;
+    color: #1a1410;
+    padding: 10px 20px;
+    text-decoration: none;
+    z-index: 10000;
+    font-weight: bold;
+    border-radius: 0 0 8px 0;
+    transition: top 0.2s;
+}
+.skip-link:focus { top: 0; }
+
+/* Фокус-стили для клавиатурной навигации */
+a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
+    outline: 3px solid #c9a961;
+    outline-offset: 2px;
+}
+
+/* ARIA: скрытые визуально, но доступные для скринридеров */
+.sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Скриншоты-галерея */
+.screenshots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+.screenshot-card {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative;
+    border: 1px solid rgba(201, 169, 97, 0.2);
+    background: #1a1410;
+}
+.screenshot-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(201, 169, 97, 0.2);
+    border-color: rgba(201, 169, 97, 0.5);
+}
+.screenshot-card img {
+    width: 100%;
+    display: block;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+}
+.screenshot-caption {
+    padding: 0.8rem 1rem;
+    text-align: center;
+    color: #c9a961;
+    font-family: 'Marcellus', serif;
+    font-size: 0.95rem;
+    background: rgba(26, 20, 16, 0.9);
+    border-top: 1px solid rgba(201, 169, 97, 0.15);
+}
+
+/* Lightbox для скриншотов */
+.screenshot-lightbox {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    padding: 2rem;
+}
+.screenshot-lightbox.open { display: flex; }
+.screenshot-lightbox img {
+    max-width: 95%;
+    max-height: 95%;
+    border-radius: 8px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
+}
+.screenshot-lightbox-close {
+    position: absolute;
+    top: 1rem; right: 2rem;
+    color: #c9a961;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+/* Гамбургер-меню */
+.mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    z-index: 1001;
+}
+.hamburger {
+    display: block;
+    width: 28px;
+    height: 3px;
+    background: var(--gold);
+    position: relative;
+    transition: all 0.3s;
+    border-radius: 2px;
+}
+.hamburger::before,
+.hamburger::after {
+    content: '';
+    position: absolute;
+    width: 28px;
+    height: 3px;
+    background: var(--gold);
+    transition: all 0.3s;
+    border-radius: 2px;
+}
+.hamburger::before { top: -8px; }
+.hamburger::after { top: 8px; }
+.mobile-menu-toggle[aria-expanded="true"] .hamburger {
+    background: transparent;
+}
+.mobile-menu-toggle[aria-expanded="true"] .hamburger::before {
+    top: 0;
+    transform: rotate(45deg);
+}
+.mobile-menu-toggle[aria-expanded="true"] .hamburger::after {
+    top: 0;
+    transform: rotate(-45deg);
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle { display: block; }
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+        padding: 1rem 0;
+        background: rgba(26, 20, 16, 0.98);
+        position: absolute;
+        top: 100%;
+        left: 0;
+    }
+    .nav-links.open { display: flex; }
+    .header-inner { position: relative; }
+    .screenshots-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Видео-презентация */
+#trailer video {
+    width: 100%;
+    display: block;
+}
+
+/* Параллакс hero */
+.hero-image-wrap {
+    overflow: hidden;
+    position: relative;
+}
+.hero-image {
+    will-change: transform;
+    transition: transform 0.1s linear;
+}
+
+/* Демо iframe */
+.demo-frame-wrap {
+    margin-top: 1rem;
+}

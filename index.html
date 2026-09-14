@@ -5,30 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Летописи Руси XV века — The Chronicles of Ruthenia | Текстовая RPG с ИИ</title>
     <meta name="description" content="Текстовая повествовательная RPG про Русь XV века с LLM-Нарратором, RAG-базой исторических данных и ролевой системой BRP d100.">
-    
+    <meta name="keywords" content="RPG, Русь, средневековье, BRP, d100, браузерная игра, Phaser, Godot, AI, историческая игра, Chronicles of Ruthenia">
+    <meta name="author" content="sosnowda">
+    <meta name="theme-color" content="#1A1410">
+    <meta name="robots" content="index, follow">
 
-<!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();
-for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}
-k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");
-ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
-</script>
-<noscript><div><img src="https://mc.yandex.ru/watch/112435792" style="position:absolute;left:-9999px" alt=""/></div></noscript>
-<!-- /Yandex.Metrika counter -->
-<meta property="og:image" content="https://sosnowda.github.io/assets/images/title.jpg">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:image" content="https://sosnowda.github.io/assets/images/title.jpg">
-<link rel="canonical" href="https://sosnowda.github.io/">
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"VideoGame","name":"Летописи Руси XV века","description":"AI-narrative RPG про Русь 1400-1505.","genre":["RPG","Historical","AI"],"applicationCategory":"Game","operatingSystem":"Windows","url":"https://sosnowda.github.io/","image":"https://sosnowda.github.io/assets/images/title.jpg","author":{"@type":"Person","name":"sosnowda"}}
-</script>
-<link rel="stylesheet" href="styles.css">
-<link rel="manifest" href="manifest.json">
+    <!-- Favicon -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="favicon-16.png" type="image/png" sizes="16x16">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Летописи Руси XV века — AI-narrative RPG">
+    <meta property="og:description" content="Текстовая повествовательная RPG про Русь XV века с LLM-Нарратором, RAG-базой и BRP d100.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sosnowda.github.io/">
+    <meta property="og:image" content="https://sosnowda.github.io/assets/images/title.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="ru_RU">
+    <meta property="og:site_name" content="Летописи Руси XV века">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Летописи Руси XV века — AI-narrative RPG">
+    <meta name="twitter:description" content="Текстовая RPG про Русь XV века с LLM-Нарратором и BRP d100.">
+    <meta name="twitter:image" content="https://sosnowda.github.io/assets/images/title.jpg">
+    <meta name="twitter:image:alt" content="Летописи Руси XV века — титульная картинка">
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://sosnowda.github.io/">
+
+    <!-- Preload критических ресурсов -->
+    <link rel="preload" href="assets/images/title.jpg" as="image" fetchpriority="high">
+    <link rel="preload" href="styles.css" as="style">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"VideoGame","name":"Летописи Руси XV века","description":"AI-narrative RPG про Русь 1400-1505.","genre":["RPG","Historical","AI"],"applicationCategory":"Game","operatingSystem":"Web Browser, Windows","url":"https://sosnowda.github.io/","image":"https://sosnowda.github.io/assets/images/title.jpg","author":{"@type":"Person","name":"sosnowda"},"softwareVersion":"0.1.0-alpha","offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"}}
+    </script>
+
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();
+    for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}
+    k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+    (window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");
+    ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
+    </script>
+    <noscript><div><img src="https://mc.yandex.ru/watch/112435792" style="position:absolute;left:-9999px" alt=""/></div></noscript>
+    <!-- /Yandex.Metrika counter -->
+
+    <!-- Skip-link для доступности -->
+    <a href="#main-content" class="skip-link">Перейти к основному содержимому</a>
 
     <div class="bg-pattern">
 </div>
@@ -54,29 +92,22 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
 
 <header class="header">
         <div class="container header-inner">
-            <a href="#" class="logo">
-                <span class="logo-icon">⚔️</span> Летописи Руси XV
+            <a href="#" class="logo" aria-label="На главную страницу">
+                <span class="logo-icon" aria-hidden="true">⚔️</span> Летописи Руси XV
             </a>
-            <nav>
-                <ul class="nav-links">
-                    <li>
-<a href="#about">Об игре</a>
-</li>
-                    <li>
-<a href="#brp">BRP d100</a>
-</li>
-                    <li>
-<a href="#tech">Технологии</a>
-</li>
-                    <li>
-<a href="#history">История</a>
-</li>
-                    <li>
-<a href="#systems">Особенности</a>
-</li>
-                    <li>
-<a href="#demo">Демо</a>
-</li>
+            <button class="mobile-menu-toggle" aria-label="Открыть меню" aria-expanded="false" aria-controls="nav-menu">
+                <span class="hamburger" aria-hidden="true"></span>
+            </button>
+            <nav aria-label="Основная навигация">
+                <ul class="nav-links" id="nav-menu" role="menubar">
+                    <li role="none"><a href="#about" role="menuitem">Об игре</a></li>
+                    <li role="none"><a href="#trailer" role="menuitem">Видео</a></li>
+                    <li role="none"><a href="#screenshots" role="menuitem">Скриншоты</a></li>
+                    <li role="none"><a href="#brp" role="menuitem">BRP d100</a></li>
+                    <li role="none"><a href="#tech" role="menuitem">Технологии</a></li>
+                    <li role="none"><a href="#history" role="menuitem">История</a></li>
+                    <li role="none"><a href="#systems" role="menuitem">Особенности</a></li>
+                    <li role="none"><a href="#demo" role="menuitem">Демо</a></li>
                 </ul>
             </nav>
         </div>
@@ -85,7 +116,10 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
     <!-- HERO -->
     <section class="hero">
         <div class="hero-image-wrap">
-            <img src="assets/images/title.jpg" alt="Летописи Руси XV века — титульная картинка" class="hero-image">
+            <picture>
+                <source srcset="assets/images/title.webp" type="image/webp">
+                <img src="assets/images/title.jpg" alt="Летописи Руси XV века — титульная картинка" class="hero-image" fetchpriority="high">
+            </picture>
         </div>
     </section>
 
@@ -95,17 +129,18 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
 </div>
 
     <!-- ОБ ИГРЕ -->
-    <section class="section" id="about">
+    <section class="section" id="about" aria-labelledby="about-heading">
         <div class="container">
             <div class="section-label">О проекте</div>
-            <h2>Симбиоз математики и творчества</h2>
+            <h2 id="about-heading">Симбиоз математики и творчества</h2>
             <div style="max-width: 820px; margin: 0 auto; text-align: center; color: var(--text-dim); font-size: 1.05rem; line-height: 1.8;">
                 <p>
                     <strong class="highlight">«Летописи Руси XV века»</strong> — это уникальный проект, где
-                    <strong class="highlight">игровой движок Godot</strong> берёт на себя всю математику:
+                    <strong class="highlight">игровой движок Godot</strong> (десктопная версия) берёт на себя всю математику:
                     броски кубиков, расчёт урона, шансы попаданий, проверку умений и выживания.
                     А <strong class="highlight">Нейросеть-Нарратор</strong> (локальная llama или облачная модель)
                     выступает в роли бесконечно креативного Игрового Мастера, описывая мир, диалоги и последствия действий.
+                    Браузерное демо на этой странице написано на <strong class="highlight">Phaser 3</strong>.
                 </p>
                 <p style="margin-top: 1rem;">
                     Но главное — <strong class="highlight">жёсткий историзм</strong>. RAG-База Данных, собранная из
@@ -193,7 +228,10 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
         <p style="text-align:center;color:#a89878;max-width:700px;margin:0 auto 2rem;">Игра использует реалистичные исторические карты местности Руси XIV–XVI веков.</p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:2rem;">
             <div class="map-card" style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
-                <img src="assets/images/maps/vida_lyatsky_1542.jpg" alt="Карта России Антония Вида и Ивана Лятского, 1542-1555" style="width:100%;display:block;cursor:zoom-in;" loading="lazy">
+                <picture>
+                    <source srcset="assets/images/maps/vida_lyatsky_1542.webp" type="image/webp">
+                    <img src="assets/images/maps/vida_lyatsky_1542.jpg" alt="Карта России Антония Вида и Ивана Лятского, 1542-1555" style="width:100%;display:block;cursor:zoom-in;" loading="lazy" decoding="async">
+                </picture>
                 <div style="padding:1.5rem;">
                     <h3 style="color:#c9a961;font-family:'Marcellus',serif;margin-bottom:0.5rem;">Карта России Антония Вида и Ивана Лятского</h3>
                     <p style="color:#c9a961;font-size:0.9rem;margin-bottom:0.8rem;">1542–1555 гг.</p>
@@ -201,7 +239,10 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
                 </div>
             </div>
             <div class="map-card" style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
-                <img src="assets/images/maps/herberstein_1550.jpg" alt="Карта России Сигизмунда фон Герберштейна, 1550" style="width:100%;display:block;cursor:zoom-in;" loading="lazy">
+                <picture>
+                    <source srcset="assets/images/maps/herberstein_1550.webp" type="image/webp">
+                    <img src="assets/images/maps/herberstein_1550.jpg" alt="Карта России Сигизмунда фон Герберштейна, 1550" style="width:100%;display:block;cursor:zoom-in;" loading="lazy" decoding="async">
+                </picture>
                 <div style="padding:1.5rem;">
                     <h3 style="color:#c9a961;font-family:'Marcellus',serif;margin-bottom:0.5rem;">Карта России Сигизмунда фон Герберштейна</h3>
                     <p style="color:#c9a961;font-size:0.9rem;margin-bottom:0.8rem;">1550 г.</p>
@@ -273,12 +314,15 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
 <!-- Интерактивный 3D дайс d100 -->
 <div style="text-align:center;padding:2rem 0;perspective:800px;">
     <h3 style="color:var(--gold);font-family:'Marcellus',serif;margin-bottom:1.5rem;">Интерактивный бросок d100</h3>
-    <div id="d100Dice" onclick="rollD100()" style="width:120px;height:120px;margin:0 auto;cursor:pointer;user-select:none;transform-style:preserve-3d;transition:transform 0.1s;">
+    <div id="d100Dice" onclick="rollD100()" role="button" tabindex="0"
+         aria-label="Бросить кубик d100. Нажмите Enter или Space для броска."
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rollD100();}"
+         style="width:120px;height:120px;margin:0 auto;cursor:pointer;user-select:none;transform-style:preserve-3d;transition:transform 0.1s;">
         <div id="d100Sphere" style="width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#E0C078,#C9A961,#8B6914);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 36px rgba(0,0,0,0.5),inset 0 -6px 12px rgba(0,0,0,0.3),inset 0 6px 12px rgba(255,255,255,0.15);border:2px solid #5A4015;">
-            <span id="d100Result" style="font-size:2.5rem;font-weight:bold;color:#1A1410;font-family:'PT Serif',serif;text-shadow:0 2px 4px rgba(0,0,0,0.2);">d100</span>
+            <span id="d100Result" aria-live="polite" style="font-size:2.5rem;font-weight:bold;color:#1A1410;font-family:'PT Serif',serif;text-shadow:0 2px 4px rgba(0,0,0,0.2);">d100</span>
         </div>
     </div>
-    <p id="d100Degree" style="margin-top:1rem;color:var(--text-dim);font-size:1.1rem;">Нажми на дайс</p>
+    <p id="d100Degree" aria-live="polite" style="margin-top:1rem;color:var(--text-dim);font-size:1.1rem;">Нажми на дайс</p>
 </div>
     </section>
 
@@ -499,6 +543,60 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
         </div>
     </section>
 
+<!-- ВИДЕО-ПРЕЗЕНТАЦИЯ -->
+<section class="section" id="trailer">
+    <div class="container">
+        <div class="section-label">Видеопрезентация</div>
+        <h2>Взгляните на мир игры</h2>
+        <p style="text-align:center;color:var(--text-dim);max-width:700px;margin:0 auto 2rem;">
+            Короткое промо-видео о «Летописях Руси XV века» — концепция, атмосфера, геймплей.
+        </p>
+        <div style="max-width:900px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);border:2px solid var(--gold);">
+            <video controls preload="none" poster="assets/images/title.jpg" style="width:100%;display:block;">
+                <source src="assets/video/promo.mp4" type="video/mp4">
+                Ваш браузер не поддерживает видео. <a href="assets/video/promo.mp4">Скачать промо</a>.
+            </video>
+        </div>
+    </div>
+</section>
+
+<!-- СКРИНШОТЫ ИГРЫ -->
+<section class="section section-alt" id="screenshots">
+    <div class="container">
+        <div class="section-label">Галерея</div>
+        <h2>Скриншоты игры</h2>
+        <p style="text-align:center;color:var(--text-dim);max-width:700px;margin:0 auto 2rem;">
+            Кадры из браузерного демо — деревня, интерьеры, бой, создание персонажа и локации.
+        </p>
+        <div class="screenshots-grid">
+            <div class="screenshot-card" data-src="assets/screenshots/01-title.png">
+                <img src="assets/screenshots/01-title.png" alt="Главное меню игры" loading="lazy">
+                <div class="screenshot-caption">Главное меню</div>
+            </div>
+            <div class="screenshot-card" data-src="assets/screenshots/02-village.png">
+                <img src="assets/screenshots/02-village.png" alt="Деревня — вид сверху" loading="lazy">
+                <div class="screenshot-caption">Деревня</div>
+            </div>
+            <div class="screenshot-card" data-src="assets/screenshots/03-interior.png">
+                <img src="assets/screenshots/03-interior.png" alt="Интерьер дома — диалог с NPC" loading="lazy">
+                <div class="screenshot-caption">Диалог с NPC</div>
+            </div>
+            <div class="screenshot-card" data-src="assets/screenshots/04-combat.png">
+                <img src="assets/screenshots/04-combat.png" alt="Боевая сцена BRP d100" loading="lazy">
+                <div class="screenshot-caption">Боевая сцена</div>
+            </div>
+            <div class="screenshot-card" data-src="assets/screenshots/05-character.png">
+                <img src="assets/screenshots/05-character.png" alt="Создание персонажа" loading="lazy">
+                <div class="screenshot-caption">Создание персонажа</div>
+            </div>
+            <div class="screenshot-card" data-src="assets/screenshots/06-locations.png">
+                <img src="assets/screenshots/06-locations.png" alt="Локации — река, мельница, пасека" loading="lazy">
+                <div class="screenshot-caption">Локации</div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- ДЕМО — Браузерная игра -->
 <section class="section section-alt" id="demo">
     <div class="container">
@@ -508,30 +606,63 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
             Попробуйте боевую систему BRP d100 прямо в браузере! Управляйте путником в деревне Руси XV века,
             общайтесь с NPC и сразитесь с разбойником.
         </p>
-        <div style="text-align:center;padding:2rem 0;">
-            <a href="game/index.html" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:1.2rem 3rem;font-size:1.3rem;font-family:'Marcellus',serif;color:#1A1410;background:linear-gradient(135deg,#E0C078,#C9A961,#8B6914);border:2px solid #5A4015;border-radius:12px;text-decoration:none;box-shadow:0 8px 32px rgba(0,0,0,0.5);transition:transform 0.2s,box-shadow 0.2s;text-shadow:0 1px 1px rgba(255,255,255,0.2);">
-                ⚔️ Запустить игру в новом окне
-            </a>
-            <p style="margin-top:1.5rem;color:var(--text-muted);font-size:0.9rem;">
-                Игра откроется в новой вкладке. Управление: WASD/стрелки — движение, E — взаимодействие.<br>
-                Размер окна: 1280×720. Рекомендуется полноэкранный режим (F11).
+        <p style="text-align:center;color:var(--text-muted);max-width:600px;margin:0 auto 1.5rem;font-size:0.9rem;">
+            <em>Браузерное демо написано на движке <strong style="color:var(--gold-bright);">Phaser 3</strong>.
+            Основная игра разрабатывается на <strong style="color:var(--gold-bright);">Godot Engine</strong>.</em>
+        </p>
+
+        <!-- Встроенный iframe с игрой -->
+        <div class="demo-frame-wrap" style="position:relative;max-width:1100px;margin:0 auto;">
+            <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border:2px solid var(--gold);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+                <iframe src="game/index.html"
+                        style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+                        allow="fullscreen; autoplay; gamepad"
+                        loading="lazy"
+                        title="Браузерное демо «Летописи Руси XV века»"></iframe>
+            </div>
+            <div style="text-align:center;margin-top:1rem;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+                <a href="game/index.html" target="_blank" rel="noopener noreferrer"
+                   style="display:inline-block;padding:0.8rem 2rem;font-size:1rem;font-family:'Marcellus',serif;color:#1A1410;background:linear-gradient(135deg,#E0C078,#C9A961,#8B6914);border:2px solid #5A4015;border-radius:8px;text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,0.4);">
+                    ⛶ Открыть на весь экран
+                </a>
+            </div>
+            <p style="text-align:center;margin-top:1rem;color:var(--text-muted);font-size:0.85rem;">
+                Управление: WASD/стрелки — движение, E — взаимодействие, ESC — выход.<br>
+                Размер: 1280×720. Рекомендуется полноэкранный режим.
             </p>
         </div>
     </div>
 </section>
 
 <!-- ПОДДЕРЖИТЕ ПРОЕКТ -->
-<section class="section" style="text-align:center;">
+<section class="section" id="support" style="text-align:center;">
     <div class="container">
-<div style="margin-top:0;padding-top:0;border-top:1px solid rgba(201,169,97,0.2);text-align:center;">
-        <h4 style="color:#c9a961;margin-bottom:1rem;font-family:'Marcellus',serif;">Поддержите проект</h4>
-        <div style="margin-bottom:1.5rem;">
-            <h4 style="color:#c9a961;margin-bottom:0.5rem;font-family:'Marcellus',serif;font-size:1rem;">Поделиться</h4>
+        <div class="section-label">Поддержка</div>
+        <h2>Поддержите проект</h2>
+        <p style="text-align:center;color:var(--text-dim);max-width:700px;margin:0 auto 2rem;">
+            Средства пойдут на оборудование для тестирования ИИ, наполнение баз знаний и разработку.
+        </p>
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem;">
+            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer"
+               style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#ff8a00;color:#fff;text-decoration:none;font-size:1rem;">
+                🚀 Boosty (подписка)
+            </a>
+            <a href="https://yoomoney.ru/to/4100119624440650" target="_blank" rel="noopener noreferrer"
+               style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:1rem;">
+                💰 ЮMoney (перевод)
+            </a>
+            <a href="https://vk.ru/club241165941" target="_blank" rel="noopener noreferrer"
+               style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#0077ff;color:#fff;text-decoration:none;font-size:1rem;">
+                👥 ВКонтакте
+            </a>
+        </div>
+        <div style="border-top:1px solid rgba(201,169,97,0.2);padding-top:1.5rem;">
+            <h4 style="color:#c9a961;margin-bottom:1rem;font-family:'Marcellus',serif;">Поделиться сайтом</h4>
             <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
                 <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0077ff;color:#fff;text-decoration:none;font-size:0.85rem;">ВК</a>
                 <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=Летописи Руси XV века — AI-narrative RPG" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0088cc;color:#fff;text-decoration:none;font-size:0.85rem;">Telegram</a>
                 <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#ee8208;color:#fff;text-decoration:none;font-size:0.85rem;">Одноклассники</a>
-                <a href="javascript:navigator.clipboard.writeText('https://sosnowda.github.io').then(()=>{alert('Ссылка скопирована!')})" style="padding:0.5rem 1.2rem;border-radius:8px;background:#333;color:#fff;text-decoration:none;font-size:0.85rem;cursor:pointer;">Копировать</a>
+                <button onclick="navigator.clipboard.writeText('https://sosnowda.github.io').then(()=>{alert('Ссылка скопирована!')})" style="padding:0.5rem 1.2rem;border-radius:8px;background:#333;color:#fff;border:none;cursor:pointer;font-size:0.85rem;">📋 Копировать</button>
             </div>
         </div>
     </div>
@@ -544,21 +675,12 @@ ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webv
 <footer class="footer">
         <div class="container">
             <ul class="footer-links">
-                <li>
-<a href="#">О проекте</a>
-</li>
-                <li>
-<a href="#">Документация</a>
-</li>
-                <li>
-<a href="#">Сообщество</a>
-</li>
-                <li>
-<a href="#">Hugging Face</a>
-</li>
-                <li>
-<a href="#">Chaosium BRP</a>
-</li>
+                <li><a href="#about">О проекте</a></li>
+                <li><a href="#trailer">Видео</a></li>
+                <li><a href="#screenshots">Скриншоты</a></li>
+                <li><a href="#demo">Демо</a></li>
+                <li><a href="#brp">BRP d100</a></li>
+                <li><a href="#tech">Технологии</a></li>
             </ul>
             <p>
                 &copy; 2025 Летописи Руси XV века — The Chronicles of Ruthenia.<br>

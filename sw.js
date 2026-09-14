@@ -1,8 +1,11 @@
 /* Service Worker — Летописи Руси XV века
-   Network-first, но ТОЛЬКО для same-origin (своих файлов).
-   Внешние CDN (unpkg, jsdelivr) — пропускаем напрямую, не перехватываем. */
+   Network-first для HTML/CSS/JS, cache-first для ассетов игры.
 
-var CACHE_NAME = 'chronicles-ruthenia-v3';
+   v4 — добавлено кеширование /game/assets/ (cache-first).
+   Сцены игры (/game/src/) НЕ кешируются — для горячей перезагрузки. */
+
+var CACHE_NAME = 'chronicles-ruthenia-v4';
+var GAME_ASSETS_CACHE = 'game-assets-v1';
 
 self.addEventListener('install', function (event) {
     self.skipWaiting();
@@ -13,7 +16,7 @@ self.addEventListener('activate', function (event) {
         caches.keys().then(function (keys) {
             return Promise.all(
                 keys.map(function (k) {
-                    if (k !== CACHE_NAME) return caches.delete(k);
+                    if (k !== CACHE_NAME && k !== GAME_ASSETS_CACHE) return caches.delete(k);
                 })
             );
         }).then(function () {
@@ -27,17 +30,45 @@ self.addEventListener('fetch', function (event) {
 
     var url = new URL(event.request.url);
 
-    // ВНЕШНИЕ запросы (CDN, другие домены) — пропускаем напрямую, НЕ перехватываем
+    // ВНЕШНИЕ запросы (CDN, другие домены) — пропускаем напрямую
     if (url.origin !== self.location.origin) {
         return;
     }
 
-    // Папка /game/ — пропускаем напрямую (игра не кешируется SW)
-    if (url.pathname.startsWith('/game/')) {
+    // /game/assets/ — cache-first (ассеты не меняются между релизами)
+    if (url.pathname.startsWith('/game/assets/')) {
+        event.respondWith(
+            caches.open(GAME_ASSETS_CACHE).then(function (cache) {
+                return cache.match(event.request).then(function (cached) {
+                    if (cached) {
+                        // Фоновое обновление
+                        fetch(event.request).then(function (response) {
+                            if (response && response.status === 200) {
+                                cache.put(event.request, response.clone());
+                            }
+                        }).catch(function () {});
+                        return cached;
+                    }
+                    return fetch(event.request).then(function (response) {
+                        if (response && response.status === 200) {
+                            cache.put(event.request, response.clone());
+                        }
+                        return response;
+                    }).catch(function () {
+                        return new Response('', { status: 404 });
+                    });
+                });
+            })
+        );
         return;
     }
 
-    // Same-origin — network-first
+    // /game/src/ — пропускаем напрямую (сцены обновляются часто)
+    if (url.pathname.startsWith('/game/src/')) {
+        return;
+    }
+
+    // Same-origin (сайт) — network-first
     event.respondWith(
         fetch(event.request).then(function (response) {
             if (response && response.status === 200) {
