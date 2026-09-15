@@ -16,6 +16,7 @@ import { checkGameEnd } from '../data/thief.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, formatDateTime, getSeason } from '../systems/TimeSystem.js';
+import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
 import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, dayKeyOf } from '../data/chests.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
@@ -426,6 +427,10 @@ export class VillageScene extends Phaser.Scene {
             .setScrollFactor(0)
             .setDepth(90)
             .setBlendMode(Phaser.BlendModes.MULTIPLY);
+
+        // ----- Погода (раунд 14): затемнение + дождь/снег в экранных координатах.
+        // День/ночь 90 → затемнение 92, осадки 96; HUD 100+ остаётся поверх.
+        applyWeatherVisuals(this, { tintDepth: 92, precipDepth: 96 });
 
         // ----- Кнопки меню сверху (Пункт 9) -----
         this.createTopMenu();
@@ -893,6 +898,8 @@ export class VillageScene extends Phaser.Scene {
         let statusLine = `❤${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  ⚔${p.skills.sword}%  💰${moneyStr}`;
         if (timeState) {
             statusLine += `  📅${formatDateTime(timeState)}`;
+            // Раунд 14: иконка текущей погоды рядом с датой
+            if (this.weather) statusLine += ` ${this.weather.icon}`;
         }
         if (turnsLeft > 0 && !q.thiefDefeated && !q.thiefEscaped) {
             statusLine += `  ⏳${turnsLeft}ход`;
@@ -1700,20 +1707,26 @@ export class VillageScene extends Phaser.Scene {
                 tickTime(this.registry, 60);
                 markOpened(q, 'fish_daily', today);
                 this.registry.set('quest', q);
-                const heal = 3;
+                // Раунд 14: в дождь рыба активнее — улов заметно богаче (+4 вместо +3)
+                const raining = this.weather && isRainy(this.weather);
+                const heal = raining ? 4 : 3;
                 player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
                 this.registry.set('player', player);
                 this.updateHUD();
                 this.audioManager.playSound('sfx_heal');
                 this.cameras.main.fadeIn(500, 0, 0, 0);
                 ActionLog.add(this.registry, winter
-                    ? 'Порыбачил через лунку — налим к ужину (+3 ❤).'
-                    : 'Наловил рыбы к обеду (+3 ❤).');
+                    ? `Порыбачил через лунку — налим к ужину (+${heal} ❤).`
+                    : (raining
+                        ? `Дождь — рыба идёт на крючок смело. Отличный улов (+${heal} ❤).`
+                        : `Наловил рыбы к обеду (+${heal} ❤).`));
                 createDialog(this, title,
                     (winter
                         ? 'Прорубаешь лунку и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим. Ужин обеспечен.'
-                        : 'Забросил удочку с причала... Через час в корзине пара ершей и лещ. Свежая рыба — это силы.')
-                    + '\n\nСвежая рыба: +3 ❤.',
+                        : raining
+                            ? 'Забросил удочку с причала под моросящим дождём... Рыба клюёт одна за другой — вёдра полные!'
+                            : 'Забросил удочку с причала... Через час в корзине пара ершей и лещ. Свежая рыба — это силы.')
+                    + `\n\nСвежая рыба: +${heal} ❤.`,
                     [{ text: 'Взять улов', callback: close }]);
             });
         } else {

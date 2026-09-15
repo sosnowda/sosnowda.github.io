@@ -10,6 +10,7 @@ import {
     validateForestMap,
 } from '../data/forest.js';
 import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
+import { applyWeatherVisuals, isRainy } from '../systems/Weather.js';
 import { checkGameEnd } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
 import { dayKeyOf } from '../data/chests.js';
@@ -380,6 +381,11 @@ export class ForestScene extends Phaser.Scene {
         this.leavesEmitter.setScrollFactor(0);
         this.leavesEmitter.setDepth(98);
 
+        // ----- Погода (раунд 14): дождь/снег в лесу. Осадки поверх листвы (99).
+        // В дождь волки хуже слышат — радиус агро срезается (см. wolfAggroRadius).
+        applyWeatherVisuals(this, { tintDepth: 94, precipDepth: 99 });
+        this.wolfAggroRadius = WOLF_CFG.aggroRadius * (isRainy(this.weather) ? 0.65 : 1);
+
         // Светлячки — проявляются ночью (как в деревне)
         for (let i = 0; i < 9; i++) {
             const fx = (24 + Math.random() * (WORLD_W - 48));
@@ -397,7 +403,7 @@ export class ForestScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         // Название локации (под кнопками — урок раунда 11)
-        this.add.text(12, 34, '🌲 Тёмный лес', {
+        this.add.text(12, 34, `🌲 Тёмный лес${this.weather ? `  ${this.weather.icon}` : ''}`, {
             fontSize: '15px', color: '#9fc08a', fontStyle: 'bold',
             fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 3,
         }).setScrollFactor(0).setDepth(102);
@@ -534,7 +540,7 @@ export class ForestScene extends Phaser.Scene {
                 vx = dx / len; vy = dy / len;
                 speed = WOLF_CFG.retreatSpeed;
                 wolf.state = 'retreat';
-            } else if (!scared && dist < WOLF_CFG.aggroRadius && distHome < WOLF_CFG.homeLeash * 1.5) {
+            } else if (!scared && dist < (this.wolfAggroRadius || WOLF_CFG.aggroRadius) && distHome < WOLF_CFG.homeLeash * 1.5) {
                 // Погоня
                 const dx = p.x - s.x, dy = p.y - s.y;
                 const len = Math.max(1, Math.hypot(dx, dy));

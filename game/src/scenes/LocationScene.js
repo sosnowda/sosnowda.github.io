@@ -10,6 +10,7 @@ import { createButton, createDialog } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
+import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
 
 const LOCATION_BG = {
     forest: 0x1a2a1a,
@@ -54,6 +55,9 @@ export class LocationScene extends Phaser.Scene {
                 .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY);
         }
 
+        // ----- Погода (раунд 14): дождь/снег над текстовой локацией -----
+        applyWeatherVisuals(this, { tintDepth: 94, precipDepth: 96 });
+
         // ----- Заголовок -----
         this.add.text(width / 2, 20, `${loc.icon} ${loc.name}`, {
             fontSize: '28px', color: RUS.text, fontStyle: 'bold',
@@ -68,9 +72,10 @@ export class LocationScene extends Phaser.Scene {
             wordWrap: { width: width - 80 },
         }).setOrigin(0.5, 0);
 
-        // Дата и время (п.13)
+        // Дата и время (п.13) + погода дня (раунд 14)
         if (timeState) {
-            this.add.text(width / 2, 80, `📅 ${formatDateTime(timeState)}`, {
+            const weather = getWeather(this.registry);
+            this.add.text(width / 2, 80, `📅 ${formatDateTime(timeState)}   ${weather.icon} ${weather.name}`, {
                 fontSize: '11px', color: '#8ab4f8',
                 fontFamily: 'Georgia, serif',
                 stroke: '#000', strokeThickness: 1,

@@ -10,6 +10,7 @@ import SaveManager from '../systems/SaveManager.js';
 import { ActionLog } from '../data/actionLog.js';
 import { winGame, loseHeroDead } from '../data/thief.js';
 import { getTime, getDayNightOverlay } from '../systems/TimeSystem.js';
+import { applyWeatherVisuals } from '../systems/Weather.js';
 
 export class CombatScene extends Phaser.Scene {
     constructor() {
@@ -127,6 +128,9 @@ export class CombatScene extends Phaser.Scene {
             this.add.rectangle(0, 0, width, height, overlay.color, overlay.alpha)
                 .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY);
         }
+
+        // ----- Погода (раунд 14): дождь/снег видны и в бою -----
+        applyWeatherVisuals(this, { tintDepth: 94, precipDepth: 96 });
     }
 
     createActions() {
@@ -140,11 +144,30 @@ export class CombatScene extends Phaser.Scene {
             },
         );
         const y = height - 50;
-        mk(width / 2 - 320, y, '⚔ Мечом', () => this.playerAttack('sword'), RUS.accent, RUS.accentLight);
-        mk(width / 2 - 160, y, '➶ Луком', () => this.playerAttack('bow'), 0x3a6b8c, 0x4a7b9c);
-        mk(width / 2, y, 'Уклон', () => this.dodge(), 0x4a6a4a, 0x5a7a5a);
-        mk(width / 2 + 160, y, 'Трава', () => this.useHerb(), 0x6a5a2a, 0x7a6a3a);
-        mk(width / 2 + 320, y, '🏃 Бежать', () => this.flee(), 0x2a2a5a, 0x3a3a6a);
+
+        // Раунд 14: честные кнопки атаки. Раньше обе кнопки ("Мечом"/"Луком")
+        // били экипированным оружием — надпись врала о выборе. Теперь:
+        //  - основная кнопка = реально экипированное оружие (её имя на кнопке);
+        //  - если экипировка не кулаки — доступен честный резерв "Кулаками".
+        const equipped = this.player.weapon || WEAPONS.fists;
+        const equippedKey = equipped.id || 'fists';
+        const acts = [
+            { label: `⚔ ${equipped.name}`, cb: () => this.playerAttack(equippedKey),
+              bg: RUS.accent, hover: RUS.accentLight },
+        ];
+        if (equipped.id !== 'fists') {
+            acts.push({ label: '🤜 Кулаками', cb: () => this.playerAttack('fists'),
+              bg: 0x6a5a40, hover: 0x7a6a50 });
+        }
+        acts.push(
+            { label: 'Уклон', cb: () => this.dodge(), bg: 0x4a6a4a, hover: 0x5a7a5a },
+            { label: 'Трава', cb: () => this.useHerb(), bg: 0x6a5a2a, hover: 0x7a6a3a },
+            { label: '🏃 Бежать', cb: () => this.flee(), bg: 0x2a2a5a, hover: 0x3a3a6a },
+        );
+        // Равномерная раскладка по центру (4 или 5 кнопок)
+        const gap = 160;
+        const startX = width / 2 - (gap * (acts.length - 1)) / 2;
+        acts.forEach((a, i) => mk(startX + i * gap, y, a.label, a.cb, a.bg, a.hover));
     }
 
     /**
@@ -300,8 +323,9 @@ export class CombatScene extends Phaser.Scene {
     }
 
     playerAttack(weaponKey) {
-        // Используем экипированное оружие игрока, а не переданный ключ
-        const w = this.player.weapon || WEAPONS[weaponKey] || WEAPONS.fists;
+        // Раунд 14: используем оружие ВЫБРАННОЙ кнопки (а не всегда экипировку).
+        // Кулаки — честный резерв с навыком brawl; экипировка передаётся своей кнопкой.
+        const w = WEAPONS[weaponKey] || this.player.weapon || WEAPONS.fists;
         const skill = this.player.skills[w.skill] || 20;
         const res = skillCheck(skill);
         const target = this.firstAlive();

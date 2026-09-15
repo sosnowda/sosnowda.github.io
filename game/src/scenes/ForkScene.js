@@ -9,6 +9,7 @@ import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { getForkLocations } from '../data/mapLocations.js';
 import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
+import { getWeather } from '../systems/Weather.js';
 import { getVillageName } from '../data/world.js';
 
 export class ForkScene extends Phaser.Scene {
@@ -48,10 +49,11 @@ export class ForkScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5, 0);
 
-        // ----- Дата и время (п.13) -----
+        // ----- Дата и время (п.13) + погода дня (раунд 14) -----
         const timeState = getTime(this.registry);
         if (timeState) {
-            this.add.text(width / 2, 78, `📅 ${formatDateTime(timeState)}`, {
+            const weather = getWeather(this.registry);
+            this.add.text(width / 2, 78, `📅 ${formatDateTime(timeState)}   ${weather.icon} ${weather.name}`, {
                 fontSize: '12px', color: '#8ab4f8',
                 fontFamily: 'Georgia, serif',
                 stroke: '#000', strokeThickness: 1,

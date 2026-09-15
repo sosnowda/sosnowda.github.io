@@ -519,6 +519,17 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(0x7d5f2a, 1); g.fillRect(0, 4, 10, 1);             // прожилка
         g.generateTexture('forest_leaf', 10, 8);
 
+        // ===== Погода (раунд 14): капля дождя 2×14 и снежинка 5×5 =====
+        g.clear();
+        g.fillStyle(0xbfd8ff, 0.85); g.fillRect(0, 0, 2, 12);          // тело капли
+        g.fillStyle(0xffffff, 0.45); g.fillRect(0, 0, 1, 7);           // светлый край
+        g.generateTexture('weather_rain', 2, 14);
+
+        g.clear();
+        g.fillStyle(0xffffff, 0.95); g.fillCircle(2.5, 2.5, 1.6);      // ядро
+        g.fillStyle(0xffffff, 0.4);  g.fillCircle(2.5, 2.5, 2.4);      // ореол
+        g.generateTexture('weather_snow', 5, 5);
+
         g.destroy();
     }
 
