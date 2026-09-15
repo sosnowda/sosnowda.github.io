@@ -2,14 +2,17 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { FORK_LOCATIONS } from '../data/interiors.js';
-import { THIEF_LOCATIONS } from '../data/thief.js';
 import { getLocationById } from '../data/mapLocations.js';
-import { searchLocation, getHuntState, checkGameEnd } from '../data/thief.js';
+import {
+    searchLocation, getHuntState, checkGameEnd,
+    isChaseActive, isThiefAt, presentThiefEncounter, chaseTicksLeft,
+} from '../data/thief.js';
+import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
 import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
-import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
+import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 
@@ -97,7 +100,7 @@ export class LocationScene extends Phaser.Scene {
             fontSize: '14px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
         }).setDepth(100);
-        this.turnsText = this.add.text(16, 40, tf('⏳ Ходов: {0}', state.turnsLeft), {
+        this.turnsText = this.add.text(16, 40, tf(t('⏳ Действий: {0}'), state.turnsLeft), {
             fontSize: '14px', color: state.turnsLeft <= 3 ? '#ff4040' : '#ff8060',
             backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
@@ -112,14 +115,20 @@ export class LocationScene extends Phaser.Scene {
             duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         });
 
-        // ----- Состояние поиска -----
+        // ----- Состояние поиска + погоня (раунд 21) -----
+        const chaseActive = isChaseActive(this.registry);
         const alreadySearched = state.locationsSearched.includes(this.locationId);
-        if (alreadySearched) {
-            this.add.text(width / 2, height * 0.4, t('Ты уже обыскивал эту местность.\nНовых следов здесь не найти.'), {
+        if (chaseActive && alreadySearched) {
+            this.add.text(width / 2, height * 0.4, t('Ты уже прочитал следы в этой местности.\nНовых здесь не найти.'), {
                 fontSize: '18px', color: RUS.textDim, align: 'center',
                 fontFamily: 'Georgia, serif',
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5);
+        }
+
+        // ----- ВСТРЕЧА С ВОРОМ (раунд 21): если вор в локации — игрок видит его сразу -----
+        if (isThiefAt(this.registry, this.locationId)) {
+            this.time.delayedCall(400, () => presentThiefEncounter(this, this.locationId));
         }
 
         // П.11,16: Названия кнопок зависят от локации.
@@ -130,8 +139,8 @@ export class LocationScene extends Phaser.Scene {
         const searchLabel = isRiver ? t('🔍 Поиск') : (isRoad ? t('🔍 Осмотр') : t('🔍 Искать следы'));
         const exitLabel = (isRiver || isRoad) ? t('🚪 Выход') : t('◀ Назад к развилке');
 
-        // ----- Кнопка поиска/осмотра -----
-        if (!alreadySearched) {
+        // ----- Кнопка поиска/осмотра (только пока активна погоня) -----
+        if (chaseActive && !alreadySearched) {
             createButton(this, width / 2, height - 100, tf('{0} (проверка Внимательности)', searchLabel), () => {
                 this.doSearch();
             }, {
@@ -141,14 +150,23 @@ export class LocationScene extends Phaser.Scene {
             });
         }
 
-        // ----- Кнопка выхода -----
+        // ----- Кнопка выхода (дорога обратно к развилке занимает время) -----
         createButton(this, width / 2, height - 50, exitLabel, () => {
+            tickTime(this.registry, 15); // 1 тик на дорогу
+            ActionLog.add(this.registry, `Игрок покинул локацию «${loc.name}».`);
             this.scene.start(this.from);
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
             fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
             cornerRadius: 8,
         });
+    }
+
+    update() {
+        // Раунд 21: побег вора закрывает поход (пока открыт диалог — ждём)
+        if (this.busyDialog) return;
+        const endState = checkGameEnd(this.registry);
+        if (endState) this.scene.start('End');
     }
 
     /**
@@ -1036,13 +1054,15 @@ export class LocationScene extends Phaser.Scene {
     }
 
     /**
-     * Выполнить поиск следов вора.
+     * Выполнить поиск следов вора (раунд 21: следы/направление; бой теперь
+     * начинается только при встрече с вором лично).
      */
     doSearch() {
         const result = searchLocation(this.registry, this.locationId);
-        this.turnsText.setText(tf('⏳ Ходов: {0}', result.turnsLeft));
-        if (result.turnsLeft <= 3) this.turnsText.setColor('#ff4040');
-        else if (result.turnsLeft <= 6) this.turnsText.setColor('#ffaa40');
+        const ticksLeft = chaseTicksLeft(this.registry);
+        this.turnsText.setText(tf(t('⏳ Действий: {0}'), ticksLeft));
+        if (ticksLeft <= 3) this.turnsText.setColor('#ff4040');
+        else if (ticksLeft <= 6) this.turnsText.setColor('#ffaa40');
 
         // Если вор сбежал — переход к концу
         if (result.thiefEscaped) {
@@ -1051,24 +1071,22 @@ export class LocationScene extends Phaser.Scene {
         }
 
         // Показать результат поиска через диалог
-        const loc = FORK_LOCATIONS.find(l => l.id === this.locationId);
         const title = result.found ? t('✨ Следы найдены!') : t('🔍 Поиск следов');
-
         createDialog(this, title, result.message, [
             {
-                text: result.found ? t('Погоня!') : t('Продолжить'),
+                text: t('Продолжить'),
                 callback: () => {
-                    if (result.found) {
-                        // Переход к бою с вором
-                        this.scene.start('Combat', { enemyKeys: ['thief'], npcId: 'thief', fromLocation: this.locationId });
+                    // Раунд 21: вор мог прийти в локацию, пока мы искали
+                    if (isThiefAt(this.registry, this.locationId)) {
+                        this.scene.restart({ locationId: this.locationId, from: this.from });
+                        return;
                     }
-                    // Иначе — остаёмся в локации, но кнопка "искать" уже неактивна
                     this.scene.restart({ locationId: this.locationId, from: this.from });
                 },
             },
         ], {
             singleton: false,
-            portraitKey: result.found ? 'portrait_bandit' : 'portrait_narrator',
+            portraitKey: result.found ? 'portrait_narrator' : 'portrait_narrator',
             typing: true,
             typingSpeed: 30,
         });

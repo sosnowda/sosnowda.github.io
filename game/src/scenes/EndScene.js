@@ -31,7 +31,9 @@ export class EndScene extends Phaser.Scene {
         let endColor = '';
         if (quest.thiefDefeated) {
             endType = 'victory';
-            endTitle = '🏆 ПОБЕДА!';
+            // Раунд 21: победа бывает двух степеней — святыня возвращена деревне
+            // или вор повержен, но икона ещё у героя
+            endTitle = quest.mainQuestDone ? '🏆 ПОБЕДА! ИКОНА ВОЗВРАЩЕНА' : '⚖ ВОР ПОВЕРЖЕН';
             endColor = '#ffcc40';
             this.audioManager.playLevelUp();
         } else if (quest.thiefEscaped) {

@@ -2,16 +2,17 @@
 // Теперь использует расширенную карту местности (п.2,3) и отображает время (п.13).
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
-import { getHuntState } from '../data/thief.js';
+import { getHuntState, isChaseActive, chaseTicksLeft, checkGameEnd, TRAVEL_COST, TICK_MINUTES } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
 import { createButton, bindRestartOnResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { getForkLocations } from '../data/mapLocations.js';
-import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
+import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { getWeather } from '../systems/Weather.js';
 import { getVillageName } from '../data/world.js';
 import { t, tf } from '../systems/i18n.js';
+import { onLocationVisited } from '../data/questGenerator.js';
 
 export class ForkScene extends Phaser.Scene {
     constructor() {
@@ -63,13 +64,15 @@ export class ForkScene extends Phaser.Scene {
             }).setOrigin(0.5, 0);
         }
 
-        // ----- HUD: счётчик ходов -----
-        const turnsLeft = state.turnsLeft;
-        this.add.text(width / 2, 105, tf('⏳ Ходов до побега вора: {0}', turnsLeft), {
-            fontSize: '14px', color: turnsLeft <= 3 ? '#ff4040' : '#ff8060',
-            fontFamily: 'Georgia, serif',
-            stroke: '#000', strokeThickness: 2,
-        }).setOrigin(0.5, 0);
+        // ----- HUD: отсчёт времени до побега вора (раунд 21: тики вместо ходов) -----
+        if (isChaseActive(this.registry)) {
+            const ticksLeft = chaseTicksLeft(this.registry);
+            this.add.text(width / 2, 105, tf(t('⏳ Вор скроется через {0} действий'), ticksLeft), {
+                fontSize: '14px', color: ticksLeft <= 3 ? '#ff4040' : '#ff8060',
+                fontFamily: 'Georgia, serif',
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5, 0);
+        }
 
         // ----- Подсказки, собранные у жителей -----
         if (state.cluesGathered && state.cluesGathered.length > 0) {
@@ -119,6 +122,10 @@ export class ForkScene extends Phaser.Scene {
 
             createButton(this, x, y, label, () => {
                 ActionLog.add(this.registry, `Игрок отправился в локацию «${loc.name}».`);
+                // Раунд 21: дорога занимает время (1-2 тика) — вор тоже двигается
+                tickTime(this.registry, TICK_MINUTES * (TRAVEL_COST[loc.id] || 1));
+                // Раунд 21: посещение локации может закрыть процедурное поручение
+                onLocationVisited(this.registry, loc.id);
                 // Раунд 20 (слияние Пасек): охотничья пасека = ходячая ApiaryScene
                 if (loc.id === 'apiary') {
                     this.scene.start('Apiary', { from: 'Fork', hunt: true });
@@ -139,6 +146,7 @@ export class ForkScene extends Phaser.Scene {
         const backBtnY = startY + rows * step + 14;
         createButton(this, width / 2, backBtnY, t('🌲 Тёмный лес — прогулка'), () => {
             ActionLog.add(this.registry, 'Игрок отправился гулять в Тёмный лес.');
+            tickTime(this.registry, TICK_MINUTES); // дорога занимает время
             this.scene.start('Forest', { from: 'Fork' });
         }, {
             backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, pressColor: 0x1e321e,
@@ -150,6 +158,7 @@ export class ForkScene extends Phaser.Scene {
         // ----- Кнопка "Пасека — прогулка" (раунд 17: пчёлы — только антураж) -----
         createButton(this, width / 2, backBtnY + 40, t('🐝 Пасека — прогулка'), () => {
             ActionLog.add(this.registry, 'Игрок отправился на Пасеку.');
+            tickTime(this.registry, TICK_MINUTES * 2); // пасека далеко — 2 тика
             this.scene.start('Apiary', { from: 'Fork' });
         }, {
             backgroundColor: 0x5a4a1e, hoverColor: 0x6e5a28, pressColor: 0x3a3012,
@@ -160,6 +169,7 @@ export class ForkScene extends Phaser.Scene {
 
         // ----- Кнопка "Вернуться в деревню" -----
         createButton(this, width / 2, backBtnY + 80, t('◀ Вернуться в деревню'), () => {
+            tickTime(this.registry, TICK_MINUTES); // дорога занимает время
             this.scene.start('Village');
         }, {
             backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
@@ -175,6 +185,13 @@ export class ForkScene extends Phaser.Scene {
             fontSize: 16, padding: { left: 24, right: 24, top: 10, bottom: 10 },
             cornerRadius: 8,
         });
+    }
+
+    update() {
+        // Раунд 21: побег вора или иные концы закрывают поход
+        if (this.busyDialog) return;
+        const endState = checkGameEnd(this.registry);
+        if (endState) this.scene.start('End');
     }
 
     // П.17: Карта местности с указанием положения игрока

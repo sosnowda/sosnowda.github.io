@@ -9,7 +9,7 @@ import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js'
 import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd, askMoneyForHelp, askElderAdvance } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
-import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion } from '../data/questGenerator.js';
+import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion, onLocationVisited } from '../data/questGenerator.js';
 import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { getWeather } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
@@ -50,6 +50,14 @@ export class InteriorScene extends Phaser.Scene {
             return;
         }
         this.interior = interior;
+
+        // Раунд 21: вход в дом занимает время (1 тик) — вор тоже двигается.
+        // До рисования HUD, чтобы дата/время уже были с учётом входа.
+        tickTime(this.registry, 15);
+        // Раунд 21: визит в церковь может закрыть поручение «Помолиться за больного»
+        if (this.interiorId === 'church') {
+            onLocationVisited(this.registry, 'church');
+        }
 
         // Получаем NPC из registry (со случайным именем, п.5,6)
         this.npcData = findNpc(this.registry, interior.npcId);
@@ -253,6 +261,9 @@ export class InteriorScene extends Phaser.Scene {
      */
     talkToNpc(interior) {
         if (this.busyDialog) return;
+        // Раунд 21: если у NPC есть ВЫПОЛНЕННОЕ, но не оплаченное поручение —
+        // сперва выдаём награду, потом разговор.
+        if (this.claimCompletedQuests(interior)) return;
         const talkCheck = checkNpcWillingToTalk(this.registry, interior.npcId, { npcBusy: false });
         if (talkCheck.willAttack) {
             createDialog(this, t('Нападение!'),
@@ -291,6 +302,34 @@ export class InteriorScene extends Phaser.Scene {
         });
     }
 
+
+    /**
+     * Раунд 21: выдать награду за ВЫПОЛНЕННОЕ поручение этого NPC.
+     * Поручения отмечаются выполненными по факту (бой/визит в локацию),
+     * а награда выдаётся при разговоре с заказчиком — полный цикл RPG.
+     * @returns {boolean} true, если награда была выдана (диалог открыт)
+     */
+    claimCompletedQuests(interior) {
+        // Раунд 21 ФИКС: getActiveQuests ОТФИЛЬТРОВЫВАЕТ выполненные задания —
+        // ищем среди ВСЕХ принятых поручений этого NPC
+        const allQuests = ((this.registry.get('quest') || {}).activeQuests) || [];
+        const done = allQuests
+            .find(q => q.completed && !q.rewardClaimed && q.npcId === interior.npcId);
+        if (!done) return false;
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        const rewards = grantQuestRewards(this.registry, done);
+        done.rewardClaimed = true;
+        applyQuestCompleteBonus(this.registry, interior.npcId, done.difficulty);
+        ActionLog.add(this.registry, `Награда за «${done.title}»: ${rewards.join(', ')}.`);
+        this.busyDialog = true;
+        const address = this.player && this.player.gender === 'female' ? t('путница') : t('путник');
+        createDialog(this, t('✓ Поручение выполнено!'),
+            `${npcName}: «${tf(t('Ты справился, {0}! Прими это в благодарность.'), address)}»\n\n${t('Награда')}: ${rewards.join(', ')}`,
+            [{ text: t('Спасибо!'), callback: () => { this.busyDialog = false; } }],
+            { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 25 });
+        if (this.hud) this.updateHUD();
+        return true;
+    }
 
     /**
      * Попросить денег у NPC (п.16) — одноразовое действие.
@@ -353,7 +392,7 @@ export class InteriorScene extends Phaser.Scene {
 
         const questText = `${quest.description}\n\n` +
             `Цель: ${quest.objective}\n` +
-            `Время на выполнение: ${quest.timeLimit} ходов\n` +
+            `Время на выполнение: ${tf(t('{0} действий'), quest.timeLimit)}\n` +
             `Сложность: ${quest.difficulty === 'hard' ? 'тяжёлая' : (quest.difficulty === 'medium' ? 'средняя' : 'лёгкая')}\n` +
             `Награда: ${rewardTexts.join(', ')}`;
 

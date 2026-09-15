@@ -764,6 +764,10 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         let totalH = pad.top + titleH + pad.title + contentH + pad.content;
         if (actionContainers.length > 0) {
             totalH += pad.action + 50;
+            // Раунд 21: при 4+ кнопках — сетка 2 колонки; доп. ряды по 50px
+            const perRow = actionContainers.length > 3 ? 2 : actionContainers.length;
+            const extraRows = Math.ceil(actionContainers.length / perRow) - 1;
+            totalH += extraRows * 50;
         }
         totalH += pad.bottom;
 
@@ -806,17 +810,27 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             contentText.setPosition(-contentText.width / 2, contentTop);
         }
 
-        // Кнопки — в один ряд внизу
+        // Кнопки — внизу; при 4+ кнопках сетка 2×N (раунд 21: в один ряд
+        // подписи обрезались/перекрывались)
         const n = actionContainers.length;
-        const btnY = totalH / 2 - pad.bottom - 25;
-        if (n === 1) {
-            actionContainers[0].setPosition(0, btnY);
-        } else if (n > 1) {
-            const spacing = (dialogWidth - 40) / n;
-            actionContainers.forEach((btn, i) => {
-                const x = -dialogWidth / 2 + 20 + spacing / 2 + i * spacing;
-                btn.setPosition(x, btnY);
-            });
+        if (n > 0) {
+            const perRow = n > 3 ? 2 : n;
+            const rows = Math.ceil(n / perRow);
+            const rowH = 50;
+            const btnYBase = totalH / 2 - pad.bottom - 25 - (rows - 1) * rowH / 2;
+            for (let r = 0; r < rows; r++) {
+                const rowBtns = actionContainers.slice(r * perRow, (r + 1) * perRow);
+                const m = rowBtns.length;
+                const y = btnYBase + r * rowH;
+                if (m === 1) {
+                    rowBtns[0].setPosition(0, y);
+                } else {
+                    const spacing = (dialogWidth - 40) / m;
+                    rowBtns.forEach((btn, i) => {
+                        btn.setPosition(-dialogWidth / 2 + 20 + spacing / 2 + i * spacing, y);
+                    });
+                }
+            }
         }
     };
 

@@ -12,7 +12,8 @@ import SaveManager from '../systems/SaveManager.js';
 import { Tutorial } from '../systems/Tutorial.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
 import { ActionLog } from '../data/actionLog.js';
-import { checkGameEnd } from '../data/thief.js';
+import { checkGameEnd, chaseTicksLeft } from '../data/thief.js';
+import { onLocationVisited } from '../data/questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, formatDateTime, getSeason } from '../systems/TimeSystem.js';
@@ -783,9 +784,14 @@ export class VillageScene extends Phaser.Scene {
         });
         invBtn.on('pointerover', () => invBtn.setFillStyle(0x5a4530, 1));
         invBtn.on('pointerout', () => invBtn.setFillStyle(0x4a3520, 0.95));
+
+        // Раунд 21: возвращение в деревню может закрыть поручение «Помирить соседей» и т.п.
+        onLocationVisited(this.registry, 'village');
     }
 
     update() {
+        // Пока открыт диалог — не перебиваем его концом игры (раунд 21)
+        if (this.busyDialog) return;
         // Проверка конца игры
         const endState = checkGameEnd(this.registry);
         if (endState) {
@@ -960,17 +966,18 @@ export class VillageScene extends Phaser.Scene {
         const timeState = getTime(this.registry);
         const villageRep = getVillageRep(this.registry);
         const repLevel = getReputationLevel(villageRep);
-        const turnsLeft = (q.turnLimit || 12) - (q.turnsUsed || 0);
+        // Раунд 21: отсчёт до побега вора в ДЕЙСТВИЯХ (тиках)
+        const ticksLeft = chaseTicksLeft(this.registry);
         
-        // Единый статус-бар (п.10): HP | MP | Меч | Деньги | Дата | Ходы | Репутация
+        // Единый статус-бар (п.10): HP | MP | Меч | Деньги | Дата | Действия | Репутация
         let statusLine = `❤${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  ⚔${p.skills.sword}%  💰${moneyStr}`;
         if (timeState) {
             statusLine += `  📅${formatDateTime(timeState)}`;
             // Раунд 14: иконка текущей погоды рядом с датой
             if (this.weather) statusLine += ` ${this.weather.icon}`;
         }
-        if (turnsLeft > 0 && !q.thiefDefeated && !q.thiefEscaped) {
-            statusLine += `  ${tf('⏳{0}ход', turnsLeft)}`;
+        if (ticksLeft > 0) {
+            statusLine += `  ${tf(t('⏳{0}действ.'), ticksLeft)}`;
         }
         statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
         this.statusText.setText(statusLine);
@@ -1058,6 +1065,9 @@ export class VillageScene extends Phaser.Scene {
             this.scene.pause();
             this.scene.launch('Interior', { interiorId: this.nearestInteractable.interiorId, from: 'Village' });
         } else if (this.nearestInteractable.type === 'gate') {
+            // Раунд 21: выход за околицу занимает время (1 тик) — вор тоже двигается
+            tickTime(this.registry, 15);
+            ActionLog.add(this.registry, 'Игрок вышел за околицу.');
             this.scene.start('Fork');
         } else if (this.nearestInteractable.type === 'chest') {
             // nearestInteractable.chest — сырой объект из CHESTS; нужен отрисованный

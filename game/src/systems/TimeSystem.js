@@ -180,7 +180,9 @@ export function getTime(registry) {
     return registry.get('gameTime');
 }
 
-// Продвинуть время и сохранить в registry
+// Продвинуть время и сохранить в registry.
+// Раунд 21: на каждый тик времени реагирует мировая погоня за вором —
+// вор ждёт на локации или перемещается (хук из data/thief.js).
 export function tickTime(registry, minutes = 15) {
     let timeState = registry.get('gameTime');
     if (!timeState) {
@@ -188,6 +190,11 @@ export function tickTime(registry, minutes = 15) {
     }
     advanceTime(timeState, minutes);
     registry.set('gameTime', timeState);
+    // Мировой тик погони (вор двигается на каждый полный тик)
+    const chaseHook = registry.get && registry.get('chaseTickHook');
+    if (typeof chaseHook === 'function') {
+        chaseHook(registry, minutes);
+    }
     return timeState;
 }
 

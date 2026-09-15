@@ -4,12 +4,13 @@ import { RUS } from '../config/RusTheme.js';
 import { WEAPONS } from '../config/GameConfig.js';
 import { skillCheck, rollDamage, ROLL_RESULT, applyDamage } from '../systems/BRPEngine.js';
 import { spawnEnemy } from '../data/characters.js';
-import { createButton, createFloatingText, registerAnchoredUI, onSceneResize } from '../utils/ui.js';
+import { createButton, createDialog, createFloatingText, registerAnchoredUI, onSceneResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { ActionLog } from '../data/actionLog.js';
-import { winGame, loseHeroDead } from '../data/thief.js';
-import { getTime, getDayNightOverlay } from '../systems/TimeSystem.js';
+import { loseHeroDead, recoverStolenItem } from '../data/thief.js';
+import { getActiveQuests, checkQuestCompletion } from '../data/questGenerator.js';
+import { getTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 
@@ -191,11 +192,9 @@ export class CombatScene extends Phaser.Scene {
         if (res.result === 'critical' || res.result === 'success') {
             this.pushLog(tf('Ты успешно бежал с поля боя (бросок {0})!', res.roll));
             if (this.audioManager) this.audioManager.playSwordMiss();
-            // Тратим 2 хода за побег (вор ближе к побегу)
-            const q = this.registry.get('quest') || {};
-            q.turnsUsed = (q.turnsUsed || 0) + 2;
-            this.registry.set('quest', q);
-            ActionLog.add(this.registry, `Побег из боя. Потеряно 2 хода (бросок ${res.roll}, успех).`);
+            // Раунд 21: побег занимает время — 2 тика (вор тоже двигается)
+            tickTime(this.registry, 30);
+            ActionLog.add(this.registry, `Побег из боя. Потеряно 2 действия (бросок ${res.roll}, успех).`);
             this.time.delayedCall(1000, () => {
                 // Возврат в предыдущую сцену (раунд 13: лес возвращается в лес)
                 if (this.fromScene === 'Forest') {
@@ -209,11 +208,9 @@ export class CombatScene extends Phaser.Scene {
         } else {
             this.pushLog(tf('Не удалось сбежать (бросок {0})! Враг атакует.', res.roll));
             if (this.audioManager) this.audioManager.playDamageTaken();
-            // Тратим 1 ход за неудачный побег
-            const q = this.registry.get('quest') || {};
-            q.turnsUsed = (q.turnsUsed || 0) + 1;
-            this.registry.set('quest', q);
-            ActionLog.add(this.registry, `Неудачный побег из боя. Потерян 1 ход (бросок ${res.roll}, провал).`);
+            // Раунд 21: неудачный побег занимает 1 тик
+            tickTime(this.registry, 15);
+            ActionLog.add(this.registry, `Неудачный побег из боя. Потеряно 1 действие (бросок ${res.roll}, провал).`);
             this.time.delayedCall(800, () => this.enemyTurn());
         }
     }
@@ -520,18 +517,26 @@ export class CombatScene extends Phaser.Scene {
 
     endCombatVictory() {
         const q = this.registry.get('quest');
-        // Если это был вор — победа в игре
+        // Если это был вор — победа в ПОГОНЕ, но игра продолжается (раунд 21)
         const isThiefFight = this.enemies.some(e => e.isThief) || this.npcId === 'thief';
         if (isThiefFight) {
-            winGame(this.registry);
+            // Вор повержен в бою — икона в инвентарь, погоня завершена
+            recoverStolenItem(this.registry, 'killed', null);
             ActionLog.add(this.registry, `Бой с вором выигран. Вор повержен!`);
         } else if (this.npcId === 'bandit') {
             q.banditDefeated = true;
         }
-        q.currentObjective = isThiefFight ? 'Победа! Икона возвращена!' : 'Враг повержен';
+        if (!isThiefFight) {
+            // Раунд 21: боевые процедурные поручения (волк/разбойники) завершаются
+            this.completeCombatQuests();
+            q.currentObjective = 'Враг повержен';
+        } else {
+            q.currentObjective = 'Икона у тебя! Верни её старосте или священнику.';
+        }
+        this.registry.set('quest', q);
         this.autosave();
         this.busy = true;
-        this.pushLog(isThiefFight ? t('Вор повержен! Икона твоя!') : t('Враг повержен! Ты одержал победу.'));
+        this.pushLog(isThiefFight ? t('Вор повержен! Икона у тебя!') : t('Враг повержен! Ты одержал победу.'));
         if (this.audioManager) this.audioManager.playLevelUp();
         // Эффект победы — золотые частицы
         const emitter = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
@@ -545,9 +550,13 @@ export class CombatScene extends Phaser.Scene {
         emitter.explode(30);
         this.time.delayedCall(1500, () => {
             emitter.destroy();
-            // Переход в EndScene при победе над вором; в лес — после волка/засады (раунд 13)
+            // Раунд 21: после победы над вором — НЕ конец игры, а возврат в деревню
+            // (икону нужно вернуть старосте или священнику; игра продолжается)
             if (isThiefFight) {
-                this.scene.start('End');
+                createDialog(this, t('🏆 Вор повержен!'),
+                    t('Ты обыскал тело поверженного вора и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.'),
+                    [{ text: t('В деревню!'), callback: () => this.scene.start('Village') }],
+                    { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
             } else if (this.fromScene === 'Forest') {
                 // Стая напугана на 4 игровых часа
                 const ts = this.registry.get('gameTime');
@@ -559,6 +568,23 @@ export class CombatScene extends Phaser.Scene {
                 this.scene.start('Forest', { from: 'Combat' });
             } else {
                 this.scene.start('Village');
+            }
+        });
+    }
+
+    /**
+     * Раунд 21: завершить боевые процедурные поручения (волк/разбойники),
+     * подходящие по типу врага. Награда выдаётся при разговоре с заказчиком.
+     */
+    completeCombatQuests() {
+        const enemyKeys = this.enemyKeys || [];
+        getActiveQuests(this.registry).forEach(quest => {
+            if (!quest.combat || quest.completed) return;
+            const matched = !quest.enemyKeys || enemyKeys.some(k => quest.enemyKeys.includes(k));
+            if (!matched) return;
+            const done = checkQuestCompletion(this.registry, quest, { combatWon: true, enemyKey: enemyKeys[0] });
+            if (done) {
+                ActionLog.add(this.registry, tf(t('Поручение «{0}» выполнено! Загляни к {1} за наградой.'), quest.title, quest.npcName));
             }
         });
     }

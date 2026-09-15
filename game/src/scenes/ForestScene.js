@@ -11,7 +11,8 @@ import {
 } from '../data/forest.js';
 import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals, isRainy } from '../systems/Weather.js';
-import { checkGameEnd } from '../data/thief.js';
+import { checkGameEnd, chaseTicksLeft } from '../data/thief.js';
+import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
 import { dayKeyOf } from '../data/chests.js';
 import { createDialog } from '../utils/ui.js';
@@ -468,23 +469,28 @@ export class ForestScene extends Phaser.Scene {
         }
 
         this.updateHUD();
+
+        // Раунд 21: прогулка в лес может закрыть поручение «Заготовить дрова» и т.п.
+        onLocationVisited(this.registry, 'forest');
     }
 
     // ================= ИГРОВОЙ ЦИКЛ =================
 
     update(time) {
-        const endState = checkGameEnd(this.registry);
-        if (endState) {
-            this.scene.start('End');
-            return;
-        }
-
+        // Пока открыт диалог — мир ждёт (раунд 21)
         if (this.busyDialog) {
             this.playerObj.setVelocity(0, 0);
             this.wolves.forEach(w => w.sprite.setVelocity(0, 0));
             if (this.virtualControls) this.virtualControls.setVisible(false);
             return;
         }
+
+        const endState = checkGameEnd(this.registry);
+        if (endState) {
+            this.scene.start('End');
+            return;
+        }
+
         if (this.virtualControls) this.virtualControls.setVisible(true);
 
         this.movePlayer();

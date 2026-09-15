@@ -424,6 +424,119 @@ const EN = {
     '💬 Нажми, чтобы поговорить': '💬 Click to talk',
     'Подарок': 'A gift',
     'Не хватает денег!': 'Not enough money!',
+
+    // ----- Раунд 21: много-локационная погоня за вором -----
+    '⏳ Вор скроется через {0} действий': '⏳ The thief will vanish in {0} actions',
+    '⏳ Действий: {0}': '⏳ Actions left: {0}',
+    '⏳{0}действ.': '⏳{0}act.',
+    '{0} действий': '{0} actions',
+    'Вор украл икону и бежал из деревни! Расспроси жителей или ищи следы — время уходит.':
+        'The thief stole the icon and fled the village! Question the locals or look for tracks — time is running out.',
+    'Игра началась. Вор украл чудотворную икону и бежал из деревни в неизвестном направлении.':
+        'The journey begins. The thief stole the miracle-working icon and fled the village in an unknown direction.',
+    'Вор покинул «{0}» и двинулся дальше.': 'The thief left "{0}" and moved on.',
+    'Вор скрылся с иконой. Погоня провалена.': 'The thief escaped with the icon. The chase has failed.',
+    'ПОРАЖЕНИЕ: вор покинул вторую локацию и скрылся из вида. След ведёт за околицу.':
+        'DEFEAT: the thief left the second location and vanished. The trail leads out of the village bounds.',
+    'Пока ты осматривался, вор успел скрыться из вида...': 'While you were searching, the thief managed to slip away...',
+    'Погоня окончена — искать больше нечего.': 'The chase is over — there is nothing left to search for.',
+    'Следы свежайшие — трава ещё примята! Вор где-то совсем рядом, оглянись!':
+        'The tracks are absolutely fresh — the grass is still flattened! The thief is very close, look around!',
+    'Вор был здесь! Следы ведут в сторону «{0}». Не теряй времени!':
+        'The thief was here! The tracks lead towards "{0}". Waste no time!',
+    'Следы вора здесь обрываются: он уходил прочь из деревни широкими шагами бегуна.':
+        'The thief\'s tracks end here: he left the village at a runner\'s stride, heading away for good.',
+    'Кто-то здесь проходил — видны примятые травы. Но разобрать следы не вышло. Попробуй ещё раз.':
+        'Someone passed here — the grass is trampled. But you could not make out the tracks. Try again.',
+    'Ты тщательно осмотрел местность — свежих следов вора здесь нет. Видимо, он пошёл другой дорогой.':
+        'You searched the area thoroughly — no fresh tracks of the thief here. He must have taken another road.',
+    'Видел, как воришка в тёмном плаще бежал в сторону «{0}»!':
+        'I saw the sneaky wretch in a dark cloak running towards "{0}"!',
+    'И следы ещё не остыли — поспеши!': 'And the tracks are still fresh — hurry!',
+    'Его видели уже на дороге к «{0}». Догоняй!': 'He was already seen on the road to "{0}". Catch him!',
+    'Его видели уже у «{0}». Догоняй!': 'He was already seen near "{0}". Catch him!',
+    'Следы потерялись — не знаю, куда он подался.': 'The trail went cold — I know not where he went.',
+    'Не видел я никакого вора. Спроси кого другого, путник.':
+        'I saw no thief. Ask someone else, traveller.',
+    'Пока вы говорили, вор успел скрыться из вида...': 'While you were talking, the thief managed to vanish from sight...',
+    'Слава Богу, ворюгу изловили! Дай Бог тебе удачи, сыщик.':
+        'Thank God the rogue is caught! God speed you, detective.',
+    'Я уже помог тебе, чем мог. Больше не дам.': 'I have already helped you all I could. I will give no more.',
+    'Возьми, путник, чем богат. Помоги тебе Господь!': 'Take this, traveller, all I can spare. God bless you!',
+    'Вот тебе немного денег на дорогу.': 'Here is a little money for the road.',
+    'Попрошайка! Уходи, не позорься!': 'You beggar! Go away, have you no shame!',
+    'Больше не даст.': 'Will give no more.',
+    'Нет у меня лишних денег, сам перебиваюсь.': 'I have no spare money — I barely get by myself.',
+    'репутация упала на': 'reputation dropped by',
+    '😱 Встреча с вором!': '😱 You met the thief!',
+    'Вор в тёмном плаще сжимает краденую икону. Он тебя заметил! Можно напасть, убедить отдать краденое (проверка Убеждения) или подкрасться и оглушить (проверка Драки).':
+        'The thief in a dark cloak clutches the stolen icon. He has spotted you! You can attack, persuade him to give it back (Persuasion check), or sneak up and knock him out (Brawl check).',
+    '⚔ Напасть': '⚔ Attack',
+    '🤝 Убедить': '🤝 Persuade',
+    '🌑 Оглушить': '🌑 Knock out',
+    '◀ Отступить': '◀ Back off',
+    '🏃 Вор скрылся!': '🏃 The thief escaped!',
+    'Итоги похода': 'Journey summary',
+    '🏆 Святыня у тебя!': '🏆 The holy icon is yours!',
+    '💨 Вор вырвался!': '💨 The thief broke free!',
+    'Вор, помявшись, опускает икону в траву: «Ладно! Пронеси тебя Бог, сыщик!» — и растворяется в чаще. Икона цела! Отнеси её старосте или батюшке.':
+        'The thief hesitates, then lowers the icon into the grass: "Fine! God speed you, detective!" — and melts into the thicket. The icon is unharmed! Carry it to the village elder or the priest.',
+    'бросок': 'roll',
+    '«Не на того напал, сыщик!» — хохочет вор и исчезает меж деревьев. Это была твоя последняя возможность...':
+        '"You picked the wrong man, detective!" the thief laughs and vanishes among the trees. That was your last chance...',
+    '«Не на того напал!» — вор швыряет в тебя ком земли и пускается наутёк. Успей прочесть его следы!':
+        '"You picked the wrong man!" The thief hurls a clod of earth at you and bolts. Hurry and read his tracks!',
+    'Одним точным ударом в висок ты срубишь вора с ног и накрепко связываешь его. Икона в киоте невредима!':
+        'With one precise blow to the temple you fell the thief and bind him tightly. The icon is unharmed!',
+    'Ты догоняешь вора и оглушаешь его ударом в затылок. Вор связан — его ждёт суд старосты, а икона снова цела!':
+        'You catch up with the thief and knock him out with a blow to the back of the head. The thief is bound — the elder\'s court awaits him, and the icon is safe again!',
+    'Ты наступил на сухую ветку — вор обернулся и скрылся во мраке. Это была твоя последняя возможность...':
+        'You stepped on a dry twig — the thief whirled around and vanished into the dark. That was your last chance...',
+    'Вор оказался проворнее: увернулся от захвата и пустился наутёк. Успей прочесть его следы!':
+        'The thief proved nimbler: he dodged your grasp and bolted. Hurry and read his tracks!',
+    'Погоня окончена.': 'The chase is over.',
+    'Икона у тебя! Верни её старосте или священнику в деревне.':
+        'You have the icon! Return it to the village elder or the priest.',
+    'Чудотворная икона': 'Miracle-working icon',
+    'Вор повержен в бою': 'The thief was slain in combat',
+    'Вор оглушён и взят в плен': 'The thief was knocked out and taken captive',
+    'Вор сам вернул украденное': 'The thief gave back the stolen icon himself',
+    'ПОБЕДА:': 'VICTORY:',
+    'Чудотворная икона у тебя!': 'The miracle-working icon is in your hands!',
+    'Икона уже возвращена деревне.': 'The icon has already been returned to the village.',
+    'благословение (полное восстановление)': 'blessing (full recovery)',
+    'Вернул украденную икону': 'Returned the stolen icon',
+    'Икона возвращена! Деревня благодарна. Староста и жители дают поручения.':
+        'The icon has been returned! The village is grateful. The elder and villagers offer errands.',
+    'ПОБЕДА: чудотворная икона возвращена деревне!': 'VICTORY: the miracle-working icon has been returned to the village!',
+    'Награда': 'Reward',
+    'Герой пал в бою. Поход окончен.': 'The hero fell in battle. The journey is over.',
+    'ПОРАЖЕНИЕ: герой пал. Летопись обрывается на этой странице.':
+        'DEFEAT: the hero has fallen. The chronicle breaks off on this page.',
+    'Напал на вора в его убежище.': 'Attacked the thief at his hiding place.',
+    '🏆 Вор повержен!': '🏆 The thief is defeated!',
+    'Ты обыскал тело поверженного вора и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.':
+        'You search the fallen thief and find the miracle-working icon of the Mother of God — whole and unharmed. Return to the village: give the holy icon to the elder or the priest and claim your well-earned reward.',
+    'В деревню!': 'To the village!',
+    'Поручение «{0}» выполнено! Загляни к {1} за наградой.':
+        'Errand "{0}" is done! Visit {1} to collect your reward.',
+    'Принял задание: {0} от {1}. Время: {2}.': 'Accepted errand: {0} from {1}. Time limit: {2}.',
+    '🏺 Вернуть икону!': '🏺 Return the icon!',
+    '🏺 Вернуть икону церкви!': '🏺 Return the icon to the church!',
+    '(дальше)': '(continue)',
+    '🏆 Продолжить игру (поручения жителей)': '🏆 Keep playing (villagers\' errands)',
+    '📜 Завершить поход и посмотреть итоги': '📜 Finish the journey and view the summary',
+    'Староста бережно принимает икону и осеняет себя крестом.':
+        'The elder receives the icon reverently and crosses himself.',
+    'Батюшка принимает икону; на его лице слёзы радости. Святыня снова в киоте!':
+        'The priest receives the icon; tears of joy on his face. The holy icon is back in its shrine!',
+    '✓ Поручение выполнено!': '✓ Errand completed!',
+    'Ты справился, {0}! Прими это в благодарность.': 'Well done, {0}! Accept this with our gratitude.',
+    'Спасибо!': 'Thank you!',
+    'путник': 'traveller',
+    'путница': 'traveller (f)',
+    'Ты уже прочитал следы в этой местности.\nНовых здесь не найти.':
+        'You have already read the tracks in this area.\nThere is nothing new to find here.',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----

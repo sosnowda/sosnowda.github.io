@@ -2,23 +2,34 @@
 // choice: { text, next?, end?, action? } — action(scene) выполняется при выборе.
 // Действия обращаются к сцене через scene.registry и scene.autosave().
 
-import { askNPC, searchLocation, winGame, loseHeroDead, askElderAdvance, askMoneyForHelp } from './thief.js';
+import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, checkGameEnd } from './thief.js';
 import { ActionLog } from './actionLog.js';
+import { t } from '../systems/i18n.js';
 
 export const DIALOGUES = {
-    // === СТАРОСТА — выдаёт задание + можно попросить задаток ===
+    // === СТАРОСТА — выдаёт задание + задаток + ПРИЁМ ИКОНЫ (раунд 21) ===
     elder_quest: {
         start: 'a',
         nodes: {
             a: {
                 speaker: 'Староста Мирослав',
                 text: 'Здравствуй, {address}. У нас беда! Ночью неизвестный вор забрался в часовню и украл чудотворную икону. Это наша главная святыня!',
-                choices: [
-                    { text: 'Я помогу найти вора.', next: 'b' },
-                    { text: 'Расскажи подробнее.', next: 'c' },
-                    { text: 'Дай задаток за работу.', next: 'ask_advance' },
-                    { text: 'Извини, я спешу.', end: true },
-                ],
+                // Раунд 21: если икона у игрока — первым делом предлагаем её вернуть
+                action: (scene) => {
+                    const q = scene.registry.get('quest') || {};
+                    const base = [
+                        { text: t('Я помогу найти вора.'), next: 'b' },
+                        { text: t('Расскажи подробнее.'), next: 'c' },
+                        { text: t('Дай задаток за работу.'), next: 'ask_advance' },
+                        { text: t('Извини, я спешу.'), end: true },
+                    ];
+                    const node = DIALOGUES.elder_quest.nodes.a;
+                    node.choices = (q.stolenItemRecovered && !q.mainQuestDone)
+                        ? [{ text: t('🏺 Вернуть икону!'), next: 'return_icon' }, ...base]
+                        : base;
+                },
+                choices: [],
+                choices_base: null,
             },
             b: {
                 speaker: 'Староста Мирослав',
@@ -63,6 +74,36 @@ export const DIALOGUES = {
                 choices: [
                     { text: 'Спасибо. Я берусь за поиски.', next: 'b' },
                     { text: 'Понятно.', end: true },
+                ],
+            },
+            // Раунд 21: возврат иконы старосте — награда и победа, игра продолжается
+            return_icon: {
+                speaker: 'Староста Мирослав',
+                text: '...',
+                action: (scene) => {
+                    const r = surrenderStolenItem(scene.registry, 'elder');
+                    scene._lastAskResult = {
+                        message: r.success
+                            ? `${t('Староста бережно принимает икону и осеняет себя крестом.')}\n${t('Награда')}: ${r.rewardText}`
+                            : r.message,
+                    };
+                },
+                choices: [{ text: t('(дальше)'), next: 'victory_continue' }],
+            },
+            victory_continue: {
+                speaker: 'Староста Мирослав',
+                text: '...',
+                choices: [
+                    { text: t('🏆 Продолжить игру (поручения жителей)'), end: true },
+                    {
+                        text: t('📜 Завершить поход и посмотреть итоги'),
+                        action: (scene) => {
+                            const q = scene.registry.get('quest');
+                            q.runFinished = true;
+                            ActionLog.add(scene.registry, 'Поход завершён по воле героя.');
+                        },
+                        end: true,
+                    },
                 ],
             },
             // Финальный узел после победы
@@ -295,12 +336,51 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Отец Савватий',
                 text: 'Мир тебе, чадо. Что привело тебя в дом Божий? Может, хочешь исповедаться или помолиться?',
+                // Раунд 21: если икона у игрока — предлагаем вернуть святыню церкви
+                action: (scene) => {
+                    const q = scene.registry.get('quest') || {};
+                    const base = [
+                        { text: t('Расскажи про украденную икону'), next: 'about_icon' },
+                        { text: t('Спросить про вора'), next: 'ask_thief' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Помолиться'), next: 'pray' },
+                        { text: t('Спасибо, батюшка.'), end: true },
+                    ];
+                    const node = DIALOGUES.priest.nodes.a;
+                    node.choices = (q.stolenItemRecovered && !q.mainQuestDone)
+                        ? [{ text: t('🏺 Вернуть икону церкви!'), next: 'return_icon' }, ...base]
+                        : base;
+                },
+                choices: [],
+            },
+            // Раунд 21: возврат иконы священнику — награда и победа, игра продолжается
+            return_icon: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                action: (scene) => {
+                    const r = surrenderStolenItem(scene.registry, 'priest');
+                    scene._lastAskResult = {
+                        message: r.success
+                            ? `${t('Батюшка принимает икону; на его лице слёзы радости. Святыня снова в киоте!')}\n${t('Награда')}: ${r.rewardText}`
+                            : r.message,
+                    };
+                },
+                choices: [{ text: t('(дальше)'), next: 'victory_continue' }],
+            },
+            victory_continue: {
+                speaker: 'Отец Савватий',
+                text: '...',
                 choices: [
-                    { text: 'Расскажи про украденную икону', next: 'about_icon' },
-                    { text: 'Спросить про вора', next: 'ask_thief' },
-                    { text: 'Попросить денег', next: 'ask_money' },
-                    { text: 'Помолиться', next: 'pray' },
-                    { text: 'Спасибо, батюшка.', end: true },
+                    { text: t('🏆 Продолжить игру (поручения жителей)'), end: true },
+                    {
+                        text: t('📜 Завершить поход и посмотреть итоги'),
+                        action: (scene) => {
+                            const q = scene.registry.get('quest');
+                            q.runFinished = true;
+                            ActionLog.add(scene.registry, 'Поход завершён по воле героя.');
+                        },
+                        end: true,
+                    },
                 ],
             },
             about_icon: {

@@ -7,6 +7,7 @@
 
 import { ActionLog } from './actionLog.js';
 import { ARMORS, WEAPONS } from '../systems/Character.js';
+import { t, tf } from '../systems/i18n.js';
 
 // === ТИПЫ ЗАДАНИЙ (исторически достоверные для Руси XV века) ===
 export const QUEST_TYPES = {
@@ -426,10 +427,42 @@ export function acceptQuest(registry, quest) {
     if (!q.activeQuests) q.activeQuests = [];
     quest.accepted = true;
     q.activeQuests.push(quest);
-    q.currentObjective = quest.objective + ` (ходов: ${quest.timeLimit})`;
+    q.currentObjective = quest.objective + ` (${tf(t('{0} действий'), quest.timeLimit)})`;
     registry.set('quest', q);
-    ActionLog.add(registry, `Принял задание: ${quest.title} от ${quest.npcName}. Время: ${quest.timeLimit} ходов.`);
+    ActionLog.add(registry, tf(t('Принял задание: {0} от {1}. Время: {2}.'), quest.title, quest.npcName, tf(t('{0} действий'), quest.timeLimit)));
     return quest;
+}
+
+// Соответствие локации поручения посещённой локации.
+// 'road' (легаси-имя) считается совпадающим с 'road_south';
+// 'any' — любая загородная локация.
+function matchesLocation(questLoc, visited) {
+    if (!questLoc || !visited) return false;
+    if (questLoc === visited) return true;
+    if (questLoc === 'road' && visited === 'road_south') return true;
+    if (questLoc === 'any') {
+        return ['forest', 'road_south', 'field', 'river', 'lake', 'pogost', 'mill', 'apiary', 'pasture'].includes(visited);
+    }
+    return false;
+}
+
+/**
+ * Раунд 21: отметить выполненными НЕБОЕВЫЕ поручения, подходящие по локации.
+ * Вызывается при посещении деревни/лесов/пасеки/развилки/церкви.
+ * Награда выдаётся при разговоре с заказчиком (claimCompletedQuests).
+ * @returns {Array} список завершённых поручений
+ */
+export function onLocationVisited(registry, locationId) {
+    const completed = [];
+    getActiveQuests(registry).forEach(quest => {
+        if (quest.combat || quest.completed) return;
+        if (matchesLocation(quest.location, locationId)) {
+            quest.completed = true;
+            completed.push(quest);
+            ActionLog.add(registry, tf(t('Поручение «{0}» выполнено! Загляни к {1} за наградой.'), quest.title, quest.npcName));
+        }
+    });
+    return completed;
 }
 
 /**
@@ -442,14 +475,17 @@ export function checkQuestCompletion(registry, quest, context = {}) {
     const template = QUEST_TEMPLATES[quest.type];
     if (!template) return false;
 
-    // Для боевых заданий — проверяем, что бой с нужным врагом выигран
+    // Для боевых заданий — проверяем, что бой с НУЖНЫМ типом врага выигран
     if (quest.combat && context.combatWon) {
-        quest.completed = true;
-        return true;
+        const enemyMatched = !context.enemyKey || !quest.enemyKeys || quest.enemyKeys.includes(context.enemyKey);
+        if (enemyMatched) {
+            quest.completed = true;
+            return true;
+        }
     }
 
     // Для небоевых заданий — проверяем, что игрок был в нужной локации
-    if (!quest.combat && context.locationVisited === quest.location) {
+    if (!quest.combat && matchesLocation(quest.location, context.locationVisited)) {
         quest.completed = true;
         return true;
     }
