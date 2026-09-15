@@ -118,7 +118,7 @@ export const PROFESSION_SCHEDULES = {
     [PROFESSIONS.BEEKEEPER]: {
         dawn:      { activity: 'на пасеке', location: 'apiary', available: false },
         morning:   { activity: 'ухаживает за пчёлами', location: 'apiary', available: true },
-        noon:      { activity: 'собирает мёд', location: 'apiary', available: true },
+        noon:      { activity: 'проверяет ульи', location: 'apiary', available: true },
         evening:   { activity: 'возвращается домой', location: 'home', available: true },
         dusk:      { activity: 'дома', location: 'home', available: true },
         night:     { activity: 'спит', location: 'home', available: false },

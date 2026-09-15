@@ -131,8 +131,8 @@ export class ForkScene extends Phaser.Scene {
             cornerRadius: 6,
         });
 
-        // ----- Кнопка "Пасека — мёд и воск" (раунд 16) -----
-        createButton(this, width / 2, backBtnY + 44, t('🐝 Пасека — мёд и воск'), () => {
+        // ----- Кнопка "Пасека — прогулка" (раунд 17: пчёлы — только антураж) -----
+        createButton(this, width / 2, backBtnY + 44, t('🐝 Пасека — прогулка'), () => {
             ActionLog.add(this.registry, 'Игрок отправился на Пасеку.');
             this.scene.start('Apiary', { from: 'Fork' });
         }, {

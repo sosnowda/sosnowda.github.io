@@ -32,6 +32,11 @@ export class CharacterSelectionScene extends Phaser.Scene {
         this.selectedHero = null;
         this.customName = '';
 
+        // Раунд 17 (QA-фикс): при любом уходе со сцены (ESC, переходы)
+        // снимать DOM-инпут имени с body — иначе поле «Гаврила»
+        // остаётся висеть поверх игры.
+        this.events.once('shutdown', () => this.cleanupPreview());
+
         // Заголовок
         this.add.text(width / 2, 30, t('Создание персонажа'), {
             fontFamily: 'Georgia, serif', fontSize: '32px', color: '#E8DCC4',

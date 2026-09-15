@@ -88,10 +88,6 @@ export class CombatScene extends Phaser.Scene {
                 // Используем LPC Wolf для врага-волка
                 sp = this.add.sprite(x, y, 'wolf_combat', 0).setScale(2.5);
                 sp.play('wolf_idle');
-            } else if (e.spriteKey === 'enemy_bees' && this.textures.exists('bees_combat_0')) {
-                // Рой пчёл (Пасека, раунд 16) — процедурные кадры роя
-                sp = this.add.sprite(x, y, 'bees_combat_0').setScale(2.5);
-                sp.play('bees_idle');
             } else if (this.textures.exists(`${e.spriteKey}_idle_down`)) {
                 // Стандартный спрайт (bandit и т.п.) — top-down
                 sp = this.add.sprite(x, y, e.spriteKey, 0).setScale(2.5);
@@ -195,12 +191,9 @@ export class CombatScene extends Phaser.Scene {
             this.registry.set('quest', q);
             ActionLog.add(this.registry, `Побег из боя. Потеряно 2 хода (бросок ${res.roll}, успех).`);
             this.time.delayedCall(1000, () => {
-                // Возврат в предыдущую сцену (раунд 13: лес возвращается в лес;
-                // раунд 16: пасека возвращается на пасеку)
+                // Возврат в предыдущую сцену (раунд 13: лес возвращается в лес)
                 if (this.fromScene === 'Forest') {
                     this.scene.start('Forest', { from: 'Combat' });
-                } else if (this.fromScene === 'Apiary') {
-                    this.scene.start('Apiary', { from: 'Combat' });
                 } else if (this.fromLocation) {
                     this.scene.start('Fork');
                 } else {
@@ -558,15 +551,6 @@ export class CombatScene extends Phaser.Scene {
                     this.registry.set('quest', q2);
                 }
                 this.scene.start('Forest', { from: 'Combat' });
-            } else if (this.fromScene === 'Apiary') {
-                // Рой разогнан — пчёлы не атакуют 4 игровых часа (раунд 16)
-                const ts = this.registry.get('gameTime');
-                if (ts) {
-                    const q2 = this.registry.get('quest') || {};
-                    q2.beesCalmUntilMin = ts.day * 1440 + ts.hour * 60 + ts.minute + 240;
-                    this.registry.set('quest', q2);
-                }
-                this.scene.start('Apiary', { from: 'Combat' });
             } else {
                 this.scene.start('Village');
             }

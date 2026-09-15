@@ -166,23 +166,18 @@ const EN = {
     '◀ К ОКОЛИЦЕ': '◀ TO THE OUTSKIRTS',
     '🌲 Тёмный лес': '🌲 Dark Forest',
 
-    // --- Пасека (раунд 16) ---
+    // --- Пасека (раунд 17: пчёлы — только антураж, без боя и мёда) ---
     '🐝 Пасека': '🐝 Apiary',
-    '🐝 Пасека — мёд и воск': '🐝 Apiary — honey & wax',
+    '🐝 Пасека — прогулка': '🐝 Apiary — a stroll',
     'Колодный улей': 'Log hive',
-    'Достать мёд из улья': 'Harvest honey from the hive',
-    'Разжечь дымокур': 'Light the smudge fire',
-    'Подложить веток в дымокур': 'Add twigs to the smudge fire',
-    'Рой поднялся!': 'The swarm is up!',
-    '💨 Дымокур разожжён (40 мин)': '💨 Smudge fire lit (40 min)',
-    '💨 Дым свежий (40 мин)': '💨 Fresh smoke (40 min)',
-    'дымокур: ещё {0} мин': 'smudge fire: {0} min left',
-    'рой разогнан': 'swarm driven off',
+    'Подойти к улью': 'Walk up to the hive',
     'пчёлы спят': 'bees are asleep',
-    'пчёлы активны — без дыма опасно': 'bees are active — smoke them first',
-    'под дымом пчёлы смирны': 'under smoke the bees stay calm',
-    '🍯 Мёд собран (раны уже перевязаны)': '🍯 Honey gathered (wounds already dressed)',
-    '🍯 Собрать мёд': '🍯 Take the honey',
+    'пчёлы кружат над ульями': 'bees are buzzing over the hives',
+    '🐝 Ровный тёплый гул — улей живёт своим ладом.': '🐝 A steady warm hum — the hive lives its own quiet rhythm.',
+    '🐝 Пчёлы возвращаются с взятком: лапки в золотой пыльце.': '🐝 Bees return with their haul: legs dusted golden with pollen.',
+    '🐝 У летка дежурит сторожевая пчела — принюхивается к каждому.': '🐝 A guard bee keeps watch at the entrance, sniffing every arrival.',
+    '🐝 Восковые соты пахнут мёдом и сухой липой.': '🐝 The wax combs smell of honey and dry linden.',
+    '🐝 Две пчелы танцуют на плашке — показывают, где цветы.': '🐝 Two bees dance on the lid board — showing where the flowers are.',
     'Обыскать тайник разбойников': 'Search the bandits\' stash',
     'Вернуться к околице': 'Return to the outskirts',
     'Грибы': 'Mushrooms',
@@ -426,14 +421,12 @@ const EN_KEYS = {
         '  The bandits\' stash may hold coin — but sometimes it\'s an ambush.\n' +
         '  If a wolf is defeated, the pack stays scared for 4 hours.\n' +
         '  F1 — this help. ESC — main menu.',
-    'apiary.help.body': '🐝 APIARY — HONEY & WAX\n' +
+    'apiary.help.body': '🐝 APIARY — A QUIET STROLL\n' +
         '\n' +
         '  WASD / arrows — movement\n' +
-        '  E — harvest honey from log hives (+5 ❤, once a day per hive)\n' +
-        '  First light the smudge fire by the hut: with a smoking splinter bees stay calm.\n' +
-        '  Without smoke the swarm may attack — fight or run.\n' +
-        '  In winter, rain and at night bees sleep: safe, but less honey (+2 ❤).\n' +
-        '  After a swarm is beaten off, bees stay docile for 4 hours.\n' +
+        '  E — walk up to a hive and watch the bees; they are busy with their own business.\n' +
+        '  The smudge fire by the hut smoulders peacefully — pure scenery, leave it be.\n' +
+        '  In winter, rain and at night the bees sleep and the apiary falls quiet.\n' +
         '  The exit to the outskirts is on the southern edge.',
     'village.help.body': '🏠 DVINSKAYA SLOBODA\n' +
         '\n' +

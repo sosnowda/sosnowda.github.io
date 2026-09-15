@@ -3,7 +3,7 @@
 import { RUS } from '../config/RusTheme.js';
 import {
     buildMap, SOLID, tileTexture, roadTileSpec, validateMap, doorInteriorId, isGate,
-    PLAYER_START, MAP_W, MAP_H, getVillageName,
+    PLAYER_START, MAP_W, MAP_H, getVillageName, YARD_PROPS,
 } from '../data/world.js';
 import { BUILDINGS, VILLAGE_GATE, INTERIORS } from '../data/interiors.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
@@ -146,7 +146,7 @@ export class VillageScene extends Phaser.Scene {
             blacksmith: 'deco_house_2',
             villager_house_1: 'deco_house_0',
             villager_house_2: 'deco_house_2',
-            barn: 'deco_house_1',            // амбар — та же клеть, что и таверна (свой декор отличит)
+            barn: 'deco_barn',               // раунд 17: у амбара свой облик — широкие ворота и сеновал
         };
         this.doors = [];
         BUILDINGS.forEach(b => {
@@ -265,6 +265,9 @@ export class VillageScene extends Phaser.Scene {
         this.createCampfire(ts);
         this.createCrossGlow(ts);
         this.decoratePond(ts);
+
+        // ----- Раунд 17: рига, стога, поленница, телега (§3 village-visual-upgrade) -----
+        this.drawYardProps(ts);
 
         // ----- Метка ворот -----
         const gatePx = (MAP_W - 1) * ts + ts / 2;
@@ -556,6 +559,46 @@ export class VillageScene extends Phaser.Scene {
                 fontSize: '14px',
             }).setOrigin(0.5).setDepth(9);
         }
+    }
+
+    /**
+     * Раунд 17 (§3 village-visual-upgrade): хозяйственные постройки и детали
+     * дворов — рига-сеновал, стога за амбаром, поленница у кузницы, телега.
+     * Координаты берутся из YARD_PROPS (world.js), коллизии уже стоят ('H').
+     * Рига слегка дымит — сушит снопы (овинный дух над околицей).
+     */
+    drawYardProps(ts) {
+        const SPRITE_BY_ID = {
+            riga: 'deco_riga',
+            haystack: 'deco_haystack',
+            firewood: 'deco_firewood',
+            cart: 'deco_cart',
+        };
+        YARD_PROPS.forEach((p) => {
+            const key = SPRITE_BY_ID[p.id];
+            if (!key || !this.textures.exists(key)) return;
+            const cx = p.col * ts + p.w * ts / 2;
+            const cy = p.row * ts + p.h * ts / 2;
+            const bottomRow = p.row + p.h;
+
+            // Мягкая тень (псевдо-2.5D, как под домами)
+            this.add.ellipse(cx, bottomRow * ts - 4, p.w * ts * 0.88, ts * 0.5, 0x000000, 0.22)
+                .setDepth(bottomRow - 0.7);
+
+            const isBig = p.id === 'riga';
+            this.add.image(cx, cy, key)
+                .setDisplaySize(p.w * ts + (isBig ? 16 : 6), p.h * ts + (isBig ? 14 : 4))
+                .setDepth(bottomRow - 0.5);            // Y-сортировка
+
+            if (p.id === 'riga' && this.smokeBuildings) {
+                // Лёгкий овинный дымок над ригой — редкий, как из труб домов
+                this.smokeBuildings.push({
+                    x: cx - p.w * ts * 0.28,
+                    y: p.row * ts - ts * 0.15,
+                    depth: bottomRow + 1,
+                });
+            }
+        });
     }
 
     /**

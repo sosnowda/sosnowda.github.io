@@ -1,9 +1,9 @@
-// Пасека — ходячая локация за околицей (раунд 16, по образцу Тёмного леса).
-// Лесная поляна с рядами колодных ульев: мёд лечит (+5 ❤, раз в игровой день
-// с улья). Пчёлы активны днём в тёплую погоду: сбор без дымокура может
-// разозлить рой (бой «Рой пчёл»). Дымокур (40 игровых минут тления) делает
-// сбор безопасным. Зимой/в дождь/ночью пчёлы спят — мёда меньше (+2 ❤), но
-// рой не атакует. Выход к околице — на юге.
+// Пасека — ходячая локация за околицей (раунд 16; раунд 17 — пчёлы ТОЛЬКО
+// как антураж и анимации: ни боя с роем, ни добычи мёда, ни дымокура-
+// механики — по прямому указанию владельца). Поляна с колодными ульями:
+// пчёлы кружат орбитами, над ульями «кипят» анимированные рои-мерцания,
+// дымокур у избушки мирно тлеет, светлячки/пыльца/погода живут как раньше.
+// Выход к околице — на юге.
 // Phaser загружен глобально через CDN
 import {
     APIARY_COLS, APIARY_ROWS, APIARY_SPAWN, APIARY_EXIT,
@@ -14,7 +14,6 @@ import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../system
 import { applyWeatherVisuals, getWeather } from '../systems/Weather.js';
 import { checkGameEnd } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
-import { dayKeyOf } from '../data/chests.js';
 import { createDialog } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
@@ -26,8 +25,14 @@ const TS = 48;   // как в деревне/лесу — мир 1248×960, ка
 const WORLD_W = APIARY_COLS * TS;
 const WORLD_H = APIARY_ROWS * TS;
 
-// Тёплое золото медовых искр
-const HONEY_SPARK = 0xffc84a;
+// Наблюдательные заметки о пчёлах (чистый антураж, E у улья)
+const HIVE_NOTES = [
+    '🐝 Ровный тёплый гул — улей живёт своим ладом.',
+    '🐝 Пчёлы возвращаются с взятком: лапки в золотой пыльце.',
+    '🐝 У летка дежурит сторожевая пчела — принюхивается к каждому.',
+    '🐝 Восковые соты пахнут мёдом и сухой липой.',
+    '🐝 Две пчелы танцуют на плашке — показывают, где цветы.',
+];
 
 export class ApiaryScene extends Phaser.Scene {
     constructor() {
@@ -94,10 +99,10 @@ export class ApiaryScene extends Phaser.Scene {
         createDialog(this, '🐝 ' + t('Пасека'),
             tk('apiary.help.body',
                 'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
-                '🍯 Мёд из колодных ульев лечит (+5 ❤), раз в игровой день с каждого улья.\n' +
-                '💨 Сначала разожги дымокур у избушки: с дымящей лучиной пчёлы не тронут.\n' +
-                '🐝 Без дыма пчёлы могут кинуться роем — придётся драться или бежать.\n' +
-                '❄️ Зимой, в дождь и ночью пчёлы спят: собирать безопасно, но мёда меньше.\n' +
+                '🐝 Пасека — тихое место: пчёлы кружат над ульями и цветами.\n' +
+                '👀 Подойди к улью и понаблюдай за пчёлами (E) — они заняты своим делом.\n' +
+                '💨 У избушки мирно тлеет дымокур — просто антураж, трогать не нужно.\n' +
+                '❄️ Зимой, в дождь и ночью пчёлы спят — пасека затихает до утра.\n' +
                 '◀ Выход к околице — на юге у кромки леса.'),
             [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
             { singletonKey: 'apiary-help' });
@@ -180,41 +185,54 @@ export class ApiaryScene extends Phaser.Scene {
     }
 
     spawnHives() {
-        const q = this.registry.get('quest') || {};
-        const timeState = getTime(this.registry);
-        const today = dayKeyOf(timeState);
-        const gathered = q.apiaryGathered || {};
-
-        apiaryHives().forEach((hive) => {
+        const hives = apiaryHives();
+        hives.forEach((hive) => {
             const px = hive.col * TS + TS / 2;
             const py = hive.row * TS + TS / 2;
 
             // Улей стоит на подставке-камушках (псевдо-глубина)
             const img = this.add.image(px, py + 2, 'deco_hive').setScale(TS / 32 * 1.25);
             img.setDepth(hive.row + 0.4);
-            const taken = gathered[hive.id] === today;
 
-            // Медовая искра над нетронутыми ульями
-            let marker = null;
-            if (!taken) {
-                marker = this.add.image(px, py - TS * 0.75, 'particle_spark')
-                    .setScale(0.55).setDepth(hive.row + 0.6).setTint(HONEY_SPARK);
-                this.tweens.add({
-                    targets: marker,
-                    y: py - TS * 0.75 - 7,
-                    alpha: { from: 0.95, to: 0.35 },
-                    duration: 850 + (hive.col * 41 + hive.row * 67) % 300,
-                    yoyo: true,
-                    repeat: -1,
-                });
-            } else {
-                img.setTint(0xb09868);  // опустошённый улей чуть тусклее
-            }
-
-            const entry = { ...hive, img, marker };
+            const entry = { ...hive, img };
             this.hiveEntries.push(entry);
             this.hiveByTile.set(`${hive.col},${hive.row}`, entry);
         });
+
+        // ----- Раунд 17: анимированные рои-мерцания над первыми ульями -----
+        // Те же процедурные кадры, что раньше рисовались в бою, теперь живут
+        // на пасеке: «кипящий» облачок пчёл над летком. Чистый антураж.
+        this.swarmShimmers = [];
+        if (this.textures.exists('bees_combat_0')) {
+            if (!this.anims.exists('bees_swarm')) {
+                const frames = [0, 1, 2, 1].filter(f => this.textures.exists(`bees_combat_${f}`));
+                this.anims.create({
+                    key: 'bees_swarm',
+                    frames: frames.map(f => ({ key: `bees_combat_${f}`, frame: 0 })),
+                    frameRate: 8,
+                    repeat: -1,
+                });
+            }
+            hives.slice(0, APIARY_CFG.swarmShimmers).forEach((hive, i) => {
+                const sh = this.add.sprite(
+                    hive.col * TS + TS / 2 + (i % 2 === 0 ? -6 : 8),
+                    hive.row * TS - 10,
+                    'bees_combat_0',
+                ).setScale(1.5).setAlpha(0.55).setDepth(hive.row + 0.75);
+                sh.play('bees_swarm');
+                // Рой медленно «дышит» — чуть смещается вокруг летка
+                this.tweens.add({
+                    targets: sh,
+                    x: sh.x + (i % 2 === 0 ? 7 : -7),
+                    y: sh.y - 5,
+                    duration: 2600 + i * 700,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut',
+                });
+                this.swarmShimmers.push(sh);
+            });
+        }
     }
 
     spawnSmudgeAndHut() {
@@ -223,42 +241,26 @@ export class ApiaryScene extends Phaser.Scene {
         const sy = s.row * TS + TS / 2;
 
         this.smudgeBase = this.add.image(sx, sy + 6, 'deco_smudge').setScale(TS / 32 * 1.15).setDepth(s.row + 0.3);
-        // Пламя (тлеет только когда дымокур зажжён) — Sprite, чтобы играть анимацию
-        this.smudgeFlame = null;
-        if (this.textures.exists('campfire_flame_0')) {
-            this.smudgeFlame = this.add.sprite(sx, sy - 6, 'campfire_flame_0')
-                .setScale(TS / 32 * 0.9).setDepth(s.row + 0.5).setVisible(false);
-            if (!this.anims.exists('smudge_burn')) {
-                // Костровых кадров только три (0..2) — фильтруем по существованию
-                const flameFrames = [0, 1, 2, 3].filter(f => this.textures.exists(`campfire_flame_${f}`));
-                this.anims.create({
-                    key: 'smudge_burn',
-                    frames: flameFrames.map(f => ({ key: `campfire_flame_${f}`, frame: 0 })),
-                    frameRate: 7,
-                    repeat: -1,
-                });
-            }
-        }
-        // Тёплый отсвет углей
-        this.smudgeGlow = this.add.ellipse(sx, sy + 8, 40, 16, 0xff8a30, 0.0)
+        // Тёплый отсвет углей — дымокур тлеет ПОСТОЯННО (антураж, раунд 17)
+        this.smudgeGlow = this.add.ellipse(sx, sy + 8, 40, 16, 0xff8a30, 0.12)
             .setBlendMode(Phaser.BlendModes.ADD).setDepth(s.row + 0.31);
 
-        // Тик дыма: когда дымокур тлеет — поднимаются клубы (как трубы в деревне)
+        // Тик дыма: мирные клубы поднимаются от тлеющих веток (как трубы в деревне)
         this.time.addEvent({
-            delay: 480,
+            delay: 700,
             loop: true,
             callback: () => {
-                if (!this.isSmoked() || this.smokePuffs.length > 8) return;
+                if (this.smokePuffs.length > 6) return;
                 const puff = this.add.image(sx + Phaser.Math.Between(-6, 6), sy - 10, 'particle_dust')
-                    .setScale(0.5).setAlpha(0.35).setTint(0xd8d2c4).setDepth(s.row + 0.6);
+                    .setScale(0.5).setAlpha(0.3).setTint(0xd8d2c4).setDepth(s.row + 0.6);
                 this.smokePuffs.push(puff);
                 this.tweens.add({
                     targets: puff,
-                    y: puff.y - 46 - Math.random() * 20,
+                    y: puff.y - 42 - Math.random() * 18,
                     x: puff.x + Phaser.Math.Between(-14, 14),
-                    scale: 1.25,
+                    scale: 1.2,
                     alpha: 0,
-                    duration: 2400,
+                    duration: 2600,
                     ease: 'Sine.easeOut',
                     onComplete: () => {
                         const i = this.smokePuffs.indexOf(puff);
@@ -350,6 +352,10 @@ export class ApiaryScene extends Phaser.Scene {
             // Крылышки-мерцание
             b.img.setFlipX(Math.cos(t) < 0);
         });
+        // Рои-мерцания над ульями видны только при бодрствующих пчёлах
+        if (this.swarmShimmers) {
+            this.swarmShimmers.forEach(sh => sh.setVisible(active));
+        }
     }
 
     buildAtmosphere() {
@@ -494,23 +500,6 @@ export class ApiaryScene extends Phaser.Scene {
         this.updateHUD();
     }
 
-    // ================= СОСТОЯНИЕ ПЧЕЛ =================
-
-    nowMinutes() {
-        const ts = getTime(this.registry);
-        return ts ? ts.day * 1440 + ts.hour * 60 + ts.minute : 0;
-    }
-
-    isSmoked() {
-        const q = this.registry.get('quest') || {};
-        return (q.apiarySmokeUntilMin || 0) > this.nowMinutes();
-    }
-
-    beesCalm() {
-        const q = this.registry.get('quest') || {};
-        return (q.beesCalmUntilMin || 0) > this.nowMinutes();
-    }
-
     // ================= ИГРОВОЙ ЦИКЛ =================
 
     update(time) {
@@ -587,18 +576,9 @@ export class ApiaryScene extends Phaser.Scene {
                 if (dist >= bestDist) continue;
 
                 const h = this.hiveByTile.get(`${cx},${cy}`);
-                if (h && h.marker) {
+                if (h) {
                     bestDist = dist;
                     nearest = { type: 'hive', entry: h, label: h.prompt };
-                    continue;
-                }
-                const s = smudgePos();
-                if (cx === s.col && cy === s.row) {
-                    bestDist = dist;
-                    nearest = {
-                        type: 'smudge',
-                        label: this.isSmoked() ? t('Подложить веток в дымокур') : t('Разжечь дымокур'),
-                    };
                     continue;
                 }
                 if (cx === APIARY_EXIT.col && cy === APIARY_EXIT.row) {
@@ -619,84 +599,20 @@ export class ApiaryScene extends Phaser.Scene {
     tryInteract() {
         if (this.busyDialog || !this.nearestInteractable) return;
         const n = this.nearestInteractable;
-        ActionLog.add(this.registry, `Пасека: взаимодействие — ${n.label}.`);
-        if (n.type === 'hive') this.harvestHive(n.entry);
-        else if (n.type === 'smudge') this.lightSmudge();
+        if (n.type === 'hive') this.observeHive(n.entry);
         else if (n.type === 'exit') this.leaveApiary();
     }
 
     // ================= МЕХАНИКИ =================
 
-    harvestHive(entry) {
-        const q = this.registry.get('quest') || {};
-        const timeState = getTime(this.registry);
-        const today = dayKeyOf(timeState);
-        const gathered = q.apiaryGathered || {};
-
-        if (gathered[entry.id] === today) {
-            this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, t('Уже собрано'), '#b8a88a');
-            return;
-        }
-
-        // ----- Рой: пчёлы активны, дыма нет, рой не разогнан → шанс атаки -----
-        const active = beesActive(timeState, this.weather);
-        if (active && !this.isSmoked() && !this.beesCalm()
-            && Math.random() < APIARY_CFG.swarmChance) {
-            this.busyDialog = true;
-            this.registry.set('apiaryReturnPos', { x: this.playerObj.x, y: this.playerObj.y });
-            ActionLog.add(this.registry, 'Пчёлы подняли рой — жадность без дымокура наказуема!');
-            this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, '🐝 ' + t('Рой поднялся!'), '#ffb060');
-            tickTime(this.registry, 5);
-            this.time.delayedCall(650, () => {
-                this.scene.start('Combat', { enemyKeys: ['bees'], fromScene: 'Apiary' });
-            });
-            return;
-        }
-
-        // ----- Сбор: безопасен (дым/покой/сон пчёл) -----
-        gathered[entry.id] = today;
-        q.apiaryGathered = gathered;
-        this.registry.set('quest', q);
-
-        const p = this.player;
-        const heal = Math.min(
-            active ? APIARY_CFG.honeyHeal : APIARY_CFG.honeyHealDormant,
-            p.HPmax - p.HP,
-        );
-        p.HP += heal;
-        this.registry.set('player', p);
-
-        if (entry.marker) { entry.marker.destroy(); entry.marker = null; }
-        if (entry.img) entry.img.setTint(0xb09868);
-
-        if (this.audioManager) this.audioManager.playHeal();
-        if (heal > 0) {
-            this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, `🍯 +${heal} ❤`, '#e8cc7a');
-            this.showFloatingText(this.playerObj.x, this.playerObj.y - 26, `+${heal} ❤`, '#8adf8a');
-        } else {
-            this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, t('🍯 Мёд собран (раны уже перевязаны)'), '#e8cc7a');
-        }
-        ActionLog.add(this.registry,
-            (active ? 'Добыл мёд из колодного улья под дымом.' : 'Добыл спящий мёд — пчёлы не проснулись.'));
-        tickTime(this.registry, APIARY_CFG.harvestMin);
-        this.updateHUD();
-    }
-
-    lightSmudge() {
-        const q = this.registry.get('quest') || {};
-        const wasLit = this.isSmoked();
-        q.apiarySmokeUntilMin = this.nowMinutes() + APIARY_CFG.smokeDurationMin;
-        this.registry.set('quest', q);
-
-        if (this.audioManager) this.audioManager.playLevelUp();
-        this.showFloatingText(
-            this.smudgeSmokeOrigin.x, this.smudgeSmokeOrigin.y - 18,
-            wasLit ? t('💨 Дым свежий (40 мин)') : t('💨 Дымокур разожжён (40 мин)'),
-            '#c8d8b0',
-        );
-        ActionLog.add(this.registry,
-            (wasLit ? 'Подложил веток в дымокур на пасеке.' : 'Разжёг дымокур на пасеке — пчёлы станут смирными.'));
-        tickTime(this.registry, wasLit ? 2 : APIARY_CFG.lightCostMin);
+    // Наблюдение за ульем — чистый антураж (раунд 17: ни мёда, ни риска).
+    observeHive(entry) {
+        const note = t(HIVE_NOTES[
+            (entry.col * 7 + entry.row * 13 + (this.hiveNoteIdx = (this.hiveNoteIdx || 0) + 1)) % HIVE_NOTES.length
+        ]);
+        this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, note, '#e8cc7a');
+        ActionLog.add(this.registry, 'Пасека: наблюдал за пчёлами у колодного улья.');
+        tickTime(this.registry, 2);
         this.updateHUD();
     }
 
@@ -732,23 +648,12 @@ export class ApiaryScene extends Phaser.Scene {
         statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
         this.statusText.setText(statusLine);
 
-        // ----- Сводка пчёл/дымокура -----
+        // ----- Сводка состояния пасеки (безопасно: пчёлы — только антураж) -----
         if (this.beeHint) {
-            const q = this.registry.get('quest') || {};
             const active = beesActive(timeState, this.weather);
-            let hint = '';
-            if (this.isSmoked()) {
-                const left = (q.apiarySmokeUntilMin || 0) - this.nowMinutes();
-                hint += `💨 ${tf('дымокур: ещё {0} мин', left)}   `;
-                if (active && !this.beesCalm()) hint += `🐝 ${t('под дымом пчёлы смирны')}   `;
-            } else if (this.beesCalm()) {
-                hint += `🐝 ${t('рой разогнан')}   `;
-            } else if (!active) {
-                hint += `💤 ${t('пчёлы спят')}   `;
-            } else {
-                hint += `🐝 ${t('пчёлы активны — без дыма опасно')}   `;
-            }
-            this.beeHint.setText(hint.trim());
+            this.beeHint.setText(active
+                ? `🐝 ${t('пчёлы кружат над ульями')}`
+                : `💤 ${t('пчёлы спят')}`);
         }
 
         // ----- День/ночь: светлячки, лучи, дымокур -----
@@ -781,15 +686,9 @@ export class ApiaryScene extends Phaser.Scene {
             if (this.fogPuffs) this.fogPuffs.forEach(fg => fg.setAlpha(0.03 + dark * 0.08));
             if (this.pollenEmitter) this.pollenEmitter.setAlpha(day > 0.3 ? 1 : 0.25);
 
-            // Пламя/отсвет дымокура: живёт только пока тлеет
-            const lit = this.isSmoked();
-            if (this.smudgeFlame) {
-                if (lit && !this.smudgeFlame.visible) this.smudgeFlame.play('smudge_burn');
-                if (!lit && this.smudgeFlame.visible) this.smudgeFlame.stop();
-                this.smudgeFlame.setVisible(lit);
-            }
+            // Отсвет углей дымокура: тлеет постоянно, ночью светит ярче
             if (this.smudgeGlow) {
-                this.smudgeGlow.setAlpha(lit ? (0.14 + dark * 0.22) : 0);
+                this.smudgeGlow.setAlpha(0.08 + dark * 0.2);
             }
         }
     }

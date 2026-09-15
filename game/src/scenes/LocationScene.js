@@ -408,8 +408,10 @@ export class LocationScene extends Phaser.Scene {
                 this.add.image(x, y, `tile_forest_${i % 2}`).setScale(3).setOrigin(0.5, 0.7).setDepth(4);
             }
         } else if (locId === 'pogost') {
-            // П.6,7: Погост — структурированный: часовня по центру, ряды могил с крестами, дорожки
-            // Фон — заросшая земля
+            // П.6,7: Погост — часовня по центру, ряды могил с крестами, дорожки.
+            // Раунд 17: живой погост — трава-текстура вместо плоской заливки,
+            // ограда по периметру, мерцающая лампада часовни, голуби,
+            // клочья тумана, падающие листья, светлячки ночью. БЕЗ монстров.
             gfx.fillStyle(0x3a3a2a, 1);
             gfx.fillRect(0, 80, width, height - 80);
             gfx.setDepth(0);
@@ -420,12 +422,40 @@ export class LocationScene extends Phaser.Scene {
                 const y = 100 + Math.random() * (height - 120);
                 gfx.fillRect(x, y, 4, 4);
             }
+            const weatherNow = getWeather(this.registry);
+            const isWinter = weatherNow && weatherNow.id === 'snow';
+
+            // Раунд 17: травяные пласты + кочки поверх тёмной земли (глушь, но живая)
+            for (let i = 0; i < 26; i++) {
+                const gx = Math.random() * width;
+                const gy = 100 + Math.random() * (height - 130);
+                const patch = this.add.image(gx, gy, `tile_grass_${i % 4}`)
+                    .setScale(1.6).setAlpha(0.35).setTint(0x6a7a5a).setDepth(0.5);
+                patch.setFlipX(i % 2 === 0);
+            }
+            if (this.textures.exists('deco_grass_tuft')) {
+                for (let i = 0; i < 14; i++) {
+                    this.add.image(Math.random() * width, 110 + Math.random() * (height - 160),
+                        'deco_grass_tuft').setScale(1.2).setAlpha(0.55).setTint(0x8a9a78).setDepth(1);
+                }
+            }
+
             // П.7: Дорожка от входа (низ экрана) к часовне (центр)
             const pathW = 60;
             const chapelY = height * 0.35;
             gfx.fillStyle(0x8a7a5a, 1);
             gfx.fillRect(width / 2 - pathW / 2, chapelY + 40, pathW, height - chapelY - 60);
             gfx.setDepth(1);
+            // Камешки дорожки — старая тропинка читается
+            gfx.fillStyle(0x7a6a4c, 0.8);
+            for (let i = 0; i < 26; i++) {
+                gfx.fillCircle(
+                    width / 2 - pathW / 2 + 8 + Math.random() * (pathW - 16),
+                    chapelY + 50 + Math.random() * (height - chapelY - 80), 2.5,
+                );
+            }
+            gfx.setDepth(1);
+
             // П.7: Часовня в центре
             if (this.textures.exists('deco_chapel')) {
                 this.add.image(width / 2, chapelY, 'deco_chapel').setScale(2.5).setDepth(5);
@@ -441,8 +471,36 @@ export class LocationScene extends Phaser.Scene {
                 chapelGfx.fillRect(width / 2 - 10, chapelY - 82, 20, 4);
                 chapelGfx.setDepth(5);
             }
+
+            // ----- Раунд 17: лампада часовни — тёплый мерцающий отсвет -----
+            const lampY = chapelY + 34;
+            const lampGlow = this.add.ellipse(width / 2, lampY, 46, 20, 0xffb050, 0.30)
+                .setBlendMode(Phaser.BlendModes.ADD).setDepth(6);
+            this.tweens.add({
+                targets: lampGlow,
+                alpha: { from: 0.22, to: 0.42 },
+                scale: { from: 0.92, to: 1.08 },
+                duration: 900,
+                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+            // Огонёк свечи в окне часовни (тлеет и днём — тихий маяк прихода)
+            if (this.textures.exists('campfire_flame_0')) {
+                const candle = this.add.sprite(width / 2 + 26, lampY - 6, 'campfire_flame_0')
+                    .setScale(0.8).setDepth(6).setAlpha(0.9);
+                const candleFrames = [0, 1, 2, 3].filter(f => this.textures.exists(`campfire_flame_${f}`));
+                if (candleFrames.length) {
+                    if (!this.anims.exists('pogost_candle')) {
+                        this.anims.create({
+                            key: 'pogost_candle',
+                            frames: candleFrames.map(f => ({ key: `campfire_flame_${f}`, frame: 0 })),
+                            frameRate: 6, repeat: -1,
+                        });
+                    }
+                    candle.play('pogost_candle');
+                }
+            }
+
             // П.6,7: Ровные ряды могил с крестами по бокам от часовни
-            // Левый ряд (3 могилы)
             const placedGraves = [];
             const hasGraveCollision = (x, y, minDist = 50) => {
                 return placedGraves.some(p => Math.abs(p.x - x) < minDist && Math.abs(p.y - y) < minDist);
@@ -455,7 +513,9 @@ export class LocationScene extends Phaser.Scene {
                     if (hasGraveCollision(x, y, 50)) continue;
                     const v = (row + col) % 2;
                     if (this.textures.exists(`deco_grave_${v}`)) {
-                        this.add.image(x, y, `deco_grave_${v}`).setScale(1.8).setDepth(3);
+                        const grave = this.add.image(x, y, `deco_grave_${v}`).setScale(1.8).setDepth(3);
+                        // Старые могилы чуть темнее (мох и время)
+                        if ((row * 3 + col) % 3 === 0) grave.setTint(0xb0b0a0);
                     }
                     placedGraves.push({ x, y });
                 }
@@ -468,11 +528,26 @@ export class LocationScene extends Phaser.Scene {
                     if (hasGraveCollision(x, y, 50)) continue;
                     const v = (row + col) % 2;
                     if (this.textures.exists(`deco_grave_${v}`)) {
-                        this.add.image(x, y, `deco_grave_${v}`).setScale(1.8).setDepth(3);
+                        const grave = this.add.image(x, y, `deco_grave_${v}`).setScale(1.8).setDepth(3);
+                        if ((row * 3 + col) % 3 === 1) grave.setTint(0xb0b0a0);
                     }
                     placedGraves.push({ x, y });
                 }
             }
+            // ----- Раунд 17: живые цветы на свежих могилах + каменные кресты -----
+            if (!isWinter) {
+                if (this.textures.exists('deco_flower_0')) {
+                    [0, 4, 7].forEach((gi) => {
+                        const g = placedGraves[gi];
+                        if (!g) return;
+                        const fl = `deco_flower_${gi % 3}`;
+                        if (this.textures.exists(fl)) {
+                            this.add.image(g.x + 10, g.y + 14, fl).setScale(1.1).setDepth(3.5).setAlpha(0.95);
+                        }
+                    });
+                }
+            }
+
             // П.7: Узкие дорожки между рядами могил
             gfx.fillStyle(0x7a6a4a, 1);
             // Вертикальная дорожка между рядами слева
@@ -480,6 +555,19 @@ export class LocationScene extends Phaser.Scene {
             // Вертикальная дорожка между рядами справа
             gfx.fillRect(width - 165, chapelY + 60, 20, 220);
             gfx.setDepth(1);
+
+            // ----- Раунд 17: ограда погоста по периметру (столбики + жерди) -----
+            if (this.textures.exists('tile_fence_h')) {
+                for (let fx = 14; fx < width - 10; fx += 44) {
+                    this.add.image(fx, 96, 'tile_fence_h').setScale(1.5).setDepth(2).setTint(0x9a8a70);
+                }
+                // Боковые жерди — частокол по краям, где не дороги
+                for (let fy = 120; fy < height - 60; fy += 52) {
+                    this.add.image(12, fy, 'tile_fence_h').setScale(1.5).setAngle(90).setDepth(2).setTint(0x9a8a70);
+                    this.add.image(width - 12, fy, 'tile_fence_h').setScale(1.5).setAngle(90).setDepth(2).setTint(0x9a8a70);
+                }
+            }
+
             // Деревья по периметру (с коллизиями)
             const placedTrees = [];
             const hasTreeCollision = (x, y, minDist = 60) => {
@@ -498,6 +586,104 @@ export class LocationScene extends Phaser.Scene {
                         break;
                     }
                     attempts++;
+                }
+            }
+
+            // ----- Раунд 17: голуби на погосте (живность, НЕ монстры) -----
+            // Клюют, перепархивают между могилами; в снег прячутся.
+            if (!isWinter && this.textures.exists('deco_bird')) {
+                this.pogostBirds = [];
+                for (let i = 0; i < 3; i++) {
+                    const bx = width * 0.28 + i * width * 0.22;
+                    const by = chapelY + 150 + (i % 2) * 90;
+                    const bird = this.add.image(bx, by, 'deco_bird')
+                        .setScale(2.2).setDepth(4).setFlipX(i % 2 === 0);
+                    const hopBird = () => {
+                        if (!bird.active) return;
+                        // Клёв: наклон вниз
+                        this.tweens.add({
+                            targets: bird, scaleY: 1.7, duration: 160,
+                            yoyo: true, ease: 'Quad.easeOut',
+                            onComplete: () => {
+                                this.time.delayedCall(Phaser.Math.Between(500, 1400), () => {
+                                    if (!bird.active) return;
+                                    // Перепархивает на новое место неподалёку
+                                    const nx = Phaser.Math.Clamp(bird.x + Phaser.Math.Between(-90, 90), 40, width - 40);
+                                    const ny = Phaser.Math.Clamp(bird.y + Phaser.Math.Between(-60, 60), 130, height - 120);
+                                    this.tweens.add({
+                                        targets: bird, x: nx, y: ny - 16,
+                                        duration: 380, ease: 'Sine.easeOut',
+                                        onComplete: () => {
+                                            this.tweens.add({
+                                                targets: bird, y: ny,
+                                                duration: 200, ease: 'Quad.easeIn',
+                                            });
+                                        },
+                                    });
+                                    this.time.delayedCall(Phaser.Math.Between(1600, 3400), hopBird);
+                                });
+                            },
+                        });
+                    };
+                    this.time.delayedCall(400 + i * 900, hopBird);
+                    this.pogostBirds.push(bird);
+                }
+            }
+
+            // ----- Раунд 17: клочья тумана меж могил -----
+            this.pogostFog = [];
+            for (let i = 0; i < 4; i++) {
+                const fog = this.add.image(Math.random() * width, 160 + Math.random() * (height - 220), 'fog_puff')
+                    .setScale(1.3 + Math.random() * 1.2).setAlpha(0.05).setDepth(6.5);
+                this.tweens.add({
+                    targets: fog,
+                    x: fog.x + (Math.random() - 0.5) * 90,
+                    duration: 13000 + Math.random() * 7000,
+                    yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                });
+                this.pogostFog.push(fog);
+            }
+
+            // ----- Раунд 17: падающие листья (ветер по берёзам) -----
+            if (this.textures.exists('forest_leaf') && !isWinter) {
+                this.pogostLeaves = this.add.particles(0, 0, 'forest_leaf', {
+                    x: { min: 0, max: width },
+                    y: -10,
+                    lifespan: 9000,
+                    speedY: { min: 18, max: 40 },
+                    speedX: { min: -14, max: 22 },
+                    rotate: { start: 0, end: 240 },
+                    scale: { min: 0.7, max: 1.3 },
+                    alpha: { start: 0.5, end: 0.15 },
+                    quantity: 1,
+                    frequency: 1600,
+                }).setDepth(7);
+            }
+
+            // ----- Раунд 17: светлячки над могилами ночью (не страшно — тихо) -----
+            const pogostTime = getTime(this.registry);
+            const pogostHour = pogostTime ? pogostTime.hour : 12;
+            const pogostDark = (pogostHour >= 21 || pogostHour < 5) ? 1 : (pogostHour >= 18 ? (pogostHour - 18) / 3 : (pogostHour < 8 ? (8 - pogostHour) / 3 : 0));
+            if (pogostDark > 0.4 && this.textures.exists('particle_spark')) {
+                for (let i = 0; i < 6; i++) {
+                    const fx = 40 + Math.random() * (width - 80);
+                    const fy = 140 + Math.random() * (height - 220);
+                    const f = this.add.image(fx, fy, 'particle_spark')
+                        .setScale(0.4).setTint(0xd8ffa0).setDepth(7.5).setAlpha(0);
+                    this.tweens.add({
+                        targets: f,
+                        alpha: pogostDark * Phaser.Math.FloatBetween(0.3, 0.85),
+                        duration: 1300 + Math.random() * 900,
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                        delay: Math.random() * 1800,
+                    });
+                    this.tweens.add({
+                        targets: f,
+                        x: fx + Phaser.Math.Between(-26, 26),
+                        y: fy + Phaser.Math.Between(-18, 18),
+                        duration: 4200 + Math.random() * 2400,
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
                 }
             }
         } else if (locId === 'pasture') {
@@ -546,7 +732,10 @@ export class LocationScene extends Phaser.Scene {
                 }
             }
         } else if (locId === 'mill') {
-            // П.5,13: Мельница — большая мельница в центре, дорога, много деревьев
+            // П.5,13: Мельница — большая мельница в центре, дорога, много деревьев.
+            // Раунд 17: живая мельница — РУЧЕЙ с анимированной водой и вращающимся
+            // НАЛИВНЫМ КОЛЕСОМ, мешки с мукой, поленница, телега на тракте,
+            // мучная пыль у дверей, птицы. БЕЗ монстров и врагов.
             gfx.fillStyle(0x4a7c3a, 1);
             gfx.fillRect(0, 80, width, height - 80);
             gfx.setDepth(0);
@@ -557,6 +746,27 @@ export class LocationScene extends Phaser.Scene {
                 const y = 100 + Math.random() * (height - 120);
                 gfx.fillRect(x, y, 3, 3);
             }
+            const weatherNowM = getWeather(this.registry);
+            const isWinterM = weatherNowM && weatherNowM.id === 'snow';
+
+            // Раунд 17: сочные травяные пласты + кочки
+            for (let i = 0; i < 22; i++) {
+                this.add.image(Math.random() * width, 110 + Math.random() * (height - 150),
+                    `tile_grass_${i % 4}`).setScale(1.6).setAlpha(0.45).setDepth(0.5);
+            }
+            if (this.textures.exists('deco_grass_tuft') && !isWinterM) {
+                for (let i = 0; i < 12; i++) {
+                    this.add.image(Math.random() * width, 110 + Math.random() * (height - 160),
+                        'deco_grass_tuft').setScale(1.2).setAlpha(0.7).setDepth(1);
+                }
+                if (this.textures.exists('deco_flower_0')) {
+                    for (let i = 0; i < 8; i++) {
+                        this.add.image(Math.random() * width, 130 + Math.random() * (height - 200),
+                            `deco_flower_${i % 3}`).setScale(1).setAlpha(0.9).setDepth(1.2);
+                    }
+                }
+            }
+
             // П.13: Дорога от края экрана до мельницы
             const millX = width / 2;
             const millY = height / 2;
@@ -564,20 +774,87 @@ export class LocationScene extends Phaser.Scene {
             gfx.fillStyle(0xc8a868, 1);
             gfx.fillRect(0, millY - roadW / 2, millX - 80, roadW);
             gfx.setDepth(1);
+            // Канавка-ручей идёт ПОД дорогой (брод) — дорога правее ручья продолжается
+            gfx.fillStyle(0xc8a868, 1);
+            gfx.fillRect(millX + 160, millY - roadW / 2, width - millX - 160, roadW);
+
+            // ----- Раунд 17: РУЧЕЙ-МЕЛЬНИЧНАЯ (вертикальный, справа от мельницы) -----
+            const streamX = millX + 118;          // центр ручья
+            const streamW = 62;
+            const streamTop = millY - 150;
+            const streamBottom = height - 40;
+            gfx.fillStyle(0x2e5a46, 1);           // тёмное дно с травой по краям
+            gfx.fillRect(streamX - streamW / 2 - 8, streamTop - 6, streamW + 16, streamBottom - streamTop + 12);
+            gfx.fillStyle(0x3a6b8c, 1);           // вода
+            gfx.fillRect(streamX - streamW / 2, streamTop, streamW, streamBottom - streamTop);
+            gfx.setDepth(1.5);
+            // Анимированные тайлы воды (цикл 0..2, как пруд в деревне)
+            this.millWaterTiles = [];
+            for (let wy = streamTop + 22; wy < streamBottom; wy += 44) {
+                const wImg = this.add.image(streamX, wy, 'tile_water_0')
+                    .setScale(streamW / 64).setDepth(1.6).setAlpha(0.85);
+                this.millWaterTiles.push(wImg);
+            }
+            this.millWaterFrame = 0;
+            this.time.addEvent({
+                delay: 320,
+                loop: true,
+                callback: () => {
+                    this.millWaterFrame = (this.millWaterFrame + 1) % 3;
+                    this.millWaterTiles.forEach(w => w.setTexture(`tile_water_${this.millWaterFrame}`));
+                },
+            });
+            // Белые штрихи течения — бегут вниз (ручей ТОЧНО течёт)
+            this.millRipples = [];
+            for (let i = 0; i < 4; i++) {
+                const rip = this.add.rectangle(
+                    streamX - streamW / 2 + 12 + Math.random() * (streamW - 24),
+                    streamTop + Math.random() * (streamBottom - streamTop),
+                    12, 2, 0xdff0f8, 0.5,
+                ).setDepth(1.7);
+                this.tweens.add({
+                    targets: rip,
+                    y: streamBottom + 20,
+                    alpha: { from: 0.55, to: 0.1 },
+                    duration: 1500 + i * 350,
+                    repeat: -1,
+                    onRepeat: () => { rip.y = streamTop - 10; },
+                });
+                this.millRipples.push(rip);
+            }
+            // Пенная шапка у колеса
+            this.add.ellipse(streamX, millY - 60, streamW * 0.9, 16, 0xe8f4f8, 0.25)
+                .setDepth(1.8);
+
             // П.13: Большая мельница в центре
             const millGfx = this.add.graphics();
             // Основание мельницы (деревянная башня)
             millGfx.fillStyle(0x6a4a2a, 1);
             millGfx.fillRect(millX - 60, millY - 80, 120, 120);
+            // Горизонтальные брёвна на башне (раунд 17)
+            for (let ly = millY - 68; ly < millY + 36; ly += 12) {
+                millGfx.fillStyle(0x5c3f22, 1);
+                millGfx.fillRect(millX - 58, ly, 116, 2);
+            }
             // Крыша мельницы (треугольная)
             millGfx.fillStyle(0x4a3a1a, 1);
             millGfx.fillTriangle(millX - 70, millY - 80, millX + 70, millY - 80, millX, millY - 140);
             // Окно
             millGfx.fillStyle(0x2a1a0a, 1);
             millGfx.fillRect(millX - 15, millY - 60, 30, 30);
+            // Тёплый отсвет в окне (мелют и вечером)
+            const winGlow = this.add.ellipse(millX, millY - 45, 34, 26, 0xffc866, 0.35)
+                .setBlendMode(Phaser.BlendModes.ADD).setDepth(5.5);
+            this.tweens.add({
+                targets: winGlow,
+                alpha: { from: 0.26, to: 0.42 },
+                duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
             // Дверь
             millGfx.fillStyle(0x3a2a1a, 1);
             millGfx.fillRect(millX - 12, millY - 10, 24, 50);
+            millGfx.setDepth(5);
+
             // Крылья мельницы (4 лопасти)
             millGfx.fillStyle(0x8a6a3a, 1);
             millGfx.fillRect(millX - 80, millY - 102, 160, 8);  // горизонтальная
@@ -589,33 +866,8 @@ export class LocationScene extends Phaser.Scene {
             millGfx.fillTriangle(millX - 4, millY - 180, millX + 4, millY - 180, millX, millY - 195);
             millGfx.fillTriangle(millX - 4, millY - 20, millX + 4, millY - 20, millX, millY - 5);
             millGfx.setDepth(5);
-            // Анимация вращения крыльев — создаём отдельный graphics для крыльев
-            const blades = this.add.graphics();
-            blades.fillStyle(0x8a6a3a, 1);
-            blades.fillRect(millX - 80, millY - 102, 160, 8);
-            blades.fillRect(millX - 4, millY - 180, 8, 160);
-            blades.fillStyle(0x6a4a2a, 1);
-            blades.fillTriangle(millX - 80, millY - 102, millX - 80, millY - 94, millX - 95, millY - 98);
-            blades.fillTriangle(millX + 80, millY - 102, millX + 80, millY - 94, millX + 95, millY - 98);
-            blades.fillTriangle(millX - 4, millY - 180, millX + 4, millY - 180, millX, millY - 195);
-            blades.fillTriangle(millX - 4, millY - 20, millX + 4, millY - 20, millX, millY - 5);
-            blades.setDepth(6);
-            this.tweens.add({
-                targets: blades,
-                angle: 360,
-                duration: 8000,
-                repeat: -1,
-                ease: 'Linear',
-            });
-            // Нужно вращать вокруг центра крыльев (millX, millY-98)
-            blades.x = millX;
-            blades.y = millY - 98;
-            // Сдвигаем графику обратно, чтобы центр вращения был правильным
-            // (Phaser вращает вокруг origin контейнера, у graphics origin = 0,0)
-            // Поэтому нужно сместить содержимое
-            // Проще: используем контейнер
-            blades.destroy();
-            // Создаём контейнер с крыльями для корректного вращения
+
+            // Контейнер с крыльями для корректного вращения
             const bladesContainer = this.add.container(millX, millY - 98);
             const blade1 = this.add.graphics();
             blade1.fillStyle(0x8a6a3a, 1);
@@ -638,6 +890,121 @@ export class LocationScene extends Phaser.Scene {
                 repeat: -1,
                 ease: 'Linear',
             });
+
+            // ----- Раунд 17: НАЛИВНОЕ КОЛЕСО в ручье (медленно крутится) -----
+            const wheel = this.add.container(streamX - 6, millY + 10);
+            const wheelGfx = this.add.graphics();
+            wheelGfx.fillStyle(0x2e2013, 1);          // обод
+            wheelGfx.fillCircle(0, 0, 36);
+            wheelGfx.fillStyle(0x6a4a2a, 1);
+            wheelGfx.fillCircle(0, 0, 31);
+            wheelGfx.lineStyle(3, 0x2e2013, 1);       // спицы
+            for (let a = 0; a < 6; a++) {
+                const rad = (Math.PI / 3) * a;
+                wheelGfx.lineBetween(
+                    Math.cos(rad) * 4, Math.sin(rad) * 4,
+                    Math.cos(rad) * 30, Math.sin(rad) * 30,
+                );
+            }
+            wheelGfx.fillStyle(0x584026, 1);          // лопасти-ковши
+            for (let a = 0; a < 8; a++) {
+                const rad = (Math.PI / 4) * a;
+                wheelGfx.fillRect(Math.cos(rad) * 30 - 4, Math.sin(rad) * 30 - 5, 8, 10);
+            }
+            wheelGfx.fillStyle(0x2e2013, 1);          // втулка
+            wheelGfx.fillCircle(0, 0, 5);
+            wheel.add(wheelGfx);
+            wheel.setDepth(6.5);
+            this.tweens.add({
+                targets: wheel,
+                angle: 360,
+                duration: 14000,
+                repeat: -1,
+                ease: 'Linear',
+            });
+
+            // ----- Раунд 17: мешки с мукой у двери + поленница + телега -----
+            const sacksGfx = this.add.graphics();
+            [[millX - 40, millY + 30], [millX - 56, millY + 22]].forEach(([sx, sy]) => {
+                sacksGfx.fillStyle(0x000000, 0.2);
+                sacksGfx.fillEllipse(sx, sy + 10, 26, 6);
+                sacksGfx.fillStyle(0xb8a070, 1);       // мешок
+                sacksGfx.fillRoundedRect(sx - 11, sy - 8, 22, 20, 6);
+                sacksGfx.fillStyle(0xa08858, 1);       // тень сбоку
+                sacksGfx.fillRoundedRect(sx + 3, sy - 8, 7, 20, 3);
+                sacksGfx.fillStyle(0x8a744c, 1);       // перевязка
+                sacksGfx.fillRect(sx - 11, sy + 1, 22, 3);
+            });
+            sacksGfx.setDepth(5.8);
+            if (this.textures.exists('deco_firewood')) {
+                this.add.image(millX + 42, millY + 52, 'deco_firewood').setScale(1.8).setDepth(5.8);
+            }
+            if (this.textures.exists('deco_cart')) {
+                const cart = this.add.image(millX * 0.42, millY + 6, 'deco_cart')
+                    .setScale(2).setDepth(5.5);
+                // Телега чуть покачивается под ветром — живая деталь
+                this.tweens.add({
+                    targets: cart,
+                    angle: { from: -1.2, to: 1.2 },
+                    duration: 2600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                });
+            }
+
+            // ----- Раунд 17: мучная пыль у двери (золотистая взвесь) -----
+            if (this.textures.exists('particle_spark')) {
+                this.millDust = this.add.particles(0, 0, 'particle_spark', {
+                    x: { min: millX - 46, max: millX + 46 },
+                    y: { min: millY - 10, max: millY + 50 },
+                    lifespan: 4200,
+                    speedY: { min: -8, max: 10 },
+                    speedX: { min: -6, max: 6 },
+                    scale: { min: 0.12, max: 0.3 },
+                    alpha: { start: 0.4, end: 0 },
+                    quantity: 1,
+                    frequency: 900,
+                    tint: 0xf0e2b0,
+                }).setDepth(7).setBlendMode(Phaser.BlendModes.ADD);
+            }
+
+            // ----- Раунд 17: птицы у ручья (живность, не монстры) -----
+            if (!isWinterM && this.textures.exists('deco_bird')) {
+                for (let i = 0; i < 2; i++) {
+                    const bx = millX * 0.3 + i * 90;
+                    const by = millY + 46;
+                    const bird = this.add.image(bx, by, 'deco_bird')
+                        .setScale(2).setDepth(6).setFlipX(i % 2 === 0);
+                    this.tweens.add({
+                        targets: bird,
+                        scaleY: { from: 2, to: 1.5 },
+                        duration: 220 + i * 90,
+                        yoyo: true, repeat: -1, ease: 'Quad.easeOut',
+                    });
+                    this.tweens.add({
+                        targets: bird,
+                        x: bx + (i === 0 ? 60 : -70),
+                        duration: 5200 + i * 1300,
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                }
+            }
+
+            // ----- Раунд 17: пара клочьев влажного тумана над ручьём -----
+            for (let i = 0; i < 3; i++) {
+                const fog = this.add.image(
+                    streamX + Phaser.Math.Between(-30, 30),
+                    streamTop + 60 + Math.random() * (streamBottom - streamTop - 120),
+                    'fog_puff',
+                ).setScale(1.1).setAlpha(0.06).setDepth(2);
+                this.tweens.add({
+                    targets: fog,
+                    y: fog.y - 60,
+                    alpha: 0.02,
+                    duration: 9000 + Math.random() * 4000,
+                    repeat: -1,
+                    onRepeat: () => { fog.y = streamBottom - 40; fog.alpha = 0.06; },
+                });
+            }
+
             // П.13: Много деревьев вокруг мельницы (с коллизиями)
             const placedTrees = [];
             const hasTreeCollision = (x, y, minDist = 60) => {
@@ -645,12 +1012,13 @@ export class LocationScene extends Phaser.Scene {
             };
             const isOnMill = (x, y) => Math.abs(x - millX) < 100 && Math.abs(y - millY) < 120;
             const isOnRoad = (y) => Math.abs(y - millY) < 50;
-            for (let i = 0; i < 18; i++) {
+            const isOnStream = (x) => Math.abs(x - streamX) < streamW / 2 + 26;
+            for (let i = 0; i < 16; i++) {
                 let attempts = 0;
                 while (attempts < 10) {
                     const x = Math.random() * width;
                     const y = 100 + Math.random() * (height - 150);
-                    if (!isOnMill(x, y) && !isOnRoad(y) && !hasTreeCollision(x, y, 60)) {
+                    if (!isOnMill(x, y) && !isOnRoad(y) && !isOnStream(x) && !hasTreeCollision(x, y, 60)) {
                         this.add.image(x, y, `tile_forest_${i % 2}`).setScale(3).setOrigin(0.5, 0.7).setDepth(3);
                         placedTrees.push({ x, y });
                         break;

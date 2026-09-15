@@ -11,6 +11,7 @@ import { checkGameEnd, askMoneyForHelp, askElderAdvance } from '../data/thief.js
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
 import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion } from '../data/questGenerator.js';
 import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
+import { getWeather } from '../systems/Weather.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
 import {
     checkNpcWillingToTalk, getNpcRep, getReputationLevel,
@@ -1157,8 +1158,14 @@ export class InteriorScene extends Phaser.Scene {
         }
         // === Окна (2 шт) с дневным светом и ночным синим стеклом ===
         // x = 62% и 84% — свободная зона стены (левее описание, в центре дата)
+        // Раунд 17: столбы света «дышат» и тускнеют в непогоду, в лучах
+        // кружится золотая пыль, на подоконнике — цветочный горшок,
+        // ночью из окна льётся слабый лунный столб.
         if (this.textures.exists('int_window')) {
             const winY = 50;
+            const weather = getWeather(this.registry);
+            const gloomy = !!(weather && (weather.id === 'rain' || weather.id === 'thunder' || weather.id === 'snow'));
+            const sunK = (gloomy ? 0.5 : 1) * daylight;
             [width * 0.62, width * 0.84].forEach(wx => {
                 const win = this.add.image(wx, winY, 'int_window').setScale(2).setDepth(-3);
                 // Ночью стекло темнеет и синеет
@@ -1168,18 +1175,69 @@ export class InteriorScene extends Phaser.Scene {
                     const mixed = Phaser.Display.Color.Interpolate.ColorWithColor(c, n, 100, Math.min(100, dark * 100));
                     win.setTint(Phaser.Display.Color.GetColor(mixed.r, mixed.g, mixed.b));
                 }
-                // Дневной столб света из окна на пол (ADD) — гаснет к ночи
-                if (daylight > 0.05) {
+                // Форма столба света на пол (трапеция от подоконника вниз)
+                const shaftPts = [
+                    { x: wx - 30, y: winY + 18 },
+                    { x: wx + 30, y: winY + 18 },
+                    { x: wx + 74, y: height - 96 },
+                    { x: wx - 6, y: height - 96 },
+                ];
+                // Дневной столб света из окна на пол (ADD) — гаснет к ночи и в непогоду
+                if (sunK > 0.05) {
                     const shaft = this.add.graphics().setDepth(-2);
-                    shaft.fillStyle(0xfff0c0, 0.16 * daylight);
-                    shaft.fillPoints([
-                        { x: wx - 30, y: winY + 18 },
-                        { x: wx + 30, y: winY + 18 },
-                        { x: wx + 74, y: height - 96 },
-                        { x: wx - 6, y: height - 96 },
-                    ], true);
+                    shaft.fillStyle(0xfff0c0, 0.16 * sunK);
+                    shaft.fillPoints(shaftPts, true);
                     shaft.setBlendMode(Phaser.BlendModes.ADD);
+                    // «Дыхание» дневного света — окно живое
+                    this.tweens.add({
+                        targets: shaft,
+                        alpha: { from: 0.72, to: 1 },
+                        duration: 3400,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: 'Sine.easeInOut',
+                    });
+                    // Золотая пыль, кружащаяся в столбе света
+                    if (this.textures.exists('particle_spark')) {
+                        const dust = this.add.particles(0, 0, 'particle_spark', {
+                            x: { min: wx - 28, max: wx + 62 },
+                            y: { min: winY + 22, max: height - 100 },
+                            lifespan: 5200,
+                            speedY: { min: -6, max: 14 },
+                            speedX: { min: -5, max: 5 },
+                            scale: { min: 0.12, max: 0.32 },
+                            alpha: { start: 0.5 * sunK, end: 0 },
+                            quantity: 1,
+                            frequency: 700,
+                            tint: 0xffe9a0,
+                        }).setDepth(-1).setBlendMode(Phaser.BlendModes.ADD);
+                        dust.setAlpha(sunK);
+                    }
                 }
+                // Лунный столб ночью — слабый холодный свет из окна
+                if (dark > 0.5) {
+                    const moon = this.add.graphics().setDepth(-2);
+                    moon.fillStyle(0x9fb4d8, 0.055 * dark);
+                    moon.fillPoints(shaftPts, true);
+                    moon.setBlendMode(Phaser.BlendModes.ADD);
+                }
+                // Цветочный горшок на подоконнике (маленький живой штрих)
+                const pot = this.add.graphics().setDepth(-2);
+                pot.fillStyle(0x7a4a28, 1);                     // горшок (шире сверху)
+                pot.fillPoints([
+                    { x: wx - 7, y: winY + 14 },
+                    { x: wx + 7, y: winY + 14 },
+                    { x: wx + 5, y: winY + 22 },
+                    { x: wx - 5, y: winY + 22 },
+                ], true);
+                pot.fillStyle(0x5f3a20, 1);                     // ободок
+                pot.fillRect(wx - 7, winY + 14, 14, 2);
+                pot.fillStyle(0x3f6a2e, 1);                     // зелень
+                pot.fillRect(wx - 3, winY + 9, 2, 5);
+                pot.fillRect(wx + 1, winY + 10, 2, 4);
+                pot.fillStyle(0xd884a0, 1);                     // цветок
+                pot.fillCircle(wx - 2, winY + 8, 2);
+                pot.fillCircle(wx + 2, winY + 9, 1.6);
             });
         }
 

@@ -181,6 +181,9 @@ export class BootScene extends Phaser.Scene {
         // ----- Процедурные текстуры Пасеки — раунд 16 -----
         this.createApiaryTextures();
 
+        // ----- Процедурные текстуры хозяйственных построек — раунд 17 -----
+        this.createVillageYardTextures();
+
         // ----- АУДИО -----
         // SFX
         const sfxKeys = [
@@ -232,7 +235,8 @@ export class BootScene extends Phaser.Scene {
         // ----- Анимации LPC Wolf (combat sheet) -----
         this.createWolfAnimations();
 
-        // ----- Анимация боевого роя пчёл (Пасека, раунд 16) -----
+        // ----- Анимация «кипящего» роя пчёл (раунд 17: ТОЛЬКО антураж пасеки —
+        // кадровый спрайт-мерцание над ульями; врагов из пчёл больше нет) -----
         if (this.textures.exists('bees_combat_0')) {
             this.anims.create({
                 key: 'bees_idle',
@@ -654,6 +658,154 @@ export class BootScene extends Phaser.Scene {
             });
             g.generateTexture(`bees_combat_${f}`, 44, 36);
         }
+
+        g.destroy();
+    }
+
+    /**
+     * Процедурные текстуры хозяйственных построек (раунд 17, §3
+     * village-visual-upgrade): амбар (собственный облик вместо таверны),
+     * рига-сеновал, стог сена, поленница дров и телега.
+     * Все детерминированы (без Math.random) — как остальные процедурные.
+     */
+    createVillageYardTextures() {
+        const g = this.make.graphics({ add: false });
+
+        // ===== АМБАР (96×80): широкий сруб с воротами и сеновалом-окном =====
+        g.clear();
+        g.fillStyle(0x000000, 0.25); g.fillEllipse(48, 76, 88, 8);      // тень
+        // Сруб
+        g.fillStyle(0x5a4028, 1); g.fillRoundedRect(6, 30, 84, 46, 3);
+        // Горизонтальные брёвна
+        for (let ly = 36; ly < 74; ly += 8) {
+            g.fillStyle(0x6a4c30, 1); g.fillRect(8, ly, 80, 2);
+            g.fillStyle(0x46301c, 1); g.fillRect(8, ly + 4, 80, 1);
+        }
+        // Торцы брёвен по углам
+        [10, 86].forEach(cx2 => {
+            g.fillStyle(0x7a5a3a, 1); g.fillCircle(cx2, 34, 3); g.fillCircle(cx2, 70, 3);
+        });
+        // Двойные ворота
+        g.fillStyle(0x3a2816, 1); g.fillRect(30, 44, 36, 32);
+        g.fillStyle(0x584026, 1); g.fillRect(32, 46, 15, 30); g.fillRect(49, 46, 15, 30);
+        g.lineStyle(2, 0x2e2013, 1);
+        g.lineBetween(32, 52, 47, 46 + 24); g.lineBetween(64, 46, 49, 46 + 24);
+        g.lineBetween(32, 46 + 24, 47, 52); g.lineBetween(64, 52, 49, 46 + 24);
+        // Скоба-запор
+        g.fillStyle(0x2e2013, 1); g.fillRect(46, 58, 4, 6);
+        // Сеновал-окно над воротами (сено торчит)
+        g.fillStyle(0x2e2013, 1); g.fillRect(38, 32, 20, 10);
+        g.fillStyle(0xc8a838, 1); g.fillRect(40, 34, 16, 6);
+        g.fillStyle(0xe0c050, 1); g.fillRect(40, 34, 16, 2);
+        // Крыша-самцовая (широкий фронтон)
+        g.fillStyle(0x4a3520, 1); g.fillPoints([
+            { x: 0, y: 30 }, { x: 96, y: 30 }, { x: 48, y: 4 },
+        ], true);
+        g.fillStyle(0x5f4630, 1); g.fillPoints([
+            { x: 6, y: 30 }, { x: 90, y: 30 }, { x: 48, y: 8 },
+        ], true);
+        // Дранка на крыше
+        for (let i = 0; i < 5; i++) {
+            const yy = 26 - i * 4;
+            const half = 44 - i * 8;
+            g.fillStyle(0x3a2818, 1);
+            g.fillRect(48 - half, yy, half * 2, 1);
+        }
+        g.generateTexture('deco_barn', 96, 80);
+
+        // ===== РИГА-СЕНАЛ (112×72): низкая широкая, открытый закром с сеном =====
+        g.clear();
+        g.fillStyle(0x000000, 0.25); g.fillEllipse(56, 68, 104, 8);     // тень
+        // Левая половина — открытый закром с сеном
+        g.fillStyle(0x46301c, 1); g.fillRect(6, 32, 48, 34);
+        g.fillStyle(0x2e2013, 1); g.fillRect(9, 35, 42, 28);            // проём
+        g.fillStyle(0xc8a838, 1);                                       // сено внутри
+        g.fillEllipse(20, 52, 22, 16); g.fillEllipse(36, 54, 20, 14);
+        g.fillStyle(0xe0c050, 1);
+        g.fillEllipse(22, 48, 12, 6); g.fillEllipse(34, 50, 10, 5);
+        // Правая половина — глухая стена из брёвен
+        g.fillStyle(0x5a4028, 1); g.fillRect(54, 32, 52, 34);
+        for (let ly = 37; ly < 65; ly += 8) {
+            g.fillStyle(0x6a4c30, 1); g.fillRect(56, ly, 48, 2);
+            g.fillStyle(0x46301c, 1); g.fillRect(56, ly + 4, 48, 1);
+        }
+        // Сено, просыпавшееся у закрома
+        g.fillStyle(0xc8a838, 1);
+        g.fillEllipse(16, 64, 26, 6); g.fillEllipse(34, 65, 16, 4);
+        // Кровля-навес на всю ширину (слегка провисшая)
+        g.fillStyle(0x4a3520, 1); g.fillPoints([
+            { x: 0, y: 34 }, { x: 112, y: 34 }, { x: 100, y: 8 }, { x: 12, y: 8 },
+        ], true);
+        g.fillStyle(0x5f4630, 1); g.fillPoints([
+            { x: 5, y: 31 }, { x: 107, y: 31 }, { x: 97, y: 11 }, { x: 15, y: 11 },
+        ], true);
+        for (let i = 0; i < 5; i++) {                                    // дранка
+            g.fillStyle(0x3a2818, 1);
+            g.fillRect(16 + i * 1, 28 - i * 3.4, 82 - i * 2, 1);
+        }
+        // Гнёзда-ласточки под свесом (живая деталь)
+        g.fillStyle(0x2e2013, 1);
+        g.fillCircle(24, 36, 3); g.fillCircle(88, 36, 2.6);
+        g.generateTexture('deco_riga', 112, 72);
+
+        // ===== СТОГ СЕНА (36×28): округлый, с «расчёской»-штрихами =====
+        g.clear();
+        g.fillStyle(0x000000, 0.25); g.fillEllipse(18, 25, 32, 6);
+        g.fillStyle(0xa8902e, 1); g.fillEllipse(18, 16, 30, 18);        // тело
+        g.fillStyle(0xc8a838, 1); g.fillEllipse(18, 14, 26, 14);        // светлый верх
+        g.fillStyle(0xb89a32, 1); g.fillTriangle(18, 2, 10, 12, 26, 12); // верхушка
+        for (let i = 0; i < 7; i++) {                                    // штрихи-грабли
+            const sx = 6 + i * 4;
+            g.fillStyle(0x8f7824, 1);
+            g.fillRect(sx, 8 + (i % 3) * 3, 1, 12 - (i % 3) * 2);
+        }
+        g.generateTexture('deco_haystack', 36, 28);
+
+        // ===== ПОЛЕННИЦА (36×20): два ряда брёвен торцами наружу =====
+        g.clear();
+        g.fillStyle(0x000000, 0.25); g.fillEllipse(18, 18, 34, 5);
+        g.fillStyle(0x2e2013, 1); g.fillRect(2, 4, 32, 12);              // общая масса
+        // Нижний ряд торцов
+        for (let i = 0; i < 4; i++) {
+            const cx2 = 6 + i * 8;
+            g.fillStyle(0x8a6a42, 1); g.fillCircle(cx2, 12, 4);
+            g.fillStyle(0x6a4c2c, 1); g.fillCircle(cx2, 12, 2.2);
+            g.fillStyle(0xa8885a, 1); g.fillCircle(cx2 - 1, 11, 1);
+        }
+        // Верхний ряд (3 бревна)
+        for (let i = 0; i < 3; i++) {
+            const cx2 = 10 + i * 8;
+            g.fillStyle(0x8a6a42, 1); g.fillCircle(cx2, 6, 3.6);
+            g.fillStyle(0x6a4c2c, 1); g.fillCircle(cx2, 6, 2);
+            g.fillStyle(0xa8885a, 1); g.fillCircle(cx2 - 1, 5, 0.9);
+        }
+        g.generateTexture('deco_firewood', 36, 20);
+
+        // ===== ТЕЛЕГА (48×30): кузов с сеном, два колеса, оглобля =====
+        g.clear();
+        g.fillStyle(0x000000, 0.25); g.fillEllipse(24, 27, 44, 6);
+        // Оглобля (вправо)
+        g.fillStyle(0x4a3826, 1); g.fillRect(30, 12, 16, 3);
+        // Кузов
+        g.fillStyle(0x5a4028, 1); g.fillRect(4, 8, 34, 10);
+        g.fillStyle(0x46301c, 1); g.fillRect(4, 8, 34, 2);
+        for (let sx2 = 8; sx2 < 36; sx2 += 6) {                          // доски
+            g.fillStyle(0x6a4c30, 1); g.fillRect(sx2, 10, 1, 7);
+        }
+        // Сено в кузове
+        g.fillStyle(0xc8a838, 1);
+        g.fillEllipse(14, 7, 16, 8); g.fillEllipse(26, 8, 12, 7);
+        g.fillStyle(0xe0c050, 1); g.fillEllipse(15, 5, 8, 4);
+        // Колёса со спицами
+        [10, 34].forEach(wx2 => {
+            g.fillStyle(0x2e2013, 1); g.fillCircle(wx2, 20, 6.5);
+            g.fillStyle(0x584026, 1); g.fillCircle(wx2, 20, 4.5);
+            g.lineStyle(1, 0x2e2013, 1);
+            g.lineBetween(wx2 - 4, 20, wx2 + 4, 20);
+            g.lineBetween(wx2, 16, wx2, 24);
+            g.fillStyle(0x2e2013, 1); g.fillCircle(wx2, 20, 1.6);
+        });
+        g.generateTexture('deco_cart', 48, 30);
 
         g.destroy();
     }
