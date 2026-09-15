@@ -114,9 +114,20 @@ export class ForkScene extends Phaser.Scene {
             });
         });
 
-        // ----- Кнопка "Вернуться в деревню" -----
+        // ----- Кнопка "Тёмный лес — прогулка" (раунд 13) -----
         const backBtnY = startY + locations.length * (btnH + gap) + 20;
-        createButton(this, width / 2, backBtnY, '◀ Вернуться в деревню', () => {
+        createButton(this, width / 2, backBtnY, '🌲 Тёмный лес — прогулка', () => {
+            ActionLog.add(this.registry, 'Игрок отправился гулять в Тёмный лес.');
+            this.scene.start('Forest', { from: 'Fork' });
+        }, {
+            backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, pressColor: 0x1e321e,
+            textColor: '#c9e0b0',
+            fontSize: 14, padding: { left: 16, right: 16, top: 8, bottom: 8 },
+            cornerRadius: 6,
+        });
+
+        // ----- Кнопка "Вернуться в деревню" -----
+        createButton(this, width / 2, backBtnY + 44, '◀ Вернуться в деревню', () => {
             this.scene.start('Village');
         }, {
             backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
@@ -125,7 +136,7 @@ export class ForkScene extends Phaser.Scene {
         });
 
         // П.17: Кнопка "Карта" — показать карту местности
-        createButton(this, width / 2, backBtnY + 40, '🗺 Карта местности', () => {
+        createButton(this, width / 2, backBtnY + 88, '🗺 Карта местности', () => {
             this.showMap();
         }, {
             backgroundColor: 0x2a4a6a, hoverColor: 0x3a5a7a, textColor: RUS.text,

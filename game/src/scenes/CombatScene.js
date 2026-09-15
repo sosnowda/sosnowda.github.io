@@ -20,6 +20,8 @@ export class CombatScene extends Phaser.Scene {
         this.enemyKeys = (data && data.enemyKeys) || ['bandit'];
         this.npcId = (data && data.npcId) || null;
         this.fromLocation = (data && data.fromLocation) || null;
+        // Раунд 13: возврат в Тёмный лес после боя с волком/засадой
+        this.fromScene = (data && data.fromScene) || null;
     }
 
     create() {
@@ -165,8 +167,10 @@ export class CombatScene extends Phaser.Scene {
             this.registry.set('quest', q);
             ActionLog.add(this.registry, `Побег из боя. Потеряно 2 хода (бросок ${res.roll}, успех).`);
             this.time.delayedCall(1000, () => {
-                // Возврат в предыдущую сцену
-                if (this.fromLocation) {
+                // Возврат в предыдущую сцену (раунд 13: лес возвращается в лес)
+                if (this.fromScene === 'Forest') {
+                    this.scene.start('Forest', { from: 'Combat' });
+                } else if (this.fromLocation) {
                     this.scene.start('Fork');
                 } else {
                     this.scene.start('Village');
@@ -510,9 +514,18 @@ export class CombatScene extends Phaser.Scene {
         emitter.explode(30);
         this.time.delayedCall(1500, () => {
             emitter.destroy();
-            // Переход в EndScene при победе над вором, иначе в Village
+            // Переход в EndScene при победе над вором; в лес — после волка/засады (раунд 13)
             if (isThiefFight) {
                 this.scene.start('End');
+            } else if (this.fromScene === 'Forest') {
+                // Стая напугана на 4 игровых часа
+                const ts = this.registry.get('gameTime');
+                if (ts) {
+                    const q2 = this.registry.get('quest') || {};
+                    q2.wolfScaredUntilMin = ts.day * 1440 + ts.hour * 60 + ts.minute + 240;
+                    this.registry.set('quest', q2);
+                }
+                this.scene.start('Forest', { from: 'Combat' });
             } else {
                 this.scene.start('Village');
             }

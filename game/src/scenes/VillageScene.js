@@ -327,10 +327,19 @@ export class VillageScene extends Phaser.Scene {
         this.lastStepTime = 0;
         this.stepInterval = 350;
 
-        // П.25: F1 — окно помощи
+        // П.25: F1 — окно помощи (сцены 'Help' в сборке нет — фикс латентного бага,
+        // ранее клавиша молча не работала: launch('Help') не находил сцену)
         this.input.keyboard.on('keydown-F1', () => {
-            this.scene.pause();
-            this.scene.launch('Help');
+            if (this.busyDialog) return;
+            this.busyDialog = true;
+            createDialog(this, '❓ Помощь',
+                'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
+                '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
+                '📦 Сундуки и тайники — раз в игровой день.\n' +
+                '🔥 Костёр — отдых, 🎣 причал — рыбалка, ✝ крест — молитва.\n' +
+                '🐺 За воротами, в Тёмном лесу, водятся волки — там же грибы и ягоды.',
+                [{ text: 'Понятно', callback: () => { this.busyDialog = false; } }],
+                { singletonKey: 'village-help' });
         });
         // П.26: ESC — главное меню
         this.input.keyboard.on('keydown-ESC', () => {

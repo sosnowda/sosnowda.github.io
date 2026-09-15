@@ -175,6 +175,9 @@ export class BootScene extends Phaser.Scene {
         // ----- Процедурные текстуры (сундуки, цветы) — раунд 11 -----
         this.createDecoTextures();
 
+        // ----- Процедурные текстуры Тёмного леса — раунд 13 -----
+        this.createForestTextures();
+
         // ----- АУДИО -----
         // SFX
         const sfxKeys = [
@@ -424,6 +427,97 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(0x4d8d44, 1); g.fillEllipse(7, 5, 10, 5);          // внутренний блик
         g.fillStyle(0x2a5a2a, 1); g.fillRect(8, 2, 1, 4);              // вырез к центру
         g.generateTexture('deco_lilypad', 16, 10);
+
+        g.destroy();
+    }
+
+    /**
+     * Процедурные текстуры Тёмного леса (раунд 13): грибы, куст ягод,
+     * зверобой, тайник под корягой, поваленный ствол, клочья тумана.
+     * Всё рисуется кодом — ноль сетевых запросов.
+     */
+    createForestTextures() {
+        const g = this.add.graphics();
+
+        // ===== Грибы (18×14): три грибка на подстилке из хвои =====
+        g.clear();
+        g.fillStyle(0x4a5a2a, 0.6); g.fillEllipse(9, 12, 16, 4);       // подстилка
+        // Большой гриб
+        g.fillStyle(0xE8DCC4, 1); g.fillRect(7, 7, 3, 5);              // ножка
+        g.fillStyle(0xB53925, 1); g.fillEllipse(8.5, 7, 10, 6);        // шляпка
+        g.fillStyle(0xD85B45, 1); g.fillEllipse(7.5, 6, 6, 3);         // блик
+        g.fillStyle(0xF2E8D0, 1); g.fillCircle(6, 6, 1); g.fillCircle(11, 7, 1); // пятна
+        // Маленький гриб слева
+        g.fillStyle(0xE8DCC4, 1); g.fillRect(2, 9, 2, 3);
+        g.fillStyle(0x9a3a2a, 1); g.fillEllipse(3, 9, 6, 4);
+        g.generateTexture('deco_mushroom', 18, 14);
+
+        // ===== Куст ягод (26×22): тёмная зелень + грозди красных ягод =====
+        g.clear();
+        g.fillStyle(0x2a4a1e, 1); g.fillEllipse(13, 14, 24, 15);       // крона
+        g.fillStyle(0x3a5a28, 1); g.fillEllipse(10, 11, 14, 9);        // блик
+        g.fillStyle(0x1e3816, 1); g.fillEllipse(17, 18, 12, 6);        // тень низа
+        // Ягоды — грозди по 3
+        const berrySpots = [[7, 12], [9, 15], [6, 16], [13, 10], [15, 13], [12, 16], [19, 11], [21, 14], [18, 16]];
+        berrySpots.forEach(([bx, by], i) => {
+            g.fillStyle(0x8a1a2a, 1); g.fillCircle(bx, by, 2.2);       // тень ягоды
+            g.fillStyle(i % 3 === 0 ? 0xC94060 : 0xB03050, 1); g.fillCircle(bx - 0.5, by - 0.5, 1.8);
+            g.fillStyle(0xE88AA0, 1); g.fillCircle(bx - 1, by - 1, 0.7); // блик
+        });
+        g.generateTexture('deco_berry_bush', 26, 22);
+
+        // ===== Зверобой (16×18): пучок стеблей с жёлтыми цветками =====
+        g.clear();
+        g.fillStyle(0x4a6a2a, 1); g.fillRect(7, 6, 2, 11);             // главный стебель
+        g.fillStyle(0x5a7a35, 1); g.fillRect(4, 9, 3, 2); g.fillRect(9, 11, 3, 2); // листья
+        g.fillRect(3, 13, 3, 2); g.fillRect(10, 14, 3, 2);
+        // Цветки (звёзды из 5 точек)
+        g.fillStyle(0xF2C940, 1);
+        g.fillCircle(8, 4, 1.6); g.fillCircle(5, 7, 1.3); g.fillCircle(11, 8, 1.3);
+        g.fillStyle(0xF7E080, 1);
+        g.fillCircle(8, 4, 0.8); g.fillCircle(5, 7, 0.6);
+        g.generateTexture('deco_herb', 16, 18);
+
+        // ===== Тайник под корягой (30×20): бугор земли + корни + крест-затвор =====
+        g.clear();
+        g.fillStyle(0x4a3a26, 1); g.fillEllipse(15, 14, 28, 12);       // бугор
+        g.fillStyle(0x5a4830, 1); g.fillEllipse(13, 12, 16, 7);        // светлее верх
+        g.fillStyle(0x332619, 1); g.fillEllipse(15, 16, 14, 5);        // тень ямы
+        // Коряга-корни
+        g.fillStyle(0x4d3a22, 1);
+        g.fillRect(2, 8, 3, 8); g.fillRect(25, 7, 3, 9);
+        g.fillRect(4, 6, 8, 3); g.fillRect(20, 5, 8, 3);
+        g.fillStyle(0x6a5232, 1); g.fillRect(5, 6, 6, 1);              // блик коряг
+        // Крест-примета сверху (две перекладины)
+        g.fillStyle(0x2e2013, 1); g.fillRect(14, 4, 2, 9); g.fillRect(11, 7, 8, 2);
+        g.generateTexture('deco_stash_mound', 30, 20);
+
+        // ===== Поваленный ствол (44×16): лежачее бревно с мхом =====
+        g.clear();
+        g.fillStyle(0x4a3826, 1); g.fillRoundedRect(0, 4, 44, 10, 4);  // тело бревна
+        g.fillStyle(0x5a4830, 1); g.fillRoundedRect(2, 5, 40, 4, 2);   // блик сверху
+        g.fillStyle(0x33261a, 1); g.fillRoundedRect(0, 10, 44, 4, 2);  // тень низа
+        g.fillStyle(0x3a2a1a, 1); g.fillEllipse(2, 9, 5, 9);           // срез слева
+        g.fillStyle(0x6a5232, 1); g.fillEllipse(2, 9, 3, 6);           // годовые кольца
+        // Мох
+        g.fillStyle(0x3f6a2e, 1);
+        g.fillEllipse(12, 5, 8, 4); g.fillEllipse(28, 5, 10, 4); g.fillEllipse(38, 6, 6, 3);
+        g.generateTexture('deco_log', 44, 16);
+
+        // ===== Клок тумана (128×128): мягкий радиальный диск =====
+        g.clear();
+        for (let i = 10; i >= 1; i--) {
+            const a = 0.028 * (11 - i) / 10;
+            g.fillStyle(0xdfe8d8, a);
+            g.fillCircle(64, 64, i * 6.2);
+        }
+        g.generateTexture('fog_puff', 128, 128);
+
+        // ===== Плавающий листок (10×8): для падающей листвы =====
+        g.clear();
+        g.fillStyle(0x9a7b3f, 1); g.fillEllipse(5, 4, 10, 6);
+        g.fillStyle(0x7d5f2a, 1); g.fillRect(0, 4, 10, 1);             // прожилка
+        g.generateTexture('forest_leaf', 10, 8);
 
         g.destroy();
     }
