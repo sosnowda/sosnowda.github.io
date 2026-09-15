@@ -8,7 +8,8 @@
 // Лицензия: CC-BY-SA 3.0 / GPL 3.0
 
 import { RUS } from '../config/RusTheme.js';
-import { createButton } from '../utils/ui.js';
+import { createButton, bindRestartOnResize } from '../utils/ui.js';
+import { t } from '../systems/i18n.js';
 import {
     loadAllLpcLayers, composeCharacterTexture,
     createCustomCharacterAnimations,
@@ -24,14 +25,15 @@ import { initReputation } from '../data/reputation.js';
 import AudioManager from '../systems/AudioManager.js';
 
 const CAT_LABELS = {
-    body: 'Телосложение',
-    eyes: 'Глаза',
-    beards: 'Борода',
-    hair: 'Прическа',
-    legs: 'Штаны',
-    feet: 'Обувь',
-    torso: 'Одежда',
+    body: 'Телосложение',   // EN: Body
+    eyes: 'Глаза',          // EN: Eyes
+    beards: 'Борода',       // EN: Beard
+    hair: 'Прическа',       // EN: Hair
+    legs: 'Штаны',          // EN: Legs
+    feet: 'Обувь',          // EN: Footwear
+    torso: 'Одежда',        // EN: Clothing
 };
+const catLabel = (cat) => t(CAT_LABELS[cat] || cat);
 
 const CAT_ORDER = ['body', 'eyes', 'beards', 'hair', 'legs', 'feet', 'torso'];
 
@@ -41,6 +43,7 @@ export class CharacterGeneratorScene extends Phaser.Scene {
     }
 
     create() {
+        bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
         this.cameras.main.setBackgroundColor(RUS.bg);
         this.audioManager = new AudioManager(this);
@@ -54,14 +57,14 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         this.previewSprite = null;
 
         // Заголовок
-        this.add.text(width / 2, 30, '🎨 Создание персонажа (LPC)', {
+        this.add.text(width / 2, 30, t('🎨 Создание персонажа (LPC)'), {
             fontFamily: 'Georgia, serif',
             fontSize: '28px', color: RUS.text, fontStyle: 'bold',
             stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5, 0);
 
         // Подсказка загрузки
-        this.loadingText = this.add.text(width / 2, height / 2, 'Загрузка LPC-слоёв...', {
+        this.loadingText = this.add.text(width / 2, height / 2, t('Загрузка LPC-слоёв...'), {
             fontSize: '20px', color: RUS.text,
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
@@ -104,20 +107,22 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         }
 
         // === Превью персонажа (большой спрайт по центру) ===
-        this.previewScale = 4; // 64 × 4 = 256 px
+        // Раунд 20: на узких экранах превью компактнее и колонки прижаты к краям
+        const narrow = width < 760;
+        this.previewScale = narrow ? 3 : 4;
         this.previewX = width / 2;
         this.previewY = height / 2 - 30;
         // Рамка под превью
-        this.add.rectangle(this.previewX, this.previewY, 280, 280, 0x1a140e, 0.9)
+        this.add.rectangle(this.previewX, this.previewY, narrow ? 200 : 280, narrow ? 200 : 280, 0x1a140e, 0.9)
             .setStrokeStyle(2, RUS.border);
-        this.add.text(this.previewX, this.previewY - 145, 'Предпросмотр', {
+        this.add.text(this.previewX, this.previewY - (narrow ? 105 : 145), t('Предпросмотр'), {
             fontSize: '14px', color: RUS.textDim,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
 
         // Имя персонажа
-        this.characterName = 'Путник';
-        this.nameInput = this.add.text(this.previewX, this.previewY + 150, this.characterName, {
+        this.characterName = t('Путник');
+        this.nameInput = this.add.text(this.previewX, this.previewY + (narrow ? 110 : 150), this.characterName, {
             fontSize: '20px', color: RUS.text, fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
             padding: { x: 12, y: 6 },
@@ -127,11 +132,11 @@ export class CharacterGeneratorScene extends Phaser.Scene {
 
         // === Переключатель пола ===
         const sexY = 100;
-        this.add.text(width / 2 - 100, sexY, 'Пол:', {
+        this.add.text(width / 2 - 100, sexY, t('Пол:'), {
             fontSize: '16px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(1, 0.5);
-        createButton(this, width / 2 - 60, sexY, '♂ Муж', () => {
+        createButton(this, width / 2 - 60, sexY, t('♂ Муж'), () => {
             this.sex = 'male';
             this.rebuildAppearanceForSex();
         }, {
@@ -140,7 +145,7 @@ export class CharacterGeneratorScene extends Phaser.Scene {
             textColor: RUS.text, fontSize: 14,
             padding: { left: 14, right: 14, top: 6, bottom: 6 },
         });
-        createButton(this, width / 2 + 30, sexY, '♀ Жен', () => {
+        createButton(this, width / 2 + 30, sexY, t('♀ Жен'), () => {
             this.sex = 'female';
             this.rebuildAppearanceForSex();
         }, {
@@ -154,9 +159,9 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         this.catButtonsY = 160;
         this.categoryButtons = [];
         CAT_ORDER.forEach((cat, i) => {
-            const bx = 100;
+            const bx = narrow ? 70 : 100;
             const by = this.catButtonsY + i * 50;
-            const btn = createButton(this, bx, by, CAT_LABELS[cat], () => {
+            const btn = createButton(this, bx, by, catLabel(cat), () => {
                 this.activeCategory = cat;
                 this.refreshCategoryButtons();
                 this.drawOptionPanel();
@@ -170,17 +175,17 @@ export class CharacterGeneratorScene extends Phaser.Scene {
 
         // === Панель опций (справа) — рисуется динамически ===
         this.optionPanel = this.add.container(0, 0);
-        this.optionPanel.x = width - 180;
+        this.optionPanel.x = width - (narrow ? 110 : 180);
 
         // === Кнопки навигации по опциям ===
         // «◀ Пред» и «След ▶» для текущей категории
-        createButton(this, width - 240, height - 180, '◀ Пред', () => {
+        createButton(this, width - (narrow ? 190 : 240), height - 180, t('◀ Пред'), () => {
             this.cycleOption(-1);
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
             fontSize: 14, padding: { left: 14, right: 14, top: 8, bottom: 8 },
         });
-        createButton(this, width - 120, height - 180, 'След ▶', () => {
+        createButton(this, width - (narrow ? 70 : 120), height - 180, t('След ▶'), () => {
             this.cycleOption(1);
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
@@ -188,7 +193,7 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         });
 
         // === Кнопка "Случайно" ===
-        createButton(this, width / 2, height - 110, '🎲 Случайный облик', () => {
+        createButton(this, width / 2, height - 110, t('🎲 Случайный облик'), () => {
             this.appearance = randomAppearance(this.manifest, this.sex);
             // Обновим индексы
             for (const cat of CAT_ORDER) {
@@ -204,14 +209,14 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         });
 
         // === Кнопки внизу ===
-        createButton(this, 100, height - 40, '◀ Назад', () => {
+        createButton(this, narrow ? 80 : 100, height - 40, t('◀ Назад'), () => {
             this.scene.start('CharacterSelection');
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
             fontSize: 16, padding: { left: 20, right: 20, top: 10, bottom: 10 },
         });
 
-        createButton(this, width - 130, height - 40, 'Подтвердить ▶', () => {
+        createButton(this, width - (narrow ? 100 : 130), height - 40, t('Подтвердить ▶'), () => {
             this.confirmCharacter();
         }, {
             backgroundColor: RUS.accent, hoverColor: RUS.accentLight, textColor: RUS.text,
@@ -254,13 +259,17 @@ export class CharacterGeneratorScene extends Phaser.Scene {
 
     refreshCategoryButtons() {
         this.categoryButtons.forEach(({ cat, btn }) => {
-            // Меняем цвет активной категории
-            // (кнопка уже создана, мы не можем изменить цвет напрямую —
-            // перерисуем через tint)
+            // Раунд 20 ФИКС: контейнер кнопки не поддерживает setTint —
+            // красим ФОН (image/rectangle) через getElement('background').
+            // (Раньше здесь падал buildUi — опции и превью не отрисовывались.)
             const isActive = cat === this.activeCategory;
-            // Найдём фон кнопки и обновим
-            // Упрощённо: используем setTint
-            btn.setTint(isActive ? RUS.accent : 0xffffff);
+            const bg = (typeof btn.getElement === 'function') ? btn.getElement('background') : null;
+            if (!bg) return;
+            if (typeof bg.setTint === 'function') {
+                bg.setTint(isActive ? RUS.accent : 0xffffff);
+            } else if (typeof bg.setFillStyle === 'function') {
+                bg.setFillStyle(isActive ? RUS.accent : 0x4a3520, 1);
+            }
         });
     }
 
@@ -269,7 +278,8 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         const cat = this.activeCategory;
         const opts = this.getFilteredOptions(cat);
         if (opts.length === 0) {
-            const t = this.add.text(0, 0, '(нет опций)', {
+            const noOptText = t('(нет опций)');
+            const t = this.add.text(0, 0, noOptText, {
                 fontSize: '14px', color: RUS.textDim,
             }).setOrigin(0.5);
             this.optionPanel.add(t);
@@ -360,7 +370,7 @@ export class CharacterGeneratorScene extends Phaser.Scene {
 
     editName() {
         // Простой промпт через JS
-        const newName = window.prompt('Введите имя персонажа:', this.characterName);
+        const newName = window.prompt(t('Введите имя персонажа:'), this.characterName);
         if (newName && newName.trim().length > 0) {
             this.characterName = newName.trim().slice(0, 24);
             this.nameInput.setText(this.characterName);

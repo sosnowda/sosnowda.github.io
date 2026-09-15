@@ -5,13 +5,14 @@ import { INTERIORS } from '../data/interiors.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
-import { createButton, createDialog } from '../utils/ui.js';
+import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js';
 import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd, askMoneyForHelp, askElderAdvance } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
 import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion } from '../data/questGenerator.js';
 import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { getWeather } from '../systems/Weather.js';
+import { t, tf } from '../systems/i18n.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
 import {
     checkNpcWillingToTalk, getNpcRep, getReputationLevel,
@@ -35,6 +36,7 @@ export class InteriorScene extends Phaser.Scene {
     }
 
     create() {
+        bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
@@ -112,7 +114,7 @@ export class InteriorScene extends Phaser.Scene {
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(20);
             // П.7: Подсказка «нажмите, чтобы поговорить»
-            this.add.text(this.npcSprite.x, this.npcSprite.y - 80, '💬 Нажми, чтобы поговорить', {
+            this.add.text(this.npcSprite.x, this.npcSprite.y - 80, t('💬 Нажми, чтобы поговорить'), {
                 fontSize: '11px', color: '#c9a14a',
                 backgroundColor: '#00000088', padding: { x: 6, y: 3 },
                 stroke: '#000', strokeThickness: 1,
@@ -191,41 +193,41 @@ export class InteriorScene extends Phaser.Scene {
 
         const buttons = [];
         if (hasNpc) {
-            buttons.push({ label: '\u{1F4AC} Поговорить', bg: RUS.accent, hover: RUS.accentLight, cb: () => this.talkToNpc(interior) });
-            buttons.push({ label: '\u{1F4B0} Просить денег', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.askMoneyFromNpc(interior) });
-            buttons.push({ label: '\u{1F4DC} Задание', bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.offerQuest(interior) });
-            buttons.push({ label: '\u{1F381} Подарить', bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.showGiftMenu(interior) });
-            buttons.push({ label: '\u{1F44D} Похвалить', bg: 0x2a5a5a, hover: 0x3a6a6a, cb: () => this.complimentNpc(interior) });
-            buttons.push({ label: '\u{1F620} Угрожать', bg: 0x5a1a1a, hover: 0x6a2a2a, cb: () => this.threatenNpc(interior) });
+            buttons.push({ label: t('\u{1F4AC} Поговорить'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.talkToNpc(interior) });
+            buttons.push({ label: t('\u{1F4B0} Просить денег'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.askMoneyFromNpc(interior) });
+            buttons.push({ label: t('\u{1F4DC} Задание'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.offerQuest(interior) });
+            buttons.push({ label: t('\u{1F381} Подарить'), bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.showGiftMenu(interior) });
+            buttons.push({ label: t('\u{1F44D} Похвалить'), bg: 0x2a5a5a, hover: 0x3a6a6a, cb: () => this.complimentNpc(interior) });
+            buttons.push({ label: t('\u{1F620} Угрожать'), bg: 0x5a1a1a, hover: 0x6a2a2a, cb: () => this.threatenNpc(interior) });
             if (this.npcData && this.npcData.gender !== player.gender && npcRepValue >= 50 && villageRepValue >= 30) {
-                buttons.push({ label: '\u{1F48D} Свататься', bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.proposeMarriage(interior) });
+                buttons.push({ label: t('\u{1F48D} Свататься'), bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.proposeMarriage(interior) });
             }
             if (interior.id === 'tavern') {
-                buttons.push({ label: '\u{1F37B} Угостить (20\u0434)', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.treatEveryone(interior) });
-                buttons.push({ label: '\u{1F6D2} Купить еды', bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showTavernShop() });
+                buttons.push({ label: t('\u{1F37B} Угостить (20\u0434)'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.treatEveryone(interior) });
+                buttons.push({ label: t('\u{1F6D2} Купить еды'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showTavernShop() });
                 // Раунд 12: свой тюк, оставленный на сохранение у тавернщика
-                buttons.push({ label: '\u{1F392} Мой тюк', bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('tavern') });
+                buttons.push({ label: t('\u{1F392} Мой тюк'), bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('tavern') });
             } else if (interior.id === 'blacksmith') {
-                buttons.push({ label: '\u{1F6D2} Купить оружие', bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
+                buttons.push({ label: t('\u{1F6D2} Купить оружие'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
             }
         } else if (interior.id === 'chapel') {
             // Часовня: богомолье вместо разговора
-            buttons.push({ label: '\u{1F64F} Помолиться', bg: RUS.accent, hover: RUS.accentLight, cb: () => this.prayInChapel() });
-            buttons.push({ label: '\u{1F56F} Пожертвовать (5\u0434)', bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.donateInChapel() });
-            buttons.push({ label: '\u{1F50D} Осмотреть киот', bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectChapelKiot() });
+            buttons.push({ label: t('\u{1F64F} Помолиться'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.prayInChapel() });
+            buttons.push({ label: t('\u{1F56F} Пожертвовать (5\u0434)'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.donateInChapel() });
+            buttons.push({ label: t('\u{1F50D} Осмотреть киот'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectChapelKiot() });
         } else if (interior.id === 'barn') {
             // Амбар: подённая работа
-            buttons.push({ label: '\u{2692} Работать (1 час)', bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInBarn() });
-            buttons.push({ label: '\u{1F33E} Осмотреть зерно', bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectBarnGrain() });
+            buttons.push({ label: t('\u{2692} Работать (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInBarn() });
+            buttons.push({ label: t('\u{1F33E} Осмотреть зерно'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectBarnGrain() });
             // Раунд 12: свой работничий узел в углу
-            buttons.push({ label: '\u{1F392} Мой узел', bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('barn') });
+            buttons.push({ label: t('\u{1F392} Мой узел'), bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('barn') });
         }
         const exitAction = () => {
             this.scene.stop();
             if (this.scene.isPaused(this.from)) this.scene.resume(this.from);
             else this.scene.start(this.from);
         };
-        buttons.push({ label: '\u{1F6AA} Выйти', bg: 0x4a3520, hover: 0x5a4530, cb: exitAction });
+        buttons.push({ label: t('\u{1F6AA} Выйти'), bg: 0x4a3520, hover: 0x5a4530, cb: exitAction });
 
         // Раунд 12 ФИКС: в таверне теперь 10 кнопок — фиксированные 130px
         // давали 1372px и обрезали «Выйти» за краем экрана. Ширина подстраивается:
@@ -253,7 +255,7 @@ export class InteriorScene extends Phaser.Scene {
         if (this.busyDialog) return;
         const talkCheck = checkNpcWillingToTalk(this.registry, interior.npcId, { npcBusy: false });
         if (talkCheck.willAttack) {
-            createDialog(this, 'Нападение!',
+            createDialog(this, t('Нападение!'),
                 `${getNpcDisplayName(this.registry, interior.npcId)} бросается на тебя с кулаками!`,
                 [{ text: 'Драться!', callback: () => {
                     this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
@@ -403,7 +405,7 @@ export class InteriorScene extends Phaser.Scene {
         let y = height / 2 - panelH / 2 + 65;
 
         // Подарить деньги (10 д.)
-        createButton(this, width / 2, y, '💸 Подарить 10 денег', () => {
+        createButton(this, width / 2, y, t('💸 Подарить 10 денег'), () => {
             if ((player.dengas || 0) < 10) {
                 createDialog(this, 'Подарок', 'Не хватает денег!', [{ text: 'Понятно', callback: () => {} }],
                     { singleton: false, portraitKey: interior.portrait });
@@ -426,7 +428,7 @@ export class InteriorScene extends Phaser.Scene {
         y += 35;
 
         // Подарить деньги (50 д.)
-        createButton(this, width / 2, y, '💸 Подарить 50 денег', () => {
+        createButton(this, width / 2, y, t('💸 Подарить 50 денег'), () => {
             if ((player.dengas || 0) < 50) {
                 createDialog(this, 'Подарок', 'Не хватает денег!', [{ text: 'Понятно', callback: () => {} }],
                     { singleton: false, portraitKey: interior.portrait });
@@ -737,7 +739,7 @@ export class InteriorScene extends Phaser.Scene {
         items.forEach((item, i) => {
             const y = startY + i * 42;
             const canAfford = (player.dengas || 0) >= item.price;
-            createButton(this, width / 2, y, `${item.name} — ${item.price} д. (${item.effect})`, () => {
+            createButton(this, width / 2, y, `${t(item.name)} — ${item.price} ${t('д.')} (${item.effect})`, () => {
                 if (!canAfford) {
                     createDialog(this, 'Таверна', 'Не хватает денег!', [
                         { text: 'Понятно', callback: () => {} },
@@ -801,7 +803,7 @@ export class InteriorScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(202);
 
         // Переключатель вкладок
-        createButton(this, width / 2 - 100, height / 2 - panelH / 2 + 100, 'Оружие', () => {
+        createButton(this, width / 2 - 100, height / 2 - panelH / 2 + 100, t('Оружие'), () => {
             overlay.destroy();
             panel.destroy();
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
@@ -813,7 +815,7 @@ export class InteriorScene extends Phaser.Scene {
             padding: { left: 16, right: 16, top: 6, bottom: 6 },
         }).setDepth(202);
 
-        createButton(this, width / 2 + 100, height / 2 - panelH / 2 + 100, 'Доспехи', () => {
+        createButton(this, width / 2 + 100, height / 2 - panelH / 2 + 100, t('Доспехи'), () => {
             overlay.destroy();
             panel.destroy();
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());

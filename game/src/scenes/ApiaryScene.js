@@ -12,9 +12,9 @@ import {
 } from '../data/apiary.js';
 import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals, getWeather } from '../systems/Weather.js';
-import { checkGameEnd } from '../data/thief.js';
+import { checkGameEnd, searchLocation, getHuntState } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
-import { createDialog } from '../utils/ui.js';
+import { createDialog, createButton } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
 import { formatMoney } from '../systems/Character.js';
@@ -41,6 +41,9 @@ export class ApiaryScene extends Phaser.Scene {
 
     init(data) {
         this.from = (data && data.from) || 'Fork';
+        // Раунд 20 (слияние Пасек): пасека — ЕДИНАЯ сцена. С режима охоты на вора
+        // сюда можно попасть из развилки — поиск следов прямо на ходячей локации.
+        this.hunt = !!(data && data.hunt);
         // Возврат после боя — вернуть игрока туда, где он встал
         this.returnPos = this.registry.get('apiaryReturnPos') || null;
         this.registry.set('apiaryReturnPos', null);
@@ -91,6 +94,86 @@ export class ApiaryScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-F1', () => this.showHelpDialog());
         this.input.keyboard.on('keydown-ESC', () => this.scene.start('Title'));
         this.virtualControls = new VirtualControls(this);
+
+        // ----- Режим охоты на вора (раунд 20): поиск следов на пасеке -----
+        if (this.hunt) {
+            this.buildHuntUI();
+        }
+    }
+
+    buildHuntUI() {
+        const { width, height } = this.scale;
+        const state = getHuntState(this.registry);
+        const alreadySearched = state.locationsSearched.includes('apiary');
+
+        // Счётчик ходов — под сводкой о пчёлах (левый верхний угол)
+        this.huntTurnsText = this.add.text(12, 72, tf('⏳ Ходов: {0}', state.turnsLeft), {
+            fontSize: '13px', color: state.turnsLeft <= 3 ? '#ff4040' : '#ff8060',
+            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+            backgroundColor: '#000000aa', padding: { x: 6, y: 4 },
+        }).setScrollFactor(0).setDepth(102);
+
+        if (alreadySearched) {
+            this.add.text(width / 2, height - 170, t('Ты уже обыскивал эту местность.\nНовых следов здесь не найти.'), {
+                fontSize: '14px', color: '#c8b890', align: 'center',
+                fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+                backgroundColor: '#000000aa', padding: { x: 10, y: 6 },
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+            return;
+        }
+
+        // Кнопка поиска (низ-центр, между джойстиком и кнопкой E).
+        // Раунд 20 ФИКС: камера пасеки СКРОЛИТСЯ за игроком — кнопка обязана
+        // быть привязана к экрану (scrollFactor 0), иначе «уплывает» с камерой.
+        const searchBtn = createButton(this, width / 2, height - 90,
+            tf('{0} (проверка Внимательности)', t('🔍 Искать следы')),
+            () => this.doHuntSearch(),
+            {
+                backgroundColor: 0x4a6a4a, hoverColor: 0x5a7a5a, pressColor: 0x2a3a2a,
+                textColor: '#f0e6c8', fontSize: 15,
+                padding: { left: 20, right: 20, top: 10, bottom: 10 },
+                cornerRadius: 8,
+            });
+        searchBtn.setScrollFactor(0);
+        searchBtn.each ? searchBtn.list.forEach(o => o.setScrollFactor && o.setScrollFactor(0)) : null;
+    }
+
+    /** Поиск следов вора на пасеке (та же логика, что в LocationScene). */
+    doHuntSearch() {
+        if (this.busyDialog) return;
+        this.busyDialog = true;
+        const result = searchLocation(this.registry, 'apiary');
+        if (this.huntTurnsText) {
+            this.huntTurnsText.setText(tf('⏳ Ходов: {0}', result.turnsLeft));
+            if (result.turnsLeft <= 3) this.huntTurnsText.setColor('#ff4040');
+        }
+        ActionLog.add(this.registry, 'Игрок искал следы на Пасеке.');
+
+        if (result.thiefEscaped) {
+            this.time.delayedCall(1500, () => this.scene.start('End'));
+            return;
+        }
+
+        const title = result.found ? t('✨ Следы найдены!') : t('🔍 Поиск следов');
+        createDialog(this, title, result.message, [
+            {
+                text: result.found ? t('Погоня!') : t('Продолжить'),
+                callback: () => {
+                    this.busyDialog = false;
+                    if (result.found) {
+                        // Бой с вором; возврат после боя — через Location('apiary') → Apiary(hunt)
+                        this.scene.start('Combat', { enemyKeys: ['thief'], npcId: 'thief', fromLocation: 'apiary' });
+                        return;
+                    }
+                    this.scene.restart({ from: this.from, hunt: true });
+                },
+            },
+        ], {
+            singleton: false,
+            portraitKey: result.found ? 'portrait_bandit' : 'portrait_narrator',
+            typing: true,
+            typingSpeed: 30,
+        });
     }
 
     showHelpDialog() {

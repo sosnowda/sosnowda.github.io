@@ -8,7 +8,7 @@
 //   y = 42..64  — штаны (нижняя часть тела)
 
 import { RUS } from '../config/RusTheme.js';
-import { createButton } from '../utils/ui.js';
+import { createButton, bindRestartOnResize } from '../utils/ui.js';
 
 // Палитры цветов (Phaser tint — 0xRRGGBB)
 const SKIN_COLORS = [
@@ -93,6 +93,7 @@ export class CharacterAppearanceScene extends Phaser.Scene {
     }
 
     create() {
+        bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
         this.cameras.main.setBackgroundColor(RUS.bg);
 

@@ -30,7 +30,116 @@ import {
 } from '../config/StyleConfig.js';
 
 // ============================================================
-// Внутренние хелперы
+// ВНУТРЕННИЕ ХЕЛПЕРЫ
+// ============================================================
+
+// ============================================================
+// АДАПТИВНОСТЬ (раунд 20): полный ресайз окна.
+// Phaser работает в Scale.RESIZE — канвас занимает ВСЁ окно,
+// координаты сцены = CSS-пиксели окна (любое разрешение/ориентация).
+// Все кнопки/диалоги, созданные через createButton/createDialog,
+// регистрируются в реестре анкоров и сами переезжают при ресайзе:
+//   • близко к центру X  → привязка к центру (с сохранением смещения)
+//   • у левого/правого края → к краю
+//   • верхняя треть по Y → к верху, нижняя — к низу, иначе — к середине.
+// Дополнительно: bindRestartOnResize(scene) для меню-сцен (перезапуск
+// с сохранением scene data после паузы), scene.__uiOnResize(fn) —
+// произвольные обработчики (HUD, VirtualControls, фоны сцен).
+// ============================================================
+const ANCHORED_UI = new WeakMap(); // scene -> [{obj, ax, ay, dx, dy, stretch}]
+
+function inferAnchor(x, y, w, h) {
+    const ax = Math.abs(x - w / 2) < 10 ? 'center' : (x <= w * 0.3 ? 'left' : (x >= w * 0.7 ? 'right' : 'center'));
+    const ay = y <= h * 0.33 ? 'top' : (y >= h * 0.67 ? 'bottom' : 'middle');
+    const dx = ax === 'center' ? x - w / 2 : (ax === 'right' ? x - w : x);
+    const dy = ay === 'top' ? y : (ay === 'bottom' ? y - h : y - h / 2);
+    return { ax, ay, dx, dy };
+}
+
+function applyAnchor(e, w, h) {
+    if (!e.obj || !e.obj.scene) return;
+    if (e.stretch) {
+        if (typeof e.obj.setSize === 'function') e.obj.setSize(w, h);
+        return;
+    }
+    e.obj.x = e.ax === 'center' ? w / 2 + e.dx : (e.ax === 'right' ? w + e.dx : e.dx);
+    e.obj.y = e.ay === 'top' ? e.dy : (e.ay === 'bottom' ? h + e.dy : h / 2 + e.dy);
+}
+
+/** Зарегистрировать объект UI для авто-перепозиционирования при ресайзе. */
+export function registerAnchoredUI(scene, obj, x = obj.x, y = obj.y, opts = {}) {
+    if (!scene || !scene.scale || !obj) return obj;
+    let list = ANCHORED_UI.get(scene);
+    if (!list) { list = []; ANCHORED_UI.set(scene, list); }
+    if (!list.some(e => e.obj === obj)) {
+        if (opts.stretch) {
+            list.push({ obj, stretch: true });
+        } else {
+            list.push({ obj, ...inferAnchor(x, y, scene.scale.width, scene.scale.height) });
+        }
+    }
+    ensureSceneResizeBinding(scene);
+    return obj;
+}
+
+/** Ленивая привязка resize-обработчика сцены (один раз на сцену). */
+export function ensureSceneResizeBinding(scene) {
+    if (!scene || !scene.scale || scene.__uiResizeBound) return;
+    scene.__uiResizeBound = true;
+    const list = ANCHORED_UI.get(scene) || [];
+    ANCHORED_UI.set(scene, list);
+
+    let restartTimer = null;
+    let lastW = scene.scale.width;
+    let lastH = scene.scale.height;
+
+    const onResize = (gameSize) => {
+        const w = gameSize.width;
+        const h = gameSize.height;
+        for (let i = 0; i < list.length; i++) applyAnchor(list[i], w, h);
+        if (Array.isArray(scene.__uiResizeHandlers)) {
+            scene.__uiResizeHandlers.forEach((fn) => {
+                try { fn(w, h); } catch (e) { console.warn('[ui] resize handler failed', e); }
+            });
+        }
+        if (scene.__uiRestartOnResize) {
+            clearTimeout(restartTimer);
+            restartTimer = setTimeout(() => {
+                if (!scene.scene || !scene.scene.isActive()) return;
+                if (Math.abs(w - lastW) < 80 && Math.abs(h - lastH) < 80) return;
+                lastW = w; lastH = h;
+                scene.scene.restart((scene.scene.settings && scene.scene.settings.data) || {});
+            }, 280);
+        }
+    };
+
+    scene.scale.on('resize', onResize);
+    scene.events.once('shutdown', () => {
+        clearTimeout(restartTimer);
+        try { scene.scale.off('resize', onResize); } catch (e) { /* noop */ }
+        scene.__uiResizeBound = false;
+        scene.__uiResizeHandlers = [];
+        ANCHORED_UI.delete(scene);
+    });
+}
+
+/** Меню-сцены: полный перезапуск сцены при существенном изменении окна. */
+export function bindRestartOnResize(scene) {
+    if (!scene || !scene.scale) return;
+    scene.__uiRestartOnResize = true;
+    ensureSceneResizeBinding(scene);
+}
+
+/** Произвольный обработчик ресайза сцены (HUD, фоны, контролы). */
+export function onSceneResize(scene, fn) {
+    if (!scene || typeof fn !== 'function') return;
+    ensureSceneResizeBinding(scene);
+    if (!Array.isArray(scene.__uiResizeHandlers)) scene.__uiResizeHandlers = [];
+    scene.__uiResizeHandlers.push(fn);
+}
+
+// ============================================================
+// Внутренние хелперы (рисование)
 // ============================================================
 
 /**
@@ -429,6 +538,9 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
     };
     container.layout = () => container; // no-op для совместимости
 
+    // Раунд 20: авто-анкор при ресайзе окна (Scale.RESIZE)
+    registerAnchoredUI(scene, container, x, y);
+
     return container;
 }
 
@@ -538,7 +650,11 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     dialog.setScrollFactor(0);
 
     // Ширина диалога — увеличена, чтобы помещался портрет + текст
-    const dialogWidth = portraitKey ? 560 : DIALOG_STYLES.width;
+    // Раунд 20: на узких экранах диалог не шире окна (поля по 12px)
+    const dialogWidth = Math.min(
+        portraitKey ? 560 : DIALOG_STYLES.width,
+        Math.max(240, cam.width - 24)
+    );
     const pad = DIALOG_STYLES.padding;
 
     // Пергаментный фон — если доступна текстура 'ui_panel_parchment', используем её
@@ -615,6 +731,15 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         btn.setDepth(buttonDepth);
         actionButtons.push(btn);
         return btn;
+    });
+
+    // Раунд 20: подложка и панель следуют за размером окна
+    registerAnchoredUI(scene, blocker, 0, 0, { stretch: true });
+    registerAnchoredUI(scene, dialog, centerX, centerY);
+    onSceneResize(scene, (w, h) => {
+        if (!dialog.scene) return;
+        dialog.setPosition(w / 2, h / 2);
+        layout();
     });
 
     dialog.add(titleText);

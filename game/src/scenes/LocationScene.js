@@ -6,7 +6,7 @@ import { THIEF_LOCATIONS } from '../data/thief.js';
 import { getLocationById } from '../data/mapLocations.js';
 import { searchLocation, getHuntState, checkGameEnd } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
-import { createButton, createDialog } from '../utils/ui.js';
+import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
@@ -22,7 +22,6 @@ const LOCATION_BG = {
     pogost: 0x3a3a2a,
     pasture: 0x5a8a3a,
     mill: 0x4a7c3a,     // П.5,13: трава (мельница рисуется поверх)
-    apiary: 0x4a7c3a,   // П.8,9: трава (пасеки рисуются поверх)
 };
 
 export class LocationScene extends Phaser.Scene {
@@ -33,9 +32,16 @@ export class LocationScene extends Phaser.Scene {
     init(data) {
         this.locationId = data?.locationId || 'forest';
         this.from = data?.from || 'Fork';
+        // Раунд 20 (слияние Пасек): статичного вида пасеки больше нет —
+        // охотничья пасека открывается через ходячую ApiaryScene с поиском следов.
+        if (this.locationId === 'apiary') {
+            this.scene.start('Apiary', { from: this.from, hunt: true });
+            return;
+        }
     }
 
     create() {
+        bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
@@ -1025,73 +1031,6 @@ export class LocationScene extends Phaser.Scene {
                     }
                     attempts++;
                 }
-            }
-        } else if (locId === 'apiary') {
-            // П.8,9: Пасека — ровные ряды домиков-пасек + разбросанные деревья
-            gfx.fillStyle(0x4a7c3a, 1);
-            gfx.fillRect(0, 80, width, height - 80);
-            gfx.setDepth(0);
-            // Текстура травы
-            gfx.fillStyle(0x5a8c4a, 0.5);
-            for (let i = 0; i < 50; i++) {
-                const x = Math.random() * width;
-                const y = 100 + Math.random() * (height - 120);
-                gfx.fillRect(x, y, 3, 3);
-            }
-            // П.9: Ровные ряды очень маленьких домиков-пасек (улей)
-            // 3 ряда по 5 домиков
-            const placedHives = [];
-            const hasHiveCollision = (x, y, minDist = 30) => {
-                return placedHives.some(p => Math.abs(p.x - x) < minDist && Math.abs(p.y - y) < minDist);
-            };
-            for (let row = 0; row < 3; row++) {
-                for (let col = 0; col < 5; col++) {
-                    const x = 120 + col * 220;
-                    const y = 180 + row * 160;
-                    if (hasHiveCollision(x, y, 30)) continue;
-                    // Рисуем маленький домик-пасеку графикой
-                    const hive = this.add.graphics();
-                    // Корпус улья (жёлтый деревянный)
-                    hive.fillStyle(0xc8a838, 1);
-                    hive.fillRect(x - 25, y - 20, 50, 40);
-                    // Крыша (тёмно-коричневая)
-                    hive.fillStyle(0x4a3a1a, 1);
-                    hive.fillTriangle(x - 30, y - 20, x + 30, y - 20, x, y - 40);
-                    // Вход в улей (маленькое отверстие)
-                    hive.fillStyle(0x2a1a0a, 1);
-                    hive.fillRect(x - 5, y + 5, 10, 8);
-                    // Полоски на улье (декорация)
-                    hive.fillStyle(0x8a6818, 1);
-                    hive.fillRect(x - 25, y - 10, 50, 2);
-                    hive.fillRect(x - 25, y, 50, 2);
-                    hive.setDepth(4);
-                    placedHives.push({ x, y });
-                }
-            }
-            // П.9: Разбросанные деревья по всей локации (с коллизиями)
-            const placedTrees = [];
-            const hasTreeCollision = (x, y, minDist = 60) => {
-                return placedTrees.some(p => Math.abs(p.x - x) < minDist && Math.abs(p.y - y) < minDist);
-            };
-            const isOnHive = (x, y) => hasHiveCollision(x, y, 40);
-            for (let i = 0; i < 15; i++) {
-                let attempts = 0;
-                while (attempts < 10) {
-                    const x = Math.random() * width;
-                    const y = 100 + Math.random() * (height - 150);
-                    if (!isOnHive(x, y) && !hasTreeCollision(x, y, 60)) {
-                        this.add.image(x, y, `tile_forest_${i % 2}`).setScale(3).setOrigin(0.5, 0.7).setDepth(3);
-                        placedTrees.push({ x, y });
-                        break;
-                    }
-                    attempts++;
-                }
-            }
-            // Цветы (для пчёл)
-            for (let i = 0; i < 30; i++) {
-                const x = Math.random() * width;
-                const y = 100 + Math.random() * (height - 120);
-                this.add.text(x, y, '🌸', { fontSize: '12px' }).setOrigin(0.5).setDepth(2);
             }
         }
     }

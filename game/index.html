@@ -44,6 +44,7 @@ window.addEventListener('load', function() {
         import('./src/scenes/BootScene.js'),
         import('./src/scenes/TitleScene.js'),
         import('./src/scenes/CharacterSelectionScene.js'),
+        import('./src/scenes/CharacterGeneratorScene.js'),
         import('./src/scenes/CharacterAppearanceScene.js'),
         import('./src/scenes/VillageScene.js'),
         import('./src/scenes/InteriorScene.js'),
@@ -64,8 +65,11 @@ window.addEventListener('load', function() {
             type: Phaser.AUTO,
             title: 'Летописи Руси',
             parent: 'game-container',
-            width: 1280,
-            height: 720,
+            // Раунд 20: ЛЮБОЕ разрешение пользователя — канвас = всё окно.
+            // Scale.RESIZE: буфер = CSS-пиксели окна, сцены читают актуальные
+            // размеры через this.scale, UI переезжает по анкорам (utils/ui.js).
+            width: window.innerWidth,
+            height: window.innerHeight,
             backgroundColor: '#2e2118',
             pixelArt: false,
             physics: {
@@ -73,8 +77,9 @@ window.addEventListener('load', function() {
                 arcade: { gravity: { x: 0, y: 0 }, debug: false }
             },
             scale: {
-                mode: Phaser.Scale.FIT,
+                mode: Phaser.Scale.RESIZE,
                 autoCenter: Phaser.Scale.CENTER_BOTH,
+                expandParent: true
             },
             scene: scenes
             // RexUI плагин убран — не нужен

@@ -573,6 +573,8 @@ export class VillageScene extends Phaser.Scene {
             haystack: 'deco_haystack',
             firewood: 'deco_firewood',
             cart: 'deco_cart',
+            banya: 'deco_banya',   // §3.1 раунд 20
+            ovin: 'deco_ovin',     // §3.1 раунд 20
         };
         YARD_PROPS.forEach((p) => {
             const key = SPRITE_BY_ID[p.id];
@@ -595,6 +597,14 @@ export class VillageScene extends Phaser.Scene {
                 this.smokeBuildings.push({
                     x: cx - p.w * ts * 0.28,
                     y: p.row * ts - ts * 0.15,
+                    depth: bottomRow + 1,
+                });
+            }
+            if (p.id === 'banya' && this.smokeBuildings) {
+                // §3.1: баня топится — дымок из каменной трубы (правый край сруба)
+                this.smokeBuildings.push({
+                    x: cx + p.w * ts * 0.30,
+                    y: p.row * ts - ts * 0.62,
                     depth: bottomRow + 1,
                 });
             }

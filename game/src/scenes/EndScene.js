@@ -3,7 +3,7 @@
 import { RUS } from '../config/RusTheme.js';
 import { ActionLog } from '../data/actionLog.js';
 import { getHuntState, checkGameEnd } from '../data/thief.js';
-import { createButton } from '../utils/ui.js';
+import { createButton, bindRestartOnResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { getTime, formatDateTime } from '../systems/TimeSystem.js';
 
@@ -13,6 +13,7 @@ export class EndScene extends Phaser.Scene {
     }
 
     create() {
+        bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
         this.cameras.main.setBackgroundColor(0x0a0604);
         this.audioManager = new AudioManager(this);

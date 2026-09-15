@@ -94,8 +94,15 @@ export function searchLocation(registry, locationId) {
     }
 
     // Тратим ход
-    const loc = THIEF_LOCATIONS.find(l => l.id === locationId);
-    const locName = loc ? loc.name : locationId;
+    // Раунд 20 ФИКС: 'apiary' (и прочие прогулочные локации) нет в
+    // THIEF_LOCATIONS — раньше searchLocation падал на loc.name.
+    const EXTRA_HUNT_NAMES = {
+        apiary: 'Пасека', pogost: 'Погостъ', mill: 'Водяная мельница',
+        pasture: 'Выпасъ', lake: 'Святое озеро',
+    };
+    const loc = THIEF_LOCATIONS.find(l => l.id === locationId)
+        || { id: locationId, name: EXTRA_HUNT_NAMES[locationId] || locationId, description: 'окрестности' };
+    const locName = loc.name;
     const turnsLeft = spendTurn(registry, `Поиск следов в локации «${locName}»`);
 
     // Отмечаем, что обыскали

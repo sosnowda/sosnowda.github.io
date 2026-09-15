@@ -3,7 +3,7 @@
 // После выбора можно изменить имя.
 
 import { RUS } from '../config/RusTheme.js';
-import { createButton } from '../utils/ui.js';
+import { createButton, bindRestartOnResize } from '../utils/ui.js';
 import {
     PRESET_HEROES, GENERATION_PATTERNS,
     createPresetHero, createRandomHero,
@@ -25,6 +25,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
     }
 
     create() {
+        bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
         this.cameras.main.setBackgroundColor(RUS.bg);
         this.audioManager = new AudioManager(this);

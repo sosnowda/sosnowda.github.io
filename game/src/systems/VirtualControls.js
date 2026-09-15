@@ -112,6 +112,25 @@ export class VirtualControls {
         });
 
         this.actionButton = { base: actionBase, text: actionText, ax, ay, ar };
+
+        // Раунд 20: при ресайзе окна контролы прилипают к нижним углам заново
+        if (this.scene.scale) {
+            this.scene.scale.on('resize', (gameSize) => {
+                if (!this.joystick || !this.actionButton) return;
+                const jx2 = 100;
+                const jy2 = gameSize.height - 100;
+                this.joystick.jx = jx2;
+                this.joystick.jy = jy2;
+                this.joystick.base.setPosition(jx2, jy2);
+                if (!this.joystick.active) this.joystick.thumb.setPosition(jx2, jy2);
+                const ax2 = gameSize.width - 100;
+                const ay2 = gameSize.height - 100;
+                this.actionButton.ax = ax2;
+                this.actionButton.ay = ay2;
+                this.actionButton.base.setPosition(ax2, ay2);
+                this.actionButton.text.setPosition(ax2, ay2);
+            });
+        }
     }
 
     _updateThumb(px, py) {

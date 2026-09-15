@@ -1,7 +1,7 @@
 // Экран персонажа: характеристики, навыки и инвентарь с экипировкой.
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
-import { createButton } from '../utils/ui.js';
+import { createButton, bindRestartOnResize } from '../utils/ui.js';
 import {
     CHARACTER_KEYS, SKILLS, SKILL_CATEGORIES,
     ARMORS, WEAPONS,
@@ -20,6 +20,7 @@ export class CharacterScene extends Phaser.Scene {
     }
 
     create() {
+        bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
         this.cameras.main.setBackgroundColor(RUS.bg);
         const p = this.registry.get('player');

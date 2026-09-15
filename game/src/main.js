@@ -4,6 +4,7 @@
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { CharacterSelectionScene } from './scenes/CharacterSelectionScene.js';
+import { CharacterGeneratorScene } from './scenes/CharacterGeneratorScene.js';
 import { CharacterAppearanceScene } from './scenes/CharacterAppearanceScene.js';
 import { VillageScene } from './scenes/VillageScene.js';
 import { InteriorScene } from './scenes/InteriorScene.js';
@@ -18,8 +19,10 @@ const config = {
     title: 'Летописи Руси',
     description: 'Браузерная RPG в сеттинге Руси XV века',
     parent: 'game-container',
-    width: 1280,
-    height: 720,
+    // Раунд 20: Scale.RESIZE — любое разрешение/ориентация окна.
+    // (Точка входа игры — game/index.html; этот конфиг держим синхронно.)
+    width: (typeof window !== 'undefined') ? window.innerWidth : 1280,
+    height: (typeof window !== 'undefined') ? window.innerHeight : 720,
     // П.5: Фон canvas — тёмно-коричневый (не зелёный!), чтобы избежать «зелёной сетки».
     backgroundColor: '#2e2118',
     pixelArt: false,
@@ -31,6 +34,7 @@ const config = {
         BootScene,
         TitleScene,
         CharacterSelectionScene,
+        CharacterGeneratorScene,
         CharacterAppearanceScene,
         VillageScene,
         InteriorScene,
@@ -41,8 +45,9 @@ const config = {
         CharacterScene,
     ],
     scale: {
-        mode: Phaser.Scale.FIT,
+        mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
+        expandParent: true,
     },
 };
 

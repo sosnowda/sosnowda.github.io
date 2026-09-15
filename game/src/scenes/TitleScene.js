@@ -2,6 +2,7 @@
 import { RUS } from '../config/RusTheme.js';
 import AudioManager from '../systems/AudioManager.js';
 import { t, tf, tk, getLang, setLang } from '../systems/i18n.js';
+import { bindRestartOnResize } from '../utils/ui.js';
 
 export class TitleScene extends Phaser.Scene {
     constructor() {
@@ -9,6 +10,7 @@ export class TitleScene extends Phaser.Scene {
     }
 
     create() {
+        bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
         this.cameras.main.setBackgroundColor(RUS.bg);
         this.audioManager = new AudioManager(this);
@@ -35,12 +37,15 @@ export class TitleScene extends Phaser.Scene {
             });
         }
 
+        // Раунд 20: заголовок масштабируется под ширину окна (на телефоне не выпирает)
+        const titleSize = Math.max(30, Math.min(66, Math.round(width / 12)));
         this.add.text(width / 2, 110, 'ЛЕТОПИСИ РУСИ', {
-            fontFamily: 'Georgia, serif', fontSize: '66px', color: '#E8DCC4',
+            fontFamily: 'Georgia, serif', fontSize: titleSize + 'px', color: '#E8DCC4',
             fontStyle: 'bold', stroke: '#000', strokeThickness: 4,
         }).setOrigin(0.5);
-        this.add.text(width / 2, 178, t('XV век · Поход за утраченной иконой'), {
-            fontSize: '22px', color: '#A89878',
+        const subSize = Math.max(14, Math.min(22, Math.round(width / 30)));
+        this.add.text(width / 2, 110 + titleSize * 0.75 + 18, t('XV век · Поход за утраченной иконой'), {
+            fontSize: subSize + 'px', color: '#A89878',
         }).setOrigin(0.5);
 
         // Кнопки — без "Продолжить" (одноразовая игра)

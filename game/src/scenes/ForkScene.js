@@ -4,7 +4,7 @@
 import { RUS } from '../config/RusTheme.js';
 import { getHuntState } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
-import { createButton } from '../utils/ui.js';
+import { createButton, bindRestartOnResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { getForkLocations } from '../data/mapLocations.js';
@@ -19,6 +19,7 @@ export class ForkScene extends Phaser.Scene {
     }
 
     create() {
+        bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
         this.cameras.main.setBackgroundColor(0x2a3a2a);
         this.audioManager = new AudioManager(this);
@@ -93,14 +94,24 @@ export class ForkScene extends Phaser.Scene {
         }
 
         // ----- Кнопки локаций (расширенная карта, п.2,3) -----
+        // Раунд 20: на низких экранах (телефон в ландшафте, узкие окна) —
+        // ДВЕ колонки, чтобы все кнопки + «Назад» гарантированно влезали.
         const locations = getForkLocations();
-        const btnH = 36;
         const startY = 140;
-        const gap = 4;
+        const twoCols = height < 640;
+        const cols = twoCols ? 2 : 1;
+        const rows = Math.ceil(locations.length / cols);
+        const colW = Math.min(320, (width - 40) / cols);
+        const availH = Math.max(120, height - startY - 170);
+        const step = Math.max(28, Math.min(40, Math.floor(availH / rows)));
+        const btnH = step - 4;
+        const gridLeft = width / 2 - (colW * (cols - 1)) / 2;
 
         locations.forEach((loc, i) => {
-            const x = width / 2;
-            const y = startY + i * (btnH + gap);
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const x = twoCols ? (gridLeft - colW / 2 + col * colW + colW / 2) : width / 2;
+            const y = startY + row * step;
             const alreadySearched = state.locationsSearched.includes(loc.id);
             const label = alreadySearched
                 ? tf('{0} (обыскано)', `${loc.icon} ${loc.name}`)
@@ -108,19 +119,24 @@ export class ForkScene extends Phaser.Scene {
 
             createButton(this, x, y, label, () => {
                 ActionLog.add(this.registry, `Игрок отправился в локацию «${loc.name}».`);
+                // Раунд 20 (слияние Пасек): охотничья пасека = ходячая ApiaryScene
+                if (loc.id === 'apiary') {
+                    this.scene.start('Apiary', { from: 'Fork', hunt: true });
+                    return;
+                }
                 this.scene.start('Location', { locationId: loc.id, from: 'Fork' });
             }, {
                 backgroundColor: alreadySearched ? 0x3a3a3a : 0x4a6a4a,
                 hoverColor: alreadySearched ? 0x4a4a4a : 0x5a7a5a,
                 pressColor: 0x2a3a2a,
                 textColor: alreadySearched ? '#888' : RUS.text,
-                fontSize: 14, padding: { left: 16, right: 16, top: 8, bottom: 8 },
+                fontSize: twoCols ? 13 : 14, padding: { left: 12, right: 12, top: 6, bottom: 6 },
                 cornerRadius: 6,
             });
         });
 
         // ----- Кнопка "Тёмный лес — прогулка" (раунд 13) -----
-        const backBtnY = startY + locations.length * (btnH + gap) + 20;
+        const backBtnY = startY + rows * step + 14;
         createButton(this, width / 2, backBtnY, t('🌲 Тёмный лес — прогулка'), () => {
             ActionLog.add(this.registry, 'Игрок отправился гулять в Тёмный лес.');
             this.scene.start('Forest', { from: 'Fork' });
@@ -132,7 +148,7 @@ export class ForkScene extends Phaser.Scene {
         });
 
         // ----- Кнопка "Пасека — прогулка" (раунд 17: пчёлы — только антураж) -----
-        createButton(this, width / 2, backBtnY + 44, t('🐝 Пасека — прогулка'), () => {
+        createButton(this, width / 2, backBtnY + 40, t('🐝 Пасека — прогулка'), () => {
             ActionLog.add(this.registry, 'Игрок отправился на Пасеку.');
             this.scene.start('Apiary', { from: 'Fork' });
         }, {
@@ -143,7 +159,7 @@ export class ForkScene extends Phaser.Scene {
         });
 
         // ----- Кнопка "Вернуться в деревню" -----
-        createButton(this, width / 2, backBtnY + 88, t('◀ Вернуться в деревню'), () => {
+        createButton(this, width / 2, backBtnY + 80, t('◀ Вернуться в деревню'), () => {
             this.scene.start('Village');
         }, {
             backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
@@ -152,7 +168,7 @@ export class ForkScene extends Phaser.Scene {
         });
 
         // П.17: Кнопка "Карта" — показать карту местности
-        createButton(this, width / 2, backBtnY + 132, t('🗺 Карта местности'), () => {
+        createButton(this, width / 2, backBtnY + 118, t('🗺 Карта местности'), () => {
             this.showMap();
         }, {
             backgroundColor: 0x2a4a6a, hoverColor: 0x3a5a7a, textColor: RUS.text,

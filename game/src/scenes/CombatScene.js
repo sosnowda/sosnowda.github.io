@@ -4,7 +4,7 @@ import { RUS } from '../config/RusTheme.js';
 import { WEAPONS } from '../config/GameConfig.js';
 import { skillCheck, rollDamage, ROLL_RESULT, applyDamage } from '../systems/BRPEngine.js';
 import { spawnEnemy } from '../data/characters.js';
-import { createButton, createFloatingText } from '../utils/ui.js';
+import { createButton, createFloatingText, registerAnchoredUI, onSceneResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { ActionLog } from '../data/actionLog.js';
@@ -42,10 +42,15 @@ export class CombatScene extends Phaser.Scene {
         this.logLines = [];
         this.barGfx = this.add.graphics().setDepth(50);
 
-        // ----- Фон боевой сцены — тёмный лес -----
-        this.add.graphics()
-            .fillGradientStyle(0x1a0e08, 1, 0x0a0604, 1, 0)
-            .fillRect(0, 0, width, height);
+        // ----- Фон боевой сцены — тёмный лес (раунд 20: перерисовка при ресайзе) -----
+        this.bgGfx = this.add.graphics();
+        this.drawCombatBackground = (w, h) => {
+            this.bgGfx.clear();
+            this.bgGfx.fillGradientStyle(0x1a0e08, 1, 0x0a0604, 1, 0);
+            this.bgGfx.fillRect(0, 0, w, h);
+        };
+        this.drawCombatBackground(width, height);
+        onSceneResize(this, (w, h) => this.drawCombatBackground(w, h));
 
         // Деревья на фоне (декоративные)
         for (let i = 0; i < 8; i++) {
@@ -111,12 +116,13 @@ export class CombatScene extends Phaser.Scene {
             this.enemySprites.push({ sprite: sp, combatant: e, label: nm, baseY: y });
         });
 
-        // ----- Журнал боя -----
+        // ----- Журнал боя (раунд 20: анкор-центр при ресайзе) -----
         this.logText = this.add.text(width / 2, 20, '', {
             fontSize: '16px', color: RUS.text, backgroundColor: '#00000099',
-            padding: { x: 10, y: 8 }, align: 'center', wordWrap: { width: width - 80 },
+            padding: { x: 10, y: 8 }, align: 'center', wordWrap: { width: Math.max(240, width - 80) },
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5, 0).setDepth(60);
+        registerAnchoredUI(this, this.logText, width / 2, 20);
 
         this.createActions();
         this.drawBars();
