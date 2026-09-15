@@ -1469,7 +1469,6 @@ export class VillageScene extends Phaser.Scene {
                 const rewardsText = (quest.rewards || []).map(r => {
                     if (r.type === 'money') return `${r.amount} д.`;
                     if (r.type === 'item') return `${r.name} ×${r.count}`;
-                    if (r.type === 'lodging') return 'ночлег';
                     if (r.type === 'blessing') return 'благословение';
                     return r.name || '';
                 }).join(', ');

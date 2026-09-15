@@ -69,8 +69,9 @@ export class CombatScene extends Phaser.Scene {
         this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, 'knight_idle', 0);
         this.playerSprite.setScale(2.5);
         this.playerSprite.play('knight_idle');
-        // Зеркалим по горизонтали — рыцарь смотрит вправо, а нам нужно влево (к врагам)
-        this.playerSprite.setFlipX(true);
+        // Раунд 23 (п.3): бойцы стоят ЛИЦОМ К ЛИЦУ. Рыцарь отрисов
+        // мордой ВПРАВО, враги стоят справа — флип не нужен (раньше
+        // setFlipX(true) разворачивал героя СПИНОЙ к врагам).
         // Лёгкое покачивание
         this.tweens.add({
             targets: this.playerSprite,
@@ -83,19 +84,35 @@ export class CombatScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(20);
 
-        // ----- Враги -----
+        // ----- Враги (раунд 23: лицом к лицу — враги смотрят ВЛЕВО, на игрока) -----
         this.enemySprites = [];
         const n = this.enemies.length;
+        // Раунд 23 (п.5): вой волка в начале боя
+        const hasWolf = this.enemies.some(e => e.spriteKey === 'enemy_wolf');
+        if (hasWolf) {
+            this.time.delayedCall(400, () => {
+                if (this.audioManager) this.audioManager.playWolfHowl();
+            });
+        }
         this.enemies.forEach((e, i) => {
             const y = height * 0.35 + (n > 1 ? i * (height * 0.3) : height * 0.18);
             const x = width * 0.72 + (n > 1 ? (i % 2) * 60 - 30 : 0);
             let sp;
-            if (e.spriteKey === 'enemy_wolf' && this.textures.exists('wolf_combat')) {
-                // Используем LPC Wolf для врага-волка
-                sp = this.add.sprite(x, y, 'wolf_combat', 0).setScale(2.5);
-                sp.play('wolf_idle');
+            let isWolf = false;
+            if (e.spriteKey === 'enemy_wolf' && this.anims.exists('wolf_side_idle')) {
+                // Раунд 23: боковой вид волка (мордой вправо) — флипаем,
+                // чтобы морда была направлена ВЛЕВО, на игрока.
+                sp = this.add.sprite(x, y, 'wolf_full_1', 15).setScale(2.2);
+                sp.setFlipX(true);
+                sp.play('wolf_side_idle');
+                isWolf = true;
+            } else if (this.anims.exists(`${e.spriteKey}_idle_left`)) {
+                // Человекоподобные враги (разбойник/вор) — вид СБОКУ слева,
+                // мордой к игроку (раньше стояли спиной/лицом к камере).
+                sp = this.add.sprite(x, y, e.spriteKey, 0).setScale(2.5);
+                sp.play(`${e.spriteKey}_idle_left`);
             } else if (this.textures.exists(`${e.spriteKey}_idle_down`)) {
-                // Стандартный спрайт (bandit и т.п.) — top-down
+                // Fallback — стандартный спрайт (top-down)
                 sp = this.add.sprite(x, y, e.spriteKey, 0).setScale(2.5);
                 sp.play(`${e.spriteKey}_idle_down`);
             } else {
@@ -114,7 +131,7 @@ export class CombatScene extends Phaser.Scene {
                 fontSize: '15px', color: '#ffb3a0',
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(20);
-            this.enemySprites.push({ sprite: sp, combatant: e, label: nm, baseY: y });
+            this.enemySprites.push({ sprite: sp, combatant: e, label: nm, baseY: y, isWolf });
         });
 
         // ----- Журнал боя (раунд 20: анкор-центр при ресайзе) -----
@@ -332,6 +349,33 @@ export class CombatScene extends Phaser.Scene {
         this.cameras.main.flash(150, 255, 200, 50);
     }
 
+    /**
+     * Раунд 23: анимация атаки врага во время выпада.
+     * Волк — боковой «рык», человекоподобные — бег влево к игроку.
+     */
+    playEnemyAttackAnim(rec) {
+        const sp = rec.sprite;
+        if (rec.isWolf) {
+            if (this.anims.exists('wolf_side_attack')) sp.play('wolf_side_attack');
+        } else {
+            const key = rec.combatant.spriteKey;
+            if (this.anims.exists(`${key}_walk_left`)) sp.play(`${key}_walk_left`);
+        }
+    }
+
+    /**
+     * Раунд 23: вернуть врага в боковую idle-стойку лицом к игроку.
+     */
+    restoreEnemyIdle(rec) {
+        if (!rec.sprite || !rec.sprite.active) return;
+        if (rec.isWolf) {
+            if (this.anims.exists('wolf_side_idle')) rec.sprite.play('wolf_side_idle');
+        } else {
+            const key = rec.combatant.spriteKey;
+            if (this.anims.exists(`${key}_idle_left`)) rec.sprite.play(`${key}_idle_left`);
+        }
+    }
+
     playerAttack(weaponKey) {
         // Раунд 14: используем оружие ВЫБРАННОЙ кнопки (а не всегда экипировку).
         // Кулаки — честный резерв с навыком brawl; экипировка передаётся своей кнопкой.
@@ -355,6 +399,8 @@ export class CombatScene extends Phaser.Scene {
             });
         }
 
+        // Раунд 23 (п.5): свист оружия в начале выпада
+        if (this.audioManager) this.audioManager.playWeaponSwing();
         // Анимация подхода игрока
         this.playLunge(this.playerSprite, targetSprite, () => {
             // Обработка результата после подхода
@@ -386,17 +432,27 @@ export class CombatScene extends Phaser.Scene {
                     createFloatingText(this, tw.sprite.x, tw.sprite.y - 60, `-${actualDmg}`, '#ff6b5a');
                     this.pushLog(tf('{0}: попадание! Урон {1}{2} (бросок {3}){4}{5}.', t(w.name), actualDmg, absorbed > 0 ? tf(' (бронь {0})', absorbed) : '', res.roll, isCrit ? t(' [КРИТ!]') : '', res.special ? t(' [ОСОБЫЙ!]') : ''));
 
+                    // Раунд 23 (п.5): звук по исходу удара — тело / доспех / щит
+                    if (this.audioManager) {
+                        if (absorbed > 0) {
+                            if (actualDmg === 0) this.audioManager.playShieldHit();
+                            else this.audioManager.playArmorHit();
+                        } else {
+                            this.audioManager.playSwordHit();
+                        }
+                    }
                     if (isCrit) {
                         this.playCritEffect(tw.sprite.x, tw.sprite.y);
                         if (this.audioManager) this.audioManager.playLevelUp();
                     } else {
                         this.playHitEffect(tw.sprite.x, tw.sprite.y, 'blood');
-                        if (this.audioManager) this.audioManager.playSwordHit();
                     }
                     this.cameras.main.shake(120, isCrit ? 0.010 : 0.005);
 
                     if (target.HP <= 0) {
                         this.pushLog(tf('{0} повержен!', t(target.name)));
+                        // Раунд 23: звук падения поверженного
+                        if (this.audioManager) this.audioManager.playCombatDeath();
                         tw.sprite.setAlpha(0.4);
                         // Эффект "падения"
                         this.tweens.add({
@@ -463,7 +519,12 @@ export class CombatScene extends Phaser.Scene {
                 const en = e.combatant;
                 const res = skillCheck(en.attackSkill);
 
+                // Раунд 23 (п.5/п.3): свист оружия + анимация атаки врага,
+                // после выпада — возврат в стойку лицом к игроку
+                if (this.audioManager) this.audioManager.playWeaponSwing();
+                this.playEnemyAttackAnim(e);
                 this.playLunge(e.sprite, this.playerSprite, () => {
+                    this.restoreEnemyIdle(e);
                     if (res.result === ROLL_RESULT.FAIL || res.result === ROLL_RESULT.FUMBLE) {
                         this.pushLog(tf('{0}: {1} — промах.', t(en.name), res.roll));
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'dust');
@@ -493,7 +554,22 @@ export class CombatScene extends Phaser.Scene {
                         createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `-${actualDmg}`, '#ff6b5a');
                         this.pushLog(tf('{0} бьёт {1}: урон {2}{3} ({4}){5}.', t(en.name), t(en.weapon.name), actualDmg, absorbed > 0 ? tf(' (бронь {0})', absorbed) : '', res.roll, res.special ? t(' [ОСОБЫЙ!]') : ''));
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'blood');
-                        if (this.audioManager) this.audioManager.playDamageTaken();
+                        // Раунд 23 (п.5): звук по исходу — тело / доспех / щит;
+                        // при полном попадании герой вздрагивает (knight_hit)
+                        if (this.audioManager) {
+                            if (absorbed > 0) {
+                                if (actualDmg === 0) this.audioManager.playShieldHit();
+                                else this.audioManager.playArmorHit();
+                            } else {
+                                this.audioManager.playSwordHit();
+                                if (this.anims.exists('knight_hit') && this.player.HP > 0) {
+                                    this.playerSprite.play('knight_hit');
+                                    this.time.delayedCall(300, () => {
+                                        if (this.playerSprite.active && this.player.HP > 0) this.playerSprite.play('knight_idle');
+                                    });
+                                }
+                            }
+                        }
                         this.cameras.main.shake(120, 0.006);
                         this.drawBars();
                         if (this.player.HP <= 0) {
@@ -599,6 +675,11 @@ export class CombatScene extends Phaser.Scene {
     endCombatDefeat() {
         this.busy = true;
         this.pushLog(t('Ты пал в бою...'));
+        // Раунд 23 (п.5): звук падения + анимация смерти рыцаря
+        if (this.audioManager) this.audioManager.playCombatDeath();
+        if (this.anims.exists('knight_death')) {
+            this.playerSprite.play('knight_death');
+        }
         // Раунд 22 (п.6): смерть в ЛЮБОМ бою — проигрыш игры.
         // Раньше бой с волками/разбойниками просто возвращал в титул.
         loseHeroDead(this.registry);

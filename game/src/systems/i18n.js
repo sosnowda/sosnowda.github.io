@@ -559,8 +559,6 @@ const EN = {
         '✨ The priest\'s blessing lifts you: +10 to this check\'s chance (one time only).',
     '⌛ Поручение «{0}» просрочено! Срок вышел, а дело не сделано.':
         '⌛ The errand "{0}" has expired! The deadline passed and the deed was not done.',
-    'Ваучер: бесплатный ночлег в таверне (8 часов)':
-        'Voucher: a free night\'s lodging at the tavern (8 hours)',
 
     // ----- Раунд 22: благословение в церкви -----
     '🙏 Попросить благословения': '🙏 Ask for a blessing',
@@ -591,8 +589,6 @@ const EN = {
     '🛏 Отдых в таверне': '🛏 Rest at the tavern',
     'Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Отдохнёшь — силы вернутся.»':
         'Fyodor wipes the counter: "The room is clean, the hay is fresh. Rest a while and your strength will return."',
-    '🎟 У тебя есть ваучер «Бесплатный ночлег» (осталось: {0}) — ночлег будет бесплатным.':
-        '🎟 You hold a "Free lodging" voucher ({0} left) — your night\'s stay will be free.',
     '⚠ ВНИМАНИЕ: погоня за вором продолжается! Пока ты спишь, вор уйдёт далеко. Отдых лучше отложить до победы.':
         '⚠ WARNING: the chase for the thief is still on! While you sleep, the thief will get far away. Better postpone your rest until after the victory.',
     'Отдохнуть 1 час (4 д.) — лечение ~1/3': 'Rest for 1 hour (4 d.) — heal ~1/3',
@@ -602,12 +598,10 @@ const EN = {
     'Ты выспался, сил — не меряно... но пока ты спал, вор успел скрыться из вида!':
         'You slept soundly, bursting with strength... but while you slept, the thief managed to vanish from sight!',
     'Встать': 'Rise',
-    'Ты провёл в постели {0} ч (по ваучеру). {1}': 'You spent {0} h in bed (on a voucher). {1}',
     'Ты провёл в постели {0} ч. {1}': 'You spent {0} h in bed. {1}',
     'Здоровье и Воля восстановлены ПОЛНОСТЬЮ.': 'Health and Will have been FULLY restored.',
     'Здоровье +{0}, Воля +{1}.': 'Health +{0}, Will +{1}.',
     'Ты полон сил!': 'You are full of strength!',
-    'Отдохнул в таверне по ваучеру ({0} ч). {1}': 'Rested at the tavern on a voucher ({0} h). {1}',
     'Отдохнул в таверне ({0} ч) за {1} д. {2}': 'Rested at the tavern ({0} h) for {1} d. {2}',
 };
 

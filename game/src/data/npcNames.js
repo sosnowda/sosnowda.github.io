@@ -207,7 +207,7 @@ export function initNpcNames(registry) {
         const professionPool = PROFESSIONS_BY_GENDER[cfg.gender];
         const profession = professionPool.find(p => p.id === cfg.professionId) || professionPool[0];
         const ageGroup = getAgeGroup(cfg.age, cfg.gender);
-        
+
         return {
             ...cfg,
             name: name,
@@ -215,12 +215,42 @@ export function initNpcNames(registry) {
             profession: profession,
             strangerDescription: getStrangerDescription(cfg.age, cfg.gender, profession),
             knownDescription: getKnownDescription(name, profession, cfg.gender),
+            look: rollNpcLook(cfg.sprite),
             met: false,
         };
     });
 
     registry.set('npcs', npcs);
     return npcs;
+}
+
+/**
+ * Раунд 23 (п.4): случайная внешность NPC на ЭТУ игру.
+ * Сдвиг цвета одежды (hue), насыщенность, яркость и рост.
+ * NPCs с одним базовым спрайтом получают РАЗНЫЕ сдвиги (по очереди
+ * из перетасованного списка), чтобы никто не был копией другого.
+ * Вызывается при каждом старте новой игры — облик деревни каждый раз иной.
+ */
+const NPC_HUE_STEPS = [45, 90, 135, 180, 225, 270, 315, 20];
+const hueShuffles = {};
+function rollNpcLook(baseSprite) {
+    // Перетасованный порядок сдвигов на каждый базовый спрайт
+    if (!hueShuffles[baseSprite]) {
+        hueShuffles[baseSprite] = [...NPC_HUE_STEPS];
+        for (let i = hueShuffles[baseSprite].length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [hueShuffles[baseSprite][i], hueShuffles[baseSprite][j]] =
+                [hueShuffles[baseSprite][j], hueShuffles[baseSprite][i]];
+        }
+    }
+    const hue = hueShuffles[baseSprite].pop()
+        ?? Math.floor(Math.random() * 360);
+    return {
+        hue,                                          // сдвиг цвета одежды 0..360
+        satMul: 0.85 + Math.random() * 0.45,          // насыщенность ×0.85..1.3
+        valMul: 0.9 + Math.random() * 0.25,           // яркость ×0.9..1.15
+        scale: 0.93 + Math.random() * 0.14,           // рост ×0.93..1.07
+    };
 }
 
 /**

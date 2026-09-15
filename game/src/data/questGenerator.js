@@ -101,22 +101,22 @@ export const NPC_QUEST_POOLS = {
     elder: {
         // Староста — административные и охранные задания
         quests: [QUEST_TYPES.BANDIT, QUEST_TYPES.DELIVER, QUEST_TYPES.GUARD, QUEST_TYPES.MEDIATE, QUEST_TYPES.FIND_PERSON],
-        // Награды: деньги + возможно ночлег в таверне
-        rewardTypes: ['money', 'lodging', 'herb'],
+        // Награды: деньги + еда/трава
+        rewardTypes: ['money', 'herb', 'food'],
         rewardScale: 1.5, // староста богаче
         description: 'староста',
     },
     priest: {
         // Священник — религиозные и моральные задания + ГЛАВНЫЙ квест
         quests: [QUEST_TYPES.ICON_RETURN, QUEST_TYPES.CANDLE_FETCH, QUEST_TYPES.PRAYER, QUEST_TYPES.FIND_PERSON, QUEST_TYPES.MEDIATE],
-        rewardTypes: ['blessing', 'herb', 'icon', 'lodging'],
+        rewardTypes: ['blessing', 'herb', 'icon', 'money'],
         rewardScale: 0.8, // священник беднее деньгами, но даёт духовные награды
         description: 'батюшка',
     },
     tavernkeeper: {
         // Тавернщик — курьерские и информационные
         quests: [QUEST_TYPES.DELIVER, QUEST_TYPES.FETCH, QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.FIND_PERSON],
-        rewardTypes: ['food', 'drink', 'lodging', 'money'],
+        rewardTypes: ['food', 'drink', 'money', 'herb'],
         rewardScale: 1.0,
         description: 'тавернщик',
     },
@@ -370,11 +370,6 @@ function generateRewards(npcId, questType, scale) {
         rewards.push({ type: 'item', id: 'mead', name: 'Медовуха', count: 1, consumable: true, mpHeal: 2 });
     }
 
-    // Ночлег (бесплатный отдых в таверне)
-    if (rewardTypes.includes('lodging') && Math.random() < 0.4) {
-        rewards.push({ type: 'lodging', name: 'Бесплатный ночлег в таверне' });
-    }
-
     // Лечебная трава
     if (rewardTypes.includes('herb') && Math.random() < 0.6) {
         rewards.push({ type: 'item', id: 'herb', name: 'Целебная трава', count: 1 + Math.floor(Math.random() * 2), consumable: true });
@@ -600,11 +595,6 @@ export function grantQuestRewards(registry, quest) {
                 });
             }
             grantedRewards.push(`${reward.name} ×${reward.count}`);
-        } else if (reward.type === 'lodging') {
-            // Раунд 22: ночлег теперь ваучер — им можно воспользоваться,
-            // отдохнув в таверне (8 часов, бесплатно).
-            q.freeLodging = (q.freeLodging || 0) + 1;
-            grantedRewards.push('Ваучер: бесплатный ночлег в таверне (8 часов)');
         } else if (reward.type === 'blessing') {
             player.HP = player.HPmax;
             player.MP = player.MPmax;
@@ -613,7 +603,7 @@ export function grantQuestRewards(registry, quest) {
     });
 
     registry.set('player', player);
-    registry.set('quest', q); // ваучеры ночлега хранятся в quest
+    registry.set('quest', q);
     ActionLog.add(registry, `Награда за «${quest.title}»: ${grantedRewards.join(', ')}.`);
     return grantedRewards;
 }

@@ -193,6 +193,11 @@ export class BootScene extends Phaser.Scene {
             'sfx_damage_taken', 'sfx_heal', 'sfx_level_up',
             'sfx_dialogue_open', 'sfx_dialogue_close',
             'sfx_step', 'sfx_typewriter',
+            // Раунд 23: боевые SFX из репозитория DarklandsReborn (sosnowda)
+            'sfx_combat_hit_1', 'sfx_combat_hit_2', 'sfx_combat_hit_3', 'sfx_combat_hit_4',
+            'sfx_combat_miss_1', 'sfx_combat_miss_2', 'sfx_combat_swing',
+            'sfx_combat_armor', 'sfx_combat_shield',
+            'sfx_combat_death', 'sfx_wolf_howl',
         ];
         sfxKeys.forEach((key) => {
             this.load.audio(key, `assets/audio/sfx/${key}.ogg`);
@@ -1050,6 +1055,28 @@ export class BootScene extends Phaser.Scene {
             }),
             frameRate: 8, repeat: 0,
         });
+
+        // ----- Раунд 23: БОКОВЫЕ кадры волка (wolf_full_1, правый блок) -----
+        // Лист wolf_1.png 640×384 (10×6 кадров по 64). Правый блок (колонки 5-9)
+        // содержит вид СБОКУ, мордой ВПРАВО: row 1 col 5 — стойка настороже,
+        // row 3 cols 5-7 — рык/выпад. Для боя: игрок слева, волк справа,
+        // поэтому спрайт волка флипается по X (мордой влево к игроку).
+        if (this.textures.exists('wolf_full_1')) {
+            // Стойка (row 1, col 5 = frame 15) — лёгкое «дыхание» двумя кадрами
+            this.anims.create({
+                key: 'wolf_side_idle',
+                frames: [{ key: 'wolf_full_1', frame: 15 }],
+                frameRate: 1,
+            });
+            // Атака/рык (row 3, cols 5-7 = frames 35..37)
+            this.anims.create({
+                key: 'wolf_side_attack',
+                frames: this.anims.generateFrameNumbers('wolf_full_1', {
+                    frames: [35, 36, 37]
+                }),
+                frameRate: 9, repeat: 0,
+            });
+        }
     }
 
     /**

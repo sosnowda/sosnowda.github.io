@@ -79,6 +79,21 @@ export default class AudioManager {
     }
 
     /**
+     * Раунд 23: проиграть случайный SFX из набора (вариации ударов/промахов).
+     * Каждая вариация звучит чуть иначе — бой не превращается в метроном.
+     */
+    _playRealSfxRandom(keys, fallback, volume = 1) {
+        const list = keys.filter(k => this.realSounds[k]);
+        if (list.length === 0) {
+            // Ни одной новой вариации не загружено — старый запасной ключ
+            if (fallback) this._playRealSfx(fallback, null, volume);
+            return;
+        }
+        const key = list[Math.floor(Math.random() * list.length)];
+        this._playRealSfx(key, null, volume);
+    }
+
+    /**
      * Загрузить музыкальные треки. Должна вызываться после preload.
      */
     loadMusic() {
@@ -465,8 +480,29 @@ export default class AudioManager {
 
     // ====== Новые методы для конкретных SFX ======
 
-    playSwordHit() { this._playRealSfx('sfx_sword_hit', null); }
-    playSwordMiss() { this._playRealSfx('sfx_sword_miss', null); }
+    // ----- Раунд 23: боевые звуки (DarklandsReborn) -----
+    // Взмах оружия (начало любой атаки — до определения исхода)
+    playWeaponSwing() { this._playRealSfx('sfx_combat_swing', null, 0.75); }
+    // Попадание оружием по телу — 4 случайные вариации
+    playSwordHit() {
+        this._playRealSfxRandom(
+            ['sfx_combat_hit_1', 'sfx_combat_hit_2', 'sfx_combat_hit_3', 'sfx_combat_hit_4'],
+            'sfx_sword_hit', 0.9);
+    }
+    // Промах / уклонение — свист воздуха, 2 вариации
+    playSwordMiss() {
+        this._playRealSfxRandom(['sfx_combat_miss_1', 'sfx_combat_miss_2'], 'sfx_sword_miss', 0.8);
+    }
+    // Удар по доспехам (урон частично погашен бронёй)
+    playArmorHit() { this._playRealSfx('sfx_combat_armor', null, 0.85); }
+    // Удар по щиту/полностью погашен (урон = 0)
+    playShieldHit() { this._playRealSfx('sfx_combat_shield', null, 0.9); }
+    // Падение поверженного (враг или герой)
+    playCombatDeath() { this._playRealSfx('sfx_combat_death', null, 0.9); }
+    // Вой волка (начало боя с волками)
+    playWolfHowl() { this._playRealSfx('sfx_wolf_howl', null, 0.9); }
+
+    playSwordHitLegacy() { this._playRealSfx('sfx_sword_hit', null); }
     playArrowHit() { this._playRealSfx('sfx_arrow_hit', null); }
     playDamageTaken() { this._playRealSfx('sfx_damage_taken', null); }
     playHeal() { this._playRealSfx('sfx_heal', null); }

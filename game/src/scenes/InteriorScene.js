@@ -14,6 +14,7 @@ import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../system
 import { getWeather } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
+import { buildNpcLookTextures, npcVariantKey, npcPortraitVariantKey } from '../systems/NpcLook.js';
 import {
     checkNpcWillingToTalk, getNpcRep, getReputationLevel,
     applyGiftBonus, applyCompliment, applyTreatEveryoneBonus,
@@ -91,11 +92,28 @@ export class InteriorScene extends Phaser.Scene {
         // Часовня и амбар — БЕЗ NPC (ограблена / работник на поле):
         // вместо него — декор-центр и особый набор действий в кнопках.
         const hasNpc = !interior.noNpc && !!interior.npcId;
+        // Портрет для диалогов интерьера (с учётом варианта внешности NPC);
+        // для интерьеров без NPC — базовый портрет интерьера
+        this.npcPortraitKey = (this.npcData && this.npcData.portrait) || interior.portrait;
         if (hasNpc) {
-            const npcSpriteKey = (this.npcData && this.npcData.sprite) || interior.npcSprite;
+            let npcSpriteKey = (this.npcData && this.npcData.sprite) || interior.npcSprite;
             // П.6: Проверяем существование текстуры
-            const finalSpriteKey = this.textures.exists(npcSpriteKey) ? npcSpriteKey : 'npc_elder';
-            this.npcSprite = this.add.sprite(width * 0.65, height * 0.55, finalSpriteKey).setScale(2.5).setDepth(5);
+            let finalSpriteKey = this.textures.exists(npcSpriteKey) ? npcSpriteKey : 'npc_elder';
+            // Раунд 23 (п.4): уникальный облик NPC — перекрашенный вариант
+            // (строится один раз за игру; цвет одежды и рост — свои у каждого,
+            // перераздаются при каждом новом старте).
+            if (this.npcData && buildNpcLookTextures(this, this.npcData)) {
+                const variant = npcVariantKey(this.npcData);
+                if (variant && this.textures.exists(variant)) finalSpriteKey = variant;
+            }
+            // Портрет — тоже вариант (цвет одежды на портрете совпадает)
+            const portraitVariant = npcPortraitVariantKey(this.npcData);
+            if (portraitVariant && this.textures.exists(portraitVariant)) {
+                this.npcPortraitKey = portraitVariant;
+            }
+            // Рост NPC (look.scale 0.93..1.07)
+            this.npcBaseScale = 2.5 * ((this.npcData && this.npcData.look && this.npcData.look.scale) || 1);
+            this.npcSprite = this.add.sprite(width * 0.65, height * 0.55, finalSpriteKey).setScale(this.npcBaseScale).setDepth(5);
             // Проверяем существование анимации
             const animKey = `${finalSpriteKey}_idle_down`;
             if (this.anims.exists(animKey)) {
@@ -104,8 +122,8 @@ export class InteriorScene extends Phaser.Scene {
             // Лёгкое дыхание
             this.tweens.add({
                 targets: this.npcSprite,
-                scaleX: { from: 2.5, to: 2.55 },
-                scaleY: { from: 2.5, to: 2.45 },
+                scaleX: { from: this.npcBaseScale, to: this.npcBaseScale * 1.02 },
+                scaleY: { from: this.npcBaseScale, to: this.npcBaseScale * 0.98 },
                 duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
             });
             // П.7: NPC интерактивен — ЛКМ запускает разговор
@@ -274,14 +292,14 @@ export class InteriorScene extends Phaser.Scene {
                 [{ text: 'Драться!', callback: () => {
                     this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
                 }}],
-                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait }
+                { singleton: false, portraitKey: this.npcPortraitKey }
             );
             return;
         }
         if (!talkCheck.canTalk) {
             createDialog(this, 'Отказ', talkCheck.message,
                 [{ text: 'Понятно', callback: () => {} }],
-                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait }
+                { singleton: false, portraitKey: this.npcPortraitKey }
             );
             return;
         }
@@ -295,7 +313,7 @@ export class InteriorScene extends Phaser.Scene {
         this.activeNpc = {
             id: interior.npcId,
             name: this.npcData ? (this.npcData.met ? this.npcData.name : npcName) : interior.npcName,
-            portrait: (this.npcData && this.npcData.portrait) || interior.portrait,
+            portrait: this.npcPortraitKey,
         };
         this.busyDialog = true;
         this.dialogue.run(interior.dialogueId, () => {
@@ -329,7 +347,7 @@ export class InteriorScene extends Phaser.Scene {
         createDialog(this, t('✓ Поручение выполнено!'),
             `${npcName}: «${tf(t('Ты справился, {0}! Прими это в благодарность.'), address)}»\n\n${t('Награда')}: ${rewards.join(', ')}`,
             [{ text: t('Спасибо!'), callback: () => { this.busyDialog = false; } }],
-            { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 25 });
+            { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 25 });
         if (this.hud) this.updateHUD();
         return true;
     }
@@ -368,7 +386,7 @@ export class InteriorScene extends Phaser.Scene {
             createDialog(this, 'Задание', 
                 `${npcName}: «Ты ещё не выполнил моё прошлое поручение. Сперва закончи его!»`, 
                 [{ text: 'Понятно', callback: () => {} }],
-                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 30 }
+                { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 }
             );
             return;
         }
@@ -379,7 +397,7 @@ export class InteriorScene extends Phaser.Scene {
             createDialog(this, 'Задание',
                 `${npcName}: «Нет у меня сейчас для тебя дел. Зайди попозже.»`,
                 [{ text: 'Понятно', callback: () => {} }],
-                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 30 }
+                { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 }
             );
             return;
         }
@@ -388,7 +406,6 @@ export class InteriorScene extends Phaser.Scene {
         const rewardTexts = quest.rewards.map(r => {
             if (r.type === 'money') return formatMoney(r.amount);
             if (r.type === 'item') return `${r.name} ×${r.count}`;
-            if (r.type === 'lodging') return r.name;
             if (r.type === 'blessing') return r.name;
             return r.name || 'что-то';
         });
@@ -408,7 +425,7 @@ export class InteriorScene extends Phaser.Scene {
                     createDialog(this, 'Задание принято',
                         `${npcName}: «Благодарю! Не подведи. Возвращайся, как выполнишь.»`,
                         [{ text: 'Понятно', callback: () => {} }],
-                        { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 30 }
+                        { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 }
                     );
                 },
             },
@@ -420,7 +437,7 @@ export class InteriorScene extends Phaser.Scene {
             },
         ], {
             singleton: false,
-            portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+            portraitKey: this.npcPortraitKey,
             typing: true,
             typingSpeed: 25,
         });
@@ -462,7 +479,7 @@ export class InteriorScene extends Phaser.Scene {
                 : `${npcName}: «Не нужно мне твоих подачек!» (${result.bonus} реп.)`;
             this._closeGiftMenu(overlay, panel);
             createDialog(this, 'Подарок', msg, [{ text: 'Понятно', callback: () => {} }],
-                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait });
+                { singleton: false, portraitKey: this.npcPortraitKey });
         }, {
             backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
             fontSize: 13, padding: { left: 14, right: 14, top: 7, bottom: 7 },
@@ -485,7 +502,7 @@ export class InteriorScene extends Phaser.Scene {
                 : `${npcName}: «Что-то ты уж слишком щедр... Чего хочешь?» (${result.bonus} реп.)`;
             this._closeGiftMenu(overlay, panel);
             createDialog(this, 'Подарок', msg, [{ text: 'Понятно', callback: () => {} }],
-                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait });
+                { singleton: false, portraitKey: this.npcPortraitKey });
         }, {
             backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
             fontSize: 13, padding: { left: 14, right: 14, top: 7, bottom: 7 },
@@ -535,7 +552,7 @@ export class InteriorScene extends Phaser.Scene {
                         : `${npcName}: «Не нужна мне такая вещь.» (${result.bonus} реп.)`;
                     this._closeGiftMenu(overlay, panel);
                     createDialog(this, 'Подарок', msg, [{ text: 'Понятно', callback: () => {} }],
-                        { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait });
+                        { singleton: false, portraitKey: this.npcPortraitKey });
                 }, {
                     backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
                     fontSize: 12, padding: { left: 12, right: 12, top: 6, bottom: 6 },
@@ -570,7 +587,7 @@ export class InteriorScene extends Phaser.Scene {
             { text: 'Понятно', callback: () => {} },
         ], {
             singleton: false,
-            portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+            portraitKey: this.npcPortraitKey,
             typing: true, typingSpeed: 30,
         });
     }
@@ -594,7 +611,7 @@ export class InteriorScene extends Phaser.Scene {
             createDialog(this, 'Угроза',
                 `${result.message}\n\nПолучено: ${loot} д.\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})`,
                 [{ text: 'Понятно', callback: () => {} }],
-                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+                { singleton: false, portraitKey: this.npcPortraitKey,
                   typing: true, typingSpeed: 30 }
             );
         } else if (result.willAttack) {
@@ -604,13 +621,13 @@ export class InteriorScene extends Phaser.Scene {
                 [{ text: 'Драться!', callback: () => {
                     this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
                 }}],
-                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait }
+                { singleton: false, portraitKey: this.npcPortraitKey }
             );
         } else {
             createDialog(this, 'Угроза',
                 `${result.message}\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})`,
                 [{ text: 'Понятно', callback: () => {} }],
-                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+                { singleton: false, portraitKey: this.npcPortraitKey,
                   typing: true, typingSpeed: 30 }
             );
         }
@@ -652,7 +669,7 @@ export class InteriorScene extends Phaser.Scene {
                 { text: 'Понятно', callback: () => {} },
             ], {
                 singleton: false,
-                portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+                portraitKey: this.npcPortraitKey,
                 typing: true, typingSpeed: 30,
             });
             return;
@@ -695,7 +712,7 @@ export class InteriorScene extends Phaser.Scene {
                             },
                         ], {
                             singleton: false,
-                            portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+                            portraitKey: this.npcPortraitKey,
                             typing: true, typingSpeed: 20,
                         });
                     }
@@ -709,7 +726,7 @@ export class InteriorScene extends Phaser.Scene {
             },
         ], {
             singleton: false,
-            portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+            portraitKey: this.npcPortraitKey,
             typing: true, typingSpeed: 25,
         });
     }
@@ -735,7 +752,7 @@ export class InteriorScene extends Phaser.Scene {
             { text: '🎉 За нас!', callback: () => {} },
         ], {
             singleton: false,
-            portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait,
+            portraitKey: this.npcPortraitKey,
             typing: true, typingSpeed: 30,
         });
         this.updateHUD();
@@ -822,20 +839,14 @@ export class InteriorScene extends Phaser.Scene {
     /**
      * Раунд 22 (п.10/12): ОТДЫХ В ТАВЕРНЕ.
      * - Отдых 1 час (4 д.) — лечение около трети здоровья и Воли;
-     * - Ночлег 8 часов (12 д.) — ПОЛНОЕ восстановление здоровья и Воли;
-     * - по ваучеру «Бесплатный ночлег» (награда за поручения) — 8 часов бесплатно.
+     * - Ночлег 8 часов (12 д.) — ПОЛНОЕ восстановление здоровья и Воли.
+     * (Раунд 23: ваучер «Бесплатный ночлег» убран по просьбе владельца.)
      * Время реально течёт: во время погони за вором сон — дорогое решение.
      */
     showTavernRestMenu(interior) {
         if (this.busyDialog) return;
-        const player = this.registry.get('player');
-        const q = this.registry.get('quest') || {};
-        const hasVoucher = (q.freeLodging || 0) > 0;
         const chaseActive = isChaseActive(this.registry);
 
-        const voucherLine = hasVoucher
-            ? '\n' + tf(t('🎟 У тебя есть ваучер «Бесплатный ночлег» (осталось: {0}) — ночлег будет бесплатным.'), q.freeLodging)
-            : '';
         const warning = chaseActive
             ? '\n\n' + t('⚠ ВНИМАНИЕ: погоня за вором продолжается! Пока ты спишь, вор уйдёт далеко. Отдых лучше отложить до победы.')
             : '';
@@ -843,7 +854,7 @@ export class InteriorScene extends Phaser.Scene {
         this.busyDialog = true;
         createDialog(this, t('🛏 Отдых в таверне'),
             t('Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Отдохнёшь — силы вернутся.»')
-            + voucherLine + warning,
+            + warning,
             [
                 {
                     text: t('Отдохнуть 1 час (4 д.) — лечение ~1/3'),
@@ -858,38 +869,30 @@ export class InteriorScene extends Phaser.Scene {
                     callback: () => { this.busyDialog = false; },
                 },
             ],
-            { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 25 });
+            { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 25 });
     }
 
     /**
      * Раунд 22: выполнить отдых в таверне (см. showTavernRestMenu).
-     * 1 час лечит ~1/3 HP и Воли, 8 часов восстанавливают всё; ваучер
-     * «Бесплатный ночлег» покрывает 8-часовой ночлег.
+     * 1 час лечит ~1/3 HP и Воли, 8 часов восстанавливают всё.
      */
     restInTavern(interior, hours) {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
-        const q = this.registry.get('quest') || {};
         const cost = hours >= 8 ? 12 : 4;
-        const free = hours >= 8 && (q.freeLodging || 0) > 0;
 
-        if (!free && (player.dengas || 0) < cost) {
+        if ((player.dengas || 0) < cost) {
             createDialog(this, t('🛏 Отдых'),
                 tf(t('Не хватает денег: нужно {0} д., а у тебя {1}.'), cost, player.dengas || 0),
                 [{ text: t('Понятно'), callback: () => {} }],
-                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait });
+                { singleton: false, portraitKey: this.npcPortraitKey });
             return;
         }
 
         this.busyDialog = true;
         this.cameras.main.fadeOut(600, 0, 0, 0);
         this.time.delayedCall(650, () => {
-            if (free) {
-                q.freeLodging = (q.freeLodging || 1) - 1;
-                this.registry.set('quest', q);
-            } else {
-                player.dengas = (player.dengas || 0) - cost;
-            }
+            player.dengas = (player.dengas || 0) - cost;
 
             // Время реально течёт (8 часов = 32 тика погони!)
             tickTime(this.registry, hours * 60);
@@ -909,9 +912,7 @@ export class InteriorScene extends Phaser.Scene {
             this.registry.set('player', player);
             this.updateHUD();
             if (this.audioManager) this.audioManager.playSound('sfx_heal');
-            ActionLog.add(this.registry, free
-                ? tf(t('Отдохнул в таверне по ваучеру ({0} ч). {1}'), hours, effectText)
-                : tf(t('Отдохнул в таверне ({0} ч) за {1} д. {2}'), hours, cost, effectText));
+            ActionLog.add(this.registry, tf(t('Отдохнул в таверне ({0} ч) за {1} д. {2}'), hours, cost, effectText));
             this.cameras.main.fadeIn(600, 0, 0, 0);
 
             const end = checkGameEnd(this.registry);
@@ -924,12 +925,10 @@ export class InteriorScene extends Phaser.Scene {
                 this.scene.start('End');
             } else {
                 createDialog(this, t('😴 Отдых окончен'),
-                    (free
-                        ? tf(t('Ты провёл в постели {0} ч (по ваучеру). {1}'), hours, effectText)
-                        : tf(t('Ты провёл в постели {0} ч. {1}'), hours, effectText))
+                    tf(t('Ты провёл в постели {0} ч. {1}'), hours, effectText)
                     + (player && (player.HP >= player.HPmax) ? '\n' + t('Ты полон сил!') : ''),
                     [{ text: t('Встать'), callback: () => { this.busyDialog = false; } }],
-                    { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 25 });
+                    { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 25 });
             }
         });
     }
