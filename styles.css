@@ -996,22 +996,6 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
 #trailer { contain-intrinsic-size: auto 560px; }
 
 /* ===== Интерактивная SVG-карта Руси ===== */
-.rus-map-wrap{display:grid;grid-template-columns:1.7fr 1fr;gap:1.5rem;align-items:stretch;margin-bottom:2.5rem}
-.rus-map-frame{background:#241b15;border:1px solid #3d2f22;border-radius:14px;padding:0.7rem;box-shadow:0 10px 30px rgba(0,0,0,0.35)}
-.rus-map-frame svg{width:100%;height:auto;display:block;border-radius:8px}
-.rus-marker{cursor:pointer;outline:none;transition:transform .2s ease}
-.rus-marker .rus-marker-ring{opacity:0;transition:opacity .2s ease}
-.rus-marker:hover,.rus-marker:focus-visible{transform:scale(1.15);transform-box:fill-box;transform-origin:center}
-.rus-marker:hover .rus-marker-ring,.rus-marker:focus-visible .rus-marker-ring,.rus-marker.active .rus-marker-ring{opacity:1}
-.rus-marker.active circle:not(.rus-marker-ring){stroke-width:3.5;filter:drop-shadow(0 0 5px rgba(201,169,97,0.9))}
-.rus-map-panel{background:#241b15;border:1px solid #3d2f22;border-radius:14px;padding:1.5rem;display:flex;flex-direction:column;gap:0.65rem}
-.rus-map-panel h3{color:#c9a961;font-family:'Prata',serif;font-weight:400;margin:0;font-size:1.25rem}
-.rus-map-danger{margin:auto 0 0;font-size:0.85rem;padding:0.4rem 0.7rem;border-radius:8px;display:inline-block;width:fit-content}
-.rus-danger-low{background:rgba(90,140,60,0.18);color:#9fc07a;border:1px solid rgba(120,170,90,0.35)}
-.rus-danger-medium{background:rgba(201,140,60,0.16);color:#e0a860;border:1px solid rgba(201,160,90,0.4)}
-.rus-danger-high{background:rgba(180,60,40,0.18);color:#e07060;border:1px solid rgba(200,90,70,0.4)}
-@media (max-width:880px){.rus-map-wrap{grid-template-columns:1fr}}
-@media (prefers-reduced-motion: reduce){.rus-marker{transition:none}}
 
 /* ===== Переключатель языка RU/EN (раунд 10) ===== */
 .lang-item{display:flex;align-items:center}

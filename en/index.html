@@ -313,134 +313,6 @@
         <h2 style="text-align:center;font-family:'Marcellus',serif;color:#c9a961;margin-bottom:1rem;">Historical Maps of Rus'</h2>
         <p style="text-align:center;color:#a89878;max-width:700px;margin:0 auto 2rem;">The game uses realistic historical terrain maps of 14th–16th century Rus'. Below is a map of the village's game neighbourhood: click a marker to learn about the area.</p>
 
-        <!-- ===== Interactive SVG map of the game neighbourhood ===== -->
-        <div class="rus-map-wrap">
-            <div class="rus-map-frame">
-                <svg class="rus-map" viewBox="0 0 1000 560" role="group" aria-label="Interactive map of the village's game neighbourhood" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Parchment background -->
-                    <rect x="0" y="0" width="1000" height="560" rx="12" fill="#2a2018"/>
-                    <rect x="6" y="6" width="988" height="548" rx="9" fill="none" stroke="#3d2f22" stroke-width="2"/>
-                    <!-- Compass -->
-                    <g opacity="0.75" transform="translate(936,52)">
-                        <circle r="24" fill="none" stroke="#c9a961" stroke-width="1.4"/>
-                        <path d="M0,-17 L5,6 L0,2 L-5,6 Z" fill="#c9a961"/>
-                        <text y="-32" text-anchor="middle" fill="#c9a961" font-size="13" font-family="Georgia,serif">N</text>
-                    </g>
-                    <!-- Kisterma River -->
-                    <path d="M40,40 C160,120 200,200 300,260 C420,330 520,340 620,380 C740,428 840,470 950,520"
-                          fill="none" stroke="#3a6b8c" stroke-width="13" stroke-linecap="round" opacity="0.85"/>
-                    <path d="M40,40 C160,120 200,200 300,260 C420,330 520,340 620,380 C740,428 840,470 950,520"
-                          fill="none" stroke="#6a9bbc" stroke-width="3" stroke-dasharray="14 12" opacity="0.6"/>
-                    <text x="330" y="235" fill="#8ab4d8" font-size="15" font-family="Georgia,serif" font-style="italic" transform="rotate(24 330 235)">Kisterma River</text>
-                    <!-- Lake -->
-                    <ellipse cx="812" cy="128" rx="74" ry="44" fill="#3a6b8c" opacity="0.9"/>
-                    <ellipse cx="812" cy="128" rx="46" ry="26" fill="#4a7c9c" opacity="0.7"/>
-                    <!-- Woodland grove (top left corner) -->
-                    <g fill="#2f5a2f">
-                        <circle cx="90" cy="120" r="17"/><circle cx="128" cy="92" r="14"/>
-                        <circle cx="70" cy="170" r="14"/><circle cx="150" cy="140" r="16"/>
-                        <circle cx="115" cy="185" r="13"/><circle cx="185" cy="105" r="12"/>
-                        <circle cx="55" cy="105" r="11"/><circle cx="175" cy="170" r="11"/>
-                    </g>
-                    <g fill="#3f7a3f" opacity="0.75">
-                        <circle cx="90" cy="114" r="9"/><circle cx="128" cy="87" r="7"/>
-                        <circle cx="150" cy="134" r="8"/><circle cx="115" cy="180" r="6"/>
-                    </g>
-                    <!-- Rye field -->
-                    <g opacity="0.9">
-                        <rect x="420" y="440" width="200" height="86" rx="10" fill="#5a4a22"/>
-                        <g stroke="#c9a14a" stroke-width="2" opacity="0.55">
-                            <line x1="436" y1="452" x2="436" y2="516"/><line x1="460" y1="452" x2="460" y2="516"/>
-                            <line x1="484" y1="452" x2="484" y2="516"/><line x1="508" y1="452" x2="508" y2="516"/>
-                            <line x1="532" y1="452" x2="532" y2="516"/><line x1="556" y1="452" x2="556" y2="516"/>
-                            <line x1="580" y1="452" x2="580" y2="516"/><line x1="604" y1="452" x2="604" y2="516"/>
-                        </g>
-                    </g>
-                    <!-- Southern highroad -->
-                    <path d="M505,305 C520,380 545,440 570,530" fill="none" stroke="#7a6040" stroke-width="16" stroke-linecap="round" opacity="0.9"/>
-                    <path d="M505,305 C520,380 545,440 570,530" fill="none" stroke="#9a8060" stroke-width="4" stroke-dasharray="10 12" opacity="0.7"/>
-                    <!-- Roads to the village from locations -->
-                    <g stroke="#9a8060" stroke-width="4" stroke-dasharray="6 8" opacity="0.5" fill="none">
-                        <path d="M210,180 C320,220 420,250 486,272"/>
-                        <path d="M300,120 C370,180 440,230 488,262"/>
-                        <path d="M745,140 C660,180 570,225 516,262"/>
-                        <path d="M560,352 C540,330 522,305 505,295"/>
-                        <path d="M225,420 C320,360 420,310 482,292"/>
-                        <path d="M828,420 C740,380 620,330 520,300"/>
-                        <path d="M880,330 C780,310 640,295 525,285"/>
-                    </g>
-
-                    <!-- ===== LOCATION MARKERS ===== -->
-                    <g class="rus-marker" data-icon="🏠" data-name="Village" data-danger="low" data-default="1" data-desc="The game's hub: eight buildings, a well, ribbon roads and eastern gates. Here quests are given, trade is done and everyone knows everyone." tabindex="0" role="button" aria-pressed="false" aria-label="Village — the game's hub">
-                        <circle class="rus-marker-ring" cx="500" cy="280" r="34" fill="none" stroke="#c9a961" stroke-width="2" stroke-dasharray="5 5"/>
-                        <circle cx="500" cy="280" r="27" fill="#4a3520" stroke="#c9a961" stroke-width="2.5"/>
-                        <text x="500" y="289" text-anchor="middle" font-size="24">🏠</text>
-                        <text x="500" y="336" text-anchor="middle" fill="#e8dcc4" font-size="16" font-family="Georgia,serif" font-weight="bold">Village</text>
-                    </g>
-                    <g class="rus-marker" data-icon="🌲" data-name="Dark Forest" data-danger="medium" data-desc="A dense forest beyond the river. Plenty of game and mushrooms — but bandits roam here too. Hunting and tracking the thief happen here." tabindex="0" role="button" aria-pressed="false" aria-label="Dark Forest">
-                        <circle class="rus-marker-ring" cx="150" cy="145" r="30" fill="none" stroke="#c9a961" stroke-width="2" stroke-dasharray="5 5"/>
-                        <circle cx="150" cy="145" r="23" fill="#243a24" stroke="#c9a961" stroke-width="2"/>
-                        <text x="150" y="153" text-anchor="middle" font-size="20">🌲</text>
-                        <text x="150" y="192" text-anchor="middle" fill="#e8dcc4" font-size="14" font-family="Georgia,serif">Dark Forest</text>
-                    </g>
-                    <g class="rus-marker" data-icon="🐝" data-name="Apiary" data-danger="low" data-desc="An apiary with log-hive beehives deep in the woods. Honey and wax are gathered here — goods for sale or a gift for someone's table." tabindex="0" role="button" aria-pressed="false" aria-label="Apiary">
-                        <circle class="rus-marker-ring" cx="300" cy="98" r="27" fill="none" stroke="#c9a961" stroke-width="2" stroke-dasharray="5 5"/>
-                        <circle cx="300" cy="98" r="21" fill="#4a3a1a" stroke="#c9a961" stroke-width="2"/>
-                        <text x="300" y="105" text-anchor="middle" font-size="18">🐝</text>
-                        <text x="300" y="140" text-anchor="middle" fill="#e8dcc4" font-size="14" font-family="Georgia,serif">Apiary</text>
-                    </g>
-                    <g class="rus-marker" data-icon="🏞" data-name="Holy Lake" data-danger="low" data-desc="A quiet forest lake with clear water. People fish here and gather reeds. A peaceful place — just the thing." tabindex="0" role="button" aria-pressed="false" aria-label="Holy Lake">
-                        <circle class="rus-marker-ring" cx="812" cy="128" r="27" fill="none" stroke="#c9a961" stroke-width="2" stroke-dasharray="5 5"/>
-                        <circle cx="812" cy="128" r="21" fill="#2a3a4a" stroke="#c9a961" stroke-width="2"/>
-                        <text x="812" y="135" text-anchor="middle" font-size="18">🏞</text>
-                        <text x="812" y="192" text-anchor="middle" fill="#e8dcc4" font-size="14" font-family="Georgia,serif">Holy Lake</text>
-                    </g>
-                    <g class="rus-marker" data-icon="🌊" data-name="River Ford" data-danger="low" data-desc="A ford across the Kisterma. Laundry is washed here, fish are caught, cattle are watered. Tracks in the muddy bank show up clearly." tabindex="0" role="button" aria-pressed="false" aria-label="River Ford">
-                        <circle class="rus-marker-ring" cx="640" cy="378" r="27" fill="none" stroke="#c9a961" stroke-width="2" stroke-dasharray="5 5"/>
-                        <circle cx="640" cy="378" r="21" fill="#2a3a4a" stroke="#c9a961" stroke-width="2"/>
-                        <text x="640" y="385" text-anchor="middle" font-size="18">🌊</text>
-                        <text x="640" y="424" text-anchor="middle" fill="#e8dcc4" font-size="14" font-family="Georgia,serif">River Ford</text>
-                    </g>
-                    <g class="rus-marker" data-icon="🏭" data-name="Watermill" data-danger="low" data-desc="A wooden mill on a stream. The miller grinds grain for the whole neighbourhood — you can always hear the latest news here." tabindex="0" role="button" aria-pressed="false" aria-label="Watermill">
-                        <circle class="rus-marker-ring" cx="545" cy="345" r="27" fill="none" stroke="#c9a961" stroke-width="2" stroke-dasharray="5 5"/>
-                        <circle cx="545" cy="345" r="21" fill="#4a3520" stroke="#c9a961" stroke-width="2"/>
-                        <text x="545" y="352" text-anchor="middle" font-size="18">🏭</text>
-                        <text x="545" y="394" text-anchor="middle" fill="#e8dcc4" font-size="14" font-family="Georgia,serif">Mill</text>
-                    </g>
-                    <g class="rus-marker" data-icon="🌾" data-name="Rye Field" data-danger="low" data-desc="Fields of communal arable land. Peasants sow rye, oats and barley here. Tall stalks hide both the tracks and those who left them." tabindex="0" role="button" aria-pressed="false" aria-label="Rye Field">
-                        <circle class="rus-marker-ring" cx="520" cy="483" r="27" fill="none" stroke="#c9a961" stroke-width="2" stroke-dasharray="5 5"/>
-                        <circle cx="520" cy="483" r="21" fill="#4a3e1e" stroke="#c9a961" stroke-width="2"/>
-                        <text x="520" y="490" text-anchor="middle" font-size="18">🌾</text>
-                        <text x="520" y="548" text-anchor="middle" fill="#e8dcc4" font-size="14" font-family="Georgia,serif">Rye Field</text>
-                    </g>
-                    <g class="rus-marker" data-icon="🛤" data-name="Southern Highroad" data-danger="medium" data-desc="The great highroad leading to the southern towns. Merchant convoys travel it — and not only they." tabindex="0" role="button" aria-pressed="false" aria-label="Southern Highroad">
-                        <circle class="rus-marker-ring" cx="583" cy="505" r="27" fill="none" stroke="#c9a961" stroke-width="2" stroke-dasharray="5 5"/>
-                        <circle cx="583" cy="505" r="21" fill="#3e2c18" stroke="#c9a961" stroke-width="2"/>
-                        <text x="583" y="512" text-anchor="middle" font-size="18">🛤</text>
-                        <text x="672" y="512" text-anchor="middle" fill="#e8dcc4" font-size="14" font-family="Georgia,serif">Highroad</text>
-                    </g>
-                    <g class="rus-marker" data-icon="⚰️" data-name="Churchyard" data-danger="low" data-desc="The village cemetery with a wooden chapel and rows of cross-topped graves. A quiet place where people come to commemorate their ancestors." tabindex="0" role="button" aria-pressed="false" aria-label="Churchyard — village cemetery">
-                        <circle class="rus-marker-ring" cx="195" cy="420" r="27" fill="none" stroke="#c9a961" stroke-width="2" stroke-dasharray="5 5"/>
-                        <circle cx="195" cy="420" r="21" fill="#33301e" stroke="#c9a961" stroke-width="2"/>
-                        <text x="195" y="427" text-anchor="middle" font-size="18">⚰️</text>
-                        <text x="195" y="466" text-anchor="middle" fill="#e8dcc4" font-size="14" font-family="Georgia,serif">Churchyard</text>
-                    </g>
-                    <g class="rus-marker" data-icon="🐄" data-name="Pasture" data-danger="low" data-desc="A meadow where the village cows, goats and horses graze. A herdsman watches the flock here and rests by the fire." tabindex="0" role="button" aria-pressed="false" aria-label="Pasture">
-                        <circle class="rus-marker-ring" cx="838" cy="420" r="27" fill="none" stroke="#c9a961" stroke-width="2" stroke-dasharray="5 5"/>
-                        <circle cx="838" cy="420" r="21" fill="#3a4426" stroke="#c9a961" stroke-width="2"/>
-                        <text x="838" y="427" text-anchor="middle" font-size="18">🐄</text>
-                        <text x="838" y="466" text-anchor="middle" fill="#e8dcc4" font-size="14" font-family="Georgia,serif">Pasture</text>
-                    </g>
-                </svg>
-            </div>
-            <aside class="rus-map-panel" aria-live="polite">
-                <p style="margin:0;color:#8a7a5e;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;">The village neighbourhood — game world</p>
-                <h3 id="rusMapTitle">🏠 Village</h3>
-                <p id="rusMapDesc" style="margin:0;color:#a89878;font-size:0.95rem;line-height:1.6;"></p>
-                <p id="rusMapDanger" class="rus-map-danger rus-danger-low" style="margin:auto 0 0;">✓ Danger: low</p>
-                <p style="margin:0;color:#6a5a42;font-size:0.78rem;">All of these locations are available in the browser demo — start the game and leave through the eastern gates.</p>
-            </aside>
-        </div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:2rem;">
             <div class="map-card" style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
@@ -791,24 +663,36 @@
                 <div class="screenshot-caption">Main menu</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/02-village.webp">
-                <img src="../assets/screenshots/02-village.webp" alt="The village — top-down view" loading="lazy">
-                <div class="screenshot-caption">The village</div>
+                <img src="../assets/screenshots/02-village.webp" alt="The village on a June noon, top-down view" loading="lazy">
+                <div class="screenshot-caption">Village — June noon</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/03-interior.webp">
-                <img src="../assets/screenshots/03-interior.webp" alt="House interior — dialogue with an NPC" loading="lazy">
-                <div class="screenshot-caption">NPC dialogue</div>
+                <img src="../assets/screenshots/03-interior.webp" alt="Tavern interior — daylight streaming from the windows" loading="lazy">
+                <div class="screenshot-caption">Tavern — window light</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/04-combat.webp">
-                <img src="../assets/screenshots/04-combat.webp" alt="BRP d100 combat scene" loading="lazy">
-                <div class="screenshot-caption">Combat scene</div>
+                <img src="../assets/screenshots/04-combat.webp" alt="Night fight with two wolves — BRP d100" loading="lazy">
+                <div class="screenshot-caption">Wolf fight</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/05-character.webp">
                 <img src="../assets/screenshots/05-character.webp" alt="Character creation" loading="lazy">
                 <div class="screenshot-caption">Character creation</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/06-locations.webp">
-                <img src="../assets/screenshots/06-locations.webp" alt="Dark Forest — location exploration" loading="lazy">
-                <div class="screenshot-caption">Locations</div>
+                <img src="../assets/screenshots/06-locations.webp" alt="The churchyard — chapel cemetery with a living lampada" loading="lazy">
+                <div class="screenshot-caption">The churchyard</div>
+            </div>
+            <div class="screenshot-card" data-src="../assets/screenshots/07-appearance.webp">
+                <img src="../assets/screenshots/07-appearance.webp" alt="Hero appearance editor — palettes and character types" loading="lazy">
+                <div class="screenshot-caption">Appearance editor</div>
+            </div>
+            <div class="screenshot-card" data-src="../assets/screenshots/08-mill.webp">
+                <img src="../assets/screenshots/08-mill.webp" alt="Water mill — overshot wheel, stream and hay cart" loading="lazy">
+                <div class="screenshot-caption">Water mill</div>
+            </div>
+            <div class="screenshot-card" data-src="../assets/screenshots/09-apiary.webp">
+                <img src="../assets/screenshots/09-apiary.webp" alt="The apiary — log hives among summer flowers" loading="lazy">
+                <div class="screenshot-caption">The apiary</div>
             </div>
         </div>
     </div>
