@@ -140,23 +140,25 @@ export class CharacterScene extends Phaser.Scene {
         });
 
         // П.11: снаряжение — исправлен текст, не налезает
-        this.add.text(colX, top + 140, 'Снаряжение:', {
+        // (раунд 16: блок характеристик занимает 7 строк × ~22px ≈ 154px от top+30
+        // и заканчивается на ~top+184 — снаряжение опущено ниже, было top+140 → наложение)
+        this.add.text(colX, top + 200, 'Снаряжение:', {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
         const weapon = WEAPONS[p.weaponId] || { name: 'Кулаки' };
         const armor = ARMORS[p.armorId] || { name: 'Без доспеха' };
-        this.add.text(colX, top + 155, `⚔ Оружие: ${weapon.name} (урон ${weapon.dice.min}-${weapon.dice.max}+${weapon.bonus || 0})`, {
+        this.add.text(colX, top + 224, `⚔ Оружие: ${weapon.name} (урон ${weapon.dice.min}-${weapon.dice.max}+${weapon.bonus || 0})`, {
             fontSize: '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
-        this.add.text(colX, top + 175, `🛡 Доспех: ${armor.name} (защита ${armor.def})`, {
+        this.add.text(colX, top + 246, `🛡 Доспех: ${armor.name} (защита ${armor.def})`, {
             fontSize: '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
 
         // Деньги
-        this.add.text(colX, top + 205, `💰 Денег: ${formatMoney(p.dengas || 0)}`, {
+        this.add.text(colX, top + 276, `💰 Денег: ${formatMoney(p.dengas || 0)}`, {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);

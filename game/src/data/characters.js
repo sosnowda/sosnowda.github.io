@@ -21,6 +21,17 @@ export const ENEMY_TEMPLATES = {
         color: 0x6b6b6b,
         armorId: 'none',  // у волка нет брони
     },
+    // Рой пчёл (Пасека, раунд 16): слабый, но вертлявый. Урона мало, зато
+    // высокий DEX — тяжело уклониться; честная цена жадности без дымокура.
+    bees: {
+        name: 'Рой пчёл',
+        stats: { STR: 18, CON: 28, SIZ: 22, DEX: 82, INT: 10, POW: 30, CHA: 5, APP: 8 },
+        weapon: { name: 'Жала', dice: { min: 1, max: 4 }, bonus: 0 },
+        attackSkillKey: 'brawl',
+        spriteKey: 'enemy_bees',
+        color: 0xd8a020,
+        armorId: 'none',  // по рою не ударишь доспехом — его и не носит
+    },
     // Вор — главный антагонист, сильнее обычного разбойника
     thief: {
         name: 'Вор-иконокрад',

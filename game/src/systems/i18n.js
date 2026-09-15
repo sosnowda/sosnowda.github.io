@@ -165,6 +165,24 @@ const EN = {
     // --- Тёмный лес ---
     '◀ К ОКОЛИЦЕ': '◀ TO THE OUTSKIRTS',
     '🌲 Тёмный лес': '🌲 Dark Forest',
+
+    // --- Пасека (раунд 16) ---
+    '🐝 Пасека': '🐝 Apiary',
+    '🐝 Пасека — мёд и воск': '🐝 Apiary — honey & wax',
+    'Колодный улей': 'Log hive',
+    'Достать мёд из улья': 'Harvest honey from the hive',
+    'Разжечь дымокур': 'Light the smudge fire',
+    'Подложить веток в дымокур': 'Add twigs to the smudge fire',
+    'Рой поднялся!': 'The swarm is up!',
+    '💨 Дымокур разожжён (40 мин)': '💨 Smudge fire lit (40 min)',
+    '💨 Дым свежий (40 мин)': '💨 Fresh smoke (40 min)',
+    'дымокур: ещё {0} мин': 'smudge fire: {0} min left',
+    'рой разогнан': 'swarm driven off',
+    'пчёлы спят': 'bees are asleep',
+    'пчёлы активны — без дыма опасно': 'bees are active — smoke them first',
+    'под дымом пчёлы смирны': 'under smoke the bees stay calm',
+    '🍯 Мёд собран (раны уже перевязаны)': '🍯 Honey gathered (wounds already dressed)',
+    '🍯 Собрать мёд': '🍯 Take the honey',
     'Обыскать тайник разбойников': 'Search the bandits\' stash',
     'Вернуться к околице': 'Return to the outskirts',
     'Грибы': 'Mushrooms',
@@ -408,6 +426,15 @@ const EN_KEYS = {
         '  The bandits\' stash may hold coin — but sometimes it\'s an ambush.\n' +
         '  If a wolf is defeated, the pack stays scared for 4 hours.\n' +
         '  F1 — this help. ESC — main menu.',
+    'apiary.help.body': '🐝 APIARY — HONEY & WAX\n' +
+        '\n' +
+        '  WASD / arrows — movement\n' +
+        '  E — harvest honey from log hives (+5 ❤, once a day per hive)\n' +
+        '  First light the smudge fire by the hut: with a smoking splinter bees stay calm.\n' +
+        '  Without smoke the swarm may attack — fight or run.\n' +
+        '  In winter, rain and at night bees sleep: safe, but less honey (+2 ❤).\n' +
+        '  After a swarm is beaten off, bees stay docile for 4 hours.\n' +
+        '  The exit to the outskirts is on the southern edge.',
     'village.help.body': '🏠 DVINSKAYA SLOBODA\n' +
         '\n' +
         '  WASD / arrows — movement\n' +

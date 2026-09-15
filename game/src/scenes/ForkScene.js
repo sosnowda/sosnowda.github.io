@@ -131,8 +131,19 @@ export class ForkScene extends Phaser.Scene {
             cornerRadius: 6,
         });
 
+        // ----- Кнопка "Пасека — мёд и воск" (раунд 16) -----
+        createButton(this, width / 2, backBtnY + 44, t('🐝 Пасека — мёд и воск'), () => {
+            ActionLog.add(this.registry, 'Игрок отправился на Пасеку.');
+            this.scene.start('Apiary', { from: 'Fork' });
+        }, {
+            backgroundColor: 0x5a4a1e, hoverColor: 0x6e5a28, pressColor: 0x3a3012,
+            textColor: '#f0d890',
+            fontSize: 14, padding: { left: 16, right: 16, top: 8, bottom: 8 },
+            cornerRadius: 6,
+        });
+
         // ----- Кнопка "Вернуться в деревню" -----
-        createButton(this, width / 2, backBtnY + 44, t('◀ Вернуться в деревню'), () => {
+        createButton(this, width / 2, backBtnY + 88, t('◀ Вернуться в деревню'), () => {
             this.scene.start('Village');
         }, {
             backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
@@ -141,7 +152,7 @@ export class ForkScene extends Phaser.Scene {
         });
 
         // П.17: Кнопка "Карта" — показать карту местности
-        createButton(this, width / 2, backBtnY + 88, t('🗺 Карта местности'), () => {
+        createButton(this, width / 2, backBtnY + 132, t('🗺 Карта местности'), () => {
             this.showMap();
         }, {
             backgroundColor: 0x2a4a6a, hoverColor: 0x3a5a7a, textColor: RUS.text,

@@ -178,6 +178,9 @@ export class BootScene extends Phaser.Scene {
         // ----- Процедурные текстуры Тёмного леса — раунд 13 -----
         this.createForestTextures();
 
+        // ----- Процедурные текстуры Пасеки — раунд 16 -----
+        this.createApiaryTextures();
+
         // ----- АУДИО -----
         // SFX
         const sfxKeys = [
@@ -228,6 +231,21 @@ export class BootScene extends Phaser.Scene {
 
         // ----- Анимации LPC Wolf (combat sheet) -----
         this.createWolfAnimations();
+
+        // ----- Анимация боевого роя пчёл (Пасека, раунд 16) -----
+        if (this.textures.exists('bees_combat_0')) {
+            this.anims.create({
+                key: 'bees_idle',
+                frames: [
+                    { key: 'bees_combat_0', frame: 0 },
+                    { key: 'bees_combat_1', frame: 0 },
+                    { key: 'bees_combat_2', frame: 0 },
+                    { key: 'bees_combat_1', frame: 0 },
+                ],
+                frameRate: 9,
+                repeat: -1,
+            });
+        }
 
         // ----- Анимации LPC Farm Animals -----
         const animals = ['cow', 'llama', 'pig', 'sheep', 'chicken'];
@@ -327,6 +345,16 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(0xdce8f4, 0.9);
         g.fillEllipse(13, 9, 22, 3);
         g.generateTexture('deco_snow_patch', 26, 12);
+
+        // ===== Раунд 16: воробей (9×7) — стайки на дорогах деревни =====
+        g.clear();
+        g.fillStyle(0x6a4a32, 1); g.fillEllipse(5, 4, 7, 5);            // тело
+        g.fillStyle(0x7d5a3e, 1); g.fillEllipse(4, 3, 5, 3);            // спинка-блик
+        g.fillStyle(0x4a3220, 1); g.fillCircle(8, 3, 1.6);              // голова
+        g.fillStyle(0x2a1a10, 1); g.fillCircle(8.6, 2.6, 0.5);          // глаз
+        g.fillStyle(0x8a6a2a, 1); g.fillRect(9.4, 3, 1.6, 0.8);         // клюв
+        g.fillStyle(0x3a2818, 1); g.fillTriangle(1, 3, 0, 5, 2.4, 4.2); // хвост
+        g.generateTexture('deco_bird', 11, 8);
 
         // ============================================================
         // РАУНД 12: пруд, причал, костёр, крест, камыш
@@ -552,6 +580,80 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(0xffffff, 0.95); g.fillCircle(2.5, 2.5, 1.6);      // ядро
         g.fillStyle(0xffffff, 0.4);  g.fillCircle(2.5, 2.5, 2.4);      // ореол
         g.generateTexture('weather_snow', 5, 5);
+
+        g.destroy();
+    }
+
+    /**
+     * Процедурные текстуры Пасеки (раунд 16): колодный улей, пчела-декорация,
+     * дымокур и три кадра боевого роя пчёл для CombatScene.
+     */
+    createApiaryTextures() {
+        const g = this.make.graphics({ add: false });
+
+        // ===== Колодный улей (26×34): бревно-дуплянка с плашкой-крышкой и летком =====
+        g.clear();
+        g.fillStyle(0x000000, 0.25); g.fillEllipse(13, 31, 24, 6);      // тень на земле
+        g.fillStyle(0x4a3520, 1); g.fillRoundedRect(5, 8, 16, 22, 3);   // корпус бревна
+        g.fillStyle(0x5f4830, 1); g.fillRoundedRect(7, 9, 5, 19, 2);    // блик-полоса слева
+        g.fillStyle(0x33261a, 1); g.fillRoundedRect(16, 10, 4, 18, 2);  // тень справа
+        g.fillStyle(0x3a2a1a, 1); g.fillEllipse(13, 8, 18, 5);          // верхний срез
+        g.fillStyle(0x6a5232, 1); g.fillEllipse(13, 8, 12, 3);          // годовые кольца
+        // Крышка-плашка (дощечка сверху от дождя)
+        g.fillStyle(0x5a4030, 1); g.fillRoundedRect(2, 2, 22, 6, 2);
+        g.fillStyle(0x6f5236, 1); g.fillRoundedRect(3, 3, 20, 2, 1);
+        // Леток (тёмная щель, из неё пчёлы)
+        g.fillStyle(0x1a1008, 1); g.fillEllipse(13, 20, 4, 6);
+        // Полоска мёда-прополиса у летка
+        g.fillStyle(0xd8912a, 0.85); g.fillRect(11, 24, 4, 2);
+        g.generateTexture('deco_hive', 26, 34);
+
+        // ===== Пчела (7×6): тельце с полоской и крылышки =====
+        g.clear();
+        g.fillStyle(0xffffff, 0.55); g.fillEllipse(2, 2, 5, 3);         // крыло верхнее
+        g.fillStyle(0xffffff, 0.4);  g.fillEllipse(5, 2, 4, 3);         // крыло заднее
+        g.fillStyle(0xd8a020, 1); g.fillEllipse(3.5, 4, 5, 3);          // тельце
+        g.fillStyle(0x2a1a08, 1); g.fillRect(3, 3, 1, 3);               // полоска
+        g.fillStyle(0x2a1a08, 1); g.fillCircle(1.5, 4, 1);              // голова
+        g.generateTexture('deco_bee', 7, 6);
+
+        // ===== Дымокур (30×18): кучка тлеющих веток и влажного дёрна =====
+        g.clear();
+        g.fillStyle(0x000000, 0.25); g.fillEllipse(15, 15, 28, 6);
+        g.fillStyle(0x3f5a2e, 1); g.fillEllipse(9, 12, 12, 7);          // пласт дёрна травой вверх
+        g.fillStyle(0x4f7038, 1); g.fillEllipse(8, 10, 10, 5);
+        g.fillStyle(0x4a3826, 1); g.fillRoundedRect(14, 8, 14, 6, 3);   // ветки
+        g.fillStyle(0x2e2118, 1); g.fillRoundedRect(16, 10, 10, 2, 1);  // тень между ветками
+        g.fillStyle(0xff7a30, 0.8); g.fillCircle(20, 11, 2);            // угли
+        g.fillStyle(0xffc060, 0.9); g.fillCircle(20, 11, 1);
+        g.generateTexture('deco_smudge', 30, 18);
+
+        // ===== Боевой рой пчёл — 3 кадра 44×36 для CombatScene =====
+        // Каждая точка — пчела; кадры отличаются раскладкой, анимация «кипит».
+        const swarmDots = [
+            // [x, y, r] — фиксированные раскладки (без Math.random — детерминизм)
+            [[10,14,3],[17,9,2.5],[24,16,3],[14,22,2.5],[30,10,2],[27,24,3],[20,18,2],[33,18,2.5],[7,22,2],[24,30,2.5],[36,26,2],[13,30,2]],
+            [[13,10,3],[20,15,2.5],[26,11,3],[10,18,2.5],[29,19,3],[23,26,2],[33,13,2],[17,27,2.5],[8,13,2],[28,30,2.5],[36,20,2],[19,21,2]],
+            [[11,17,3],[18,12,2.5],[23,20,3],[15,9,2.5],[31,15,2],[26,27,3],[21,13,2],[35,23,2.5],[9,25,2],[25,31,2.5],[34,28,2],[16,24,2]],
+        ];
+        for (let f = 0; f < swarmDots.length; f++) {
+            g.clear();
+            // Размытое облако-подложка
+            for (let i = 6; i >= 1; i--) {
+                g.fillStyle(0x3a2c10, 0.035 * (7 - i) / 6);
+                g.fillEllipse(22, 19, i * 9, i * 7);
+            }
+            swarmDots[f].forEach(([x, y, r], i) => {
+                // Тельце с полосатым брюшком, каждое с лёгким «крылом»
+                g.fillStyle(0xffffff, 0.5); g.fillEllipse(x - 1, y - r - 1, r * 1.6, r * 0.9);
+                g.fillStyle(0xd8a020, 1); g.fillEllipse(x, y, r * 2, r * 1.5);
+                g.fillStyle(0x2a1a08, 1); g.fillRect(x, y - r * 0.6, Math.max(1, r * 0.4), r * 1.2);
+                if (i % 3 === 0) {
+                    g.fillStyle(0x2a1a08, 1); g.fillCircle(x - r * 0.8, y, Math.max(0.8, r * 0.45));
+                }
+            });
+            g.generateTexture(`bees_combat_${f}`, 44, 36);
+        }
 
         g.destroy();
     }

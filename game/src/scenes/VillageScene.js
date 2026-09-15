@@ -230,6 +230,9 @@ export class VillageScene extends Phaser.Scene {
             },
         });
 
+        // ----- Воробьи на дорогах (§3 village-visual-upgrade, раунд 16) -----
+        this.spawnBirdFlocks();
+
         // ----- Ночное свечение окон (тёплый свет в темноте) -----
         this.windowGlows = [];
         BUILDINGS.forEach(b => {
@@ -809,6 +812,7 @@ export class VillageScene extends Phaser.Scene {
         this.playerObj.setDepth(this.playerObj.y / this.tileSize);
 
         this.updateNearestInteractable();
+        this.updateBirds();
         this.updateHUD();
     }
 
@@ -1150,6 +1154,151 @@ export class VillageScene extends Phaser.Scene {
             ease: 'Sine.easeOut',
             onComplete: () => smoke.destroy(),
         });
+    }
+
+    /**
+     * Воробьиные стайки (§3 атмосфера деревни, раунд 16): сидят у колодца
+     * и перед таверной, клюют зерно; при приближении героя разлетаются,
+     * через время возвращаются, если герой отошёл. Ночью спрятаны.
+     */
+    spawnBirdFlocks() {
+        this.birds = [];
+        if (!this.textures.exists('deco_bird')) return;
+        const ts = this.tileSize;
+
+        // Якоря стай: у колодца (если есть) и перед второй дверью (таверна)
+        const anchors = [];
+        if (this.wellTiles && this.wellTiles.length) {
+            const w = this.wellTiles[0];
+            anchors.push({ x: (w.x + 2.6) * ts, y: (w.y + 0.7) * ts });
+        }
+        if (this.doors && this.doors.length > 1) {
+            const d = this.doors[1];
+            anchors.push({ x: (d.x + 2.4) * ts, y: (d.y + 1.2) * ts });
+        }
+
+        anchors.forEach((a, fi) => {
+            const count = 4 + (fi % 2);
+            for (let i = 0; i < count; i++) {
+                const hx = a.x + ((i * 23 + fi * 11) % 46) - 23;
+                const hy = a.y + ((i * 31 + fi * 7) % 30) - 15;
+                const img = this.add.image(hx, hy, 'deco_bird')
+                    .setScale(ts / 32 * 1.15)
+                    .setDepth(hy / ts);
+                this.birds.push({
+                    img,
+                    homeX: hx, homeY: hy,
+                    x: hx, y: hy,
+                    state: 'idle',          // idle | fly | away
+                    hopAt: this.time.now + 400 + i * 500 + fi * 300,
+                    awayUntil: 0,
+                });
+            }
+        });
+    }
+
+    /**
+     * Обновление воробьёв: прыжки-клёв в стае, разлёт от героя, возврат.
+     * Вызывается из update() каждый кадр; ночью (dark > 0.5) птицы спрятаны.
+     */
+    updateBirds() {
+        if (!this.birds || !this.birds.length) return;
+        const ts = this.tileSize;
+        const now = this.time.now;
+        const dark = this.darkFactor(getTime(this.registry));
+        const hidden = dark > 0.5;
+        const px = this.playerObj ? this.playerObj.x : -9999;
+        const py = this.playerObj ? this.playerObj.y : -9999;
+
+        this.birds.forEach((b) => {
+            if (hidden) {
+                b.img.setVisible(false);
+                b.state = 'idle';
+                return;
+            }
+            b.img.setVisible(true);
+
+            if (b.state === 'idle') {
+                // Клёв и мелкие прыжки
+                if (now >= b.hopAt && !this.tweens.isTweening(b.img)) {
+                    b.hopAt = now + 900 + Math.random() * 2200;
+                    const nx = b.homeX + Phaser.Math.Between(-18, 18);
+                    const ny = b.homeY + Phaser.Math.Between(-11, 11);
+                    this.tweens.add({
+                        targets: b.img,
+                        x: nx, y: ny,
+                        scaleY: { from: ts / 32 * 1.15, to: ts / 32 * 0.85 },
+                        yoyo: true,
+                        duration: 170,
+                        ease: 'Quad.easeOut',
+                        onComplete: () => {
+                            b.x = nx; b.y = ny;
+                            b.img.setDepth(ny / ts);
+                            b.img.setScale(ts / 32 * 1.15);
+                        },
+                    });
+                }
+                // Герой близко — разлетаемся
+                const dist = Phaser.Math.Distance.Between(b.x, b.y, px, py);
+                if (dist < 76) {
+                    b.state = 'fly';
+                    const dx = b.x - px, dy = b.y - py;
+                    const len = Math.max(1, Math.hypot(dx, dy));
+                    const fx = b.x + (dx / len) * Phaser.Math.Between(120, 190);
+                    const fy = b.y + (dy / len) * Phaser.Math.Between(90, 140) - 55;
+                    b.img.setFlipX(fx < b.x);
+                    this.tweens.killTweensOf(b.img);
+                    this.tweens.add({
+                        targets: b.img,
+                        x: fx, y: fy,
+                        scaleX: ts / 32 * 1.35,
+                        duration: 620,
+                        ease: 'Quad.easeOut',
+                        onComplete: () => {
+                            b.state = 'away';
+                            b.awayUntil = now + 6000 + Math.random() * 6000;
+                            b.img.setAlpha(0);
+                        },
+                    });
+                    // Взмахи — частое подрагивание scaleY
+                    this.tweens.add({
+                        targets: b.img,
+                        scaleY: { from: ts / 32 * 1.2, to: ts / 32 * 0.55 },
+                        duration: 90,
+                        yoyo: true,
+                        repeat: 6,
+                    });
+                }
+            } else if (b.state === 'away') {
+                // Отсиделись — если герой отошёл от места кормёжки, вернуться
+                const homeDist = Phaser.Math.Distance.Between(px, py, b.homeX, b.homeY);
+                if (now >= b.awayUntil && homeDist > 150) {
+                    b.state = 'idle';
+                    b.x = b.homeX; b.y = b.homeY;
+                    b.img.setPosition(b.homeX, b.homeY);
+                    b.img.setScale(ts / 32 * 1.15);
+                    b.img.setAlpha(0);
+                    this.tweens.add({
+                        targets: b.img,
+                        alpha: 1,
+                        duration: 500,
+                    });
+                    b.hopAt = now + 300;
+                }
+            }
+        });
+    }
+
+    /**
+     * Коэффициент темноты 0..1 (пороги согласованы с updateHUD).
+     */
+    darkFactor(timeState) {
+        if (!timeState) return 0;
+        const h = timeState.hour;
+        if (h >= 21 || h < 5) return 1;
+        if (h >= 18) return (h - 18) / 3;
+        if (h < 8) return (8 - h) / 3;
+        return 0;
     }
 
     /**
