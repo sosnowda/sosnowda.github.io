@@ -865,8 +865,10 @@ export class VillageScene extends Phaser.Scene {
             if (now - this.lastStepTime > this.stepInterval) {
                 this.audioManager.playStep();
                 this.lastStepTime = now;
-                // Продвигаем время (п.3: 1:20 — 20x медленнее, было 5 мин, теперь 0.25 мин)
-                tickTime(this.registry, 0.25);
+                // Раунд 22 (п.5): 1 минута за шаг (было 0.25) — время в деревне
+                // реально течёт, и счётчик действий вора тикает во время ходьбы
+                // (15 шагов = 1 действие вора).
+                tickTime(this.registry, 1);
             }
         } else {
             // П.1-2: Если композит — не вызываем play/anims

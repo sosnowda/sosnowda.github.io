@@ -6,6 +6,7 @@
 // - Времена года: весна, лето, осень, зима
 // Раунд 15: формат даты/времени локализован (i18n) — EN месяц/день/время.
 import { t, isEn, EN_MONTHS, EN_WEEKDAYS } from './i18n.js';
+import { tickQuestTime } from '../data/questGenerator.js';
 
 // Месяцы церковного календаря Руси XV века (сентябрьский стиль)
 export const MONTHS = [
@@ -195,6 +196,8 @@ export function tickTime(registry, minutes = 15) {
     if (typeof chaseHook === 'function') {
         chaseHook(registry, minutes);
     }
+    // Раунд 22: мировое время также течёт для сроков процедурных поручений
+    tickQuestTime(registry, minutes);
     return timeState;
 }
 

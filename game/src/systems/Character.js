@@ -187,6 +187,9 @@ export const PRESET_HEROES = [
         startDengas: 15,
     },
     // === СЫЩИК ===
+    // Раунд 22 (п.14): сыщик — «средние боевые», но с ножом против вора он
+    // почти гарантированно гибли (бой 38% против уклонения вора).
+    // Подравнены: CON/SIZ чуть выше (HP 11 вместо 10), Рукопашная 45.
     {
         id: 'detective_m',
         name: 'Ярополк',
@@ -194,11 +197,11 @@ export const PRESET_HEROES = [
         gender: 'male',
         sprite: 'player',
         description: 'Хорошие навыки общения и поиска улик в разговорах, средние боевые.',
-        stats: { STR: 45, CON: 50, SIZ: 45, DEX: 55, INT: 80, POW: 60, CHA: 70, APP: 55 },
+        stats: { STR: 45, CON: 55, SIZ: 50, DEX: 55, INT: 80, POW: 60, CHA: 70, APP: 55 },
         skillOverrides: {
             oratory: 72, persuade: 78, fast_talk: 62, intimidate: 38,
             spot: 68, track: 52, listen: 72,
-            sword: 42, brawl: 38, dodge: 52, bow: 28,
+            sword: 42, brawl: 45, dodge: 52, bow: 28,
             survival: 48, medicine: 42, ride: 32,
         },
         startWeapon: 'knife',
@@ -212,11 +215,11 @@ export const PRESET_HEROES = [
         gender: 'female',
         sprite: 'npc_merchant',
         description: 'Хорошие навыки общения и поиска улик в разговорах, средние боевые.',
-        stats: { STR: 40, CON: 50, SIZ: 40, DEX: 60, INT: 80, POW: 60, CHA: 75, APP: 65 },
+        stats: { STR: 40, CON: 55, SIZ: 50, DEX: 60, INT: 80, POW: 60, CHA: 75, APP: 65 },
         skillOverrides: {
             oratory: 75, persuade: 80, fast_talk: 65, intimidate: 40,
             spot: 70, track: 55, listen: 75,
-            sword: 45, brawl: 40, dodge: 55, bow: 30,
+            sword: 45, brawl: 45, dodge: 55, bow: 30,
             survival: 50, medicine: 45, ride: 35,
         },
         startWeapon: 'knife',

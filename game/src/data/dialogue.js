@@ -4,7 +4,23 @@
 
 import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, checkGameEnd } from './thief.js';
 import { ActionLog } from './actionLog.js';
-import { t } from '../systems/i18n.js';
+import { tickTime } from '../systems/TimeSystem.js';
+import { t, tf } from '../systems/i18n.js';
+
+/**
+ * Раунд 22 (п.3): повторный расспрос того же NPC НЕВОЗМОЖЕН.
+ * Если NPC уже расспрашивали о воре — выбор «Спросить про вора»
+ * не показывается: за новыми наводками нужно идти к другим людям.
+ */
+function withAskThief(scene, npcId, others, position = 1) {
+    const q = scene.registry.get('quest') || {};
+    const asked = (q.thiefAskedFrom || []).includes(npcId);
+    const list = others.map(c => ({ ...c }));
+    if (!asked) {
+        list.splice(Math.min(position, list.length), 0, { text: t('Спросить про вора'), next: 'ask_thief' });
+    }
+    return list;
+}
 
 export const DIALOGUES = {
     // === СТАРОСТА — выдаёт задание + задаток + ПРИЁМ ИКОНЫ (раунд 21) ===
@@ -129,20 +145,25 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Тавернщик Фёдор',
                 text: 'Здравствуй, путник! Заходи, присаживайся. Хочешь поесть, попить или переночевать?',
-                choices: [
-                    { text: 'Что нового в деревне?', next: 'b' },
-                    { text: 'Спросить про вора', next: 'ask_thief' },
-                    { text: 'Попросить денег', next: 'ask_money' },
-                    { text: 'Спасибо, я пойду.', end: true },
-                ],
+                // Раунд 22: расспрос о воре — один раз за игру
+                action: (scene) => {
+                    DIALOGUES.tavernkeeper.nodes.a.choices = withAskThief(scene, 'tavernkeeper', [
+                        { text: t('Что нового в деревне?'), next: 'b' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Спасибо, я пойду.'), end: true },
+                    ]);
+                },
+                choices: [],
             },
             b: {
                 speaker: 'Тавернщик Фёдор',
                 text: 'Слыхал, вор украл икону из часовни! Староста в отчаянии. А ещё говорят, что кто-то видел подозрительного человека в тёмном плаще у околицы. Но куда он побежал — никто толком не знает.',
-                choices: [
-                    { text: 'Спросить про вора', next: 'ask_thief' },
-                    { text: 'Спасибо за новости.', end: true },
-                ],
+                action: (scene) => {
+                    DIALOGUES.tavernkeeper.nodes.b.choices = withAskThief(scene, 'tavernkeeper', [
+                        { text: t('Спасибо за новости.'), end: true },
+                    ]);
+                },
+                choices: [],
             },
             ask_thief: {
                 speaker: 'Тавернщик Фёдор',
@@ -183,11 +204,13 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Кузнец Данила',
                 text: 'Здрав будь, воин! Моя кузница к твоим услугам. Нужно оружие или броня — открой меню «Купить оружие».',
-                choices: [
-                    { text: 'Спросить про вора', next: 'ask_thief' },
-                    { text: 'Попросить денег', next: 'ask_money' },
-                    { text: 'Спасибо, я пойду.', end: true },
-                ],
+                action: (scene) => {
+                    DIALOGUES.blacksmith.nodes.a.choices = withAskThief(scene, 'blacksmith', [
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Спасибо, я пойду.'), end: true },
+                    ], 1);
+                },
+                choices: [],
             },
             ask_thief: {
                 speaker: 'Кузнец Данила',
@@ -228,20 +251,24 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Крестьянин Авдей',
                 text: 'Ох, путник... у меня беда. Корова пропала третьего дня, а тут ещё иконокража! Никакого спасу от лихих людей.',
-                choices: [
-                    { text: 'Спросить про вора', next: 'ask_thief' },
-                    { text: 'Попросить денег', next: 'ask_money' },
-                    { text: 'Что с коровой?', next: 'cow' },
-                    { text: 'Сочувствую. Прощай.', end: true },
-                ],
+                action: (scene) => {
+                    DIALOGUES.peasant1.nodes.a.choices = withAskThief(scene, 'peasant1', [
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Что с коровой?'), next: 'cow' },
+                        { text: t('Сочувствую. Прощай.'), end: true },
+                    ], 0);
+                },
+                choices: [],
             },
             cow: {
                 speaker: 'Крестьянин Авдей',
                 text: 'Корова моя Машка ушла со двора и не вернулась. Ищу по окрестностям, но никак не найду. Может, в лес ушла?',
-                choices: [
-                    { text: 'Спрошу про вора.', next: 'ask_thief' },
-                    { text: 'Найдётся ваша корова.', end: true },
-                ],
+                action: (scene) => {
+                    DIALOGUES.peasant1.nodes.cow.choices = withAskThief(scene, 'peasant1', [
+                        { text: t('Найдётся ваша корова.'), end: true },
+                    ], 0);
+                },
+                choices: [],
             },
             ask_thief: {
                 speaker: 'Крестьянин Авдей',
@@ -282,20 +309,24 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Вдова Марфа',
                 text: 'Здравствуйте, молодой человек. Помолитесь со мной за упокой души моего мужа, царство ему небесное.',
-                choices: [
-                    { text: 'Спросить про вора', next: 'ask_thief' },
-                    { text: 'Попросить денег', next: 'ask_money' },
-                    { text: 'Помолюсь.', next: 'pray' },
-                    { text: 'Извините, я спешу.', end: true },
-                ],
+                action: (scene) => {
+                    DIALOGUES.widow.nodes.a.choices = withAskThief(scene, 'widow', [
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Помолюсь.'), next: 'pray' },
+                        { text: t('Извините, я спешу.'), end: true },
+                    ], 0);
+                },
+                choices: [],
             },
             pray: {
                 speaker: 'Вдова Марфа',
                 text: 'Спаси вас Господь. Пусть хранит вас Пресвятая Богородица.',
-                choices: [
-                    { text: 'Спрошу про вора.', next: 'ask_thief' },
-                    { text: 'Прощайте.', end: true },
-                ],
+                action: (scene) => {
+                    DIALOGUES.widow.nodes.pray.choices = withAskThief(scene, 'widow', [
+                        { text: t('Прощайте.'), end: true },
+                    ], 0);
+                },
+                choices: [],
             },
             ask_thief: {
                 speaker: 'Вдова Марфа',
@@ -337,11 +368,14 @@ export const DIALOGUES = {
                 speaker: 'Отец Савватий',
                 text: 'Мир тебе, чадо. Что привело тебя в дом Божий? Может, хочешь исповедаться или помолиться?',
                 // Раунд 21: если икона у игрока — предлагаем вернуть святыню церкви
+                // Раунд 22: + благословение (п.11) и одноразовый расспрос (п.3)
                 action: (scene) => {
                     const q = scene.registry.get('quest') || {};
+                    const asked = (q.thiefAskedFrom || []).includes('priest');
                     const base = [
                         { text: t('Расскажи про украденную икону'), next: 'about_icon' },
-                        { text: t('Спросить про вора'), next: 'ask_thief' },
+                        ...(!asked ? [{ text: t('Спросить про вора'), next: 'ask_thief' }] : []),
+                        { text: t('🙏 Попросить благословения'), next: 'blessing' },
                         { text: t('Попросить денег'), next: 'ask_money' },
                         { text: t('Помолиться'), next: 'pray' },
                         { text: t('Спасибо, батюшка.'), end: true },
@@ -352,6 +386,28 @@ export const DIALOGUES = {
                         : base;
                 },
                 choices: [],
+            },
+            // Раунд 22 (п.11): благословение — +10% к ШАНСАМ ОДНОЙ проверки навыка
+            // (поиска следов, расспроса, убеждения, оглушения или удара в бою).
+            blessing: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                action: (scene) => {
+                    const q = scene.registry.get('quest') || {};
+                    if (q.blessing) {
+                        scene._lastAskResult = { message: t('Батюшка качает головой: «Ты уже под защитой Господней, чадо. Благословение исполнится при первом же испытании — не гневи Боженьку жадностью.»') };
+                        return;
+                    }
+                    q.blessing = true;
+                    scene.registry.set('quest', q);
+                    // Молитва занимает время — вор тоже двигается
+                    tickTime(scene.registry, 15);
+                    scene._lastAskResult = { message: t('Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ Благословение: СЛЕДУЮЩАЯ проверка навыка (следы, расспрос, убеждение, оглушение или удар) пройдёт с +10 к шансу — но только одна!') };
+                    ActionLog.add(scene.registry, t('Получил благословение в церкви: +10 к одной проверке навыка.'));
+                },
+                choices: [
+                    { text: t('Аминь.'), next: 'ask_result' },
+                ],
             },
             // Раунд 21: возврат иконы священнику — награда и победа, игра продолжается
             return_icon: {

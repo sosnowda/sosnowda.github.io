@@ -656,7 +656,9 @@ export class ApiaryScene extends Phaser.Scene {
             if (now - this.lastStepTime > this.stepInterval) {
                 this.audioManager.playStep();
                 this.lastStepTime = now;
-                tickTime(this.registry, 0.25);
+                // Раунд 22 (п.5): 1 минута за шаг (было 0.25) — время течёт
+                // и во время ходьбы по пасеке (счётчик вора тикает)
+                tickTime(this.registry, 1);
             }
         } else if (!this.player.useComposite) {
             this.playerObj.anims.pause();

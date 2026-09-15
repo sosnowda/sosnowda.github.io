@@ -8,8 +8,8 @@ import { createButton, createDialog, createFloatingText, registerAnchoredUI, onS
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { ActionLog } from '../data/actionLog.js';
-import { loseHeroDead, recoverStolenItem } from '../data/thief.js';
-import { getActiveQuests, checkQuestCompletion } from '../data/questGenerator.js';
+import { loseHeroDead, recoverStolenItem, thiefFleesFromFight } from '../data/thief.js';
+import { getActiveQuests, checkQuestCompletion, consumeBlessing } from '../data/questGenerator.js';
 import { getTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
@@ -185,7 +185,7 @@ export class CombatScene extends Phaser.Scene {
      * Счётчик ходов до побега вора продолжает тикать (вор ближе к побегу).
      */
     flee() {
-        const dodgeSkill = this.player.skills.dodge || 25;
+        const dodgeSkill = consumeBlessing(this.registry, this.player.skills.dodge || 25);
         const res = skillCheck(dodgeSkill);
         this.busy = true;
 
@@ -194,6 +194,12 @@ export class CombatScene extends Phaser.Scene {
             if (this.audioManager) this.audioManager.playSwordMiss();
             // Раунд 21: побег занимает время — 2 тика (вор тоже двигается)
             tickTime(this.registry, 30);
+            // Раунд 22 (п.9): после побега игрока из боя вор перебегает в
+            // СЛУЧАЙНУЮ локацию, и время его «тиков» немного увеличивается.
+            const isThiefFight = this.enemies.some(e => e.isThief) || this.npcId === 'thief';
+            if (isThiefFight) {
+                thiefFleesFromFight(this.registry, this.fromLocation);
+            }
             ActionLog.add(this.registry, `Побег из боя. Потеряно 2 действия (бросок ${res.roll}, успех).`);
             this.time.delayedCall(1000, () => {
                 // Возврат в предыдущую сцену (раунд 13: лес возвращается в лес)
@@ -330,7 +336,8 @@ export class CombatScene extends Phaser.Scene {
         // Раунд 14: используем оружие ВЫБРАННОЙ кнопки (а не всегда экипировку).
         // Кулаки — честный резерв с навыком brawl; экипировка передаётся своей кнопкой.
         const w = WEAPONS[weaponKey] || this.player.weapon || WEAPONS.fists;
-        const skill = this.player.skills[w.skill] || 20;
+        // Раунд 22 (п.11): благословение батюшки усиливает ОДНУ проверку навыка
+        const skill = consumeBlessing(this.registry, this.player.skills[w.skill] || 20);
         const res = skillCheck(skill);
         const target = this.firstAlive();
         if (!target) { this.endCombatVictory(); return; }
@@ -592,20 +599,14 @@ export class CombatScene extends Phaser.Scene {
     endCombatDefeat() {
         this.busy = true;
         this.pushLog(t('Ты пал в бою...'));
-        // Если бой с вором — поражение в игре
-        const isThiefFight = this.enemies.some(e => e.isThief) || this.npcId === 'thief';
-        if (isThiefFight) {
-            loseHeroDead(this.registry);
-            ActionLog.add(this.registry, `Бой с вором проигран. Герой пал.`);
-        }
+        // Раунд 22 (п.6): смерть в ЛЮБОМ бою — проигрыш игры.
+        // Раньше бой с волками/разбойниками просто возвращал в титул.
+        loseHeroDead(this.registry);
+        ActionLog.add(this.registry, `Бой проигран. Герой пал — поход окончен.`);
         // Затемнение
         this.cameras.main.fade(900, 0, 0, 0);
         this.time.delayedCall(1000, () => {
-            if (isThiefFight) {
-                this.scene.start('End');
-            } else {
-                this.scene.start('Title');
-            }
+            this.scene.start('End');
         });
     }
 }

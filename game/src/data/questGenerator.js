@@ -9,6 +9,64 @@ import { ActionLog } from './actionLog.js';
 import { ARMORS, WEAPONS } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
 
+// ============================================================
+// БЛАГОСЛОВЕНИЕ (раунд 22, п.11)
+// Священник в церкви даёт благословение: следующая проверка навыка
+// (любая: поиск следов, расспрос, убеждение, оглушение, атака) проходит
+// с +10 к шансу — но только ОДНА проверка.
+// ============================================================
+
+/** Есть ли у героя неиспользованное благословение. */
+export function hasBlessing(registry) {
+    const q = registry.get('quest') || {};
+    return !!q.blessing;
+}
+
+/**
+ * Применить благословение к проверке навыка. Если благословение есть —
+ * оно расходуется и навык увеличивается на +10 (один раз!).
+ * @returns {number} значение навыка для skillCheck
+ */
+export function consumeBlessing(registry, skillValue) {
+    const q = registry.get('quest');
+    if (q && q.blessing) {
+        q.blessing = false;
+        registry.set('quest', q);
+        ActionLog.add(registry, t('✨ Благословение батюшки окрыляет: +10 к шансу этой проверки (единственный раз).'));
+        return Math.min(95, (skillValue || 0) + 10);
+    }
+    return skillValue || 0;
+}
+
+// ============================================================
+// СРОКИ ПОРУЧЕНИЙ (раунд 22, п.15)
+// Время поручений течёт вместе с мировым временем: каждый тик (15 минут)
+// приближает срок. Просроченное поручение проваливается.
+// Главный квест (погоня за вором) живёт по своим правилам и не сгорает.
+// ============================================================
+
+/**
+ * Вызывается из TimeSystem.tickTime на каждое изменение времени.
+ * @param {Object} registry — Phaser registry
+ * @param {number} minutes — сколько игровых минут прошло
+ */
+export function tickQuestTime(registry, minutes) {
+    const q = registry.get('quest');
+    if (!q || !q.activeQuests || q.activeQuests.length === 0) return;
+    let changed = false;
+    q.activeQuests.forEach(quest => {
+        if (quest.completed || quest.failed || quest.rewardClaimed || quest.isMainQuest) return;
+        quest.minutesDone = (quest.minutesDone || 0) + (minutes || 0);
+        changed = true;
+        const limitMinutes = (quest.timeLimit || 10) * 15;
+        if (quest.minutesDone > limitMinutes) {
+            quest.failed = true;
+            ActionLog.add(registry, tf(t('⌛ Поручение «{0}» просрочено! Срок вышел, а дело не сделано.'), quest.title));
+        }
+    });
+    if (changed) registry.set('quest', q);
+}
+
 // === ТИПЫ ЗАДАНИЙ (исторически достоверные для Руси XV века) ===
 export const QUEST_TYPES = {
     // Боевые задания
@@ -70,17 +128,19 @@ export const NPC_QUEST_POOLS = {
         description: 'кузнец',
     },
     peasant1: {
-        // Крестьянин — простые бытовые задания
+        // Крестьянин — простые бытовые задания.
+        // Раунд 22: награда поднята (0.4 → 0.9) — боевые задания за 3 деньги
+        // были нелогичны.
         quests: [QUEST_TYPES.WOLF, QUEST_TYPES.FETCH_WOOD, QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.ESCORT],
         rewardTypes: ['food', 'herb', 'money'],
-        rewardScale: 0.4, // крестьянин бедный
+        rewardScale: 0.9,
         description: 'крестьянин',
     },
     widow: {
-        // Вдова — духовные и бытовые
+        // Вдова — духовные и бытовые. Раунд 22: 0.3 → 0.7 (та же причина).
         quests: [QUEST_TYPES.PRAYER, QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.DELIVER, QUEST_TYPES.FIND_PERSON],
         rewardTypes: ['herb', 'food', 'blessing'],
-        rewardScale: 0.3, // вдова очень бедная
+        rewardScale: 0.7,
         description: 'вдова',
     },
 };
@@ -135,7 +195,9 @@ const QUEST_TEMPLATES = {
             'Разведка доносит: татары могут напасть. Встань на стражу у ворот до утра.',
         ],
         objective: 'Отстоять на страже у ворот',
-        location: 'gate',
+        // Раунд 22: 'gate' не был достижим (поручение было НЕВЫПОЛНИМО) —
+        // стража у ворот = дело деревенское, как и помирить соседей.
+        location: 'village',
         combat: false,
         baseTime: 2,
         difficulty: 'easy',
@@ -156,11 +218,11 @@ const QUEST_TEMPLATES = {
     [QUEST_TYPES.FETCH]: {
         title: 'Принести нужное',
         descriptions: [
-            'Принеси мне с реки свежей рыбы — угощу чем бог послал.',
             'Сходи в лес за грибами, да побольше — зима длинная будет!',
             'Принеси дров из лесу — печь топить нечем стало.',
+            'Нужны сухие ветки да хворост. Загляни в лес, пока не стемнело.',
         ],
-        objective: 'Принести требуемое',
+        objective: 'Принести требуемое из леса',
         location: 'forest',
         combat: false,
         baseTime: 2,
@@ -256,11 +318,13 @@ const QUEST_TEMPLATES = {
     [QUEST_TYPES.CANDLE_FETCH]: {
         title: 'Принести воск для свечей',
         descriptions: [
-            'Свечи в церкви заканчиваются. Принеси воск с пасеки — пчеловод живёт за рекой.',
+            'Свечи в церкви заканчиваются. Принеси воск с пасеки — там держат ульи.',
             'Для всенощной нужно много свечей. Сходи на пасеку, попроси воска.',
         ],
         objective: 'Принести воск для церковных свечей',
-        location: 'field',
+        // Раунд 22: воск берут на ПАСЕКЕ (было 'field' — описание не совпадало
+        // с целью, и поручение путало игрока).
+        location: 'apiary',
         combat: false,
         baseTime: 2,
         difficulty: 'easy',
@@ -372,10 +436,11 @@ export function generateQuest(npcId, registry) {
         q.mainQuestGiven = true;
         registry.set('quest', q);
     } else {
-        // Фильтруем задания, которые уже есть у игрока (не выдаем дубликаты)
-        const availableTypes = pool.quests.filter(t => {
+    // Фильтруем задания, которые уже есть у игрока (не выдаем дубликаты).
+    // Раунд 22: просроченные поручения тоже освобождают слот.
+    const availableTypes = pool.quests.filter(t => {
             if (t === QUEST_TYPES.ICON_RETURN && q.mainQuestGiven) return false;
-            return !activeQuests.some(aq => aq.type === t && !aq.completed);
+            return !activeQuests.some(aq => aq.type === t && !aq.completed && !aq.failed);
         });
         if (availableTypes.length === 0) return null; // нет доступных заданий
         questType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
@@ -390,11 +455,13 @@ export function generateQuest(npcId, registry) {
     // Награды
     const rewards = generateRewards(npcId, questType, pool.rewardScale);
 
-    // Время на выполнение: baseTime + случайная добавка
-    // Учитывает: подготовку (0-1 ход), дорогу (1-2 хода), выполнение (baseTime)
-    const prepTime = Math.floor(Math.random() * 2);
-    const travelTime = 1 + Math.floor(Math.random() * 2);
-    const timeLimit = template.baseTime + prepTime + travelTime;
+    // Время на выполнение: раунд 22, сверка проходимости (п.15).
+    // Реальный путь: дорога к развилке (1) + до цели (1-2) + обратно (1)
+    // + вход в дом (1) + разговоры. Старые лимиты (3-7 действий) были
+    // НЕПРОХОДИМЫ для дальних целей — поручения сгорали на обратном пути.
+    const FAR_LOCATIONS = ['lake', 'pogost', 'mill', 'apiary', 'pasture', 'road'];
+    const travelExtra = FAR_LOCATIONS.includes(template.location) ? 2 : 0;
+    const timeLimit = template.baseTime + 6 + travelExtra;
 
     const quest = {
         id: 'quest_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
@@ -510,6 +577,7 @@ export function grantQuestRewards(registry, quest) {
     if (!quest || !quest.rewards) return [];
     
     const player = registry.get('player');
+    const q = registry.get('quest') || {};
     const grantedRewards = [];
 
     quest.rewards.forEach(reward => {
@@ -533,10 +601,10 @@ export function grantQuestRewards(registry, quest) {
             }
             grantedRewards.push(`${reward.name} ×${reward.count}`);
         } else if (reward.type === 'lodging') {
-            // Полное восстановление HP/MP
-            player.HP = player.HPmax;
-            player.MP = player.MPmax;
-            grantedRewards.push('Бесплатный ночлег (полное восстановление)');
+            // Раунд 22: ночлег теперь ваучер — им можно воспользоваться,
+            // отдохнув в таверне (8 часов, бесплатно).
+            q.freeLodging = (q.freeLodging || 0) + 1;
+            grantedRewards.push('Ваучер: бесплатный ночлег в таверне (8 часов)');
         } else if (reward.type === 'blessing') {
             player.HP = player.HPmax;
             player.MP = player.MPmax;
@@ -545,16 +613,17 @@ export function grantQuestRewards(registry, quest) {
     });
 
     registry.set('player', player);
+    registry.set('quest', q); // ваучеры ночлега хранятся в quest
     ActionLog.add(registry, `Награда за «${quest.title}»: ${grantedRewards.join(', ')}.`);
     return grantedRewards;
 }
 
 /**
- * Получить список активных (не выполненных) заданий.
+ * Получить список активных (не выполненных и не просроченных) заданий.
  */
 export function getActiveQuests(registry) {
     const q = registry.get('quest') || {};
-    return (q.activeQuests || []).filter(q => q.accepted && !q.completed);
+    return (q.activeQuests || []).filter(q => q.accepted && !q.completed && !q.failed);
 }
 
 /**

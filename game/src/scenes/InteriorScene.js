@@ -7,7 +7,7 @@ import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js';
 import { ActionLog } from '../data/actionLog.js';
-import { checkGameEnd, askMoneyForHelp, askElderAdvance } from '../data/thief.js';
+import { checkGameEnd, askMoneyForHelp, askElderAdvance, isChaseActive } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
 import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion, onLocationVisited } from '../data/questGenerator.js';
 import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
@@ -213,6 +213,9 @@ export class InteriorScene extends Phaser.Scene {
             if (interior.id === 'tavern') {
                 buttons.push({ label: t('\u{1F37B} Угостить (20\u0434)'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.treatEveryone(interior) });
                 buttons.push({ label: t('\u{1F6D2} Купить еды'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showTavernShop() });
+                // Раунд 22 (п.10/12): отдых в таверне — 1 час (частичное лечение)
+                // или 8 часов (полное восстановление)
+                buttons.push({ label: t('\u{1F6CF} Отдых'), bg: 0x4a3a5a, hover: 0x5a4a6a, cb: () => this.showTavernRestMenu(interior) });
                 // Раунд 12: свой тюк, оставленный на сохранение у тавернщика
                 buttons.push({ label: t('\u{1F392} Мой тюк'), bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('tavern') });
             } else if (interior.id === 'blacksmith') {
@@ -743,14 +746,15 @@ export class InteriorScene extends Phaser.Scene {
      */
     showTavernShop() {
         const player = this.registry.get('player');
-        // Список товаров с учётом репутации (п.13.2: скидки при высокой репутации)
+        // Список товаров с учётом репутации (п.13.2: скидки при высокой репутации).
+        // Раунд 22: «Ночлег» убран из лавки — отдых теперь живёт в меню «Отдых»
+        // (1 час / 8 часов), чтобы время реально текло, пока герой спит.
         const priceMod = getPriceModifier(this.registry, 'tavernkeeper');
         const items = [
             { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: '+2 HP', heal: 2, mpHeal: 0 },
             { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: '+3 HP', heal: 3, mpHeal: 0 },
             { id: 'mead', name: 'Медовуха', price: Math.max(1, Math.round(4 * priceMod)), effect: '+2 MP', heal: 0, mpHeal: 2 },
             { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: '+1 MP', heal: 0, mpHeal: 1 },
-            { id: 'rest', name: 'Ночлег', price: Math.max(1, Math.round(15 * priceMod)), effect: 'Полное восстановление', heal: 999, mpHeal: 999 },
         ];
 
         const { width, height } = this.scale;
@@ -813,6 +817,121 @@ export class InteriorScene extends Phaser.Scene {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
             fontSize: 16, padding: { left: 20, right: 20, top: 10, bottom: 10 },
         }).setDepth(202);
+    }
+
+    /**
+     * Раунд 22 (п.10/12): ОТДЫХ В ТАВЕРНЕ.
+     * - Отдых 1 час (4 д.) — лечение около трети здоровья и Воли;
+     * - Ночлег 8 часов (12 д.) — ПОЛНОЕ восстановление здоровья и Воли;
+     * - по ваучеру «Бесплатный ночлег» (награда за поручения) — 8 часов бесплатно.
+     * Время реально течёт: во время погони за вором сон — дорогое решение.
+     */
+    showTavernRestMenu(interior) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        const q = this.registry.get('quest') || {};
+        const hasVoucher = (q.freeLodging || 0) > 0;
+        const chaseActive = isChaseActive(this.registry);
+
+        const voucherLine = hasVoucher
+            ? '\n' + tf(t('🎟 У тебя есть ваучер «Бесплатный ночлег» (осталось: {0}) — ночлег будет бесплатным.'), q.freeLodging)
+            : '';
+        const warning = chaseActive
+            ? '\n\n' + t('⚠ ВНИМАНИЕ: погоня за вором продолжается! Пока ты спишь, вор уйдёт далеко. Отдых лучше отложить до победы.')
+            : '';
+
+        this.busyDialog = true;
+        createDialog(this, t('🛏 Отдых в таверне'),
+            t('Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Отдохнёшь — силы вернутся.»')
+            + voucherLine + warning,
+            [
+                {
+                    text: t('Отдохнуть 1 час (4 д.) — лечение ~1/3'),
+                    callback: () => { this.busyDialog = false; this.restInTavern(interior, 1); },
+                },
+                {
+                    text: t('Ночлег 8 часов (12 д.) — полное восстановление'),
+                    callback: () => { this.busyDialog = false; this.restInTavern(interior, 8); },
+                },
+                {
+                    text: t('Не сейчас'),
+                    callback: () => { this.busyDialog = false; },
+                },
+            ],
+            { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 25 });
+    }
+
+    /**
+     * Раунд 22: выполнить отдых в таверне (см. showTavernRestMenu).
+     * 1 час лечит ~1/3 HP и Воли, 8 часов восстанавливают всё; ваучер
+     * «Бесплатный ночлег» покрывает 8-часовой ночлег.
+     */
+    restInTavern(interior, hours) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        const q = this.registry.get('quest') || {};
+        const cost = hours >= 8 ? 12 : 4;
+        const free = hours >= 8 && (q.freeLodging || 0) > 0;
+
+        if (!free && (player.dengas || 0) < cost) {
+            createDialog(this, t('🛏 Отдых'),
+                tf(t('Не хватает денег: нужно {0} д., а у тебя {1}.'), cost, player.dengas || 0),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait });
+            return;
+        }
+
+        this.busyDialog = true;
+        this.cameras.main.fadeOut(600, 0, 0, 0);
+        this.time.delayedCall(650, () => {
+            if (free) {
+                q.freeLodging = (q.freeLodging || 1) - 1;
+                this.registry.set('quest', q);
+            } else {
+                player.dengas = (player.dengas || 0) - cost;
+            }
+
+            // Время реально течёт (8 часов = 32 тика погони!)
+            tickTime(this.registry, hours * 60);
+
+            let effectText;
+            if (hours >= 8) {
+                player.HP = player.HPmax;
+                player.MP = player.MPmax;
+                effectText = t('Здоровье и Воля восстановлены ПОЛНОСТЬЮ.');
+            } else {
+                const heal = Math.max(3, Math.round((player.HPmax || 10) * 0.34));
+                const mp = Math.max(1, Math.round((player.MPmax || 4) * 0.34));
+                player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
+                player.MP = Math.min(player.MPmax || player.MP + mp, player.MP + mp);
+                effectText = tf(t('Здоровье +{0}, Воля +{1}.'), heal, mp);
+            }
+            this.registry.set('player', player);
+            this.updateHUD();
+            if (this.audioManager) this.audioManager.playSound('sfx_heal');
+            ActionLog.add(this.registry, free
+                ? tf(t('Отдохнул в таверне по ваучеру ({0} ч). {1}'), hours, effectText)
+                : tf(t('Отдохнул в таверне ({0} ч) за {1} д. {2}'), hours, cost, effectText));
+            this.cameras.main.fadeIn(600, 0, 0, 0);
+
+            const end = checkGameEnd(this.registry);
+            if (end === 'defeat_thief_escaped') {
+                createDialog(this, t('😴 Отдых окончен'),
+                    t('Ты выспался, сил — не меряно... но пока ты спал, вор успел скрыться из вида!'),
+                    [{ text: t('Итоги похода'), callback: () => this.scene.start('End') }],
+                    { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
+            } else if (end) {
+                this.scene.start('End');
+            } else {
+                createDialog(this, t('😴 Отдых окончен'),
+                    (free
+                        ? tf(t('Ты провёл в постели {0} ч (по ваучеру). {1}'), hours, effectText)
+                        : tf(t('Ты провёл в постели {0} ч. {1}'), hours, effectText))
+                    + (player && (player.HP >= player.HPmax) ? '\n' + t('Ты полон сил!') : ''),
+                    [{ text: t('Встать'), callback: () => { this.busyDialog = false; } }],
+                    { singleton: false, portraitKey: (this.npcData && this.npcData.portrait) || interior.portrait, typing: true, typingSpeed: 25 });
+            }
+        });
     }
 
     /**

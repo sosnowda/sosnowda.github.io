@@ -537,6 +537,78 @@ const EN = {
     'путница': 'traveller (f)',
     'Ты уже прочитал следы в этой местности.\nНовых здесь не найти.':
         'You have already read the tracks in this area.\nThere is nothing new to find here.',
+
+    // ----- Раунд 22: три локации, одноразовые следы и расспросы, благословение -----
+    'ПОРАЖЕНИЕ: вор покинул последнюю локацию и скрылся из вида. След ведёт за околицу.':
+        'DEFEAT: the thief left the last location and vanished from sight. The trail leads out of the village bounds.',
+    'Ты уже обследовал следы здесь. Больше из них ничего не выжать — придётся искать вора в других местах.':
+        'You have already examined the tracks here. Nothing more to squeeze out of them — you will have to look for the thief elsewhere.',
+    'Вор был здесь! Следы ведут в сторону «{0}».':
+        'The thief was here! The tracks lead towards "{0}".',
+    'По свежести примятой травы ясно: вор сейчас на дороге к «{0}»!':
+        'By the freshness of the trampled grass you can tell: the thief is right now on the road to "{0}"!',
+    'Судя по свежести следов, вор сейчас где-то у «{0}»!':
+        'Judging by how fresh the tracks are, the thief is somewhere near "{0}" right now!',
+    'Кто-то здесь проходил — видны примятые травы, но разобрать следы не вышло. Больше следы здесь не обследовать: придётся искать вора ВСЛЕПУЮ — обходить локации или расспрашивать других селян.':
+        'Someone passed here — the grass is trampled, but you could not make out the tracks. These tracks cannot be examined again: you will have to search for the thief BLIND — checking locations one by one or questioning other villagers.',
+    'Я уже всё тебе рассказал. Больше не знаю ничего — спроси у других людей.':
+        'I have told you everything I know. Ask other folk — I know nothing more.',
+    'Вор не стал испытывать судьбу: он бежал в другое место и затаился там. У тебя появилось немного больше времени, но искать нужно заново.':
+        'The thief would not tempt fate twice: he ran to another place and went to ground there. You have a little more time now, but the search starts anew.',
+    '✨ Благословение батюшки окрыляет: +10 к шансу этой проверки (единственный раз).':
+        '✨ The priest\'s blessing lifts you: +10 to this check\'s chance (one time only).',
+    '⌛ Поручение «{0}» просрочено! Срок вышел, а дело не сделано.':
+        '⌛ The errand "{0}" has expired! The deadline passed and the deed was not done.',
+    'Ваучер: бесплатный ночлег в таверне (8 часов)':
+        'Voucher: a free night\'s lodging at the tavern (8 hours)',
+
+    // ----- Раунд 22: благословение в церкви -----
+    '🙏 Попросить благословения': '🙏 Ask for a blessing',
+    'Батюшка качает головой: «Ты уже под защитой Господней, чадо. Благословение исполнится при первом же испытании — не гневи Боженьку жадностью.»':
+        'The priest shakes his head: "You are already under God\'s protection, my child. The blessing will come true at your first trial — do not anger the Lord with greed."',
+    'Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ Благословение: СЛЕДУЮЩАЯ проверка навыка (следы, расспрос, убеждение, оглушение или удар) пройдёт с +10 к шансу — но только одна!':
+        'The priest lays his hand on your head and whispers a prayer. Warmth spreads over your shoulders.\n\n✨ Blessing: your NEXT skill check (tracks, questioning, persuasion, knock-out or a strike) gets +10 to its chance — but only one!',
+    'Получил благословение в церкви: +10 к одной проверке навыка.':
+        'Received a blessing at the church: +10 to one skill check.',
+    'Аминь.': 'Amen.',
+    'Спросить про вора': 'Ask about the thief',
+    'Попросить денег': 'Ask for money',
+    'Что нового в деревне?': 'What is new in the village?',
+    'Спасибо, я пойду.': 'Thank you, I will be going.',
+    'Спасибо за новости.': 'Thank you for the news.',
+    'Что с коровой?': 'What about the cow?',
+    'Сочувствую. Прощай.': 'My sympathies. Farewell.',
+    'Найдётся ваша корова.': 'Your cow will be found.',
+    'Помолюсь.': 'I will pray.',
+    'Прощайте.': 'Farewell.',
+    'Извините, я спешу.': 'Forgive me, I am in a hurry.',
+    'Расскажи про украденную икону': 'Tell me about the stolen icon',
+    'Спасибо, батюшка.': 'Thank you, father.',
+    'Не сейчас': 'Not now',
+
+    // ----- Раунд 22: отдых в таверне (п.10/12) -----
+    '🛏 Отдых': '🛏 Rest',
+    '🛏 Отдых в таверне': '🛏 Rest at the tavern',
+    'Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Отдохнёшь — силы вернутся.»':
+        'Fyodor wipes the counter: "The room is clean, the hay is fresh. Rest a while and your strength will return."',
+    '🎟 У тебя есть ваучер «Бесплатный ночлег» (осталось: {0}) — ночлег будет бесплатным.':
+        '🎟 You hold a "Free lodging" voucher ({0} left) — your night\'s stay will be free.',
+    '⚠ ВНИМАНИЕ: погоня за вором продолжается! Пока ты спишь, вор уйдёт далеко. Отдых лучше отложить до победы.':
+        '⚠ WARNING: the chase for the thief is still on! While you sleep, the thief will get far away. Better postpone your rest until after the victory.',
+    'Отдохнуть 1 час (4 д.) — лечение ~1/3': 'Rest for 1 hour (4 d.) — heal ~1/3',
+    'Ночлег 8 часов (12 д.) — полное восстановление': 'Lodge for 8 hours (12 d.) — full recovery',
+    'Не хватает денег: нужно {0} д., а у тебя {1}.': 'Not enough money: {0} d. is needed, but you have {1}.',
+    '😴 Отдых окончен': '😴 Rest is over',
+    'Ты выспался, сил — не меряно... но пока ты спал, вор успел скрыться из вида!':
+        'You slept soundly, bursting with strength... but while you slept, the thief managed to vanish from sight!',
+    'Встать': 'Rise',
+    'Ты провёл в постели {0} ч (по ваучеру). {1}': 'You spent {0} h in bed (on a voucher). {1}',
+    'Ты провёл в постели {0} ч. {1}': 'You spent {0} h in bed. {1}',
+    'Здоровье и Воля восстановлены ПОЛНОСТЬЮ.': 'Health and Will have been FULLY restored.',
+    'Здоровье +{0}, Воля +{1}.': 'Health +{0}, Will +{1}.',
+    'Ты полон сил!': 'You are full of strength!',
+    'Отдохнул в таверне по ваучеру ({0} ч). {1}': 'Rested at the tavern on a voucher ({0} h). {1}',
+    'Отдохнул в таверне ({0} ч) за {1} д. {2}': 'Rested at the tavern ({0} h) for {1} d. {2}',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----
