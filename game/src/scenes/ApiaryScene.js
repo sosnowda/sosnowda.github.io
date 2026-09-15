@@ -64,6 +64,15 @@ export class ApiaryScene extends Phaser.Scene {
         this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
         this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
 
+        // Раунд 20: бесконечная трава за границами мира (пасека) —
+        // при RESIZE окно бывает шире мира, иначе по краям пустота фона.
+        if (this.textures.exists('tile_grass_0')) {
+            const pad = 2000;
+            const back = this.add.tileSprite(-pad, -pad, WORLD_W + pad * 2, WORLD_H + pad * 2, 'tile_grass_0')
+                .setOrigin(0, 0).setDepth(-10);
+            back.setTileScale(1.5, 1.5);
+        }
+
         this.solids = this.physics.add.staticGroup();
         this.hiveEntries = [];
         this.hiveByTile = new Map();

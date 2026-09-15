@@ -34,6 +34,15 @@ export class VillageScene extends Phaser.Scene {
         this.worldW = MAP_W * ts;
         this.worldH = MAP_H * ts;
 
+        // Раунд 20: бесконечная трава за границами мира — при RESIZE окно
+        // бывает ШИРЕ мира (1248px), иначе по краям видна пустота фона.
+        if (this.textures.exists('tile_grass_0')) {
+            const pad = 2000;
+            const back = this.add.tileSprite(-pad, -pad, this.worldW + pad * 2, this.worldH + pad * 2, 'tile_grass_0')
+                .setOrigin(0, 0).setDepth(-10);
+            back.setTileScale(1.5, 1.5); // 32px текстура → 48px тайл, как в мире
+        }
+
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.dialogue = new DialogueRunner(this);
