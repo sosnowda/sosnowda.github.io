@@ -11,6 +11,7 @@ import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
+import { t, tf } from '../systems/i18n.js';
 
 const LOCATION_BG = {
     forest: 0x1a2a1a,
@@ -86,11 +87,11 @@ export class LocationScene extends Phaser.Scene {
         // ----- HUD -----
         const player = this.registry.get('player');
         const q = this.registry.get('quest') || {};
-        this.add.text(16, 12, `❤ ${player.HP}/${player.HPmax}   ✦ Воля ${player.MP}/${player.MPmax}   ⚔ Меч ${player.skills.sword}%`, {
+        this.add.text(16, 12, `❤ ${player.HP}/${player.HPmax}   ${t('✦ Воля')} ${player.MP}/${player.MPmax}   ${t('⚔ Меч')} ${player.skills.sword}%`, {
             fontSize: '14px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
         }).setDepth(100);
-        this.turnsText = this.add.text(16, 40, `⏳ Ходов: ${state.turnsLeft}`, {
+        this.turnsText = this.add.text(16, 40, tf('⏳ Ходов: {0}', state.turnsLeft), {
             fontSize: '14px', color: state.turnsLeft <= 3 ? '#ff4040' : '#ff8060',
             backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
@@ -108,7 +109,7 @@ export class LocationScene extends Phaser.Scene {
         // ----- Состояние поиска -----
         const alreadySearched = state.locationsSearched.includes(this.locationId);
         if (alreadySearched) {
-            this.add.text(width / 2, height * 0.4, 'Ты уже обыскивал эту местность.\nНовых следов здесь не найти.', {
+            this.add.text(width / 2, height * 0.4, t('Ты уже обыскивал эту местность.\nНовых следов здесь не найти.'), {
                 fontSize: '18px', color: RUS.textDim, align: 'center',
                 fontFamily: 'Georgia, serif',
                 stroke: '#000', strokeThickness: 2,
@@ -120,12 +121,12 @@ export class LocationScene extends Phaser.Scene {
         // Для остальных: «Искать следы» и «Назад к развилке».
         const isRiver = this.locationId === 'river';
         const isRoad = this.locationId === 'road' || this.locationId === 'road_south';
-        const searchLabel = isRiver ? '🔍 Поиск' : (isRoad ? '🔍 Осмотр' : '🔍 Искать следы');
-        const exitLabel = (isRiver || isRoad) ? '🚪 Выход' : '◀ Назад к развилке';
+        const searchLabel = isRiver ? t('🔍 Поиск') : (isRoad ? t('🔍 Осмотр') : t('🔍 Искать следы'));
+        const exitLabel = (isRiver || isRoad) ? t('🚪 Выход') : t('◀ Назад к развилке');
 
         // ----- Кнопка поиска/осмотра -----
         if (!alreadySearched) {
-            createButton(this, width / 2, height - 100, `${searchLabel} (проверка Внимательности)`, () => {
+            createButton(this, width / 2, height - 100, tf('{0} (проверка Внимательности)', searchLabel), () => {
                 this.doSearch();
             }, {
                 backgroundColor: RUS.accent, hoverColor: RUS.accentLight, textColor: RUS.text,
@@ -732,7 +733,7 @@ export class LocationScene extends Phaser.Scene {
      */
     doSearch() {
         const result = searchLocation(this.registry, this.locationId);
-        this.turnsText.setText(`⏳ Ходов: ${result.turnsLeft}`);
+        this.turnsText.setText(tf('⏳ Ходов: {0}', result.turnsLeft));
         if (result.turnsLeft <= 3) this.turnsText.setColor('#ff4040');
         else if (result.turnsLeft <= 6) this.turnsText.setColor('#ffaa40');
 
@@ -744,11 +745,11 @@ export class LocationScene extends Phaser.Scene {
 
         // Показать результат поиска через диалог
         const loc = FORK_LOCATIONS.find(l => l.id === this.locationId);
-        const title = result.found ? '✨ Следы найдены!' : '🔍 Поиск следов';
+        const title = result.found ? t('✨ Следы найдены!') : t('🔍 Поиск следов');
 
         createDialog(this, title, result.message, [
             {
-                text: result.found ? 'Погоня!' : 'Продолжить',
+                text: result.found ? t('Погоня!') : t('Продолжить'),
                 callback: () => {
                     if (result.found) {
                         // Переход к бою с вором

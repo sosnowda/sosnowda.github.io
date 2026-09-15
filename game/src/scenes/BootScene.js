@@ -201,6 +201,18 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
+        // ----- Раунд 15: восстанавливаем аудио-настройки из localStorage -----
+        // (пишет их Title-панель настроек; AudioManager всех сцен читает settings.audio.*)
+        try {
+            const raw = JSON.parse(localStorage.getItem('gameSettings') || '{}');
+            if (raw && raw.audio) {
+                if (typeof raw.audio.musicMuted === 'boolean') this.registry.set('settings.audio.musicMuted', raw.audio.musicMuted);
+                if (typeof raw.audio.sfxMuted === 'boolean') this.registry.set('settings.audio.sfxMuted', raw.audio.sfxMuted);
+                if (typeof raw.audio.musicVolume === 'number') this.registry.set('settings.audio.musicVolume', raw.audio.musicVolume);
+                if (typeof raw.audio.sfxVolume === 'number') this.registry.set('settings.audio.sfxVolume', raw.audio.sfxVolume);
+            }
+        } catch (e) { /* noop */ }
+
         // ----- Создаём walk-анимации для каждого персонажа -----
         this.createWalkAnimations('player');
         this.createWalkAnimations('npc_elder');
@@ -304,6 +316,17 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(0x3f6b2f, 1);
         g.fillRect(2, 6, 2, 2); g.fillRect(5, 4, 2, 4); g.fillRect(11, 3, 2, 5);
         g.generateTexture('deco_grass_tuft', 14, 8);
+
+        // ===== Раунд 15: снежная наметь (26×10) — зимняя стилизация травы =====
+        g.clear();
+        g.fillStyle(0xf0f4fa, 0.95);
+        g.fillEllipse(13, 6, 26, 9);
+        g.fillStyle(0xffffff, 1);
+        g.fillEllipse(10, 5, 14, 6);
+        g.fillEllipse(19, 6, 8, 4);
+        g.fillStyle(0xdce8f4, 0.9);
+        g.fillEllipse(13, 9, 22, 3);
+        g.generateTexture('deco_snow_patch', 26, 12);
 
         // ============================================================
         // РАУНД 12: пруд, причал, костёр, крест, камыш

@@ -2,19 +2,15 @@
 // Каждый сундук: id, координаты тайла (обязательно проходимые '.' — проверено
 // validateMap-логикой вручную), подпись, таблица лута и редкость.
 // Открывается один раз в игровой день: в q.chestsOpened хранится [{id, day}].
-//
-// Позиции подобраны по карте buildMap() (26×18):
-//   (9, 6)   — сбоку таверны, между домом старосты и tavern (трава '.'),
-//   (21, 3)  — за амбаром с севера (трава '.', южнее — дорожная лента),
-//   (11, 10) — у колодца (колодец 'W' в (10,10), тюк «обронён» рядом),
-//   (20, 14) — за церковью (трава '.', рядом дерево (22,14)) — редкий ларец.
+// Раунд 15: подписи локализованы (i18n).
+import { t, tf } from '../systems/i18n.js';
 
 export const CHESTS = [
     {
         id: 'tavern_side',
         col: 9,
         row: 6,
-        label: 'Сундук у таверны',
+        label: t('Сундук у таверны'),
         rare: false,
         // Путники обронили мелочь
         loot: [
@@ -26,7 +22,7 @@ export const CHESTS = [
         id: 'barn_back',
         col: 21,
         row: 3,
-        label: 'Сундук за амбаром',
+        label: t('Сундук за амбаром'),
         rare: false,
         // Работник амбара держит тут припасы
         loot: [
@@ -38,7 +34,7 @@ export const CHESTS = [
         id: 'well_bundle',
         col: 11,
         row: 10,
-        label: 'Тюк у колодца',
+        label: t('Тюк у колодца'),
         rare: false,
         // Кто-то обронил узелок у колодца
         loot: [
@@ -50,7 +46,7 @@ export const CHESTS = [
         id: 'church_relic',
         col: 20,
         row: 14,
-        label: 'Позолоченный ларец',
+        label: t('Позолоченный ларец'),
         rare: true,
         // Редкий ларец за церковью — заметная награда
         loot: [
@@ -71,7 +67,7 @@ export function chestAt(col, row) {
 export const STASHES = {
     tavern: {
         id: 'stash_tavern',
-        label: 'твой тюк за лавкой',
+        label: t('твой тюк за лавкой'),
         // У тавернщика на сохранении: перекус и мелочь на дорогу
         loot: [
             { kind: 'apple', weight: 5 },
@@ -80,7 +76,7 @@ export const STASHES = {
     },
     barn: {
         id: 'stash_barn',
-        label: 'твой узел в углу амбара',
+        label: t('твой узел в углу амбара'),
         // Работничий узел: хлеб да несколько монет за смену
         loot: [
             { kind: 'apple', weight: 6 },
@@ -122,9 +118,9 @@ export function rollLoot(chest) {
 // Человекочитаемое имя предмета (для всплывающего текста и лога)
 export function lootDisplayName(loot, amount) {
     switch (loot.kind) {
-        case 'money': return `+${amount} денги`;
-        case 'apple': return 'Яблоко: +2 ❤';
-        case 'icon_scrap': return 'Медная иконка: +1 ⭐';
-        default: return 'Пусто';
+        case 'money': return tf('+{0} денги', amount);
+        case 'apple': return t('Яблоко: +2 ❤');
+        case 'icon_scrap': return t('Медная иконка: +1 ⭐');
+        default: return t('Пусто');
     }
 }

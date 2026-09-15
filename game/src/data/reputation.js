@@ -1,5 +1,7 @@
 // Система репутации для «Летописи Руси».
-// 
+//
+// Раунд 15: названия уровней репутации локализованы (i18n).
+import { t } from '../systems/i18n.js';
 // Два уровня репутации:
 // 1. Деревенская репутация (villageRep): -100..+100 — общее мнение деревни об игроке.
 // 2. Личная репутация у каждого NPC (npcRep[npcId]): -100..+100.
@@ -71,14 +73,14 @@ export function getNpcRep(registry, npcId) {
 }
 
 export function getReputationLevel(rep) {
-    if (rep >= 100) return { level: 'kin', name: 'свой человек', color: '#40ff40' };
-    if (rep >= 50) return { level: 'friend', name: 'друг деревни', color: '#60ff60' };
-    if (rep >= 10) return { level: 'respected', name: 'уважаемый', color: '#a0e060' };
-    if (rep >= 0) return { level: 'neutral', name: 'нейтральный', color: '#c0c0c0' };
-    if (rep >= -29) return { level: 'disliked', name: 'нелюбимый', color: '#ffa040' };
-    if (rep >= -49) return { level: 'unwanted', name: 'нежеланный', color: '#ff8040' };
-    if (rep >= -79) return { level: 'shunned', name: 'отверженный', color: '#ff6040' };
-    return { level: 'enemy', name: 'враг', color: '#ff2020' };
+    if (rep >= 100) return { level: 'kin', name: t('свой человек'), color: '#40ff40' };
+    if (rep >= 50) return { level: 'friend', name: t('друг деревни'), color: '#60ff60' };
+    if (rep >= 10) return { level: 'respected', name: t('уважаемый'), color: '#a0e060' };
+    if (rep >= 0) return { level: 'neutral', name: t('нейтральный'), color: '#c0c0c0' };
+    if (rep >= -29) return { level: 'disliked', name: t('нелюбимый'), color: '#ffa040' };
+    if (rep >= -49) return { level: 'unwanted', name: t('нежеланный'), color: '#ff8040' };
+    if (rep >= -79) return { level: 'shunned', name: t('отверженный'), color: '#ff6040' };
+    return { level: 'enemy', name: t('враг'), color: '#ff2020' };
 }
 
 // === ИЗМЕНЕНИЕ РЕПУТАЦИИ (п.12: повышение медленное, понижение быстрое) ===

@@ -11,6 +11,7 @@ import { ActionLog } from '../data/actionLog.js';
 import { winGame, loseHeroDead } from '../data/thief.js';
 import { getTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals } from '../systems/Weather.js';
+import { t, tf } from '../systems/i18n.js';
 
 export class CombatScene extends Phaser.Scene {
     constructor() {
@@ -103,7 +104,7 @@ export class CombatScene extends Phaser.Scene {
                 duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
                 delay: i * 200,
             });
-            const nm = this.add.text(sp.x, sp.y + 90, e.name, {
+            const nm = this.add.text(sp.x, sp.y + 90, t(e.name), {
                 fontSize: '15px', color: '#ffb3a0',
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(20);
@@ -119,7 +120,7 @@ export class CombatScene extends Phaser.Scene {
 
         this.createActions();
         this.drawBars();
-        this.pushLog('Бой начинается! Приготовься, путник.');
+        this.pushLog(t('Бой начинается! Приготовься, путник.'));
 
         // ----- Overlay дня/ночи (п.5) -----
         const timeState = getTime(this.registry);
@@ -152,17 +153,17 @@ export class CombatScene extends Phaser.Scene {
         const equipped = this.player.weapon || WEAPONS.fists;
         const equippedKey = equipped.id || 'fists';
         const acts = [
-            { label: `⚔ ${equipped.name}`, cb: () => this.playerAttack(equippedKey),
+            { label: `⚔ ${t(equipped.name)}`, cb: () => this.playerAttack(equippedKey),
               bg: RUS.accent, hover: RUS.accentLight },
         ];
         if (equipped.id !== 'fists') {
-            acts.push({ label: '🤜 Кулаками', cb: () => this.playerAttack('fists'),
+            acts.push({ label: t('🤜 Кулаками'), cb: () => this.playerAttack('fists'),
               bg: 0x6a5a40, hover: 0x7a6a50 });
         }
         acts.push(
-            { label: 'Уклон', cb: () => this.dodge(), bg: 0x4a6a4a, hover: 0x5a7a5a },
-            { label: 'Трава', cb: () => this.useHerb(), bg: 0x6a5a2a, hover: 0x7a6a3a },
-            { label: '🏃 Бежать', cb: () => this.flee(), bg: 0x2a2a5a, hover: 0x3a3a6a },
+            { label: t('Уклон'), cb: () => this.dodge(), bg: 0x4a6a4a, hover: 0x5a7a5a },
+            { label: t('Трава'), cb: () => this.useHerb(), bg: 0x6a5a2a, hover: 0x7a6a3a },
+            { label: t('🏃 Бежать'), cb: () => this.flee(), bg: 0x2a2a5a, hover: 0x3a3a6a },
         );
         // Равномерная раскладка по центру (4 или 5 кнопок)
         const gap = 160;
@@ -182,7 +183,7 @@ export class CombatScene extends Phaser.Scene {
         this.busy = true;
 
         if (res.result === 'critical' || res.result === 'success') {
-            this.pushLog(`Ты успешно бежал с поля боя (бросок ${res.roll})!`);
+            this.pushLog(tf('Ты успешно бежал с поля боя (бросок {0})!', res.roll));
             if (this.audioManager) this.audioManager.playSwordMiss();
             // Тратим 2 хода за побег (вор ближе к побегу)
             const q = this.registry.get('quest') || {};
@@ -200,7 +201,7 @@ export class CombatScene extends Phaser.Scene {
                 }
             });
         } else {
-            this.pushLog(`Не удалось сбежать (бросок ${res.roll})! Враг атакует.`);
+            this.pushLog(tf('Не удалось сбежать (бросок {0})! Враг атакует.', res.roll));
             if (this.audioManager) this.audioManager.playDamageTaken();
             // Тратим 1 ход за неудачный побег
             const q = this.registry.get('quest') || {};
@@ -348,14 +349,14 @@ export class CombatScene extends Phaser.Scene {
         this.playLunge(this.playerSprite, targetSprite, () => {
             // Обработка результата после подхода
             if (res.result === ROLL_RESULT.FAIL || res.result === ROLL_RESULT.FUMBLE) {
-                this.pushLog(`${w.name}: ${res.roll} — промах!`);
+                this.pushLog(`${t(w.name)}: ${res.roll} — ${t('промах!')}`);
                 this.playHitEffect(targetSprite.x, targetSprite.y, 'dust');
                 if (this.audioManager) this.audioManager.playSwordMiss();
             } else {
                 const tw = this.enemySprites.find(x => x.combatant === target);
                 const dodgeRes = skillCheck(target.dodge);
                 if (dodgeRes.result === ROLL_RESULT.SUCCESS || dodgeRes.result === ROLL_RESULT.CRITICAL) {
-                    this.pushLog(`${target.name} уклонился от удара (${dodgeRes.roll}).`);
+                    this.pushLog(tf('{0} уклонился от удара ({1}).', t(target.name), dodgeRes.roll));
                     this.playHitEffect(targetSprite.x, targetSprite.y, 'dust');
                     if (this.audioManager) this.audioManager.playSwordMiss();
                 } else {
@@ -373,7 +374,7 @@ export class CombatScene extends Phaser.Scene {
                     this.time.delayedCall(80, () => tw.sprite.clearTint());
 
                     createFloatingText(this, tw.sprite.x, tw.sprite.y - 60, `-${actualDmg}`, '#ff6b5a');
-                    this.pushLog(`${w.name}: попадание! Урон ${actualDmg}${absorbed > 0 ? ` (бронь ${absorbed})` : ''} (бросок ${res.roll})${isCrit ? ' [КРИТ!]' : ''}${res.special ? ' [ОСОБЫЙ!]' : ''}.`);
+                    this.pushLog(tf('{0}: попадание! Урон {1}{2} (бросок {3}){4}{5}.', t(w.name), actualDmg, absorbed > 0 ? tf(' (бронь {0})', absorbed) : '', res.roll, isCrit ? t(' [КРИТ!]') : '', res.special ? t(' [ОСОБЫЙ!]') : ''));
 
                     if (isCrit) {
                         this.playCritEffect(tw.sprite.x, tw.sprite.y);
@@ -385,7 +386,7 @@ export class CombatScene extends Phaser.Scene {
                     this.cameras.main.shake(120, isCrit ? 0.010 : 0.005);
 
                     if (target.HP <= 0) {
-                        this.pushLog(`${target.name} повержен!`);
+                        this.pushLog(tf('{0} повержен!', t(target.name)));
                         tw.sprite.setAlpha(0.4);
                         // Эффект "падения"
                         this.tweens.add({
@@ -410,19 +411,19 @@ export class CombatScene extends Phaser.Scene {
 
     dodge() {
         this.playerDodging = true;
-        this.pushLog('Ты занимаешь оборонительную стойку, готовясь уклониться.');
+        this.pushLog(t('Ты занимаешь оборонительную стойку, готовясь уклониться.'));
         this.busy = true;
         this.time.delayedCall(500, () => this.enemyTurn());
     }
 
     useHerb() {
         const q = this.registry.get('quest');
-        if (!q.hasHerb) { this.pushLog('У тебя нет целебной травы.'); return; }
+        if (!q.hasHerb) { this.pushLog(t('У тебя нет целебной травы.')); return; }
         q.hasHerb = false;
         const heal = 3 + Math.floor(Math.random() * 4) + Math.floor(this.player.CON / 10);
         this.player.HP = Math.min(this.player.HPmax, this.player.HP + heal);
         createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `+${heal}`, '#7CFC00');
-        this.pushLog(`Ты принял траву и восстановил ${heal} здоровья.`);
+        this.pushLog(tf('Ты принял траву и восстановил {0} здоровья.', heal));
         if (this.audioManager) this.audioManager.playHeal();
         // Эффект исцеления — зелёные частицы
         const emitter = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
@@ -454,14 +455,14 @@ export class CombatScene extends Phaser.Scene {
 
                 this.playLunge(e.sprite, this.playerSprite, () => {
                     if (res.result === ROLL_RESULT.FAIL || res.result === ROLL_RESULT.FUMBLE) {
-                        this.pushLog(`${en.name}: ${res.roll} — промах.`);
+                        this.pushLog(tf('{0}: {1} — промах.', t(en.name), res.roll));
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'dust');
                         if (this.audioManager) this.audioManager.playSwordMiss();
                     } else {
                         if (this.playerDodging) {
                             const dr = skillCheck(this.player.skills.dodge);
                             if (dr.result === ROLL_RESULT.SUCCESS || dr.result === ROLL_RESULT.CRITICAL) {
-                                this.pushLog(`Ты уклонился от ${en.name} (${dr.roll})!`);
+                                this.pushLog(tf('Ты уклонился от {0} ({1})!', t(en.name), dr.roll));
                                 this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'dust');
                                 if (this.audioManager) this.audioManager.playSwordMiss();
                                 this.drawBars();
@@ -480,7 +481,7 @@ export class CombatScene extends Phaser.Scene {
                         this.time.delayedCall(80, () => this.playerSprite.clearTint());
 
                         createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `-${actualDmg}`, '#ff6b5a');
-                        this.pushLog(`${en.name} бьёт ${en.weapon.name}: урон ${actualDmg}${absorbed > 0 ? ` (бронь ${absorbed})` : ''} (${res.roll})${res.special ? ' [ОСОБЫЙ!]' : ''}.`);
+                        this.pushLog(tf('{0} бьёт {1}: урон {2}{3} ({4}){5}.', t(en.name), t(en.weapon.name), actualDmg, absorbed > 0 ? tf(' (бронь {0})', absorbed) : '', res.roll, res.special ? t(' [ОСОБЫЙ!]') : ''));
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'blood');
                         if (this.audioManager) this.audioManager.playDamageTaken();
                         this.cameras.main.shake(120, 0.006);
@@ -499,7 +500,7 @@ export class CombatScene extends Phaser.Scene {
     afterEnemy() {
         this.busy = false;
         this.playerDodging = false;
-        this.pushLog('Твой ход.');
+        this.pushLog(t('Твой ход.'));
     }
 
     allDead() {
@@ -524,7 +525,7 @@ export class CombatScene extends Phaser.Scene {
         q.currentObjective = isThiefFight ? 'Победа! Икона возвращена!' : 'Враг повержен';
         this.autosave();
         this.busy = true;
-        this.pushLog(isThiefFight ? 'Вор повержен! Икона твоя!' : 'Враг повержен! Ты одержал победу.');
+        this.pushLog(isThiefFight ? t('Вор повержен! Икона твоя!') : t('Враг повержен! Ты одержал победу.'));
         if (this.audioManager) this.audioManager.playLevelUp();
         // Эффект победы — золотые частицы
         const emitter = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
@@ -558,7 +559,7 @@ export class CombatScene extends Phaser.Scene {
 
     endCombatDefeat() {
         this.busy = true;
-        this.pushLog('Ты пал в бою...');
+        this.pushLog(t('Ты пал в бою...'));
         // Если бой с вором — поражение в игре
         const isThiefFight = this.enemies.some(e => e.isThief) || this.npcId === 'thief';
         if (isThiefFight) {

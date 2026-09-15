@@ -11,6 +11,7 @@ import { getForkLocations } from '../data/mapLocations.js';
 import { getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { getWeather } from '../systems/Weather.js';
 import { getVillageName } from '../data/world.js';
+import { t, tf } from '../systems/i18n.js';
 
 export class ForkScene extends Phaser.Scene {
     constructor() {
@@ -37,13 +38,13 @@ export class ForkScene extends Phaser.Scene {
         }
 
         // ----- Заголовок -----
-        this.add.text(width / 2, 20, 'Околица деревни', {
+        this.add.text(width / 2, 20, t('Околица деревни'), {
             fontSize: '28px', color: RUS.text, fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5, 0);
 
-        this.add.text(width / 2, 55, 'Куда пойдёшь?', {
+        this.add.text(width / 2, 55, t('Куда пойдёшь?'), {
             fontSize: '16px', color: RUS.textDim,
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
@@ -63,7 +64,7 @@ export class ForkScene extends Phaser.Scene {
 
         // ----- HUD: счётчик ходов -----
         const turnsLeft = state.turnsLeft;
-        this.add.text(width / 2, 105, `⏳ Ходов до побега вора: ${turnsLeft}`, {
+        this.add.text(width / 2, 105, tf('⏳ Ходов до побега вора: {0}', turnsLeft), {
             fontSize: '14px', color: turnsLeft <= 3 ? '#ff4040' : '#ff8060',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
@@ -71,7 +72,7 @@ export class ForkScene extends Phaser.Scene {
 
         // ----- Подсказки, собранные у жителей -----
         if (state.cluesGathered && state.cluesGathered.length > 0) {
-            let cluesText = 'Улики от жителей:\n';
+            let cluesText = t('Улики от жителей:') + '\n';
             state.cluesGathered.forEach((c) => {
                 cluesText += `• ${c.npcName}: ${c.clue}\n`;
             });
@@ -101,7 +102,9 @@ export class ForkScene extends Phaser.Scene {
             const x = width / 2;
             const y = startY + i * (btnH + gap);
             const alreadySearched = state.locationsSearched.includes(loc.id);
-            const label = `${loc.icon} ${loc.name}${alreadySearched ? ' (обыскано)' : ''}`;
+            const label = alreadySearched
+                ? tf('{0} (обыскано)', `${loc.icon} ${loc.name}`)
+                : `${loc.icon} ${loc.name}`;
 
             createButton(this, x, y, label, () => {
                 ActionLog.add(this.registry, `Игрок отправился в локацию «${loc.name}».`);
@@ -118,7 +121,7 @@ export class ForkScene extends Phaser.Scene {
 
         // ----- Кнопка "Тёмный лес — прогулка" (раунд 13) -----
         const backBtnY = startY + locations.length * (btnH + gap) + 20;
-        createButton(this, width / 2, backBtnY, '🌲 Тёмный лес — прогулка', () => {
+        createButton(this, width / 2, backBtnY, t('🌲 Тёмный лес — прогулка'), () => {
             ActionLog.add(this.registry, 'Игрок отправился гулять в Тёмный лес.');
             this.scene.start('Forest', { from: 'Fork' });
         }, {
@@ -129,7 +132,7 @@ export class ForkScene extends Phaser.Scene {
         });
 
         // ----- Кнопка "Вернуться в деревню" -----
-        createButton(this, width / 2, backBtnY + 44, '◀ Вернуться в деревню', () => {
+        createButton(this, width / 2, backBtnY + 44, t('◀ Вернуться в деревню'), () => {
             this.scene.start('Village');
         }, {
             backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
@@ -138,7 +141,7 @@ export class ForkScene extends Phaser.Scene {
         });
 
         // П.17: Кнопка "Карта" — показать карту местности
-        createButton(this, width / 2, backBtnY + 88, '🗺 Карта местности', () => {
+        createButton(this, width / 2, backBtnY + 88, t('🗺 Карта местности'), () => {
             this.showMap();
         }, {
             backgroundColor: 0x2a4a6a, hoverColor: 0x3a5a7a, textColor: RUS.text,
@@ -158,7 +161,7 @@ export class ForkScene extends Phaser.Scene {
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x1a2a1a, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 20, '🗺 Карта местности', {
+        this.add.text(width / 2, height / 2 - panelH / 2 + 20, t('🗺 Карта местности'), {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
@@ -181,15 +184,15 @@ export class ForkScene extends Phaser.Scene {
 
         // Локации вокруг деревни (п.4: финальный список)
         const positions = [
-            { id: 'forest', name: 'Лес', icon: '🌲', angle: -90, dist: 150 },
-            { id: 'road_south', name: 'Тракт', icon: '🛤', angle: 90, dist: 150 },
-            { id: 'river', name: 'Река', icon: '🌊', angle: 180, dist: 150 },
-            { id: 'field', name: 'Поле', icon: '🌾', angle: 0, dist: 150 },
-            { id: 'lake', name: 'Озеро', icon: '🏞', angle: -45, dist: 200 },
-            { id: 'pogost', name: 'Погост', icon: '⚰️', angle: 45, dist: 200 },
-            { id: 'mill', name: 'Мельница', icon: '🏭', angle: 135, dist: 200 },
-            { id: 'apiary', name: 'Пасека', icon: '🐝', angle: -135, dist: 200 },
-            { id: 'pasture', name: 'Выпас', icon: '🐄', angle: 0, dist: 250 },
+            { id: 'forest', name: t('Лес'), icon: '🌲', angle: -90, dist: 150 },
+            { id: 'road_south', name: t('Тракт'), icon: '🛤', angle: 90, dist: 150 },
+            { id: 'river', name: t('Река'), icon: '🌊', angle: 180, dist: 150 },
+            { id: 'field', name: t('Поле'), icon: '🌾', angle: 0, dist: 150 },
+            { id: 'lake', name: t('Озеро'), icon: '🏞', angle: -45, dist: 200 },
+            { id: 'pogost', name: t('Погост'), icon: '⚰️', angle: 45, dist: 200 },
+            { id: 'mill', name: t('Мельница'), icon: '🏭', angle: 135, dist: 200 },
+            { id: 'apiary', name: t('Пасека'), icon: '🐝', angle: -135, dist: 200 },
+            { id: 'pasture', name: t('Выпас'), icon: '🐄', angle: 0, dist: 250 },
         ];
 
         positions.forEach(pos => {
@@ -217,7 +220,7 @@ export class ForkScene extends Phaser.Scene {
         const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 25, 140, 30, 0x8B2C1A, 1)
             .setStrokeStyle(2, 0xC9A961)
             .setInteractive({ useHandCursor: true }).setDepth(202);
-        const btnText = this.add.text(width / 2, height / 2 + panelH / 2 - 25, 'Закрыть', {
+        const btnText = this.add.text(width / 2, height / 2 + panelH / 2 - 25, t('Закрыть'), {
             fontSize: '14px', color: '#E8DCC4',
         }).setOrigin(0.5).setDepth(203);
 

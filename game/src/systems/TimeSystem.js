@@ -4,6 +4,8 @@
 // - Месяцы по церковному календарю (сентябрьский стиль)
 // - Часы: дневное время (рассвет–закат) и ночное
 // - Времена года: весна, лето, осень, зима
+// Раунд 15: формат даты/времени локализован (i18n) — EN месяц/день/время.
+import { t, isEn, EN_MONTHS, EN_WEEKDAYS } from './i18n.js';
 
 // Месяцы церковного календаря Руси XV века (сентябрьский стиль)
 export const MONTHS = [
@@ -43,13 +45,18 @@ export const TIME_OF_DAY = {
     NIGHT_EARLY: { id: 'night', name: 'ночь', startHour: 0, endHour: 4, color: 0x191970, alpha: 0.55 },
 };
 
-// Времена года
+// Времена года (имя локализуется через t() при выводе)
 export const SEASONS = {
     spring: { name: 'Весна', color: 0x90ee90, alpha: 0.05 },
     summer: { name: 'Лето', color: 0xffd700, alpha: 0.05 },
     autumn: { name: 'Осень', color: 0xd2691e, alpha: 0.1 },
     winter: { name: 'Зима', color: 0xffffff, alpha: 0.15 },
 };
+
+// Локализованное имя сезона по ключу ('spring'...)
+export function seasonName(seasonKey) {
+    return t(SEASONS[seasonKey] ? SEASONS[seasonKey].name : seasonKey);
+}
 
 // Создать случайную дату в пределах 15 века (1401-1500 от Р.Х., 6909-7008 от С.М.)
 export function createRandomStartDate() {
@@ -126,10 +133,14 @@ export function getWeekday(timeState) {
 }
 
 // Форматировать дату в историческом стиле
+// EN: "5 September 6909 A.M. (1401 AD)" — год от С.М. с уточнением от Р.Х.
 export function formatDate(timeState) {
     const day = timeState.day;
-    const monthName = MONTHS[timeState.month].name;
     const year = timeState.yearFromCreation;
+    if (isEn()) {
+        return `${day} ${EN_MONTHS[timeState.month]} ${year} A.M. (${timeState.yearFromChrist} AD)`;
+    }
+    const monthName = MONTHS[timeState.month].name;
     return `${day} ${monthName} ${year} от С.М.`;
 }
 
@@ -138,22 +149,22 @@ export function formatTime(timeState) {
     const hour = timeState.hour;
     const tod = getTimeOfDay(hour);
     // Примерное время — славянское деление
-    if (hour >= 4 && hour < 6) return 'на ранней заре';
-    if (hour >= 6 && hour < 8) return 'поутру';
-    if (hour >= 8 && hour < 10) return 'утром';
-    if (hour >= 10 && hour < 12) return 'перед обедом';
-    if (hour >= 12 && hour < 13) return 'в полдень';
-    if (hour >= 13 && hour < 16) return 'после обеда';
-    if (hour >= 16 && hour < 19) return 'под вечер';
-    if (hour >= 19 && hour < 21) return 'на закате';
-    if (hour >= 21 || hour < 1) return 'ночью';
-    if (hour >= 1 && hour < 4) return 'глубокой ночью';
-    return tod.name;
+    if (hour >= 4 && hour < 6) return t('на ранней заре');
+    if (hour >= 6 && hour < 8) return t('поутру');
+    if (hour >= 8 && hour < 10) return t('утром');
+    if (hour >= 10 && hour < 12) return t('перед обедом');
+    if (hour >= 12 && hour < 13) return t('в полдень');
+    if (hour >= 13 && hour < 16) return t('после обеда');
+    if (hour >= 16 && hour < 19) return t('под вечер');
+    if (hour >= 19 && hour < 21) return t('на закате');
+    if (hour >= 21 || hour < 1) return t('ночью');
+    if (hour >= 1 && hour < 4) return t('глубокой ночью');
+    return t(tod.name);
 }
 
 // Получить полную строку даты+времени
 export function formatDateTime(timeState) {
-    const weekday = WEEKDAYS[getWeekday(timeState)];
+    const weekday = isEn() ? EN_WEEKDAYS[getWeekday(timeState)] : WEEKDAYS[getWeekday(timeState)];
     return `${weekday}, ${formatDate(timeState)}, ${formatTime(timeState)}`;
 }
 

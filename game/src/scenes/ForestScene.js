@@ -19,6 +19,7 @@ import AudioManager from '../systems/AudioManager.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
 import { formatMoney } from '../systems/Character.js';
 import { getVillageRep } from '../data/reputation.js';
+import { t, tf, tk } from '../systems/i18n.js';
 
 const TS = 48;   // как в деревне — мир 1440×1056, камера скроллится
 const WORLD_W = FOREST_COLS * TS;
@@ -88,12 +89,13 @@ export class ForestScene extends Phaser.Scene {
         if (this.busyDialog) return;
         this.busyDialog = true;
         createDialog(this, '❓ Тёмный лес',
-            'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
-            '🐺 Волки рыщут у логовищ: заметят — погонят. В бою можно драться или сбежать.\n' +
-            '🍄 Грибы, ягоды и зверобой восстанавливают здоровье (раз в игровой день).\n' +
-            '💰 В брошенном лагере разбойников (северо-запад) зарыт тайник — но они возвращаются…\n' +
-            '◀ Выход к околице — на юге у кромки леса.',
-            [{ text: 'Понятно', callback: () => { this.busyDialog = false; } }],
+            tk('forest.help.body',
+                'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
+                '🐺 Волки рыщут у логовищ: заметят — погонят. В бою можно драться или сбежать.\n' +
+                '🍄 Грибы, ягоды и зверобой восстанавливают здоровье (раз в игровой день).\n' +
+                '💰 В брошенном лагере разбойников (северо-запад) зарыт тайник — но они возвращаются…\n' +
+                '◀ Выход к околице — на юге у кромки леса.'),
+            [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
             { singletonKey: 'forest-help' });
     }
 
@@ -240,7 +242,7 @@ export class ForestScene extends Phaser.Scene {
     drawExitMarker() {
         const px = FOREST_EXIT.col * TS + TS / 2;
         const py = FOREST_EXIT.row * TS + TS / 2;
-        const label = this.add.text(px, py - TS * 1.6, '◀ К ОКОЛИЦЕ', {
+        const label = this.add.text(px, py - TS * 1.6, t('◀ К ОКОЛИЦЕ'), {
             fontSize: '13px', color: '#E8DCC4', fontStyle: 'bold',
             fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 3,
             backgroundColor: '#00000088', padding: { x: 5, y: 2 },
@@ -403,7 +405,7 @@ export class ForestScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         // Название локации (под кнопками — урок раунда 11)
-        this.add.text(12, 34, `🌲 Тёмный лес${this.weather ? `  ${this.weather.icon}` : ''}`, {
+        this.add.text(12, 34, t('🌲 Тёмный лес') + (this.weather ? `  ${this.weather.icon}` : ''), {
             fontSize: '15px', color: '#9fc08a', fontStyle: 'bold',
             fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 3,
         }).setScrollFactor(0).setDepth(102);
@@ -449,7 +451,7 @@ export class ForestScene extends Phaser.Scene {
 
         // Предупреждение о напуганной стае
         if (this.wolvesScared) {
-            this.add.text(width / 2, 60, '🐺 Стая напугана — волки держатся подальше', {
+            this.add.text(width / 2, 60, t('🐺 Стая напугана — волки держатся подальше'), {
                 fontSize: '12px', color: '#9fc08a',
                 fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
                 backgroundColor: '#00000088', padding: { x: 8, y: 3 },
@@ -623,7 +625,7 @@ export class ForestScene extends Phaser.Scene {
         this.nearestInteractable = nearest;
 
         if (nearest && !this.busyDialog) {
-            this.prompt.setText(`Нажмите E — ${nearest.label}`).setVisible(true);
+            this.prompt.setText(tf('Нажмите E — {0}', nearest.label)).setVisible(true);
         } else {
             this.prompt.setVisible(false);
         }
@@ -699,8 +701,8 @@ export class ForestScene extends Phaser.Scene {
         if (Math.random() < FOREST_STASH.ambushChance) {
             this.busyDialog = true;
             this.time.delayedCall(700, () => {
-                createDialog(this, 'Тёмный лес', FOREST_STASH.ambushText, [{
-                    text: 'Драться!',
+                createDialog(this, t('Тёмный лес'), t(FOREST_STASH.ambushText), [{
+                    text: t('Драться!'),
                     callback: () => {
                         this.busyDialog = false;
                         this.registry.set('forestReturnPos', { x: this.playerObj.x, y: this.playerObj.y });

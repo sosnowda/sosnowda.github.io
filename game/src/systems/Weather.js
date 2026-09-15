@@ -8,6 +8,7 @@
 //  - гроза — редкие вспышки молний.
 
 import { getTime, getSeason } from './TimeSystem.js';
+import { t as tI18n } from './i18n.js';
 
 export const WEATHER_TYPES = {
     clear:  { id: 'clear',  name: 'Ясно',     icon: '☀️' },
@@ -35,14 +36,20 @@ export function getWeather(registry) {
     if (!t) return WEATHER_TYPES.clear;
     const roll = hashDateKey(`${t.yearFromChrist}-${t.month}-${t.day}`) % 100;
     if (getSeason(t.month) === 'winter') {
-        if (roll < 42) return WEATHER_TYPES.snow;
-        if (roll < 72) return WEATHER_TYPES.cloudy;
-        return WEATHER_TYPES.clear;
+        if (roll < 42) return localize(WEATHER_TYPES.snow);
+        if (roll < 72) return localize(WEATHER_TYPES.cloudy);
+        return localize(WEATHER_TYPES.clear);
     }
-    if (roll < 46) return WEATHER_TYPES.clear;
-    if (roll < 72) return WEATHER_TYPES.cloudy;
-    if (roll < 93) return WEATHER_TYPES.rain;
-    return WEATHER_TYPES.storm;
+    if (roll < 46) return localize(WEATHER_TYPES.clear);
+    if (roll < 72) return localize(WEATHER_TYPES.cloudy);
+    if (roll < 93) return localize(WEATHER_TYPES.rain);
+    return localize(WEATHER_TYPES.storm);
+}
+
+// Имя погоды локализуется (i18n), id/icon остаются ключами.
+// Внимание: параметр t здесь — timeState, функция t словаря импортирована как tI18n.
+function localize(w) {
+    return { ...w, name: tI18n(w.name) };
 }
 
 export function isRainy(w) {

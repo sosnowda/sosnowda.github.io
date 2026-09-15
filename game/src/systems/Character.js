@@ -92,8 +92,10 @@ export const CURRENCY = {
 };
 
 // Форматирование суммы денег (в денгах) в читаемую форму
+// Раунд 15: короткие обозначения номиналов локализованы (д./гр./руб.)
+import { t } from './i18n.js';
 export function formatMoney(dengas) {
-    if (dengas <= 0) return '0 д.';
+    if (dengas <= 0) return t('0 д.');
     const rubles = Math.floor(dengas / 200);
     const afterRubl = dengas % 200;
     const grivnas = Math.floor(afterRubl / 100);
@@ -101,10 +103,10 @@ export function formatMoney(dengas) {
     const dengasOnly = afterGrivna;
     
     const parts = [];
-    if (rubles > 0) parts.push(`${rubles} руб.`);
-    if (grivnas > 0) parts.push(`${grivnas} гр.`);
-    if (dengasOnly > 0) parts.push(`${dengasOnly} д.`);
-    return parts.length > 0 ? parts.join(' ') : '0 д.';
+    if (rubles > 0) parts.push(`${rubles} ${t('руб.')}`);
+    if (grivnas > 0) parts.push(`${grivnas} ${t('гр.')}`);
+    if (dengasOnly > 0) parts.push(`${dengasOnly} ${t('д.')}`);
+    return parts.length > 0 ? parts.join(' ') : t('0 д.');
 }
 
 // === ПРЕДУСТАНОВЛЕННЫЕ ГЕРОИ ===

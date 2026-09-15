@@ -17,6 +17,7 @@ import { initTime, createRandomStartDate } from '../systems/TimeSystem.js';
 import { initNpcNames } from '../data/npcNames.js';
 import { initReputation } from '../data/reputation.js';
 import AudioManager from '../systems/AudioManager.js';
+import { t, tf } from '../systems/i18n.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
     constructor() {
@@ -32,13 +33,13 @@ export class CharacterSelectionScene extends Phaser.Scene {
         this.customName = '';
 
         // Заголовок
-        this.add.text(width / 2, 30, 'Создание персонажа', {
+        this.add.text(width / 2, 30, t('Создание персонажа'), {
             fontFamily: 'Georgia, serif', fontSize: '32px', color: '#E8DCC4',
             fontStyle: 'bold', stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5, 0);
 
         // Кнопка "Случайный персонаж"
-        createButton(this, width / 2, 90, '🎲 Случайный персонаж', () => {
+        createButton(this, width / 2, 90, t('🎲 Случайный персонаж'), () => {
             this.showRandomGenerator();
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
@@ -46,7 +47,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         });
 
         // Кнопка "Свой персонаж (LPC)" — переход в CharacterGenerator
-        createButton(this, width / 2 + 280, 90, '🎨 Свой облик', () => {
+        createButton(this, width / 2 + 280, 90, t('🎨 Свой облик'), () => {
             this.scene.start('CharacterGenerator');
         }, {
             backgroundColor: 0x4a3a5a, hoverColor: 0x5a4a6a, textColor: RUS.text,
@@ -74,13 +75,13 @@ export class CharacterSelectionScene extends Phaser.Scene {
         });
 
         // Подсказка снизу
-        this.add.text(width / 2, height - 56, 'Выберите готового героя или сгенерируйте случайного', {
+        this.add.text(width / 2, height - 56, t('Выберите готового героя или сгенерируйте случайного'), {
             fontSize: '14px', color: RUS.textDim,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
 
         // Кнопка "Назад"
-        createButton(this, 100, height - 26, '◀ Назад', () => {
+        createButton(this, 100, height - 26, t('◀ Назад'), () => {
             this.scene.start('Title');
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
@@ -100,7 +101,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         container.add(bg);
 
         // Заголовок-архетип
-        const title = this.add.text(0, -h / 2 + 25, hero.archetype, {
+        const title = this.add.text(0, -h / 2 + 25, t(hero.archetype), {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
@@ -115,7 +116,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         container.add(name);
 
         // Описание
-        const desc = this.add.text(0, -h / 2 + 90, hero.description, {
+        const desc = this.add.text(0, -h / 2 + 90, t(hero.description), {
             fontSize: '12px', color: RUS.textDim,
             wordWrap: { width: w - 20 }, align: 'center',
             stroke: '#000', strokeThickness: 1,
@@ -129,7 +130,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         topSkills.forEach(([key, val]) => {
             const skillDef = SKILLS.find(s => s.key === key);
             if (skillDef) {
-                const txt = this.add.text(0, skillY, `${skillDef.name}: ${val}%`, {
+                const txt = this.add.text(0, skillY, `${t(skillDef.name)}: ${val}%`, {
                     fontSize: '13px', color: RUS.text,
                     stroke: '#000', strokeThickness: 1,
                 }).setOrigin(0.5);
@@ -142,7 +143,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         const armor = ARMORS[hero.startArmor];
         const weapon = WEAPONS[hero.startWeapon];
         const gear = this.add.text(0, h / 2 - 26,
-            `⚔ ${weapon.name}\n🛡 ${armor.name}`, {
+            `⚔ ${t(weapon.name)}\n🛡 ${t(armor.name)}`, {
             fontSize: '12px', color: '#c9a14a', align: 'center',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
@@ -177,13 +178,13 @@ export class CharacterSelectionScene extends Phaser.Scene {
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 30, 'Генерация случайного героя', {
+        this.add.text(width / 2, height / 2 - panelH / 2 + 30, t('Генерация случайного героя'), {
             fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 65, 'Выберите паттерн генерации:', {
+        this.add.text(width / 2, height / 2 - panelH / 2 + 65, t('Выберите паттерн генерации:'), {
             fontSize: '16px', color: RUS.text,
         }).setOrigin(0.5).setDepth(202);
 
@@ -193,7 +194,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         const btnH = 60;
         patterns.forEach((p, i) => {
             const y = btnY + i * (btnH + 8);
-            createButton(this, width / 2, y, `${p.name} — ${p.desc}`, () => {
+            createButton(this, width / 2, y, tf('{0} — {1}', t(p.name), t(p.desc)), () => {
                 const hero = createRandomHero(p.id);
                 this.selectedHero = hero;
                 overlay.destroy();
@@ -208,7 +209,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         });
 
         // Кнопка "Отмена"
-        createButton(this, width / 2, height / 2 + panelH / 2 - 40, 'Отмена', () => {
+        createButton(this, width / 2, height / 2 + panelH / 2 - 40, t('Отмена'), () => {
             overlay.destroy();
             panel.destroy();
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());

@@ -86,6 +86,9 @@ export const FOREST_STASH = {
 
 // Точки сбора: читаются из карты. Возвращает массив
 // { id, kind: 'mushroom'|'berry'|'herb', col, row, hp, prompt, label }
+// Раунд 15: подписи сбора локализованы (i18n).
+import { t } from '../systems/i18n.js';
+
 export function forestGatherSpots() {
     const spots = [];
     for (let row = 0; row < FOREST_ROWS; row++) {
@@ -95,21 +98,21 @@ export function forestGatherSpots() {
             if (ch === 'm') {
                 spots.push({
                     id: `m${col}_${row}`, kind: 'mushroom', col, row,
-                    hp: 2, label: 'Грибы', prompt: 'Сорвать грибы (+2 ❤)',
+                    hp: 2, label: t('Грибы'), prompt: t('Сорвать грибы (+2 ❤)'),
                     actionLog: 'Собрал грибов в лесу.',
                     floatText: '+2 ❤', tint: 0xffd9a0,
                 });
             } else if (ch === 'b') {
                 spots.push({
                     id: `b${col}_${row}`, kind: 'berry', col, row,
-                    hp: 1, label: 'Куст ягод', prompt: 'Собрать ягоды (+1 ❤)',
+                    hp: 1, label: t('Куст ягод'), prompt: t('Собрать ягоды (+1 ❤)'),
                     actionLog: 'Обобрал куст лесных ягод.',
                     floatText: '+1 ❤', tint: 0xffb0b0,
                 });
             } else if (ch === 'h') {
                 spots.push({
                     id: `h${col}_${row}`, kind: 'herb', col, row,
-                    hp: 3, label: 'Зверобой', prompt: 'Собрать зверобой (+3 ❤)',
+                    hp: 3, label: t('Зверобой'), prompt: t('Собрать зверобой (+3 ❤)'),
                     actionLog: 'Срезал зверобой на лесной поляне.',
                     floatText: '+3 ❤', tint: 0xffe9a0,
                 });

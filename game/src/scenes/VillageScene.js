@@ -18,6 +18,7 @@ import { createButton, createDialog } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, formatDateTime, getSeason } from '../systems/TimeSystem.js';
 import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
+import { t, tf, tk } from '../systems/i18n.js';
 import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, dayKeyOf } from '../data/chests.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
@@ -334,12 +335,13 @@ export class VillageScene extends Phaser.Scene {
             if (this.busyDialog) return;
             this.busyDialog = true;
             createDialog(this, '❓ Помощь',
-                'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
-                '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
-                '📦 Сундуки и тайники — раз в игровой день.\n' +
-                '🔥 Костёр — отдых, 🎣 причал — рыбалка, ✝ крест — молитва.\n' +
-                '🐺 За воротами, в Тёмном лесу, водятся волки — там же грибы и ягоды.',
-                [{ text: 'Понятно', callback: () => { this.busyDialog = false; } }],
+                tk('village.help.body',
+                    'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
+                    '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
+                    '📦 Сундуки и тайники — раз в игровой день.\n' +
+                    '🔥 Костёр — отдых, 🎣 причал — рыбалка, ✝ крест — молитва.\n' +
+                    '🐺 За воротами, в Тёмном лесу, водятся волки — там же грибы и ягоды.'),
+                [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
                 { singletonKey: 'village-help' });
         });
         // П.26: ESC — главное меню
@@ -831,7 +833,7 @@ export class VillageScene extends Phaser.Scene {
                     if (dist < bestDist) {
                         bestDist = dist;
                         const b = BUILDINGS.find(b => b.interiorId === interiorId);
-                        nearest = { type: 'door', interiorId, label: b ? b.label : 'Войти' };
+                        nearest = { type: 'door', interiorId, label: b ? b.label : t('Войти') };
                     }
                 }
                 const chestEntry = chestAt(cx, cy);
@@ -839,14 +841,14 @@ export class VillageScene extends Phaser.Scene {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < bestDist) {
                         bestDist = dist;
-                        nearest = { type: 'chest', chest: chestEntry, label: `Открыть: ${chestEntry.label}` };
+                        nearest = { type: 'chest', chest: chestEntry, label: tf('Открыть: {0}', chestEntry.label) };
                     }
                 }
                 if (isGate(cx, cy)) {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < bestDist) {
                         bestDist = dist;
-                        nearest = { type: 'gate', label: 'Выйти из деревни' };
+                        nearest = { type: 'gate', label: t('Выйти из деревни') };
                     }
                 }
 
@@ -856,21 +858,21 @@ export class VillageScene extends Phaser.Scene {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < bestDist) {
                         bestDist = dist;
-                        nearest = { type: 'campfire', label: 'Отдохнуть у костра (1 час)' };
+                        nearest = { type: 'campfire', label: t('Отдохнуть у костра (1 час)') };
                     }
                 }
                 if (tile === '~' || tile === 'P') {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < bestDist) {
                         bestDist = dist;
-                        nearest = { type: 'fish', label: 'Рыбалка' };
+                        nearest = { type: 'fish', label: t('Рыбалка') };
                     }
                 }
                 if (tile === 'X') {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < bestDist) {
                         bestDist = dist;
-                        nearest = { type: 'cross', label: 'Помолиться у креста (1 час)' };
+                        nearest = { type: 'cross', label: t('Помолиться у креста (1 час)') };
                     }
                 }
             }
@@ -878,7 +880,7 @@ export class VillageScene extends Phaser.Scene {
 
         this.nearestInteractable = nearest;
         if (nearest) {
-            this.prompt.setText(`Нажмите E — ${nearest.label}`).setVisible(true);
+            this.prompt.setText(tf('Нажмите E — {0}', nearest.label)).setVisible(true);
         } else {
             this.prompt.setVisible(false);
         }
@@ -902,7 +904,7 @@ export class VillageScene extends Phaser.Scene {
             if (this.weather) statusLine += ` ${this.weather.icon}`;
         }
         if (turnsLeft > 0 && !q.thiefDefeated && !q.thiefEscaped) {
-            statusLine += `  ⏳${turnsLeft}ход`;
+            statusLine += `  ${tf('⏳{0}ход', turnsLeft)}`;
         }
         statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
         this.statusText.setText(statusLine);
@@ -1042,7 +1044,7 @@ export class VillageScene extends Phaser.Scene {
         const timeState = getTime(this.registry);
         const hour = timeState ? timeState.hour : 12;
         const activity = this.npcData ? getNpcActivity(this.npcData, hour) : 'занят';
-        const text = `${interior.name}\n${npcName}\nРеп: ${npcRep > 0 ? '+' : ''}${npcRep} (${repLevel.name})\n${activity}`;
+        const text = `${interior.name}\n${npcName}\n${tf('Реп: {0} ({1})', `${npcRep > 0 ? '+' : ''}${npcRep}`, t(repLevel.name))}\n${activity}`;
         this.buildingTooltipText.setText(text);
         // Не выходим за правый край экрана
         const tx = Math.min(screenX + 120, this.scale.width - 130);
@@ -1169,9 +1171,9 @@ export class VillageScene extends Phaser.Scene {
             const hour = timeState ? timeState.hour : 12;
             const activity = this.npcData ? getNpcActivity(this.npcData, hour) : 'занят';
             info = `${interior.name}\n` +
-                `NPC: ${npcName}\n` +
-                `Личная репутация: ${npcRep > 0 ? '+' : ''}${npcRep} (${repLevel.name})\n` +
-                `Сейчас: ${activity}`;
+                `${tf('NPC: {0}', npcName)}\n` +
+                `${tf('Личная репутация: {0} ({1})', `${npcRep > 0 ? '+' : ''}${npcRep}`, t(repLevel.name))}\n` +
+                `${tf('Сейчас: {0}', activity)}`;
         }
         
         // Показываем как всплывающую подсказку
@@ -1850,6 +1852,15 @@ export class VillageScene extends Phaser.Scene {
                         .setDepth(0.3);
                     if (winter) g.setVisible(false);
                     this.flowers.push(g);
+                }
+
+                // Раунд 15: зимой — снежные намети вместо цветов (стилизация травы)
+                if (winter && Math.random() < 0.12) {
+                    const s = this.add.image(px + (Math.random() * 22 - 11), py + (Math.random() * 22 - 11), 'deco_snow_patch')
+                        .setScale(0.9 + Math.random() * 0.9)
+                        .setDepth(0.29)
+                        .setAlpha(0.9);
+                    this.flowers.push(s); // единый массив сезонной декорации
                 }
             }
         }
