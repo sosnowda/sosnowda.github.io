@@ -100,8 +100,9 @@ export class InteriorScene extends Phaser.Scene {
         }).setOrigin(0, 0).setDepth(50);
 
         // ----- NPC в интерьере -----
-        // Часовня и амбар — БЕЗ NPC (ограблена / работник на поле):
+        // Амбар — БЕЗ NPC (работник на поле):
         // вместо него — декор-центр и особый набор действий в кнопках.
+        // Раунд 26: часовня удалена — её богомолье/пожертвование/киот в церкви.
         const hasNpc = !interior.noNpc && !!interior.npcId;
         // Портрет для диалогов интерьера (с учётом варианта внешности NPC);
         // для интерьеров без NPC — базовый портрет интерьера
@@ -250,11 +251,12 @@ export class InteriorScene extends Phaser.Scene {
             } else if (interior.id === 'blacksmith') {
                 buttons.push({ label: t('\u{1F6D2} Купить оружие'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
             }
-        } else if (interior.id === 'chapel') {
-            // Часовня: богомолье вместо разговора
-            buttons.push({ label: t('\u{1F64F} Помолиться'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.prayInChapel() });
-            buttons.push({ label: t('\u{1F56F} Пожертвовать (5\u0434)'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.donateInChapel() });
-            buttons.push({ label: t('\u{1F50D} Осмотреть киот'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectChapelKiot() });
+            // Раунд 26: в церкви — богомолье и осмотр киота (переехали из удалённой часовни)
+            if (interior.id === 'church') {
+                buttons.push({ label: t('\u{1F64F} Помолиться'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.prayInChurch() });
+                buttons.push({ label: t('\u{1F56F} Пожертвовать (5\u0434)'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.donateInChurch() });
+                buttons.push({ label: t('\u{1F50D} Осмотреть киот'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectChurchKiot() });
+            }
         } else if (interior.id === 'barn') {
             // Амбар: подённая работа
             buttons.push({ label: t('\u{2692} Работать (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInBarn() });
@@ -1061,7 +1063,8 @@ export class InteriorScene extends Phaser.Scene {
     }
 
     // ================================================================
-    // Раунд 9: Часовня — богомолье, пожертвования, осмотр места кражи
+    // Раунд 26 (быв. часовня, раунд 9): церковь — богомолье, пожертвования,
+    // осмотр места кражи. Часовня удалена из деревни — всё живёт здесь.
     // ================================================================
 
     // Ключ игрового дня (для «раз в день»-ограничений)
@@ -1116,10 +1119,10 @@ export class InteriorScene extends Phaser.Scene {
     }
 
     /**
-     * Молитва в часовне: +Воля (MP), один раз в игровой день.
+     * Молитва в церкви: +Воля (MP), один раз в игровой день.
      * Забирает 15 минут времени.
      */
-    prayInChapel() {
+    prayInChurch() {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
         if (!player) return;
@@ -1128,8 +1131,8 @@ export class InteriorScene extends Phaser.Scene {
         const q = this.registry.get('quest') || {};
         const today = this.dayKey();
         if (q.prayerDay === today) {
-            ActionLog.add(this.registry, 'Помолился в часовне (уже молился сегодня).');
-            createDialog(this, 'Молитва', 'Ты снова стоишь перед пустым киотом. Сердце уже нашло покой утром — сегодня больше не нужно.', [
+            ActionLog.add(this.registry, 'Помолился в церкви (уже молился сегодня).');
+            createDialog(this, 'Молитва', 'Ты снова стоишь перед киотом. Сердце уже нашло покой сегодня — больше не нужно.', [
                 { text: 'Аминь.', callback: () => {} },
             ]);
             return;
@@ -1142,10 +1145,10 @@ export class InteriorScene extends Phaser.Scene {
         this.registry.set('player', player);
         this.audioManager.playPrayerChant(); // раунд 24: тихая молитва
         this.updateHUD();
-        ActionLog.add(this.registry, `Помолился в часовне — Воля +${gain}.`);
+        ActionLog.add(this.registry, `Помолился в церкви — Воля +${gain}.`);
 
         createDialog(this, 'Молитва',
-            'Ты опускаешься на колени перед пустым киотом. Вопреки горю, отделявшему деревню от святого, в тишине часовни приходит покой.\n\nВоля восстановлена: +' + gain + '.',
+            'Ты опускаешься на колени перед киотом. В полумраке церкви, под мерцание лампад, приходит покой.\n\nВоля восстановлена: +' + gain + '.',
             [{ text: 'Встать с колен.', callback: () => {} }]);
     }
 
@@ -1153,7 +1156,7 @@ export class InteriorScene extends Phaser.Scene {
      * Пожертвование на свечи и ладан: −5 д., +1 к репутации в деревне.
      * Не чаще одного раза в игровой день.
      */
-    donateInChapel() {
+    donateInChurch() {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
         if (!player) return;
@@ -1176,10 +1179,10 @@ export class InteriorScene extends Phaser.Scene {
         this.registry.set('player', player);
         q.donationDay = today;
         this.registry.set('quest', q);
-        const res = changeVillageRep(this.registry, 1, 'Пожертвование в часовне');
+        const res = changeVillageRep(this.registry, 1, 'Пожертвование в церкви');
         tickTime(this.registry, 10);
         this.updateHUD();
-        ActionLog.add(this.registry, 'Пожертвовал 5 д. в часовне — деревня это помнит (+1 репутация).');
+        ActionLog.add(this.registry, 'Пожертвовал 5 д. в церкви — деревня это помнит (+1 репутация).');
 
         createDialog(this, 'Пожертвование',
             'Ты кладёшь пять денег на блюдо у входа. «На свечи и ладан», — говоришь тихо. Казначей церкви будет рад.\n\n' +
@@ -1189,24 +1192,26 @@ export class InteriorScene extends Phaser.Scene {
 
     /**
      * Осмотр киота: уникальная улика по делу о краже (один раз за игру).
+     * Раунд 26: киот теперь в церкви (часовня удалена). Для старых сохранений
+     * читается и прежний флаг chapelInspected.
      */
-    inspectChapelKiot() {
+    inspectChurchKiot() {
         if (this.busyDialog) return;
         const q = this.registry.get('quest') || {};
         tickTime(this.registry, 10);
 
-        if (q.chapelInspected) {
+        if (q.kiotInspected || q.chapelInspected) {
             createDialog(this, 'Пустой киот', 'Больше тут ничего не изменилось: ниша без иконы, воск на полу, верёвка.', [
                 { text: 'Уйти от киота.', callback: () => {} },
             ]);
             return;
         }
-        q.chapelInspected = true;
+        q.kiotInspected = true;
         if (!q.cluesGathered) q.cluesGathered = [];
-        const clue = 'На полу часовни — капли стеарина и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в часовне горела свеча.';
-        q.cluesGathered.push({ npcId: 'chapel', npcName: 'Часовня', clue });
+        const clue = 'На полу церкви — капли стеарина и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в церкви горела свеча.';
+        q.cluesGathered.push({ npcId: 'church', npcName: 'Церковь', clue });
         this.registry.set('quest', q);
-        ActionLog.add(this.registry, 'Осмотрел киот в часовне — нашёл улику (воск, верёвка с узлами).');
+        ActionLog.add(this.registry, 'Осмотрел киот в церкви — нашёл улику (воск, верёвка с узлами).');
 
         createDialog(this, 'Осмотр киота',
             'Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли стеарина, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\n' +
@@ -1285,13 +1290,13 @@ export class InteriorScene extends Phaser.Scene {
         const ts = 32;
 
         // === Фаза 1: живописный фон интерьера (DarklandsReborn) ===
-        // Таверна/кузница/церковь (и часовня)/дом старосты получают нарисованный
+        // Таверна/кузница/церковь получают нарисованный
         // интерьер на весь экран вместо тайловых стен; пол и окна тайлами не рисуются.
+        // (Раунд 26: часовня удалена — kirche_inner.jpg только у церкви.)
         const BG_MAP = {
             tavern: 'int_bg_tavern',
             blacksmith: 'int_bg_blacksmith',
             church: 'int_bg_church',
-            chapel: 'int_bg_church',
         };
         const bgKey = BG_MAP[interior.id];
         const painted = !!(bgKey && this.textures.exists(bgKey));
@@ -1306,7 +1311,7 @@ export class InteriorScene extends Phaser.Scene {
             bg.setPosition((width - bg.width * s) / 2, (height - bg.height * s) / 2);
             // Затемнение поверх фона — фон уходит назад, декор и текст читаются
             // (церковь светлее — затемняем меньше)
-            const dimMap = { tavern: 0.34, blacksmith: 0.34, church: 0.20, chapel: 0.26 };
+            const dimMap = { tavern: 0.34, blacksmith: 0.34, church: 0.20 };
             this.add.rectangle(0, 0, width, height, 0x140d08, dimMap[interior.id] || 0.30)
                 .setOrigin(0, 0).setScrollFactor(0).setDepth(-5);
         }
@@ -1570,12 +1575,13 @@ export class InteriorScene extends Phaser.Scene {
             }
             // Инструменты на стене — между окнами
             this.add.text(width * 0.72, 78, '⚔ 🪣', { fontSize: '26px' }).setOrigin(0.5).setDepth(10);
-        } else if (interior.id === 'chapel') {
-            // Часовня (раунд 9): ПУСТОЙ киот, свечи, аналой, красный угол, крест.
-            // Ограблена: место иконы — сюжетная точка (осмотр даёт улику).
-            // Пустой киот — рисованная ниша с золотой окантовкой
+        } else if (interior.id === 'church') {
+            // Церковь (раунд 26): сюда переехал сюжет часовни — ПУСТОЙ киот,
+            // место кражи иконы (осмотр даёт улику). Киот рисуем и в живописном,
+            // и в тайловом виде — это сюжетная точка. Правый верхний угол,
+            // чтобы не перекрывать батюшку (0.65, 0.55) и игрока (0.25, 0.55).
             const kiot = this.add.graphics().setDepth(4);
-            const kx = width * 0.65, ky = height * 0.4;
+            const kx = width * 0.86, ky = height * 0.27;
             kiot.fillStyle(0x1e130a, 1);                       // тёмная ниша
             kiot.fillRoundedRect(kx - 52, ky - 74, 104, 148, 10);
             kiot.lineStyle(3, 0xc9a14a, 1);                    // золотая окантовка
@@ -1588,44 +1594,34 @@ export class InteriorScene extends Phaser.Scene {
             this.add.text(kx, ky + 62, 'слово Божие — в сердцах', {
                 fontSize: '10px', color: '#8a7248', fontFamily: 'Georgia, serif',
             }).setOrigin(0.5).setDepth(5);
-            if (!painted && this.textures.exists('int_deco_analogion')) {
-                this.add.image(width * 0.4, height * 0.6, 'int_deco_analogion').setScale(1.2).setDepth(5);
+            if (!painted) {
+                // Тайловый вид: алтарь, иконостас, свечи, аналой, крест
+                // (в «живописной» церкви иконостас/алтарь/окна уже в фоне)
+                if (this.textures.exists('int_deco_table')) {
+                    this.add.image(width * 0.5, height * 0.4, 'int_deco_table').setScale(1.5).setDepth(5);
+                }
+                if (this.textures.exists('int_deco_icon_wall')) {
+                    this.add.image(width * 0.25, height * 0.3, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
+                    this.add.image(width * 0.5, height * 0.25, 'int_deco_icon_wall').setScale(1.8).setDepth(5);
+                    this.add.image(width * 0.75, height * 0.3, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
+                }
+                if (this.textures.exists('int_deco_candle')) {
+                    this.add.image(width * 0.42, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
+                    this.add.image(width * 0.58, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
+                    this._lightSources.push({ x: width * 0.42, y: height * 0.37, w: 80, h: 30, a: 0.4 });
+                    this._lightSources.push({ x: width * 0.58, y: height * 0.37, w: 80, h: 30, a: 0.4 });
+                }
+                // Аналой (подставка для икон/книг)
+                if (this.textures.exists('int_deco_analogion')) {
+                    this.add.image(width * 0.5, height * 0.6, 'int_deco_analogion').setScale(1.2).setDepth(5);
+                }
+                this.add.text(width * 0.5, height * 0.15, '✝', {
+                    fontSize: '48px', color: '#c9a14a',
+                }).setOrigin(0.5).setDepth(10);
+                // Красный угол с лампадой — единственный огонёк после кражи
+                // (слева, чтобы не спорить с киотом в правом верхнем углу)
+                this.addRedCorner(64, height * 0.3, true);
             }
-            if (!painted && this.textures.exists('int_deco_candle')) {
-                [0.3, 0.9].forEach(fx => {
-                    this.add.image(width * fx, height * 0.52, 'int_deco_candle').setScale(1.3).setDepth(5);
-                    this._lightSources.push({ x: width * fx, y: height * 0.54, w: 90, h: 34, a: 0.5 });
-                });
-            }
-            if (!painted) this.add.text(width * 0.5, height * 0.13, '✝', {
-                fontSize: '44px', color: '#c9a14a',
-            }).setOrigin(0.5).setDepth(10);
-            // Красный угол с лампадой — единственный огонёк после кражи
-            if (!painted) this.addRedCorner(width - 64, height * 0.3, true);
-        } else if (interior.id === 'church' && !painted) {
-            // Церковь: алтарь, иконостас, свечи, аналой, крест
-            // (в «живописной» церкви иконостас/алтарь/окна уже в фоне)
-            if (this.textures.exists('int_deco_table')) {
-                this.add.image(width * 0.5, height * 0.4, 'int_deco_table').setScale(1.5).setDepth(5);
-            }
-            if (this.textures.exists('int_deco_icon_wall')) {
-                this.add.image(width * 0.25, height * 0.3, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
-                this.add.image(width * 0.5, height * 0.25, 'int_deco_icon_wall').setScale(1.8).setDepth(5);
-                this.add.image(width * 0.75, height * 0.3, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
-            }
-            if (this.textures.exists('int_deco_candle')) {
-                this.add.image(width * 0.42, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
-                this.add.image(width * 0.58, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
-                this._lightSources.push({ x: width * 0.42, y: height * 0.37, w: 80, h: 30, a: 0.4 });
-                this._lightSources.push({ x: width * 0.58, y: height * 0.37, w: 80, h: 30, a: 0.4 });
-            }
-            // Аналой (подставка для икон/книг)
-            if (this.textures.exists('int_deco_analogion')) {
-                this.add.image(width * 0.5, height * 0.6, 'int_deco_analogion').setScale(1.2).setDepth(5);
-            }
-            this.add.text(width * 0.5, height * 0.15, '✝', {
-                fontSize: '48px', color: '#c9a14a',
-            }).setOrigin(0.5).setDepth(10);
         } else if (interior.id === 'villager_house_1') {
             // Дом крестьянина Авдея: стол, лавка, кровать, поленница, стог сена, ПЕЧЬ,
             // КРАСНЫЙ УГОЛ (раунд 9)
@@ -1717,7 +1713,7 @@ export class InteriorScene extends Phaser.Scene {
     /**
      * Красный угол — передний (восточный) угол избы с иконами:
      * доска-киот, божница, вышитое полотенце (рукавичник) и мерцающая лампада.
-     * withNiche — усиленный вариант для часовни (дополнительная божница).
+     * withNiche — усиленный вариант (дополнительная божница).
      */
     addRedCorner(x, y, withNiche = false) {
         // Доска-киот под иконами
@@ -1727,7 +1723,7 @@ export class InteriorScene extends Phaser.Scene {
             this.add.image(x, y - 12, 'int_deco_icon_wall').setScale(0.6).setDepth(5);
         }
         if (withNiche && this.textures.exists('int_deco_icon_wall')) {
-            // вторая икона рядом (в часовне)
+            // вторая икона рядом (усиленный красный угол)
             this.add.image(x - 44, y - 8, 'int_deco_icon_wall').setScale(0.4).setDepth(5);
         }
         // Красное полотенце с орнаментом (graphics)

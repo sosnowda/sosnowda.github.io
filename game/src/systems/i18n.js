@@ -151,7 +151,6 @@ const EN = {
     'Амбар': 'Barn',
     'Дом Авдея': 'Avdey\'s house',
     'Дом Марфы': 'Marfa\'s house',
-    'Часовня': 'Chapel',
     'Церковь': 'Church',
     'Ворота': 'Gate',
     'Дом старосты': 'Elder\'s house',
@@ -159,7 +158,6 @@ const EN = {
     'Дом крестьянина': 'Peasant\'s house',
     'Дом вдовы': 'Widow\'s house',
     'Амбар общины': 'Community barn',
-    'Часовня Николая Чудотворца': 'Chapel of St. Nicholas',
     'Церковь Рождества Богородицы': 'Church of the Nativity of the Theotokos',
 
     // --- Тёмный лес ---

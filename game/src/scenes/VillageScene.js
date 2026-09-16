@@ -181,9 +181,7 @@ export class VillageScene extends Phaser.Scene {
             // ----- Дом спрайтом + тень (псевдо-2.5D: Y-сортировка) -----
             const sprKey = b.interiorId === 'church'
                 ? 'deco_church_building'
-                : b.interiorId === 'chapel'
-                    ? 'deco_chapel'                        // узкая часовня с главкой (64×80)
-                    : HOUSE_SPRITE_BY_ID[b.interiorId];
+                : HOUSE_SPRITE_BY_ID[b.interiorId];
             const cx = b.col * ts + b.w * ts / 2;
             const cy = b.row * ts + b.h * ts / 2;
             const bottomRow = b.row + b.h;                 // строка под домом
@@ -228,9 +226,9 @@ export class VillageScene extends Phaser.Scene {
         });
 
         // ----- Дым из труб (атмосфера, §3 village-visual-upgrade) -----
-        // Амбар и часовня без труб — дымит только жильё и очаги.
+        // Амбар без трубы — дымит только жильё и очаги.
         this.smokeBuildings = BUILDINGS
-            .filter(b => b.interiorId !== 'barn' && b.interiorId !== 'chapel')
+            .filter(b => b.interiorId !== 'barn')
             .map(b => ({
                 x: b.col * ts + b.w * ts / 2 + ts * 0.42,   // трубы в спрайтах смещены вправо от центра
                 y: b.row * ts - ts * 0.12,
@@ -1387,7 +1385,7 @@ export class VillageScene extends Phaser.Scene {
     showBuildingInfo(interiorId) {
         const interior = INTERIORS[interiorId];
         if (!interior) return;
-        // Здания без NPC (часовня, амбар): показываем описание вместо «репутации незнакомца»
+        // Здания без NPC (амбар): показываем описание вместо «репутации незнакомца»
         const noNpc = interior.noNpc || !interior.npcId;
         let info;
         if (noNpc) {
@@ -1971,7 +1969,7 @@ export class VillageScene extends Phaser.Scene {
 
     /**
      * Раунд 12: молитва у каменного креста — 1 час, +2..5 Воли, раз в день
-     * (тихая альтернатива часовне, §5.1 роадмапа).
+     * (тихая альтернатива церковной молитве, §5.1 роадмапа).
      */
     prayAtCross() {
         if (this.busyDialog) return;
