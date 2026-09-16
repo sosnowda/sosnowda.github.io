@@ -20,7 +20,7 @@ import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/Tim
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
 import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear } from '../systems/RusTime.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
-import { attachWorldClock } from '../systems/WorldClock.js';
+import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
@@ -54,8 +54,9 @@ export class VillageScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.dialogue = new DialogueRunner(this);
-        // Раунд 31 (п.12): мировые часы тикают РЕАЛЬНЫМ временем (1 реальная
-        // минута = 1 игровая), а пока открыт разговор — стоят
+        // Раунд 31 (п.12): мировые часы тикают РЕАЛЬНЫМ временем — по соотношению
+        // 1:30 (раунд 32, п.14: 1 реальная минута = 30 игровых минут),
+        // а пока открыт разговор — стоят
         attachWorldClock(this);
 
         // Фоновая музыка деревни (ambient)
@@ -429,16 +430,19 @@ export class VillageScene extends Phaser.Scene {
 
         // П.25: F1 — окно помощи (сцены 'Help' в сборке нет — фикс латентного бага,
         // ранее клавиша молча не работала: launch('Help') не находил сцену)
+        // Раунд 32 (пп.14,15): в «Информации по игре» — соотношение времени 1:30
         this.input.keyboard.on('keydown-F1', () => {
             if (this.busyDialog) return;
             this.busyDialog = true;
             createDialog(this, '❓ Помощь',
+                timeRatioInfoLine() + '\n\n' +
                 tk('village.help.body',
                     'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
                     '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
                     '📦 Сундуки и тайники — раз в игровой день.\n' +
                     '🔥 Костёр — отдых, 🎣 причал — рыбалка, ✝ крест — молитва.\n' +
-                    '🐺 За воротами, в Тёмном лесу, водятся волки — там же грибы и ягоды.'),
+                    '🐺 За воротами, в Тёмном лесу, водятся волки — там же грибы и ягоды.\n' +
+                    '🚪 Выход за околицу (по карте) занимает ровно 1 игровой час.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
                 { singletonKey: 'village-help' });
         });
@@ -478,7 +482,9 @@ export class VillageScene extends Phaser.Scene {
             }
 
             // П.4: Клик на ворота — выход из деревни
+            // Раунд 32 (п.5): перемещение между локациями — РОВНО 1 игровой час
             if (isGate(tx, ty)) {
+                tickTime(this.registry, 60);
                 this.scene.start('Fork');
                 return;
             }
@@ -1361,8 +1367,9 @@ export class VillageScene extends Phaser.Scene {
             this.scene.pause();
             this.scene.launch('Interior', { interiorId: this.nearestInteractable.interiorId, from: 'Village' });
         } else if (this.nearestInteractable.type === 'gate') {
-            // Раунд 21: выход за околицу занимает время (1 тик) — вор тоже двигается
-            tickTime(this.registry, 15);
+            // Раунд 32 (п.5): выход за околицу — перемещение между локациями,
+            // занимает РОВНО 1 игровой час — вор тоже двигается
+            tickTime(this.registry, 60);
             ActionLog.add(this.registry, 'Игрок вышел за околицу.');
             this.scene.start('Fork');
         } else if (this.nearestInteractable.type === 'chest') {

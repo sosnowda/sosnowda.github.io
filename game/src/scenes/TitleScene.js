@@ -3,6 +3,8 @@ import { RUS } from '../config/RusTheme.js';
 import AudioManager from '../systems/AudioManager.js';
 import { t, tf, tk, getLang, setLang } from '../systems/i18n.js';
 import { bindRestartOnResize } from '../utils/ui.js';
+// Раунд 32 (пп.14,15): строка о времени 1:30 в «Информации по игре» (F1)
+import { timeRatioInfoLine } from '../systems/WorldClock.js';
 
 /**
  * Раунд 24: фоновый прелоадер «тяжёлой» музыки (таверна/церковь/финалы).
@@ -198,6 +200,8 @@ export class TitleScene extends Phaser.Scene {
             '🎯 ЦЕЛЬ ИГРЫ:',
             'Ты — беженец в незнакомой деревне. Прижись, найди работу,',
             'завоюй доверие жителей. Достигни репутации +100 или женись.',
+            '',
+            timeRatioInfoLine(),
             '',
             '🎮 УПРАВЛЕНИЕ:',
             '  WASD / стрелки — движение (все 4 направления)',

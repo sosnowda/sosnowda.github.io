@@ -55,14 +55,22 @@ window.addEventListener('load', function() {
         import('./src/scenes/CombatScene.js'),
         import('./src/scenes/EndScene.js'),
         import('./src/scenes/CharacterScene.js'),
+        import('./src/tools/ScreenshotDirector.js'),
     ]).then(function(modules) {
-        var scenes = modules.map(function(m) {
+        // Раунд 32: последний модуль — директор скриншотов (?shot=...), не сцена
+        var directorMod = modules[modules.length - 1];
+        var sceneModules = modules.slice(0, -1);
+        var scenes = sceneModules.map(function(m) {
             var keys = Object.keys(m);
             return m[keys[0]];
         });
 
         var config = {
-            type: Phaser.AUTO,
+            // Раунд 32: ?renderer=canvas — принудительный Canvas-рендер (для
+            // детерминированных скриншотов через agent-browser: WebGL в headless
+            // теряет контекст и снимки выходят пустыми). По умолчанию — AUTO.
+            type: (new URLSearchParams(window.location.search).get('renderer') === 'canvas')
+                ? Phaser.CANVAS : Phaser.AUTO,
             title: 'Летописи Руси',
             parent: 'game-container',
             // Раунд 20: ЛЮБОЕ разрешение пользователя — канвас = всё окно.
@@ -88,6 +96,11 @@ window.addEventListener('load', function() {
         loadingEl.style.display = 'none';
         // Экспорт в window — для отладки и автоматизированного QA
         window.game = new Phaser.Game(config);
+        // Раунд 32: отладочные сценарии скриншотов (?shot=menu|select|custom|
+        // village|map|interior|priest|thief|combat) — без параметра ничего не делает
+        if (directorMod && typeof directorMod.bootScreenshotDirector === 'function') {
+            directorMod.bootScreenshotDirector();
+        }
     }).catch(function(err) {
         console.error('Ошибка загрузки игры:', err);
         showError('Ошибка: ' + err.message);

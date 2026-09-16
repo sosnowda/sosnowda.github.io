@@ -8,10 +8,12 @@ import { createButton, createDialog, createFloatingText, registerAnchoredUI, onS
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { ActionLog } from '../data/actionLog.js';
-import { loseHeroDead, recoverStolenItem, thiefFleesFromFight } from '../data/thief.js';
+import { loseHeroDead, recoverStolenItem, thiefFleesFromFight, saveThiefHp, restoreThiefHp } from '../data/thief.js';
 import { getActiveQuests, checkQuestCompletion, consumeBlessing } from '../data/questGenerator.js';
 import { getTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals } from '../systems/Weather.js';
+// Раунд 32 (пп.14,15): F1 — «Информация по игре» и в бою
+import { timeRatioInfoLine } from '../systems/WorldClock.js';
 import { t, tf } from '../systems/i18n.js';
 
 export class CombatScene extends Phaser.Scene {
@@ -38,6 +40,16 @@ export class CombatScene extends Phaser.Scene {
 
         this.player = this.registry.get('player');
         this.enemies = this.enemyKeys.map(k => spawnEnemy(k));
+        // Раунд 32 (п.11): вор НЕ лечится между боями — если прошлый бой был
+        // прерван побегом игрока, у вора остаётся прежний запас HP
+        const isThiefFightNow = this.enemyKeys.includes('thief') || this.npcId === 'thief';
+        if (isThiefFightNow && this.enemies[0]) {
+            const savedHp = restoreThiefHp(this.registry, this.enemies[0].HPmax);
+            if (savedHp != null && savedHp < this.enemies[0].HP) {
+                this.enemies[0].HP = savedHp;
+                this.woundedThief = true;
+            }
+        }
         this.busy = false;
         this.playerDodging = false;
         this.logLines = [];
@@ -147,6 +159,21 @@ export class CombatScene extends Phaser.Scene {
         this.createActions();
         this.drawBars();
         this.pushLog(t('Бой начинается! Приготовься, путник.'));
+        // Раунд 32 (п.11): предупреждение о раненом воре (после прошлого побега игрока)
+        if (this.woundedThief) {
+            this.pushLog(t('Вор ещё не залечил раны с прошлой схватки — он ослаблен!'));
+        }
+        // Раунд 32 (пп.14,15): F1 — «Информация по игре» (бой пошаговый —
+        // время мира на паузе, но правила часов игрок должен знать)
+        this.input.keyboard.on('keydown-F1', () => {
+            if (this.busyDialog) return;
+            this.busyDialog = true;
+            createDialog(this, '❓ Информация по игре',
+                timeRatioInfoLine() + '\n\n' +
+                t('⚔ Бой пошаговый (BRP d100): атака, уклон, трава, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.'),
+                [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+                { singletonKey: 'combat-help' });
+        });
 
         // ----- Overlay дня/ночи (п.5) -----
         const timeState = getTime(this.registry);
@@ -221,16 +248,22 @@ export class CombatScene extends Phaser.Scene {
             if (this.audioManager) this.audioManager.playSwordMiss();
             // Раунд 21: побег занимает время — 2 тика (вор тоже двигается)
             tickTime(this.registry, 30);
-            // Раунд 22 (п.9): после побега игрока из боя вор перебегает в
-            // СЛУЧАЙНУЮ локацию, и время его «тиков» немного увеличивается.
+            // Раунд 32 (пп.11,12,13): после побега игрока из боя с вором:
+            //  п.11 — вор НЕ лечится (сохраняем его текущий HP);
+            //  п.13 — вор ещё 3 часа сидит на этой локации;
+            //  п.12 — игрока автоматически переносит ко входу в Деревню.
             const isThiefFight = this.enemies.some(e => e.isThief) || this.npcId === 'thief';
             if (isThiefFight) {
+                const thiefEnemy = this.enemies.find(e => e.isThief);
+                if (thiefEnemy) saveThiefHp(this.registry, thiefEnemy.HP);
                 thiefFleesFromFight(this.registry, this.fromLocation);
             }
             ActionLog.add(this.registry, `Побег из боя. Потеряно 2 действия (бросок ${res.roll}, успех).`);
             this.time.delayedCall(1000, () => {
-                // Возврат в предыдущую сцену (раунд 13: лес возвращается в лес)
-                if (this.fromScene === 'Forest') {
+                // Раунд 32 (п.12): после побега от вора — всегда деревня (вход в локацию)
+                if (isThiefFight) {
+                    this.scene.start('Village');
+                } else if (this.fromScene === 'Forest') {
                     this.scene.start('Forest', { from: 'Combat' });
                 } else if (this.fromLocation) {
                     this.scene.start('Fork');

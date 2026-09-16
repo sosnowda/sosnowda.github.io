@@ -663,6 +663,14 @@ const EN = {
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----
 const EN_KEYS = {
+    // Раунд 32 (пп.14,15): обязательная строка «Информации по игре» (F1)
+    'help.timeRatio':
+        '⏱ TIME: 1 minute of real time = 30 minutes of game time (1:30 ratio),\n' +
+        '  a full game day passes in 48 real minutes.\n' +
+        '  Any travel between locations on the map takes EXACTLY 1 game hour.\n' +
+        '  Talking to an NPC costs 1 hour; examining a footprint costs 1 hour.\n' +
+        '  While a conversation is open, the real-time countdown is PAUSED.\n' +
+        '  The thief moves AT MOST ONE STEP per game hour.',
     'title.about': '«The Chronicles of Ruthenia» — a browser RPG set in 15th-century Rus\'.\n' +
         'Role-playing system: BRP (Basic Roleplaying Universal Game Engine SRD) — ' +
         'characteristics 3d6×5, d100 skill checks, critical success 1/20 of the skill, ' +
@@ -674,6 +682,12 @@ const EN_KEYS = {
     'title.help.body': '🎯 GOAL:\n' +
         'You are a refugee in an unfamiliar village. Settle in, find work,\n' +
         'earn the villagers\' trust. Reach +100 reputation — or get married.\n' +
+        '\n' +
+        '⏱ TIME: 1 minute of real time = 30 minutes of game time (1:30 ratio),\n' +
+        '  a full game day passes in 48 real minutes. Any travel between locations\n' +
+        '  on the map takes EXACTLY 1 game hour. Talking to an NPC costs 1 hour;\n' +
+        '  examining a footprint costs 1 hour. While a conversation is open, the\n' +
+        '  real-time countdown is PAUSED. The thief moves at most one step per hour.\n' +
         '\n' +
         '🎮 CONTROLS:\n' +
         '  WASD / arrows — movement (all 4 directions)\n' +

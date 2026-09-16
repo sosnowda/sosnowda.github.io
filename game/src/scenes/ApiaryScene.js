@@ -26,7 +26,7 @@ import { getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES } from '../data/npcPresence
 import { getNpcSpriteKey } from '../systems/NpcLpc.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
-import { attachWorldClock } from '../systems/WorldClock.js';
+import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 
 const TS = 48;   // как в деревне/лесу — мир 1248×960, камера скроллится
 const WORLD_W = APIARY_COLS * TS;
@@ -213,6 +213,7 @@ export class ApiaryScene extends Phaser.Scene {
         if (this.busyDialog) return;
         this.busyDialog = true;
         createDialog(this, '🐝 ' + t('Пасека'),
+            timeRatioInfoLine() + '\n\n' +
             tk('apiary.help.body',
                 'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
                 '🐝 Пасека — тихое место: пчёлы кружат над ульями и цветами.\n' +

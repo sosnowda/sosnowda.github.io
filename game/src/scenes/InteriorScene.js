@@ -28,7 +28,7 @@ import {
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 import { STASHES, isOpenedToday, markOpened, rollLoot, lootDisplayName } from '../data/chests.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
-import { attachWorldClock } from '../systems/WorldClock.js';
+import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 
 export class InteriorScene extends Phaser.Scene {
     constructor() {
@@ -48,6 +48,16 @@ export class InteriorScene extends Phaser.Scene {
         this.dialogue = new DialogueRunner(this);
         // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
         attachWorldClock(this);
+        // Раунд 32 (пп.14,15): F1 — «Информация по игре» и в интерьерах
+        this.input.keyboard.on('keydown-F1', () => {
+            if (this.busyDialog) return;
+            this.busyDialog = true;
+            createDialog(this, '❓ Информация по игре',
+                timeRatioInfoLine() + '\n\n' +
+                t('🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n📦 Сундуки и тайники открываются раз в игровой день.\n◀ Выход — кнопка внизу.'),
+                [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+                { singletonKey: 'interior-help' });
+        });
         // Раунд 24: звуковая атмосфера интерьера — музыка (таверна/церковь),
         // эмбиент и скрип двери при входе
         this.audioManager.playRealDoorOpen();

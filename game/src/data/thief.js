@@ -8,6 +8,19 @@
 // на Реке с двумя берегами); каждый след — цепочка из 6 чёрных отпечатков;
 // ночью следы читаются ХУЖЕ; дождь/снег смывают следы, оставленные ДО осадков;
 // обследование следа занимает ровно 1 час.
+// раунд 32 (пп.2–4,9–13 владельца):
+//  п.2  — вор делает НЕ БОЛЕЕ ОДНОГО ШАГА за игровой час;
+//  п.3  — на каждой локации вор сидит ОТ 1 ДО 3 ЧАСОВ (случайно);
+//  п.4  — подсказка селянина или прочитанный след «прибивают» вора к локации,
+//         куда они ведут: 2 часа он оттуда НЕ уходит (даже если его собственный
+//         счётчик времени уже обнулился);
+//  п.9  — следы вора исчезают через 12–24 часа (случайно) после оставления,
+//         НО только если за это время не было осадков;
+//  п.10 — наводка от НПЦ действительна только первые 5 игровых часов, потом
+//         вор уходит в другую локацию (поп-ап при входе на указанную локацию);
+//  п.11 — вор НЕ лечится после прерванного побегом игрока боя;
+//  п.12 — после побега игрока его переносит ко входу в деревню;
+//  п.13 — после побега игрока вор сидит на этой локации ещё 3 часа.
 //
 // Механика:
 // - Вор бежит из деревни в случайном направлении и проходит ПО ТРЁМ локациям
@@ -42,14 +55,42 @@ import { formatMoney } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
 import { createDialog } from '../utils/ui.js';
 
-// Длительность одного тика погони в игровых минутах
-export const TICK_MINUTES = 15;
+// Раунд 32 (п.2): длительность одного тика погони = 1 ИГРОВОЙ ЧАС.
+// Вор делает НЕ БОЛЕЕ ОДНОГО ШАГА за час: за тик он либо ждёт на локации,
+// либо один раз переходит к следующей. Часы для игрока: разговор — 1 час,
+// обследование следа — 1 час, переход по карте — ровно 1 час (п.5).
+export const TICK_MINUTES = 60;
 // Сколько локаций проходит вор, прежде чем сбежать (раунд 22: было 2, стало 3)
 export const CHASE_STOPS = 3;
-// Сколько тиков вор идёт между локациями
-export const TRAVEL_TICKS = 2;
-// Сколько тиков вор идёт из деревни до первой локации
-export const START_TRAVEL_TICKS = 2;
+// Сколько тиков (часов) вор идёт между локациями (раунд 32, п.2: один шаг в час)
+export const TRAVEL_TICKS = 1;
+// Сколько тиков (часов) вор идёт из деревни до первой локации
+export const START_TRAVEL_TICKS = 1;
+// Раунд 32 (п.3): вор ВСЕГДА сидит на локации ОТ 1 ДО 3 ЧАСОВ (случайно)
+export const MIN_STAY_HOURS = 1;
+export const MAX_STAY_HOURS = 3;
+// Раунд 32 (п.4): прочитанный след или подсказка держат вора на месте 2 часа
+export const TRAIL_LOCK_HOURS = 2;
+// Раунд 32 (п.10): наводка от НПЦ действительна 5 игровых часов; когда срок
+// выходит, вор уходит в другую локацию (принудительный переход).
+export const NPC_HINT_VALID_HOURS = 5;
+// Раунд 32 (п.13): после побега игрока из боя вор остаётся на локации ещё 3 часа
+export const POST_FIGHT_STAY_HOURS = 3;
+// Раунд 32 (п.9): следы вора исчезают через 12–24 часа (случайно) после
+// оставления — но только если за это время не было осадков.
+export const TRACE_LIFETIME_MIN_MINUTES = 12 * 60; // 12 часов
+export const TRACE_LIFETIME_MAX_MINUTES = 24 * 60; // 24 часа
+
+/** Случайный срок жизни следа в минутах (12–24 часа, п.9). */
+export function randomTraceLifetime() {
+    return TRACE_LIFETIME_MIN_MINUTES +
+        Math.floor(Math.random() * (TRACE_LIFETIME_MAX_MINUTES - TRACE_LIFETIME_MIN_MINUTES + 1));
+}
+
+/** Случайная длительность сидения вора на локации в часах (1–3, п.3). */
+export function randomStayHours() {
+    return MIN_STAY_HOURS + Math.floor(Math.random() * (MAX_STAY_HOURS - MIN_STAY_HOURS + 1));
+}
 // Нижние пороги проверок (раунд 22, баланс: даже у воина-непрофильника
 // должны быть реальные шансы — проверки решают исход погони)
 export const MIN_SPOT = 35;      // обследование следов (Внимательность)
@@ -137,7 +178,31 @@ export function worldMinutesOf(registry) {
  * ПОСЛЕ начала осадков, остаются. Погода в игре суточная — начало осадков
  * совпадает с началом дня, поэтому смываются следы «вчерашние и старше».
  * Вызывается на каждом тике времени.
+ * Раунд 32 (п.9): помимо осадков у следа есть собственный срок жизни
+ * 12–24 часа (случайно, trace.life) — если осадков не было, след всё равно
+ * истёртся по давности.
  */
+export function expireTracesByAge(registry) {
+    const q = registry.get('quest');
+    if (!q || !q.chase || !q.chase.traces) return false;
+    const now = worldMinutesOf(registry);
+    let expired = false;
+    Object.keys(q.chase.traces).forEach((locId) => {
+        const tr = q.chase.traces[locId];
+        if (tr && typeof tr.leftAt === 'number' && typeof tr.life === 'number') {
+            if (now - tr.leftAt > tr.life) {
+                delete q.chase.traces[locId];
+                if (q.footprintStates) delete q.footprintStates[locId];
+                expired = true;
+            }
+        }
+    });
+    if (expired) {
+        registry.set('quest', q);
+        ActionLog.add(registry, t('Старые следы вора истёрлись за давностью — земля их больше не хранит.'));
+    }
+    return expired;
+}
 export function washTracksByWeather(registry) {
     const q = registry.get('quest');
     if (!q || !q.chase || !q.chase.traces) return false;
@@ -292,6 +357,9 @@ export function examineFootprint(registry, locationId, fpId) {
     if (success) {
         // УДАЧА: след «светится» и выдаёт местоположение вора (п.6)
         st[fpId] = 'found';
+        // Раунд 32 (п.4): прочитанный след «прибивает» вора к его текущей
+        // локации на 2 часа — даже если его счётчик уже обнулился
+        pinThiefAtCurrentStop(registry, TRAIL_LOCK_HOURS, false);
         registry.set('quest', q);
         const where = thiefWhereabouts(registry);
         const nowLoc = where ? getLocationById(where.locId) : null;
@@ -344,13 +412,16 @@ export function initThiefHunt(registry) {
         phase: 'travel',       // 'travel' (в пути) | 'stay' (сидит на локации)
         stop: 0,               // индекс текущей остановки в route
         ticksLeft: START_TRAVEL_TICKS,
+        // Раунд 32 (п.3): на КАЖДОЙ локации вор сидит 1–3 часа (случайно)
         stays: [
-            4 + Math.floor(Math.random() * 3), // 4..6 тиков на первой локации
-            3 + Math.floor(Math.random() * 3), // 3..5 тиков на второй
-            3 + Math.floor(Math.random() * 3), // 3..5 тиков на третьей
+            randomStayHours(),
+            randomStayHours(),
+            randomStayHours(),
         ],
-        minutesAccum: 0,       // накопитель неполных тиков
-        traces: {},            // { locId: { wentTo, side, leftAt } }
+        minutesAccum: 0,       // накопитель неполных тиков (часов)
+        traces: {},            // { locId: { wentTo, side, leftAt, life } }
+        hintLockHours: 0,      // раунд 32 (п.4): «заморозка» на 2/5 часов
+        hintLockFlee: false,   // раунд 32 (п.10): уйти ли принудительно по истечении
     };
     // Раунд 31 (п.1): в лес — строго последовательно: Опушка → Поляна → Чаща
     applyForestSequence(route);
@@ -424,18 +495,21 @@ function thiefWhereabouts(registry) {
 
 /**
  * Мировой тик: вызывается из TimeSystem.tickTime на каждое изменение времени.
- * На каждый полный тик (15 игровых минут) вор ждёт или перемещается.
+ * Раунд 32 (п.2): на каждый полный тик (60 ИГРОВЫХ минут = 1 час) вор ждёт
+ * или перемещается РОВНО ОДИН РАЗ — не более одного шага в час.
  */
 export function thiefChaseTick(registry, minutes) {
     const q = registry.get('quest');
     if (!q || !q.chase || q.thiefEscaped || q.thiefDefeated) return;
     // Раунд 31 (п.5): дождь/снег смывают следы, оставленные ДО осадков
     washTracksByWeather(registry);
+    // Раунд 32 (п.9): следы старше 12–24 часов истёртись сами (если осадков не было)
+    expireTracesByAge(registry);
     if (!q.chase || q.thiefEscaped || q.thiefDefeated) return;
     const c = q.chase;
     c.minutesAccum = (c.minutesAccum || 0) + minutes;
     let guard = 0;
-    while (c.minutesAccum >= TICK_MINUTES && guard < 24) {
+    while (c.minutesAccum >= TICK_MINUTES && guard < 48) {
         c.minutesAccum -= TICK_MINUTES;
         thiefStep(registry, c);
         guard++;
@@ -444,37 +518,74 @@ export function thiefChaseTick(registry, minutes) {
     registry.set('quest', q);
 }
 
-/** Один шаг ИИ вора: ожидание на локации или переход к следующей. */
+/**
+ * Один шаг ИИ вора: ожидание на локации или переход к следующей.
+ * Раунд 32 (п.4): пока активна «заморозка» (подсказка/след), вор НЕ двигается
+ * вообще — счётчик его сидения тоже стоит; по истечении заморозки всё
+ * продолжается как ни в чём не бывало (или, для наводки НПЦ, п.10 —
+ * вор принудительно уходит в следующую локацию).
+ */
 function thiefStep(registry, c) {
     const q = registry.get('quest');
+
+    // Раунд 32 (пп.4,10): «заморозка» от подсказки/следа — вор не двигается
+    if ((c.hintLockHours || 0) > 0) {
+        c.hintLockHours--;
+        if (c.hintLockHours === 0 && c.hintLockFlee) {
+            // Раунд 32 (п.10): срок наводки вышел — вор уходит в другую локацию
+            c.hintLockFlee = false;
+            if (c.phase === 'stay' && c.stop < c.route.length - 1) {
+                thiefLeaveLocation(registry, c);
+            }
+        }
+        registry.set('quest', q);
+        return;
+    }
+
     c.ticksLeft--;
     if (c.ticksLeft > 0) { registry.set('quest', q); return; }
 
     if (c.phase === 'travel') {
         // Вор добрался до своей текущей остановки и затаился
         c.phase = 'stay';
-        c.ticksLeft = c.stays[c.stop] || 3;
+        c.ticksLeft = c.stays[c.stop] || randomStayHours();
     } else {
-        // Вор ушёл с локации — оставил следы в сторону следующей.
-        // Раунд 30 (п.3): сторона следов на Реке — ДО моста или ЗА мостом —
-        // выбирается один раз при создании следа (детерминизм при перерисовках).
-        const fromId = c.route[c.stop];
-        const nextId = c.route[c.stop + 1] || null;
-        // Раунд 31 (п.5): у следа есть «возраст» (leftAt) — дождь/снег смоет
-        // его, только если он оставлен ДО начала осадков.
-        c.traces[fromId] = { wentTo: nextId, side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry) };
-        c.stop++;
-        if (c.stop >= c.route.length) {
-            // После последней локации вор сбегает — проигрыш
-            escapeThief(registry);
-            return;
-        }
-        c.phase = 'travel';
-        c.ticksLeft = TRAVEL_TICKS;
-        const from = getLocationById(fromId);
-        ActionLog.add(registry, tf(t('Вор покинул «{0}» и двинулся дальше.'), from ? from.name : fromId));
+        thiefLeaveLocation(registry, c);
     }
     registry.set('quest', q);
+}
+
+/**
+ * Вор уходит с текущей локации: оставляет следы в сторону следующей и
+ * либо прячется на новой остановке, либо сбегает совсем.
+ * (выделено из thiefStep; используется и при истечении наводки, п.10)
+ */
+function thiefLeaveLocation(registry, c) {
+    const q = registry.get('quest');
+    const fromId = c.route[c.stop];
+    const nextId = c.route[c.stop + 1] || null;
+    // Раунд 30 (п.3): сторона следов на Реке — ДО моста или ЗА мостом.
+    // Раунд 31 (п.5): «возраст» следа (leftAt).
+    // Раунд 32 (п.9): случайный срок жизни следа 12–24 часа (life).
+    c.traces[fromId] = {
+        wentTo: nextId,
+        side: Math.random() < 0.5 ? 'before' : 'after',
+        leftAt: worldMinutesOf(registry),
+        life: randomTraceLifetime(),
+    };
+    // Раунд 32 (п.10): если наводка указывала на покидаемую локацию и её срок
+    // ещё не вышел — наводка фактически сгорела (вор ушёл раньше срока)
+    if (q.npcHint && q.npcHint.locId === fromId) q.npcHint.broken = true;
+    c.stop++;
+    if (c.stop >= c.route.length) {
+        // После последней локации вор сбегает — проигрыш
+        escapeThief(registry);
+        return;
+    }
+    c.phase = 'travel';
+    c.ticksLeft = TRAVEL_TICKS;
+    const from = getLocationById(fromId);
+    ActionLog.add(registry, tf(t('Вор покинул «{0}» и двинулся дальше.'), from ? from.name : fromId));
 }
 
 /** Вор сбежал из деревни с добычей — игра проиграна. */
@@ -483,7 +594,7 @@ export function escapeThief(registry) {
     if (!q || !q.chase) return;
     const c = q.chase;
     const lastLoc = c.route[c.route.length - 1];
-    if (lastLoc && !c.traces[lastLoc]) c.traces[lastLoc] = { wentTo: null, side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry) };
+    if (lastLoc && !c.traces[lastLoc]) c.traces[lastLoc] = { wentTo: null, side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry), life: randomTraceLifetime() };
     q.thiefEscaped = true;
     q.currentObjective = t('Вор скрылся с иконой. Погоня провалена.');
     ActionLog.add(registry, t('ПОРАЖЕНИЕ: вор покинул последнюю локацию и скрылся из вида. След ведёт за околицу.'));
@@ -503,8 +614,8 @@ export function escapeThief(registry) {
  * - если вора здесь не было — локация помечается обысканной (исключение варианта).
  */
 export function searchLocation(registry, locationId) {
-    const q = registry.get('quest');
-    if (!q) q = registry.get('quest') || {};
+    let q = registry.get('quest');
+    if (!q) q = {};
     if (!q.locationsSearched) q.locationsSearched = [];
 
     const loc = getLocationById(locationId) || { id: locationId, name: locationId };
@@ -564,6 +675,10 @@ export function searchLocation(registry, locationId) {
         const res = skillCheck(spotSkill);
         // Следы разбираются ОДИН раз — неудача закрывает эту локацию навсегда
         if (!q.locationsSearched.includes(locationId)) q.locationsSearched.push(locationId);
+        if (res.result === 'critical' || res.result === 'success') {
+            // Раунд 32 (п.4): прочитанный след «прибивает» вора на 2 часа
+            pinThiefAtCurrentStop(registry, TRAIL_LOCK_HOURS, false);
+        }
         registry.set('quest', q);
 
         if (res.result === 'critical' || res.result === 'success') {
@@ -660,6 +775,17 @@ export function askNPC(registry, npcId, npcName) {
         gotClue = true;
         const where = thiefWhereabouts(registry);
         const loc = where ? getLocationById(where.locId) : null;
+        // Раунд 32 (пп.4,10): наводка «прибивает» вора к указанной локации
+        // (2 часа гарантии, п.4) и действительна 5 игровых часов (п.10) —
+        // когда срок выйдет, вор уйдёт в другую локацию.
+        const pinnedLoc = pinThiefAtCurrentStop(registry, NPC_HINT_VALID_HOURS, true);
+        q.npcHint = {
+            locId: pinnedLoc || (where ? where.locId : null),
+            issuedAtMin: worldMinutesOf(registry),
+            expiresAtMin: worldMinutesOf(registry) + NPC_HINT_VALID_HOURS * 60,
+            popupShown: false,
+            broken: false,
+        };
         const clueText = loc
             ? (where.heading
                 ? tf(t('Видел я его, темного человека! Он бежит к «{0}» — поспеши, догонешь!'), loc.name)
@@ -931,7 +1057,7 @@ function thiefFleesNow(registry) {
     }
     // Немедленно в путь к следующей остановке
     const fromId = c.route[c.stop];
-    c.traces[fromId] = { wentTo: c.route[c.stop + 1], side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry) };
+    c.traces[fromId] = { wentTo: c.route[c.stop + 1], side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry), life: randomTraceLifetime() };
     c.stop++;
     c.phase = 'travel';
     c.ticksLeft = TRAVEL_TICKS;
@@ -940,50 +1066,78 @@ function thiefFleesNow(registry) {
 }
 
 /**
- * Раунд 22: игрок СБЕЖАЛ из боя с вором. Вор не станет ждать второго
- * нападения: он перебегает в СЛУЧАЙНУЮ локацию (не текущую и не уже
- * пройденную) и затаивается там, а времени на его поимку становится
- * ЧУТЬ БОЛЬШЕ (+2 тика к текущей остановке).
+ * Раунд 32 (пп.4,10): «ПРИБИТЬ» вора к его текущей остановке.
+ * hours — на сколько часов он гарантированно остаётся там, куда ведёт
+ * подсказка или след (п.4: «даже если счётчик перемещения уже обнулился»);
+ * forceFlee — уйти ли принудительно по истечении срока (наводка НПЦ, п.10:
+ * «потом вор убегает в другую локацию»). Если вор сейчас в пути, он
+ * немедленно «добирается» до остановки — наводка всегда указывает верно.
+ * Возвращает id локации, к которой прибит вор (или null).
+ */
+export function pinThiefAtCurrentStop(registry, hours, forceFlee) {
+    const q = registry.get('quest');
+    const c = getChase(registry);
+    if (!c) return null;
+    if (c.phase === 'travel') {
+        c.phase = 'stay';
+        c.ticksLeft = c.stays[c.stop] || randomStayHours();
+    }
+    c.hintLockHours = Math.max(c.hintLockHours || 0, hours);
+    c.hintLockFlee = !!forceFlee;
+    registry.set('quest', q);
+    return c.route[c.stop];
+}
+
+// ============================================================
+// РАУНД 32 (п.11): HP ВОРА МЕЖДУ БОЯМИ — вор не лечится
+// ============================================================
+
+/** Сохранить текущий HP вора (после прерванного боя). */
+export function saveThiefHp(registry, hp) {
+    const q = registry.get('quest') || {};
+    q.thiefHp = Math.max(1, Math.round(hp));
+    registry.set('quest', q);
+}
+
+/** Восстановить сохранённый HP вора (или null — бой «с чистого листа»). */
+export function restoreThiefHp(registry, fullHp) {
+    const q = registry.get('quest') || {};
+    if (typeof q.thiefHp !== 'number') return null;
+    return Math.max(1, Math.min(fullHp, q.thiefHp));
+}
+
+/** Сбросить сохранённый HP (вор повержен или погоня окончена). */
+export function clearThiefHp(registry) {
+    const q = registry.get('quest') || {};
+    delete q.thiefHp;
+    registry.set('quest', q);
+}
+
+/**
+ * Раунд 32 (пп.11,13): игрок СБЕЖАЛ из боя с вором.
+ *  п.11 — вор НЕ лечится: текущий запас его HP сохраняется в quest.thiefHp
+ *         и восстанавливается при следующем бое (см. CombatScene);
+ *  п.13 — вор ЕЩЁ 3 ЧАСА сидит на ЭТОЙ ЖЕ локации, а потом снова убегает
+ *         ПО ОБЫЧНЫМ ПРАВИЛАМ (один шаг в час, следы, следующая остановка).
+ * (раньше вор сразу перебегал в случайную локацию — по п.13 он больше не
+ * срывается с места: игрок знает, где он, но повторный вход стоит часа).
  */
 export function thiefFleesFromFight(registry, fromLocationId) {
     const q = registry.get('quest');
     const c = getChase(registry);
     if (!c) return false;
 
-    const visited = c.route.slice(0, c.stop);
-    // Раунд 31 (п.1): в лес вор входит ПОСЛЕДОВАТЕЛЬНО — на Поляну можно
-    // бежать только побывав на Опушке, в Чащу — побывав на Поляне.
-    const forestAllowed = (id) => {
-        if (id === 'forest_glade') return visited.includes('forest_edge');
-        if (id === 'forest') return visited.includes('forest_glade');
-        return true;
-    };
-    let pool = CHASE_LOCATIONS.filter(l => l !== fromLocationId && !visited.includes(l) && forestAllowed(l));
-    if (pool.length === 0) pool = CHASE_LOCATIONS.filter(l => l !== fromLocationId && forestAllowed(l));
-    if (pool.length === 0) pool = CHASE_LOCATIONS.filter(l => l !== fromLocationId);
-    const dest = pool[Math.floor(Math.random() * pool.length)];
-
-    // Следы, что вели к старой остановке, теперь ведут к новому месту
-    // (возраст следов не трогаем — дождь смоет их по своему расписанию)
-    Object.keys(c.traces || {}).forEach(k => {
-        if (c.traces[k] && c.traces[k].wentTo === c.route[c.stop]) c.traces[k].wentTo = dest;
-    });
-    if (fromLocationId) c.traces[fromLocationId] = { wentTo: dest, side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry) };
-
-    c.route[c.stop] = dest;
-    // Раунд 31 (п.1): хвост маршрута держим в лесном порядке
-    applyForestSequence(c.route);
-    c.stays[c.stop] = (c.stays[c.stop] || 3) + 2;   // время его тиков увеличивается
+    // Раунд 32 (п.13): ровно 3 часа на текущей локации, дальше — обычные правила
     c.phase = 'stay';
-    c.ticksLeft = c.stays[c.stop];
+    c.stays[c.stop] = c.stays[c.stop] || randomStayHours();
+    c.ticksLeft = POST_FIGHT_STAY_HOURS;
+    // «Заморозки» от старых подсказок больше не действуют — теперь вора
+    // держит на месте срок из п.13
+    c.hintLockHours = 0;
+    c.hintLockFlee = false;
+    void fromLocationId;
 
-    // Новое убежище — новые следы: если эту локацию обыскивали раньше,
-    // снова разрешаем обследование (иначе следы было бы не прочесть)
-    if (q.locationsSearched) {
-        q.locationsSearched = q.locationsSearched.filter(l => l !== dest);
-    }
-
-    ActionLog.add(registry, t('Вор не стал испытывать судьбу: он бежал в другое место и затаился там. У тебя появилось немного больше времени, но искать нужно заново.'));
+    ActionLog.add(registry, t('Вор затаился на месте — уйдёт не раньше, чем через три часа. Но и раны его не заживали: сил у него меньше, чем было.'));
     registry.set('quest', q);
     return true;
 }
@@ -999,6 +1153,8 @@ export function recoverStolenItem(registry, how, res) {
     q.thiefDefeated = how;
     q.stolenItemRecovered = true;
     q.currentObjective = t('Икона у тебя! Верни её старосте или священнику в деревне.');
+    clearThiefHp(registry); // раунд 32 (п.11): сохранённый HP больше не нужен
+    delete q.npcHint;       // раунд 32 (п.10): наводка больше не нужна
 
     // Икона — в инвентарь
     if (!player.inventory) player.inventory = [];

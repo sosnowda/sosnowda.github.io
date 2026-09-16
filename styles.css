@@ -824,10 +824,10 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
     border: 0;
 }
 
-/* Скриншоты-галерея */
+/* Скриншоты-галерея — Раунд 32 (п.1): РОВНО 3 скриншота в ряд на десктопе */
 .screenshots-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
     margin-top: 2rem;
 }

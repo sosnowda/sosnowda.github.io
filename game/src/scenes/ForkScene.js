@@ -2,13 +2,17 @@
 // Теперь использует расширенную карту местности (п.2,3) и отображает время (п.13).
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
-import { getHuntState, isChaseActive, chaseTicksLeft, checkGameEnd, TRAVEL_COST, TICK_MINUTES } from '../data/thief.js';
+import { getHuntState, isChaseActive, chaseTicksLeft, checkGameEnd } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
-import { createButton, bindRestartOnResize } from '../utils/ui.js';
+import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js';
+// Раунд 32 (пп.14,15): F1 — «Информация по игре» со соотношением времени 1:30
+import { timeRatioInfoLine } from '../systems/WorldClock.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { getForkLocations } from '../data/mapLocations.js';
 import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
+// Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
+export const MAP_TRAVEL_MINUTES = 60;
 import { getWeather } from '../systems/Weather.js';
 import { getVillageName } from '../data/world.js';
 import { t, tf } from '../systems/i18n.js';
@@ -33,6 +37,17 @@ export class ForkScene extends Phaser.Scene {
 
         const q = this.registry.get('quest') || {};
         const state = getHuntState(this.registry);
+
+        // Раунд 32 (пп.14,15): F1 — «Информация по игре» (окно помощи и на развилке)
+        this.input.keyboard.on('keydown-F1', () => {
+            if (this.busyDialog) return;
+            this.busyDialog = true;
+            createDialog(this, '❓ Информация по игре',
+                timeRatioInfoLine() + '\n\n' +
+                t('🗺 Околица — карта местности: выбирай локацию и в путь.\nКаждый переход по карте занимает ровно 1 игровой час.\nСледы вора живут от 12 до 24 часов — а дождь и снег смывают их и раньше.'),
+                [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+                { singletonKey: 'fork-help' });
+        });
 
         // ----- Фон: дорога с указателем -----
         this.add.rectangle(0, 0, width, height, 0x3a2a1a).setOrigin(0);
@@ -68,11 +83,11 @@ export class ForkScene extends Phaser.Scene {
             }).setOrigin(0.5, 0);
         }
 
-        // ----- HUD: отсчёт времени до побега вора (раунд 21: тики вместо ходов) -----
+        // ----- HUD: отсчёт времени до побега вора (раунд 32: часы вместо тиков) -----
         if (isChaseActive(this.registry)) {
-            const ticksLeft = chaseTicksLeft(this.registry);
-            this.add.text(width / 2, 105, tf(t('⏳ Вор скроется через {0} действий'), ticksLeft), {
-                fontSize: '14px', color: ticksLeft <= 3 ? '#ff4040' : '#ff8060',
+            const hoursLeft = chaseTicksLeft(this.registry);
+            this.add.text(width / 2, 105, tf(t('⏳ Вор скроется примерно через {0} ч.'), hoursLeft), {
+                fontSize: '14px', color: hoursLeft <= 3 ? '#ff4040' : '#ff8060',
                 fontFamily: 'Georgia, serif',
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5, 0);
@@ -127,8 +142,8 @@ export class ForkScene extends Phaser.Scene {
 
             createButton(this, x, y, label, () => {
                 ActionLog.add(this.registry, `Игрок отправился в локацию «${loc.name}».`);
-                // Раунд 21: дорога занимает время (1-2 тика) — вор тоже двигается
-                tickTime(this.registry, TICK_MINUTES * (TRAVEL_COST[loc.id] || 1));
+                // Раунд 32 (п.5): ЛЮБОЕ перемещение по карте — РОВНО 1 игровой час
+                tickTime(this.registry, MAP_TRAVEL_MINUTES);
                 // Раунд 21: посещение локации может закрыть процедурное поручение
                 onLocationVisited(this.registry, loc.id);
                 // Раунд 20 (слияние Пасек): охотничья пасека = ходячая ApiaryScene
@@ -153,7 +168,7 @@ export class ForkScene extends Phaser.Scene {
         const backBtnY = startY + rows * step + 14;
         createButton(this, width / 2, backBtnY, t('🌲 Тёмный лес — прогулка'), () => {
             ActionLog.add(this.registry, 'Игрок отправился гулять в Тёмный лес.');
-            tickTime(this.registry, TICK_MINUTES); // дорога занимает время
+            tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
             this.scene.start('Forest', { from: 'Fork' });
         }, {
             backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, pressColor: 0x1e321e,
@@ -165,7 +180,7 @@ export class ForkScene extends Phaser.Scene {
         // ----- Кнопка "Пасека — прогулка" (раунд 17: пчёлы — только антураж) -----
         createButton(this, width / 2, backBtnY + 40, t('🐝 Пасека — прогулка'), () => {
             ActionLog.add(this.registry, 'Игрок отправился на Пасеку.');
-            tickTime(this.registry, TICK_MINUTES * 2); // пасека далеко — 2 тика
+            tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
             this.scene.start('Apiary', { from: 'Fork' });
         }, {
             backgroundColor: 0x5a4a1e, hoverColor: 0x6e5a28, pressColor: 0x3a3012,
@@ -176,7 +191,7 @@ export class ForkScene extends Phaser.Scene {
 
         // ----- Кнопка "Вернуться в деревню" -----
         createButton(this, width / 2, backBtnY + 80, t('◀ Вернуться в деревню'), () => {
-            tickTime(this.registry, TICK_MINUTES); // дорога занимает время
+            tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
             this.scene.start('Village');
         }, {
             backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
@@ -233,17 +248,22 @@ export class ForkScene extends Phaser.Scene {
             fontSize: '12px', color: '#c9a14a',
         }).setOrigin(0.5).setDepth(203);
 
-        // Локации вокруг деревни (п.4: финальный список)
+        // Локации вокруг деревни (п.4: финальный список).
+        // Раунд 32: лес — ТРЕМЯ узлами (Опушка → Поляна → Чаща, раунд 30);
+        // цепочка леса рисуется дугой на северо-западе: опушка ближе к деревне,
+        // чаща — дальше всех. Все 11 узлов умещаются в панель 700×550.
         const positions = [
-            { id: 'forest', name: t('Лес'), icon: '🌲', angle: -90, dist: 150 },
-            { id: 'road_south', name: t('Тракт'), icon: '🛤', angle: 90, dist: 150 },
-            { id: 'river', name: t('Река'), icon: '🌊', angle: 180, dist: 150 },
-            { id: 'field', name: t('Поле'), icon: '🌾', angle: 0, dist: 150 },
-            { id: 'lake', name: t('Озеро'), icon: '🏞', angle: -45, dist: 200 },
-            { id: 'pogost', name: t('Погост'), icon: '⚰️', angle: 45, dist: 200 },
-            { id: 'mill', name: t('Мельница'), icon: '🏭', angle: 135, dist: 200 },
-            { id: 'apiary', name: t('Пасека'), icon: '🐝', angle: -135, dist: 200 },
-            { id: 'pasture', name: t('Выпас'), icon: '🐄', angle: 0, dist: 250 },
+            { id: 'forest_edge', name: t('Опушка'), icon: '🌳', angle: -150, dist: 140 },
+            { id: 'forest_glade', name: t('Поляна'), icon: '🌿', angle: -125, dist: 205 },
+            { id: 'forest', name: t('Тёмный лес'), icon: '🌲', angle: -103, dist: 222 },
+            { id: 'apiary', name: t('Пасека'), icon: '🐝', angle: -50, dist: 215 },
+            { id: 'lake', name: t('Озеро'), icon: '🏞', angle: -20, dist: 250 },
+            { id: 'pasture', name: t('Выпас'), icon: '🐄', angle: 8, dist: 170 },
+            { id: 'field', name: t('Поле'), icon: '🌾', angle: 28, dist: 255 },
+            { id: 'pogost', name: t('Погост'), icon: '⚰️', angle: 120, dist: 235 },
+            { id: 'mill', name: t('Мельница'), icon: '🏭', angle: 145, dist: 265 },
+            { id: 'road_south', name: t('Тракт'), icon: '🛤', angle: 92, dist: 165 },
+            { id: 'river', name: t('Река'), icon: '🌊', angle: 178, dist: 185 },
         ];
 
         positions.forEach(pos => {

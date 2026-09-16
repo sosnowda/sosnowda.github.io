@@ -6,7 +6,7 @@ import { getLocationById } from '../data/mapLocations.js';
 import {
     searchLocation, getHuntState, checkGameEnd,
     isChaseActive, isThiefAt, presentThiefEncounter, chaseTicksLeft,
-    getFootprints, examineFootprint, getChase, askNPC,
+    getFootprints, examineFootprint, getChase, askNPC, worldMinutesOf,
 } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
@@ -15,10 +15,12 @@ import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import { getTime, getDayNightOverlay, tickTime, getSeason } from '../systems/TimeSystem.js';
+// Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
+import { MAP_TRAVEL_MINUTES } from './ForkScene.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
 import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel } from '../systems/RusTime.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
-import { attachWorldClock } from '../systems/WorldClock.js';
+import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 // Раунд 31 (п.2): стадо и пастухи на водопое
 import { getHerdState } from '../data/herd.js';
 import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
@@ -72,6 +74,16 @@ export class LocationScene extends Phaser.Scene {
         // Раунд 31 (п.12): мировые часы тикают РЕАЛЬНЫМ временем, а пока
         // открыт разговор (диалог) — стоят
         attachWorldClock(this);
+        // Раунд 32 (пп.14,15): F1 — «Информация по игре» и на локациях
+        this.input.keyboard.on('keydown-F1', () => {
+            if (this.busyDialog) return;
+            this.busyDialog = true;
+            createDialog(this, '❓ Информация по игре',
+                timeRatioInfoLine() + '\n\n' +
+                t('🔍 Каждый след проверяется отдельно и только один раз;\nнеудача затирает след. Ночью следы читаются хуже.\n🕐 Обследование следа занимает ровно 1 игровой час.\n◀ Назад к развилке — тоже час дороги.'),
+                [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+                { singletonKey: 'location-help' });
+        });
         this.audioManager.playSceneMusic('village');
 
         const loc = getLocationById(this.locationId) || FORK_LOCATIONS.find(l => l.id === this.locationId) || { name: this.locationId, icon: '❓', description: '' };
@@ -155,7 +167,7 @@ export class LocationScene extends Phaser.Scene {
             fontSize: '14px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
         }).setDepth(100);
-        this.turnsText = this.add.text(16, 40, tf(t('⏳ Действий: {0}'), state.turnsLeft), {
+        this.turnsText = this.add.text(16, 40, tf(t('⏳ Часов до побега вора: {0}'), state.turnsLeft), {
             fontSize: '14px', color: state.turnsLeft <= 3 ? '#ff4040' : '#ff8060',
             backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
@@ -189,7 +201,13 @@ export class LocationScene extends Phaser.Scene {
         }
 
         // ----- ВСТРЕЧА С ВОРОМ (раунд 21): если вор в локации — игрок видит его сразу -----
-        if (isThiefAt(this.registry, this.locationId)) {
+        const thiefHere = isThiefAt(this.registry, this.locationId);
+        // ----- Раунд 32 (п.10): ПОП-АП О НАВОДКЕ НПЦ при заходе на локацию,
+        // на которую указал свидетель. Пока наводка свежа (первые 5 часов)
+        // и вор ещё здесь — про неё напоминает сама встреча; если срок вышел
+        // или вор ушёл раньше срока — честно говорим, что наводка устарела.
+        this.showNpcHintPopupIfAny(width, height, thiefHere);
+        if (thiefHere) {
             this.time.delayedCall(400, () => presentThiefEncounter(this, this.locationId));
         }
 
@@ -215,7 +233,8 @@ export class LocationScene extends Phaser.Scene {
 
         // ----- Кнопка выхода (дорога обратно к развилке занимает время) -----
         createButton(this, width / 2, height - 50, exitLabel, () => {
-            tickTime(this.registry, 15); // 1 тик на дорогу
+            // Раунд 32 (п.5): любое перемещение по карте — РОВНО 1 игровой час
+            tickTime(this.registry, MAP_TRAVEL_MINUTES);
             ActionLog.add(this.registry, `Игрок покинул локацию «${loc.name}».`);
             this.scene.start(this.from);
         }, {
@@ -235,6 +254,42 @@ export class LocationScene extends Phaser.Scene {
             const traceSide = trace && trace.traces && trace.traces[this.locationId] ? trace.traces[this.locationId].side : null;
             this.drawFootprints(footprints, traceSide, width, height);
         }
+    }
+
+    /**
+     * Раунд 32 (п.10): поп-ап о статусе НАВОДКИ НПЦ при входе на локацию,
+     * на которую указал свидетель. Наводка действительна только первые
+     * 5 игровых часов (NPC_HINT_VALID_HOURS) — потом вор уходит в другую
+     * локацию, и об этом игрок узнаёт именно здесь, на месте.
+     * Показывается один раз на наводку (q.npcHint.popupShown).
+     */
+    showNpcHintPopupIfAny(width, height, thiefHere) {
+        const q = this.registry.get('quest');
+        if (!q || !q.npcHint || q.npcHint.popupShown) return;
+        if (q.npcHint.locId !== this.locationId) return;
+        const hint = q.npcHint;
+        const now = worldMinutesOf(this.registry);
+        const expired = !!hint.broken || now >= hint.expiresAtMin;
+        // Если вор сам сидит на локации и наводка свежа — он игроку и так
+        // виден: встреча говорит сама за себя, поп-ап не нужен.
+        if (!expired && thiefHere) return;
+        hint.popupShown = true;
+        this.registry.set('quest', q);
+        const locName = (getLocationById(hint.locId) || {}).name || hint.locId;
+        const hoursLeft = Math.max(0, Math.ceil((hint.expiresAtMin - now) / 60));
+        const title = expired ? t('⟳ Наводка устарела') : t('📍 Ты по адресу!');
+        const body = expired
+            ? tf(t('Селяне говорили, что вора видели у «{0}». Но с той поры прошло больше пяти часов — наводка больше не верна: вор давно перебрался в другое место. Ищи свежие следы или расспроси новых людей!'), locName)
+            : tf(t('Селяне говорили правду: вора видели именно здесь, у «{0}»! Но помни: наводка живёт только 5 часов с разговора — осталось около {1} ч. Потом вор уйдёт в другое место!'), locName, hoursLeft);
+        this.time.delayedCall(250, () => {
+            if (this.busyDialog) return;
+            createDialog(this, title, body, [
+                { text: t('Понятно'), callback: () => { this.busyDialog = false; } },
+            ], { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
+        });
+        ActionLog.add(this.registry, expired
+            ? `Наводка на «${locName}» устарела (п.10).`
+            : `Наводка привела на «${locName}» (п.10, осталось ~${hoursLeft} ч.).`);
     }
 
     /**

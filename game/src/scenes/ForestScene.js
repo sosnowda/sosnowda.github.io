@@ -23,7 +23,7 @@ import { formatMoney } from '../systems/Character.js';
 import { getVillageRep } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
-import { attachWorldClock } from '../systems/WorldClock.js';
+import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 
 const TS = 48;   // как в деревне — мир 1440×1056, камера скроллится
 const WORLD_W = FOREST_COLS * TS;
@@ -110,6 +110,7 @@ export class ForestScene extends Phaser.Scene {
         if (this.busyDialog) return;
         this.busyDialog = true;
         createDialog(this, '❓ Тёмный лес',
+            timeRatioInfoLine() + '\n\n' +
             tk('forest.help.body',
                 'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
                 '🐺 Волки рыщут у логовищ: заметят — погонят. В бою можно драться или сбежать.\n' +

@@ -787,19 +787,57 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     });
 
     // ----- Раскладка содержимого -----
+    // Раунд 32: длинные диалоги (первый рассказ священника и т.п.) не должны
+    // вылезать за пределы экрана. Сначала уменьшаем шрифт контента,
+    // если панель выше 90% окна; если текст всё равно не помещается —
+    // обрезаем маской и включаем прокрутку колесом мыши.
+    let contentScrollY = 0;
+    let contentMaskGfx = null;
+    let wheelHandler = null;
+    let layoutOverflow = 0;
+    let layoutContentTop = 0;
+    let maxContentHCache = 120;
     const layout = () => {
         const titleH = titleText.height || 30;
-        const contentH = contentText.height || 60;
+        const availH = Math.max(280, cam.height * 0.9);
 
-        let totalH = pad.top + titleH + pad.title + contentH + pad.content;
-        if (actionContainers.length > 0) {
-            totalH += pad.action + 50;
-            // Раунд 21: при 4+ кнопках — сетка 2 колонки; доп. ряды по 50px
-            const perRow = actionContainers.length > 3 ? 2 : actionContainers.length;
-            const extraRows = Math.ceil(actionContainers.length / perRow) - 1;
-            totalH += extraRows * 50;
+        // Подбор шрифта: 18 → 16 → 14 → 12, пока панель не влезет
+        const computeTotal = () => {
+            const contentH = contentText.height || 60;
+            let th = pad.top + titleH + pad.title + contentH + pad.content;
+            if (actionContainers.length > 0) {
+                th += pad.action + 50;
+                const perRow = actionContainers.length > 3 ? 2 : actionContainers.length;
+                th += (Math.ceil(actionContainers.length / perRow) - 1) * 50;
+            }
+            th += pad.bottom;
+            return th;
+        };
+        let fontPx = 18;
+        contentText.setStyle({ ...contentStyle, fontSize: fontPx + 'px' });
+        let naturalH = computeTotal();
+        while (naturalH > availH && fontPx > 12) {
+            fontPx -= 2;
+            contentText.setStyle({ ...contentStyle, fontSize: fontPx + 'px' });
+            naturalH = computeTotal();
         }
-        totalH += pad.bottom;
+        // Панель не выше 90% экрана, даже если текст ещё не убрался
+        const totalH = Math.min(naturalH, availH);
+        const contentTop = -totalH / 2 + pad.top + titleH + pad.title;
+        const maxContentH = Math.max(60,
+            totalH - (pad.top + titleH + pad.title) - (pad.content + pad.bottom + (actionContainers.length > 0 ? pad.action + 50 + (Math.ceil(actionContainers.length / (actionContainers.length > 3 ? 2 : actionContainers.length)) - 1) * 50 : 0)));
+
+        // Маска + колесо прокрутки, если контент выше отведённой области.
+        // Саму маску создаём В КОНЦЕ layout() — когда contentText.x уже
+        // выставлен (см. конец функции); здесь только считаем overflow.
+        const overflow = Math.max(0, (contentText.height || 0) - maxContentH);
+        if (wheelHandler) { scene.input.removeListener('wheel', wheelHandler); wheelHandler = null; }
+        layoutOverflow = overflow;
+        layoutContentTop = contentTop;
+        maxContentHCache = maxContentH;
+        contentScrollY = overflow > 2 ? Phaser.Math.Clamp(contentScrollY, 0, overflow) : 0;
+
+        const contentH = contentText.height || 60;
 
         // Пергаментный фон панели
         panelBg.clear();
@@ -838,7 +876,7 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         }
 
         // Портрет — слева сверху (после заголовка)
-        const contentTop = -totalH / 2 + pad.top + titleH + pad.title;
+        // (contentTop вычислен выше — с учётом маски и прокрутки, раунд 32)
         if (portraitImg) {
             const px = -dialogWidth / 2 + pad.left + 48;
             const py = contentTop + 48;
@@ -853,10 +891,10 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
 
             // Контент — правее портрета
             const contentX = -dialogWidth / 2 + pad.left + 110;
-            contentText.setPosition(contentX, contentTop);
+            contentText.setPosition(contentX, contentTop - contentScrollY);
         } else {
             // Без портрета — контент по центру
-            contentText.setPosition(-contentText.width / 2, contentTop);
+            contentText.setPosition(-contentText.width / 2, contentTop - contentScrollY);
         }
 
         // Кнопки — внизу; при 4+ кнопках сетка 2×N (раунд 21: в один ряд
@@ -881,6 +919,29 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
                 }
             }
         }
+
+        // ----- Раунд 32: маска длинного текста (в МИРОВЫХ координатах —
+        // geometry-маска не знает о контейнере dialog) + колесо прокрутки -----
+        if (contentMaskGfx) { contentMaskGfx.destroy(); contentMaskGfx = null; }
+        contentText.clearMask();
+        if (layoutOverflow > 2) {
+            const cX = contentText.x;
+            const cW = (contentStyle.wordWrap && contentStyle.wordWrap.width) || dialogWidth - pad.left - 110;
+            const wx = dialog.x + cX - 4;
+            const wy = dialog.y + layoutContentTop - 6;
+            contentMaskGfx = scene.make.graphics({ add: false });
+            contentMaskGfx.fillRect(wx, wy, cW + 14, maxContentHCache + 14);
+            contentText.setMask(contentMaskGfx.createGeometryMask());
+            if (!wheelHandler) {
+                wheelHandler = (pointer, over, dx, dy) => {
+                    if (!dialog.scene) return;
+                    contentScrollY = Phaser.Math.Clamp(contentScrollY + dy, 0, layoutOverflow);
+                    contentText.y = layoutContentTop - contentScrollY;
+                };
+                scene.input.on('wheel', wheelHandler);
+            }
+        }
+        contentText.y = layoutContentTop - contentScrollY;
     };
 
     panelBg.setDepth(dialogDepth - 1);
@@ -944,6 +1005,9 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         if (isClosing) return;
         isClosing = true;
         if (typeTimer) typeTimer.remove();
+        // Раунд 32: убрать колесо прокрутки и маску длинного текста
+        if (wheelHandler) { scene.input.removeListener('wheel', wheelHandler); wheelHandler = null; }
+        if (contentMaskGfx) { contentMaskGfx.destroy(); contentMaskGfx = null; }
 
         actionButtons.forEach((btn) => {
             if (typeof btn.disableInteractive === 'function') btn.disableInteractive();
