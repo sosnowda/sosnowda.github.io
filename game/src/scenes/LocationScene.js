@@ -13,7 +13,9 @@ import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js'
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
-import { getTime, formatDateTime, getDayNightOverlay, tickTime, realTimeString, getSeason } from '../systems/TimeSystem.js';
+import { getTime, getDayNightOverlay, tickTime, getSeason } from '../systems/TimeSystem.js';
+// Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
+import { formatDateRus, slavonicHourReal, folkTimeReal, showChroniclePanel } from '../systems/RusTime.js';
 import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
@@ -107,21 +109,25 @@ export class LocationScene extends Phaser.Scene {
             wordWrap: { width: width - 80 },
         }).setOrigin(0.5, 0);
 
-        // Дата и время (п.13) + погода дня (раунд 14) + реальные часы (раунд 28)
+        // Дата и время (п.13) + погода дня (раунд 14) + время «как на Руси» (раунд 29)
         if (timeState) {
             const weather = getWeather(this.registry);
-            this.dateLine = this.add.text(width / 2, 80, `📅 ${formatDateTime(timeState)}   ${weather.icon} ${weather.name}   🕐 ${realTimeString()}`, {
+            const rusDateLine = () => `📅 ${formatDateRus(timeState)}   ${weather.icon} ${weather.name}   🕐 ${slavonicHourReal()} · ${folkTimeReal()}`;
+            this.dateLine = this.add.text(width / 2, 80, rusDateLine(), {
                 fontSize: '11px', color: '#8ab4f8',
                 fontFamily: 'Georgia, serif',
                 stroke: '#000', strokeThickness: 1,
                 backgroundColor: '#00000088', padding: { x: 6, y: 3 },
             }).setOrigin(0.5, 0).setDepth(100);
+            // Раунд 29: клик по дате открывает «Летопись» (полная датировка с индиктом)
+            this.dateLine.setInteractive({ useHandCursor: true });
+            this.dateLine.on('pointerup', () => showChroniclePanel(this));
             // Раунд 28 (п.5): часы реального времени тикают, пока игрок на локации
             this.time.addEvent({
                 delay: 15000, loop: true,
                 callback: () => {
                     if (this.dateLine && this.dateLine.active) {
-                        this.dateLine.setText(`📅 ${formatDateTime(timeState)}   ${weather.icon} ${weather.name}   🕐 ${realTimeString()}`);
+                        this.dateLine.setText(rusDateLine());
                     }
                 },
             });

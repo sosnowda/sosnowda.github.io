@@ -16,7 +16,9 @@ import { checkGameEnd, chaseTicksLeft } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog } from '../utils/ui.js';
-import { tickTime, getTime, getDayNightOverlay, formatDateTime, getSeason, realTimeString } from '../systems/TimeSystem.js';
+import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/TimeSystem.js';
+// Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
+import { formatDateRus, slavonicHourReal, folkTimeReal, showChroniclePanel, eraYear } from '../systems/RusTime.js';
 import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
@@ -499,6 +501,9 @@ export class VillageScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 1,
             wordWrap: { width: this.scale.width - 220 },
         }).setScrollFactor(0).setDepth(101);
+        // Раунд 29: клик по статус-бару открывает «Летопись» (полная датировка)
+        this.statusText.setInteractive({ useHandCursor: true });
+        this.statusText.on('pointerup', () => showChroniclePanel(this));
 
         // Цель квеста (под статус-баром)
         this.objectiveText = this.add.text(8, 30, '', {
@@ -1241,11 +1246,18 @@ export class VillageScene extends Phaser.Scene {
         // Единый статус-бар (п.10): HP | MP | Меч | Деньги | Дата | Действия | Репутация
         let statusLine = `❤${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  ⚔${p.skills.sword}%  💰${moneyStr}`;
         if (timeState) {
-            statusLine += `  📅${formatDateTime(timeState)}`;
+            // Раунд 29: дата «как на Руси» — день, народный месяц, лето от Сотворения мира
+            statusLine += `  📅${formatDateRus(timeState)}`;
             // Раунд 14: иконка текущей погоды рядом с датой
             if (this.weather) statusLine += ` ${this.weather.icon}`;
-            // Раунд 28 (п.5): живые часы РЕАЛЬНОГО времени игрока
-            statusLine += `  🕐${realTimeString()}`;
+            // Раунд 29: живые часы в косом счёте + народный ориентир (по реальному времени)
+            statusLine += `  🕐${slavonicHourReal()} · ${folkTimeReal()}`;
+        }
+        // Раунд 29: анонс новолетия (сигнал из tickTime) — показываем один раз
+        const novoletie = this.registry.get('novoletie');
+        if (novoletie) {
+            this.registry.set('novoletie', null);
+            this.showNovoletieAnnounce(novoletie);
         }
         if (ticksLeft > 0) {
             statusLine += `  ${tf(t('⏳{0}действ.'), ticksLeft)}`;
@@ -1691,6 +1703,35 @@ export class VillageScene extends Phaser.Scene {
         };
         overlay.on('pointerup', closeInfo);
         this.time.delayedCall(3000, closeInfo); // авто-закрытие через 3 сек
+    }
+
+    /**
+     * Раунд 29: анонс новолетия — смена года от Сотворения мира
+     * (сентябрьское 1 сентября / мартовское 1 марта, сигнал из tickTime).
+     */
+    showNovoletieAnnounce(novoletie) {
+        if (!novoletie) return;
+        const { width, height } = this.scale;
+        const era = novoletie.era || (eraYear(getTime(this.registry)) + 1);
+        const msg = novoletie.style === 'march'
+            ? `✨ Новолетие! Весенний год пошёл: лето ${era}-е от Сотворения мира`
+            : `✨ Новолетие! Настало лето ${era}-е от Сотворения мира`;
+        const txt = this.add.text(width / 2, height * 0.22, msg, {
+            fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif', align: 'center',
+            stroke: '#000', strokeThickness: 3,
+            backgroundColor: '#000000cc', padding: { x: 18, y: 10 },
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(210);
+        this.tweens.add({
+            targets: txt,
+            alpha: { from: 0, to: 1 },
+            duration: 800,
+            yoyo: false,
+            hold: 4200,
+            onComplete: () => {
+                this.tweens.add({ targets: txt, alpha: 0, duration: 900, onComplete: () => txt.destroy() });
+            },
+        });
     }
 
     // П.20-22: Журнал заданий

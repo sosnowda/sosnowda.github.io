@@ -201,8 +201,22 @@ export function tickTime(registry, minutes = 15) {
     if (!timeState) {
         timeState = initTime(registry);
     }
+    // Раунд 29: новолетие — смена года по сентябрьскому (1 сентября) или
+    // мартовскому (1 марта) стилю; сигнал для сцен-анонсов.
+    const prevMonth = timeState.month, prevDay = timeState.day;
     advanceTime(timeState, minutes);
     registry.set('gameTime', timeState);
+    let novoletie = null;
+    if (timeState.month === 0 && timeState.day === 1 && !(prevMonth === 0 && prevDay === 1)) {
+        // Сентябрьский год = stored yearFromChrist + 5509 (см. RusTime.eraYear)
+        novoletie = { style: 'september', era: timeState.yearFromChrist + 5509 };
+    } else if (timeState.month === 6 && timeState.day === 1 && !(prevMonth === 6 && prevDay === 1)) {
+        // Мартовское: реальный Р.Х.-год в марте = stored + 1
+        novoletie = { style: 'march', era: timeState.yearFromChrist + 1 + 5508 };
+    }
+    if (novoletie) {
+        registry.set('novoletie', novoletie);
+    }
     // Мировой тик погони (вор двигается на каждый полный тик)
     const chaseHook = registry.get && registry.get('chaseTickHook');
     if (typeof chaseHook === 'function') {
