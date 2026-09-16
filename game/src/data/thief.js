@@ -1,5 +1,8 @@
 // ОХОТА НА ВОРА — много-локационная погоня (раунд 21, по спецификации владельца;
-// раунд 22: ТРИ локации, следы и расспросы — по одному разу, побег вора из боя).
+// раунд 22: ТРИ локации, следы и расспросы — по одному разу, побег вора из боя;
+// раунд 30: СЛЕДЫ — отдельные видимые метки: каждый след проверяется ОДИН раз,
+// после неудачи след исчезает, после удачи светится и показывает, где вор;
+// свидетели о воре — 3–5 случайных селян, выбираются на старте игры).
 //
 // Механика:
 // - Вор бежит из деревни в случайном направлении и проходит ПО ТРЁМ локациям
@@ -53,8 +56,10 @@ export const TURN_LIMIT = 20;
 // Локации, куда может бежать вор (все ходовые точки у околицы).
 // Раунд 21: баг «road» vs «road_south» устранён — вор теперь может
 // бежать в любую локацию с развилки, включая Тракт.
+// Раунд 30: ЛЕС разделён на три части — Опушка, Поляна и сам Лес.
 export const CHASE_LOCATIONS = [
-    'forest', 'road_south', 'field', 'river', 'lake', 'pogost', 'mill', 'apiary', 'pasture',
+    'forest', 'forest_edge', 'forest_glade',
+    'road_south', 'field', 'river', 'lake', 'pogost', 'mill', 'apiary', 'pasture',
 ];
 
 // Легаси-импорт (LocationScene импортирует THIEF_LOCATIONS)
@@ -62,9 +67,167 @@ export const THIEF_LOCATIONS = CHASE_LOCATIONS;
 
 // Дорога до локации в тиках (ближние — 1, дальние — 2, как на «Карте местности»)
 export const TRAVEL_COST = {
-    forest: 1, road_south: 1, field: 1, river: 1,
+    forest: 1, forest_edge: 1, forest_glade: 1,
+    road_south: 1, field: 1, river: 1,
     lake: 2, pogost: 2, mill: 2, apiary: 2, pasture: 2,
 };
+
+// ============================================================
+// РАУНД 30: СЛЕДЫ — ОТДЕЛЬНЫЕ ВИДИМЫЕ МЕТКИ
+// ============================================================
+
+// Сколько отдельных следов вор оставляет на локации, с которой ушёл
+// (каждый след обследуется отдельно и только единожды).
+export const FOOTPRINTS_PER_TRACE = 3;
+
+// Раунд 30: свидетели о воре — не всякий селянин его видел. На старте игры
+// (по спецификации владельца, п.9) случайным образом выбирается, КТО может
+// рассказать о воре и месте его нахождения — но не менее ТРЁХ человек.
+// Священник и староста в списке не участвуют: батюшка сам не видел вора
+// (он рассказывает о краже при первом диалоге), староста выдаёт задание.
+export const MIN_WITNESSES = 3;
+const WITNESS_POOL = [
+    'peasant1', 'widow', 'beekeeper1', 'beekeeper_wife', 'elder_wife',
+    'blacksmith', 'tavernkeeper', 'hunter', 'fisherman',
+];
+
+/** Список свидетелей (ленивая инициализация — для старых сейвов тоже работает). */
+export function ensureWitnesses(registry) {
+    const q = registry.get('quest') || {};
+    if (!q.thiefWitnesses || !q.thiefWitnesses.length) {
+        const pool = [...WITNESS_POOL];
+        const count = MIN_WITNESSES + Math.floor(Math.random() * 3); // 3..5
+        q.thiefWitnesses = [];
+        for (let i = 0; i < count && pool.length; i++) {
+            q.thiefWitnesses.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+        }
+        registry.set('quest', q);
+    }
+    return q.thiefWitnesses;
+}
+
+/** Был ли этот селянин свидетелем вора (случайно, на старте игры). */
+export function isThiefWitness(registry, npcId) {
+    return ensureWitnesses(registry).includes(npcId);
+}
+
+/**
+ * Следы на локации (раунд 30): список отдельных следов с состоянием.
+ * 'fresh' — можно обследовать; 'found' — прочитан (светится); 'gone' — затёрт.
+ */
+export function getFootprints(registry, locationId) {
+    const q = registry.get('quest');
+    const c = getChase(registry);
+    if (!q || !c || !c.traces || !c.traces[locationId]) return [];
+    const st = (q.footprintStates && q.footprintStates[locationId]) || {};
+    const list = [];
+    for (let i = 0; i < FOOTPRINTS_PER_TRACE; i++) {
+        const id = `fp${i}`;
+        list.push({ id, state: st[id] || 'fresh' });
+    }
+    return list;
+}
+
+/** Есть ли на локации необследованные следы (для кнопки общего осмотра). */
+export function hasFreshFootprints(registry, locationId) {
+    return getFootprints(registry, locationId).some(fp => fp.state === 'fresh');
+}
+
+/**
+ * Обследовать КОНКРЕТНЫЙ след (раунд 30, пп.4–6 спецификации владельца):
+ * - проверка отдельная на каждый след и только ЕДИНожды на след;
+ * - после НЕУДАЧНОЙ проверки след пропадает (затёрт);
+ * - после УДАЧНОЙ след «светится» и появляется подсказка с названием
+ *   локации текущего местоположения вора.
+ * Тратит 1 тик (15 игровых минут).
+ */
+export function examineFootprint(registry, locationId, fpId) {
+    const q = registry.get('quest') || {};
+    const c = getChase(registry);
+    const loc = getLocationById(locationId) || { id: locationId, name: locationId };
+
+    if (!c || !c.traces || !c.traces[locationId]) {
+        return { resolved: false, found: false, message: t('Следов вора здесь нет.') };
+    }
+
+    q.footprintStates = q.footprintStates || {};
+    q.footprintStates[locationId] = q.footprintStates[locationId] || {};
+    const st = q.footprintStates[locationId];
+
+    // Уже обследованный след повторно НЕ проверяется (без траты времени)
+    if (st[fpId]) {
+        if (st[fpId] === 'found') {
+            const where = thiefWhereabouts(registry);
+            const nowLoc = where ? getLocationById(where.locId) : null;
+            const popup = nowLoc
+                ? (where.heading
+                    ? tf(t('📍 Вор сейчас на дороге к «{0}»!'), nowLoc.name)
+                    : tf(t('📍 Вор сейчас где-то у «{0}»!'), nowLoc.name))
+                : t('След ещё хранит отпечаток, но свежесть ушла.');
+            return { resolved: true, found: true, alreadyChecked: true, message: popup };
+        }
+        return {
+            resolved: true, found: false, alreadyChecked: true,
+            message: t('Этот след ты уже затоптал — больше он ничего не скажет.'),
+        };
+    }
+
+    const wasActive = isChaseActive(registry);
+    // Обследование следа занимает время — вор тоже двигается
+    tickTime(registry, TICK_MINUTES);
+
+    if (q.thiefEscaped) {
+        return { resolved: false, found: false, thiefEscaped: true, message: t('Пока ты склонялся над следом, вор успел скрыться из вида...') };
+    }
+    if (!wasActive) {
+        return { resolved: false, found: false, message: t('Погоня окончена — искать больше нечего.') };
+    }
+
+    // Вор стоит на локации — обследовать следы некогда, он рядом!
+    if (isThiefAt(registry, locationId)) {
+        registry.set('quest', q);
+        return {
+            resolved: false, found: false, thiefNearby: true,
+            message: t('Следы свежайшие — трава ещё примята! Вор где-то совсем рядом, оглянись!'),
+        };
+    }
+
+    const trace = c.traces[locationId];
+    const player = registry.get('player');
+    const spotSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT));
+    const res = skillCheck(spotSkill);
+    const success = res.result === 'critical' || res.result === 'success';
+
+    if (success) {
+        // УДАЧА: след «светится» и выдаёт местоположение вора (п.6)
+        st[fpId] = 'found';
+        registry.set('quest', q);
+        const where = thiefWhereabouts(registry);
+        const nowLoc = where ? getLocationById(where.locId) : null;
+        let message = nowLoc
+            ? (where.heading
+                ? tf(t('📍 ПОП-АП: вор сейчас на дороге к «{0}»!'), nowLoc.name)
+                : tf(t('📍 ПОП-АП: вор сейчас где-то у «{0}»!'), nowLoc.name))
+            : t('След прочитан, но человек он скрытный — куда подался, не разобрать.');
+        message = message.replace('📍 ПОП-АП: ', '📍 ');
+        if (trace.wentTo) {
+            const next = getLocationById(trace.wentTo);
+            message += '\n' + tf(t('Сам след ведёт в сторону «{0}».'), next ? next.name : trace.wentTo);
+        }
+        ActionLog.add(registry, `Обследовал след в «${loc.name}» — след прочитан (бросок ${res.roll}, успех): вор у «${nowLoc ? nowLoc.name : '?'}».`);
+        return { resolved: true, found: true, message, turnsLeft: chaseTicksLeft(registry), thiefEscaped: false };
+    }
+
+    // НЕУДАЧА: след пропадает (п.5)
+    st[fpId] = 'gone';
+    registry.set('quest', q);
+    ActionLog.add(registry, `Обследовал след в «${loc.name}» — провал (бросок ${res.roll}), след затёрт.`);
+    return {
+        resolved: true, found: false,
+        message: t('Ты пригляделся к следу, но неосторожно наступил — отпечаток затрётся и пропал. Больше этот след не обследовать.'),
+        turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
+    };
+}
 
 // ============================================================
 // ИНИЦИАЛИЗАЦИЯ И СОСТОЯНИЕ
@@ -106,6 +269,10 @@ export function initThiefHunt(registry) {
     quest.turnLimit = TURN_LIMIT;
     quest.cluesGathered = [];
     quest.locationsSearched = [];
+    // Раунд 30: состояния отдельных следов ({ locId: { fp0: 'fresh'|'found'|'gone' } })
+    // и случайные свидетели о воре (не менее трёх селян)
+    quest.footprintStates = {};
+    ensureWitnesses(registry);
     quest.currentObjective = t('Вор украл икону и бежал из деревни! Расспроси жителей или ищи следы — время уходит.');
     registry.set('quest', quest);
 
@@ -191,10 +358,12 @@ function thiefStep(registry, c) {
         c.phase = 'stay';
         c.ticksLeft = c.stays[c.stop] || 3;
     } else {
-        // Вор ушёл с локации — оставил следы в сторону следующей
+        // Вор ушёл с локации — оставил следы в сторону следующей.
+        // Раунд 30 (п.3): сторона следов на Реке — ДО моста или ЗА мостом —
+        // выбирается один раз при создании следа (детерминизм при перерисовках).
         const fromId = c.route[c.stop];
         const nextId = c.route[c.stop + 1] || null;
-        c.traces[fromId] = { wentTo: nextId };
+        c.traces[fromId] = { wentTo: nextId, side: Math.random() < 0.5 ? 'before' : 'after' };
         c.stop++;
         if (c.stop >= c.route.length) {
             // После последней локации вор сбегает — проигрыш
@@ -215,7 +384,7 @@ export function escapeThief(registry) {
     if (!q || !q.chase) return;
     const c = q.chase;
     const lastLoc = c.route[c.route.length - 1];
-    if (lastLoc && !c.traces[lastLoc]) c.traces[lastLoc] = { wentTo: null };
+    if (lastLoc && !c.traces[lastLoc]) c.traces[lastLoc] = { wentTo: null, side: Math.random() < 0.5 ? 'before' : 'after' };
     q.thiefEscaped = true;
     q.currentObjective = t('Вор скрылся с иконой. Погоня провалена.');
     ActionLog.add(registry, t('ПОРАЖЕНИЕ: вор покинул последнюю локацию и скрылся из вида. След ведёт за околицу.'));
@@ -335,11 +504,14 @@ export function searchLocation(registry, locationId) {
 }
 
 /**
- * Расспросить жителя о воре (проверка «Красноречия»). Тратит 1 тик.
+ * Расспросить жителя о воре. Тратит 1 тик.
  * Раунд 22: КАЖДЫЙ селянин расспрашивается ТОЛЬКО ОДИН РАЗ — повторный
  * запрос к нему невозможен, за наводками нужно идти к другим людям.
- * Успех: наводка на ПЕРВУЮ локацию маршрута вора; если она уже известна —
- * селянин подсказывает, где вор находится сейчас.
+ * Раунд 30 (пп.7,9 спецификации владельца): рассказать о воре и месте его
+ * нахождения могут только СВИДЕТЕЛИ — 3–5 случайных селян, выбираемых на
+ * старте игры. Свидетель выдаёт место вора; остальные честно говорят,
+ * что не видели (не все могли видеть вора). Подсказка даётся ЕДИНожды:
+ * второй раз строчки диалога про вора у этого NPC не появляется.
  */
 export function askNPC(registry, npcId, npcName) {
     const q = registry.get('quest');
@@ -382,44 +554,35 @@ export function askNPC(registry, npcId, npcName) {
         };
     }
 
-    const player = registry.get('player');
-    // Раунд 22: нижний порог Красноречия + благословение (+10, одна проверка)
-    const oratorySkill = consumeBlessing(registry, Math.max((player.skills && player.skills.oratory) || 15, MIN_ORATORY));
-    const res = skillCheck(oratorySkill);
-    const success = res.result === 'critical' || res.result === 'success';
-
     if (!q.cluesGathered) q.cluesGathered = [];
     let gotClue = false;
     let message = '';
 
-    if (success) {
-        const knowStop0 = q.cluesGathered.some(cl => cl && cl.stop0Clue);
-        if (!knowStop0) {
-            // Наводка на первую локацию маршрута (по спецификации)
-            gotClue = true;
-            const stop0 = getLocationById(c.route[0]);
-            const clueText = tf(t('Видел, как воришка в тёмном плаще бежал в сторону «{0}»!'), stop0 ? stop0.name : c.route[0]);
-            q.cluesGathered.push({ npcId, npcName, clue: clueText, stop0Clue: true });
-            const extra = res.result === 'critical' ? ' ' + t('И следы ещё не остыли — поспеши!') : '';
-            message = `${npcName}: «${clueText}${extra}»`;
-            ActionLog.add(registry, `Расспрос ${npcName} о воре — НАВОДКА: ${clueText} (бросок ${res.roll}, успех).`);
-        } else {
-            // Первая локация уже известна — подсказка, где вор сейчас
-            gotClue = true;
-            const where = thiefWhereabouts(registry);
-            const loc = where ? getLocationById(where.locId) : null;
-            const clueText = loc
-                ? (where.heading
-                    ? tf(t('Его видели уже на дороге к «{0}». Догоняй!'), loc.name)
-                    : tf(t('Его видели уже у «{0}». Догоняй!'), loc.name))
-                : t('Следы потерялись — не знаю, куда он подался.');
-            q.cluesGathered.push({ npcId, npcName, clue: clueText, whereClue: true });
-            message = `${npcName}: «${clueText}»`;
-            ActionLog.add(registry, `Расспрос ${npcName} о воре — подсказка: ${clueText} (бросок ${res.roll}, успех).`);
-        }
+    // Раунд 30: видел ли этот селянин вора — решено случайно на старте игры
+    const witness = isThiefWitness(registry, npcId);
+
+    if (witness) {
+        // Свидетель выдаёт ТЕКУЩЕЕ местоположение вора (п.9)
+        gotClue = true;
+        const where = thiefWhereabouts(registry);
+        const loc = where ? getLocationById(where.locId) : null;
+        const clueText = loc
+            ? (where.heading
+                ? tf(t('Видел я его, темного человека! Он бежит к «{0}» — поспеши, догонешь!'), loc.name)
+                : tf(t('Видел я его, темного человека! Он сейчас прячется у «{0}» — поспеши!'), loc.name))
+            : t('Видел я вора, да куда он подался — не ведаю.');
+        q.cluesGathered.push({ npcId, npcName, clue: clueText, whereClue: true });
+        message = `${npcName}: «${clueText}»`;
+        ActionLog.add(registry, `Расспрос ${npcName} о воре — СВИДЕТЕЛЬ: ${clueText}.`);
     } else {
-        message = `${npcName}: «${t('Не видел я никакого вора. Спроси кого другого, путник.')}»`;
-        ActionLog.add(registry, `Расспрос ${npcName} о воре — ничего не узнал (бросок ${res.roll}, провал).`);
+        // Не все могли видеть вора — этот селянин ничего не знает
+        const notSeen = [
+            t('Не видел я никакого вора. Спроси кого другого, путник.'),
+            t('Вор? Здесь не пробегал. Я бы заметил — весь день на виду был.'),
+            t('Темных людей не видал, батиушко упаси. Может, в другой стороне ищешь?'),
+        ];
+        message = `${npcName}: «${notSeen[Math.floor(Math.random() * notSeen.length)]}»`;
+        ActionLog.add(registry, `Расспрос ${npcName} о воре — не свидетель, ничего не знает.`);
     }
 
     registry.set('quest', q);

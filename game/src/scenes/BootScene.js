@@ -31,6 +31,13 @@ export class BootScene extends Phaser.Scene {
         for (let f = 0; f < 3; f++) this.load.image(`tile_water_${f}`, `assets/tiles/water_${f}.png`);
         // Лес
         for (let v = 0; v < 2; v++) this.load.image(`tile_forest_${v}`, `assets/tiles/forest_${v}.png`);
+        // Раунд 30 ФИКС: деревья — ФАЙЛОВЫЕ ассеты (PIL, прозрачный фон) вместо
+        // пустых runtime-текстур: с раунда 27 deco_tree_*/deco_pine_* генерировались
+        // graphics-ом в пустоту (0 непрозрачных пикселей) — деревья не были видны
+        // ни в лесу, ни на опушке/поляне, ни в деревне. Ключи прежние —
+        // все сцены (Village/Location/Forest) подхватывают фикс автоматически.
+        for (let v = 0; v < 3; v++) this.load.image(`deco_tree_${v}`, `assets/sprites/tree_${v}.png`);
+        for (let v = 0; v < 2; v++) this.load.image(`deco_pine_${v}`, `assets/sprites/pine_${v}.png`);
         // Камень
         for (let v = 0; v < 2; v++) this.load.image(`tile_rock_${v}`, `assets/tiles/rock_${v}.png`);
         // Раунд 28 (п.7): гравийная дорога для тракта (нарисовано PIL-ом)
@@ -423,77 +430,29 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(0x3a2818, 1); g.fillTriangle(1, 3, 0, 5, 2.4, 4.2); // хвост
         g.generateTexture('deco_bird', 11, 8);
 
-        // ============================================================
-        // РАУНД 27 (п.1): ДЕРЕВЬЯ БЕЗ ФОНА — прозрачные спрайты вместо
-        // квадратных тайлов tile_forest_N (у тех был непрозрачный фон,
-        // деревья выглядели «плашками» поверх травы).
-        // Рисуются один раз graphics-ом: ствол + многослойная крона.
-        // ============================================================
+        // ===== Раунд 30: отпечаток сапога (11×15) — след вора на локациях =====
+        // Подошва + каблук, тёмно-грязный с влажным ободком; правый рисуется
+        // тем же спрайтом с setFlipX(true). Следы ставит LocationScene.
+        g.clear();
+        g.fillStyle(0x241a10, 0.35);                                    // влажный ободок
+        g.fillEllipse(5.5, 5.5, 9.5, 12.5);
+        g.fillEllipse(5.5, 12, 7, 4.5);
+        g.fillStyle(0x33261a, 0.95);                                    // подошва
+        g.fillEllipse(5.5, 5.5, 7.5, 10.5);
+        g.fillEllipse(5.5, 12, 5.2, 3.4);
+        g.fillStyle(0x463423, 0.9);                                     // внутренний блик
+        g.fillEllipse(5, 5, 4.6, 7);
+        g.fillStyle(0x2a1f14, 0.9);                                     // протектор
+        g.fillRect(3.2, 4, 4.6, 1);
+        g.fillRect(3.4, 6.4, 4.2, 1);
+        g.fillRect(3.9, 11.4, 3.2, 1);
+        g.generateTexture('deco_footprint', 11, 15);
 
-        // ===== Лиственное дерево 3 вариантов (56×72) =====
-        // Варианты: 0 — сочная зелень, 1 — тёмный хвойный оттенок,
-        //           2 — светлая желтоватая листва.
-        const treeVariants = [
-            { under: 0x24471f, mid: 0x2f5a27, top: 0x3f6b2f, hi: 0x4d7d3a },
-            { under: 0x1f3d2a, mid: 0x2a4f30, top: 0x356038, hi: 0x436f42 },
-            { under: 0x3a5a22, mid: 0x4a6b2c, top: 0x5a7d38, hi: 0x6b8f46 },
-        ];
-        treeVariants.forEach((c, i) => {
-            g.clear();
-            // Ствол (сужается вверх) + корневое утолщение
-            g.fillStyle(0x4a3018, 1);
-            g.fillTriangle(26, 70, 30, 70, 28.5, 38);   // левая грань
-            g.fillTriangle(28.5, 70, 30.5, 70, 29.5, 38);
-            g.fillRect(26, 66, 6, 5);                    // корневая подушка
-            g.fillStyle(0x5a4028, 1);
-            g.fillRect(29, 42, 1.6, 26);                 // блик на стволе
-            // Ветви (торчат из кроны)
-            g.fillStyle(0x4a3018, 1);
-            g.fillRect(18, 44, 10, 2);                   // левая ветка
-            g.fillRect(30, 40, 10, 2);                   // правая ветка
-            // Крона: 3 слоя перекрывающихся эллипсов
-            g.fillStyle(c.under, 1);
-            g.fillEllipse(28, 34, 46, 30);               // нижний тёмный слой
-            g.fillEllipse(14, 40, 22, 16);
-            g.fillEllipse(43, 40, 22, 16);
-            g.fillStyle(c.mid, 1);
-            g.fillEllipse(28, 27, 40, 26);               // средний слой
-            g.fillEllipse(17, 34, 20, 15);
-            g.fillEllipse(40, 33, 19, 14);
-            g.fillStyle(c.top, 1);
-            g.fillEllipse(27, 20, 30, 20);               // верхний слой
-            g.fillEllipse(20, 27, 16, 11);
-            g.fillStyle(c.hi, 1);
-            g.fillEllipse(24, 16, 14, 9);                // светлая макушка
-            g.fillEllipse(33, 22, 8, 6);                 // блики листвы
-            g.fillEllipse(14, 32, 7, 5);
-            g.generateTexture(`deco_tree_${i}`, 56, 72);
-        });
-
-        // ===== Ель 2 вариантов (44×76): треугольные ярусы =====
-        const pineVariants = [
-            { a: 0x1a331c, b: 0x24471f, c: 0x2f5a27 },
-            { a: 0x20401f, b: 0x2a5228, c: 0x35602e },
-        ];
-        pineVariants.forEach((c, i) => {
-            g.clear();
-            g.fillStyle(0x4a3018, 1);
-            g.fillRect(20, 66, 5, 9);                    // ствол
-            g.fillStyle(0x5a4028, 1);
-            g.fillRect(22.6, 66, 1.4, 9);                // блик ствола
-            // Ярусы снизу вверх (широкие → узкие)
-            g.fillStyle(c.a, 1);
-            g.fillTriangle(2, 68, 42, 68, 22, 44);       // нижний ярус
-            g.fillStyle(c.b, 1);
-            g.fillTriangle(6, 52, 38, 52, 22, 30);       // средний
-            g.fillStyle(c.c, 1);
-            g.fillTriangle(10, 37, 34, 37, 22, 16);      // верхний
-            g.fillStyle(0x3f6b2f, 1);
-            g.fillTriangle(14, 24, 30, 24, 22, 8);       // макушка
-            g.fillStyle(0x4d7d3a, 1);
-            g.fillRect(21, 10, 2, 4);                    // световой блик на макушке
-            g.generateTexture(`deco_pine_${i}`, 44, 76);
-        });
+        // ============================================================
+        // РАУНД 30: ДЕРЕВЬЯ ПЕРЕНЕСЕНЫ В ФАЙЛОВЫЕ АССЕТЫ (assets/sprites/).
+        // Runtime-генерация deco_tree_*/deco_pine_* удалена — она давала
+        // ПУСТЫЕ текстуры (деревья были невидимы с раунда 27).
+        // ============================================================
 
         // ===== Улей колодный (36×46) — у дома пасечника (раунд 27, п.6) =====
         g.clear();

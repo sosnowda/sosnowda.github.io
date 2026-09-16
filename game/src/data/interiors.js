@@ -36,7 +36,11 @@ export const INTERIORS = {
         description: t('Просторный зал с деревянными столами. Пахнет хлебом и медовухой. У камина греются путники.'),
         decor: ['bar', 'tables', 'fireplace'],
         services: ['eat', 'drink', 'rest'],
-        prices: { eat: 5, drink: 3, rest: 10 },
+        // Раунд 30: цены — из репозитория игры ChroniclesRuthenia:
+        // еда (трапеза) 2 д. = каравай хлеба 1 д. + похлёбка 1 д. (FoodCatalog);
+        // рацион (хлеб + бурдюк воды на день) 2 д. (FoodCatalog: bread 1 + water 1);
+        // ночлег на постоялом дворе 2 д. с человека (RestService.PLACES.inn).
+        prices: { eat: 2, drink: 3, rest: 2, ration: 2 },
     },
 
     blacksmith: {
@@ -152,9 +156,11 @@ export const BUILDINGS = [
 // Ворота на выходе из деревни (правый край карты)
 export const VILLAGE_GATE = { col: 23, row: 9, label: t('Ворота') };
 
-// Локации на развилке
+// Локации на развилке (раунд 30: лес — тремя частями: опушка/поляна/чаща)
 export const FORK_LOCATIONS = [
-    { id: 'forest', name: t('Лес'), icon: '🌲', description: t('Густой лес за рекой. Много следов, но и много зверья.') },
+    { id: 'forest_edge', name: t('Опушка леса'), icon: '🌳', description: t('Краешек леса, где кончается трава и начинаются деревья. Светло, грибные места да ягодные кусты.') },
+    { id: 'forest_glade', name: t('Лесная поляна'), icon: '🌼', description: t('Солнечная поляна среди леса, в кольце деревьев. Много цветов, ягод и пчелиного звона.') },
+    { id: 'forest', name: t('Лес'), icon: '🌲', description: t('Густая чаща за опушкой и поляной. Много следов, но и много зверья.') },
     { id: 'road', name: t('Тракт'), icon: '🛤', description: t('Торный тракт на юг, к большим городам.') },
     { id: 'river', name: t('Река'), icon: '🌊', description: t('Брод через реку. Галька, илистый берег — следы видны хорошо.') },
     { id: 'field', name: t('Поле'), icon: '🌾', description: t('Рожковое поле на восток. Высокие стебли скрывают следы.') },

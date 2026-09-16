@@ -99,9 +99,10 @@ export class ForkScene extends Phaser.Scene {
         // ----- Кнопки локаций (расширенная карта, п.2,3) -----
         // Раунд 20: на низких экранах (телефон в ландшафте, узкие окна) —
         // ДВЕ колонки, чтобы все кнопки + «Назад» гарантированно влезали.
+        // Раунд 30: локаций стало 11 (лес — тремя частями) — всегда две колонки.
         const locations = getForkLocations();
         const startY = 140;
-        const twoCols = height < 640;
+        const twoCols = height < 640 || locations.length > 9;
         const cols = twoCols ? 2 : 1;
         const rows = Math.ceil(locations.length / cols);
         const colW = Math.min(320, (width - 40) / cols);
@@ -143,6 +144,8 @@ export class ForkScene extends Phaser.Scene {
         });
 
         // ----- Кнопка "Тёмный лес — прогулка" (раунд 13) -----
+        // Раунд 30: чаща — теперь через опушку и поляну; прогулка остаётся
+        // отдельной сценой лесной чащи (ForestScene).
         const backBtnY = startY + rows * step + 14;
         createButton(this, width / 2, backBtnY, t('🌲 Тёмный лес — прогулка'), () => {
             ActionLog.add(this.registry, 'Игрок отправился гулять в Тёмный лес.');

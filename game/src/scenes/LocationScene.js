@@ -6,6 +6,7 @@ import { getLocationById } from '../data/mapLocations.js';
 import {
     searchLocation, getHuntState, checkGameEnd,
     isChaseActive, isThiefAt, presentThiefEncounter, chaseTicksLeft,
+    getFootprints, examineFootprint, getChase, askNPC,
 } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
@@ -28,6 +29,8 @@ const TREE_KEYS = ['deco_tree_0', 'deco_tree_1', 'deco_tree_2', 'deco_pine_0', '
 
 const LOCATION_BG = {
     forest: 0x1a2a1a,
+    forest_edge: 0x3d6b33,   // раунд 30: опушка — светлее чащи
+    forest_glade: 0x4d7d3a,  // раунд 30: поляна — солнечная трава
     road: 0x4a3a2a,
     river: 0x4a7c3a,    // П.10: трава (река рисуется поверх)
     field: 0x4a7c3a,    // П.14: трава (жёлтое поле рисуется поверх)
@@ -45,6 +48,9 @@ export class LocationScene extends Phaser.Scene {
     init(data) {
         this.locationId = data?.locationId || 'forest';
         this.from = data?.from || 'Fork';
+        // Раунд 30 QA-фикс: флаг диалога не должен переживать рестарт сцены
+        // (застрявший true блокировал все клики после перезахода на локацию)
+        this.busyDialog = false;
         // Раунд 20 (слияние Пасек): статичного вида пасеки больше нет —
         // охотничья пасека открывается через ходячую ApiaryScene с поиском следов.
         if (this.locationId === 'apiary') {
@@ -161,7 +167,11 @@ export class LocationScene extends Phaser.Scene {
         // ----- Состояние поиска + погоня (раунд 21) -----
         const chaseActive = isChaseActive(this.registry);
         const alreadySearched = state.locationsSearched.includes(this.locationId);
-        if (chaseActive && alreadySearched) {
+        // Раунд 30 (пп.4–6): ВИДИМЫЕ СЛЕДЫ — если вор оставил следы на этой
+        // локации, общий поиск заменяется отдельной проверкой каждого следа
+        const footprints = chaseActive ? getFootprints(this.registry, this.locationId) : [];
+        const hasFootprints = footprints.length > 0;
+        if (chaseActive && alreadySearched && !hasFootprints) {
             this.add.text(width / 2, height * 0.4, t('Ты уже прочитал следы в этой местности.\nНовых здесь не найти.'), {
                 fontSize: '18px', color: RUS.textDim, align: 'center',
                 fontFamily: 'Georgia, serif',
@@ -182,8 +192,9 @@ export class LocationScene extends Phaser.Scene {
         const searchLabel = isRiver ? t('🔍 Поиск') : (isRoad ? t('🔍 Осмотр') : t('🔍 Искать следы'));
         const exitLabel = (isRiver || isRoad) ? t('🚪 Выход') : t('◀ Назад к развилке');
 
-        // ----- Кнопка поиска/осмотра (только пока активна погоня) -----
-        if (chaseActive && !alreadySearched) {
+        // ----- Кнопка поиска/осмотра (только пока активна погоня и НЕТ следов:
+        // раунд 30 — где вор прошёл, там следы проверяются по одному кликом) -----
+        if (chaseActive && !alreadySearched && !hasFootprints) {
             createButton(this, width / 2, height - 100, tf('{0} (проверка Внимательности)', searchLabel), () => {
                 this.doSearch();
             }, {
@@ -207,6 +218,14 @@ export class LocationScene extends Phaser.Scene {
         // ----- Раунд 27 (пп.7,8): ЖИТЕЛИ НА ЛОКАЦИЯХ —
         // Авдей на мельнице, Марфа с травами на озере/реке/в лесу и т.д.
         this.drawLocationNpcs(width, height);
+
+        // ----- Раунд 30 (пп.3–6): ВИДИМЫЕ СЛЕДЫ ВОРА — рисуем поверх фона,
+        // клик по следу — отдельная проверка (единожды на след) -----
+        if (hasFootprints) {
+            const trace = getChase(this.registry);
+            const traceSide = trace && trace.traces && trace.traces[this.locationId] ? trace.traces[this.locationId].side : null;
+            this.drawFootprints(footprints, traceSide, width, height);
+        }
     }
 
     /**
@@ -279,7 +298,7 @@ export class LocationScene extends Phaser.Scene {
         });
     }
 
-    /** Разговор с жителем на локации (раунд 27) */
+    /** Разговор с жителем на локации (раунд 27; раунд 30: + расспрос о воре) */
     talkToLocationNpc(npcId) {
         this.busyDialog = true;
         const npcData = findNpc(this.registry, npcId);
@@ -287,12 +306,34 @@ export class LocationScene extends Phaser.Scene {
         const dialogueId = NPC_DIALOGUE[npcId];
         if (dialogueId) {
             this.dialogue.run(dialogueId, () => { this.busyDialog = false; });
-        } else {
-            const line = OUTDOOR_LINES[npcId] || t('Занят(а) своим делом. Заходи в другой раз.');
-            createDialog(this, displayName, line, [
-                { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
-            ], { singleton: true, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+            return;
         }
+
+        // Раунд 30 (пп.7,9): расспрос о воре доступен и на локациях —
+        // но каждый НПЦ выдаёт подсказку ЕДИНожды (строчка не повторяется)
+        const q = this.registry.get('quest') || {};
+        const chaseActive = isChaseActive(this.registry);
+        const alreadyAsked = (q.thiefAskedFrom || []).includes(npcId);
+        const canAsk = chaseActive && !alreadyAsked;
+
+        const closeCb = () => { this.busyDialog = false; };
+        const choices = canAsk
+            ? [
+                {
+                    text: t('Расспросить о воре'),
+                    callback: () => {
+                        const r = askNPC(this.registry, npcId, displayName);
+                        createDialog(this, displayName, r.message, [
+                            { text: t('Продолжить'), callback: closeCb },
+                        ], { singleton: true, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+                    },
+                },
+                { text: t('Продолжить'), callback: closeCb },
+            ]
+            : [{ text: t('Продолжить'), callback: closeCb }];
+
+        const line = OUTDOOR_LINES[npcId] || t('Занят(а) своим делом. Заходи в другой раз.');
+        createDialog(this, displayName, line, choices, { singleton: true, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
     }
 
     update() {
@@ -300,6 +341,173 @@ export class LocationScene extends Phaser.Scene {
         if (this.busyDialog) return;
         const endState = checkGameEnd(this.registry);
         if (endState) this.scene.start('End');
+    }
+
+    // ============================================================
+    // РАУНД 30 (пп.3–6): ВИДИМЫЕ СЛЕДЫ ВОРА
+    // ============================================================
+
+    /**
+     * Нарисовать следы на локации. Каждый след — отдельный интерактивный
+     * объект: проверяется ТОЛЬКО ЕДИНожды; после неудачи пропадает,
+     * после удачи светится (золотое сияние) и даёт подсказку с названием
+     * локации, где вор находится сейчас. Затёртые следы не рисуются.
+     */
+    drawFootprints(footprints, traceSide, width, height) {
+        footprints.forEach((fp, idx) => {
+            if (fp.state === 'gone') return; // п.5: неудачная проверка — след пропал
+            const pos = this.footprintPosition(this.locationId, idx, traceSide, width, height);
+            if (!pos) return;
+            this.drawOneFootprint(fp, pos.x, pos.y);
+        });
+    }
+
+    /**
+     * Детерминированная позиция следа (хэш строки — при перерисовке сцены
+     * следы стоят на тех же местах, «прыганья» нет).
+     * П.3: на РЕКЕ следы стоят или ПЕРЕД мостом, или ЗА мостом (сторона
+     * выбирается один раз на след в данных погони), в ДАЛЬНЕЙ части локации.
+     */
+    footprintPosition(locId, idx, traceSide, width, height) {
+        const hash = (s) => {
+            let h = 2166136261;
+            for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+            return (h >>> 0);
+        };
+        const h1 = hash(`${locId}:fp${idx}`);
+        const jig = (range) => (h1 % (range * 2)) - range;   // ±range
+        const bridgeX = width / 2;
+
+        switch (locId) {
+            case 'river': {
+                // П.3: ДО моста (север, дальний верх) или ЗА мостом (юг, дальний низ),
+                // на дороге к мосту; цепочка следов тянется вдоль дороги
+                const before = traceSide ? traceSide === 'before' : (h1 % 2 === 0);
+                const x = bridgeX + jig(16);
+                const y = before
+                    ? 120 + (h1 % 46) + idx * 34            // перед мостом — дальняя часть у верха
+                    : height - 190 + (h1 % 46) + idx * 34;  // за мостом — дальняя часть у низа
+                return { x, y: Phaser.Math.Clamp(y, 110, height - 70) };
+            }
+            case 'forest':
+                // Чаща: среди деревьев верхней (дальней) трети
+                return { x: 70 + (h1 % Math.max(80, width - 140)), y: 130 + ((h1 >> 5) % Math.max(40, height * 0.28)) + idx * 26 };
+            case 'forest_edge':
+                // Опушка: у кромки деревьев (верх локации)
+                return { x: 70 + (h1 % Math.max(80, width - 140)), y: 125 + ((h1 >> 5) % Math.max(30, height * 0.22)) + idx * 26 };
+            case 'forest_glade':
+                // Поляна: поперёк травяного круга
+                return { x: width * 0.28 + (h1 % Math.max(60, width * 0.44)), y: height * 0.4 + ((h1 >> 5) % Math.max(30, height * 0.22)) + idx * 26 };
+            case 'field':
+                // Поле: в высокой ржи (центральные 2/3)
+                return { x: width / 6 + (h1 % Math.max(60, (width * 2) / 3)), y: 150 + ((h1 >> 5) % Math.max(40, height - 300)) + idx * 22 };
+            case 'lake':
+                // Озеро: дальний берег
+                return { x: 80 + (h1 % Math.max(80, width - 160)), y: height / 2 - Math.min(width, height) / 3.5 - 20 + ((h1 >> 5) % 40) + idx * 20 };
+            case 'road_south':
+                // Тракт: на гравийной ленте
+                return { x: 60 + (h1 % Math.max(80, width - 120)), y: height * 0.5 + jig(30) + idx * 6 };
+            case 'pogost':
+                // Погост: между рядами могил (дальняя половина)
+                return { x: 70 + (h1 % Math.max(80, width - 140)), y: height * 0.42 + ((h1 >> 5) % Math.max(30, height * 0.3)) + idx * 22 };
+            case 'mill':
+                // Мельница: вдоль дороги к мельнице (дальняя часть)
+                return { x: 70 + (h1 % Math.max(80, width - 140)), y: height * 0.5 + 60 + ((h1 >> 5) % 40) + idx * 22 };
+            case 'pasture':
+                // Выпас: в сочной траве (дальний край луга)
+                return { x: 70 + (h1 % Math.max(80, width - 140)), y: 130 + ((h1 >> 5) % Math.max(40, height * 0.3)) + idx * 26 };
+            default:
+                return { x: width * 0.3 + (h1 % Math.max(60, width * 0.4)), y: height * 0.35 + ((h1 >> 5) % 80) + idx * 24 };
+        }
+    }
+
+    /** Один след: пара отпечатков сапог; найденный — светится золотом. */
+    drawOneFootprint(fp, x, y) {
+        const found = fp.state === 'found';
+        const cont = this.add.container(x, y).setDepth(45);
+
+        if (found) {
+            // П.6: удачная проверка — след «СВЕТИТСЯ» (пульсирующее золотое сияние)
+            const halo = this.add.ellipse(0, 2, 44, 28, 0xffe08a, 0.35)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            cont.add(halo);
+            this.tweens.add({
+                targets: halo,
+                alpha: { from: 0.22, to: 0.5 },
+                scale: { from: 0.9, to: 1.18 },
+                duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+        }
+
+        if (this.textures.exists('deco_footprint')) {
+            const l = this.add.image(-6, -1, 'deco_footprint').setScale(2.3);
+            const r = this.add.image(6, 3, 'deco_footprint').setScale(2.3).setFlipX(true);
+            if (found) { l.setTint(0xffd76a); r.setTint(0xffd76a); }
+            cont.add([l, r]);
+        } else {
+            // Запасной вариант — графика
+            const g = this.add.graphics();
+            const boot = found ? 0x6a5528 : 0x33261a;
+            g.fillStyle(boot, 0.92);
+            g.fillEllipse(-6, -3, 7, 11); g.fillEllipse(-6, 4, 5, 4);
+            g.fillEllipse(6, -1, 7, 11); g.fillEllipse(6, 6, 5, 4);
+            if (found) {
+                g.lineStyle(1.4, 0xffd76a, 0.95);
+                g.strokeEllipse(-6, -3, 8, 12); g.strokeEllipse(6, -1, 8, 12);
+            }
+            cont.add(g);
+        }
+
+        // Подпись следа
+        cont.add(this.add.text(0, found ? -24 : -20, found ? t('✨ след прочитан') : t('🔍 след вора'), {
+            fontSize: '10px', color: found ? '#ffd76a' : '#e8d8a8',
+            fontFamily: 'Georgia, serif',
+            backgroundColor: '#000000aa', padding: { x: 4, y: 2 },
+        }).setOrigin(0.5));
+
+        // Клик — отдельная проверка этого следа
+        cont.setInteractive({
+            hitArea: new Phaser.Geom.Rectangle(-28, -26, 56, 48),
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+            useHandCursor: true,
+        });
+        cont.on('pointerdown', (pointer) => {
+            if (pointer.leftButtonDown() && !this.busyDialog) this.onFootprintClick(fp.id);
+        });
+    }
+
+    /**
+     * Клик по следу (раунд 30, пп.4–6): проверка отдельная на каждый след,
+     * только единожды. Удача — след светится + поп-ап «где вор сейчас»;
+     * неудача — след пропадает.
+     */
+    onFootprintClick(fpId) {
+        this.busyDialog = true;
+        const res = examineFootprint(this.registry, this.locationId, fpId);
+        if (res.turnsLeft !== undefined && res.turnsLeft !== null) {
+            this.turnsText.setText(tf(t('⏳ Действий: {0}'), res.turnsLeft));
+            if (res.turnsLeft <= 3) this.turnsText.setColor('#ff4040');
+            else if (res.turnsLeft <= 6) this.turnsText.setColor('#ffaa40');
+        }
+        if (res.thiefEscaped) {
+            createDialog(this, t('🏃 Вор скрылся!'), res.message, [
+                { text: t('Итоги похода'), callback: () => this.scene.start('End') },
+            ], { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
+            return;
+        }
+        const title = res.found
+            ? t('✨ След прочитан!')
+            : (res.alreadyChecked ? t('🔍 След') : t('🔍 След затёрт'));
+        createDialog(this, title, res.message, [
+            {
+                text: t('Продолжить'),
+                callback: () => {
+                    this.busyDialog = false;
+                    // Перерисовать: найденный след засветился, затёртый — исчез
+                    this.scene.restart({ locationId: this.locationId, from: this.from });
+                },
+            },
+        ], { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
     }
 
     /**
@@ -340,6 +548,176 @@ export class LocationScene extends Phaser.Scene {
                         break;
                     }
                     attempts++;
+                }
+            }
+        } else if (locId === 'forest_edge') {
+            // РАУНД 30 (п.1): ОПУШКА ЛЕСА — светлая трава, деревья только у
+            // верхнего края (лес «нависает» с дальнего плана), кусты и грибы
+            gfx.fillStyle(0x4a7c3a, 1);
+            gfx.fillRect(0, 80, width, height - 80);
+            gfx.setDepth(0);
+            // Светлая трава
+            gfx.fillStyle(0x5f9448, 0.55);
+            for (let i = 0; i < 70; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 120);
+                gfx.fillRect(x, y, 3, 4);
+            }
+            // Травяные пласты и кочки (живая земля)
+            for (let i = 0; i < 18; i++) {
+                this.add.image(Math.random() * width, 110 + Math.random() * (height - 150),
+                    `tile_grass_${i % 4}`).setScale(1.5).setAlpha(0.4).setDepth(0.5);
+            }
+            const tuftOkE = this.textures.exists('deco_grass_tuft');
+            for (let i = 0; i < 22; i++) {
+                this.add.image(Math.random() * width, 110 + Math.random() * (height - 150),
+                    tuftOkE ? 'deco_grass_tuft' : 'tile_grass_0').setScale(1.4).setDepth(1);
+            }
+            // Ягодные кусты и грибы по опушке
+            const bushOkE = this.textures.exists('deco_berry_bush');
+            for (let i = 0; i < 9; i++) {
+                const x = Math.random() * width;
+                const y = height * 0.55 + Math.random() * (height * 0.35);
+                this.add.image(x, y, bushOkE ? 'deco_berry_bush' : 'tile_forest_0')
+                    .setScale(1.7).setOrigin(0.5, 0.8).setDepth(3);
+            }
+            // Лес нависает с дальнего плана: плотная стена деревьев вверху
+            const placedEdgeTrees = [];
+            for (let i = 0; i < 14; i++) {
+                let attempts = 0;
+                while (attempts < 10) {
+                    const x = Math.random() * width;
+                    const y = 100 + Math.random() * (height * 0.3);
+                    const clash = placedEdgeTrees.some(p => Math.abs(p.x - x) < 54 && Math.abs(p.y - y) < 54);
+                    if (!clash) {
+                        const tex = TREE_KEYS[i % TREE_KEYS.length];
+                        this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
+                            .setScale(2.8).setOrigin(0.5, 0.88).setDepth(3);
+                        placedEdgeTrees.push({ x, y });
+                        break;
+                    }
+                    attempts++;
+                }
+            }
+            // Одиночные деревья-стражи по бокам опушки
+            for (let i = 0; i < 3; i++) {
+                const x = (i === 1) ? width * 0.5 + Phaser.Math.Between(-40, 40) : (i === 0 ? 70 : width - 70);
+                const y = height * 0.52 + Math.random() * 60;
+                const tex = TREE_KEYS[(i + 2) % TREE_KEYS.length];
+                this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
+                    .setScale(2.5).setOrigin(0.5, 0.88).setDepth(3.5);
+            }
+            // Птицы на опушке (живность, не монстры)
+            if (this.textures.exists('deco_bird')) {
+                for (let i = 0; i < 2; i++) {
+                    const bx = width * 0.3 + i * width * 0.4;
+                    const by = height * 0.6 + Math.random() * 60;
+                    const bird = this.add.image(bx, by, 'deco_bird').setScale(2).setDepth(4).setFlipX(i % 2 === 0);
+                    this.tweens.add({
+                        targets: bird,
+                        scaleY: { from: 2, to: 1.5 },
+                        duration: 260 + i * 110, yoyo: true, repeat: -1, ease: 'Quad.easeOut',
+                    });
+                }
+            }
+        } else if (locId === 'forest_glade') {
+            // РАУНД 30 (п.1): ЛЕСНАЯ ПОЛЯНА — солнечный круг травы среди леса,
+            // деревья кольцом по краю, много цветов и ягодных кустов
+            gfx.fillStyle(0x55863c, 1);
+            gfx.fillRect(0, 80, width, height - 80);
+            gfx.setDepth(0);
+            // Солнечное пятно в центре поляны
+            gfx.fillStyle(0x6a9a48, 0.5);
+            gfx.fillCircle(width / 2, height * 0.52, Math.min(width, height) * 0.28);
+            gfx.setDepth(0.5);
+            // Кочки и трава
+            for (let i = 0; i < 20; i++) {
+                this.add.image(Math.random() * width, 110 + Math.random() * (height - 150),
+                    `tile_grass_${i % 4}`).setScale(1.5).setAlpha(0.45).setDepth(0.5);
+            }
+            const tuftOkG = this.textures.exists('deco_grass_tuft');
+            for (let i = 0; i < 18; i++) {
+                this.add.image(Math.random() * width, 110 + Math.random() * (height - 150),
+                    tuftOkG ? 'deco_grass_tuft' : 'tile_grass_0').setScale(1.5).setDepth(1);
+            }
+            // МНОГО ЦВЕТОВ на поляне (по сезону: зимой — снег вместо цветов)
+            const tsGlade = getTime(this.registry);
+            const seasonGlade = getSeason(tsGlade ? tsGlade.month : 5);
+            if (seasonGlade !== 'winter' && this.textures.exists('deco_flower_0')) {
+                for (let i = 0; i < 30; i++) {
+                    const fl = `deco_flower_${i % 3}`;
+                    const x = Math.random() * width;
+                    const y = 130 + Math.random() * (height - 190);
+                    const flower = this.add.image(x, y, fl).setScale(1.6).setDepth(1.3);
+                    // Цветы слегка качаются
+                    this.tweens.add({
+                        targets: flower,
+                        angle: { from: -5, to: 5 },
+                        duration: 1800 + Math.random() * 1600,
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                        delay: Math.random() * 1200,
+                    });
+                }
+            }
+            // Ягодные кусты в кольце
+            const bushOkG = this.textures.exists('deco_berry_bush');
+            for (let i = 0; i < 7; i++) {
+                const angle = (i / 7) * Math.PI * 2 + 0.3;
+                const r = Math.min(width, height) * 0.3;
+                const x = width / 2 + Math.cos(angle) * r;
+                const y = height * 0.52 + Math.sin(angle) * r * 0.7;
+                this.add.image(x, y, bushOkG ? 'deco_berry_bush' : 'tile_forest_0')
+                    .setScale(1.8).setOrigin(0.5, 0.8).setDepth(3);
+            }
+            // Бревно в центре поляны (привал грибников)
+            const logG = this.add.graphics();
+            logG.fillStyle(0x5a4028, 1);
+            logG.fillRoundedRect(width * 0.44, height * 0.62, 130, 22, 10);
+            logG.fillStyle(0x6f5233, 1);
+            logG.fillRoundedRect(width * 0.44, height * 0.62, 130, 8, 4);
+            logG.fillStyle(0x8a6a44, 1);
+            logG.fillCircle(width * 0.44 + 6, height * 0.62 + 11, 10);
+            logG.fillCircle(width * 0.44 + 124, height * 0.62 + 11, 10);
+            logG.setDepth(3.5);
+            // Деревья КОЛЬЦОМ вокруг поляны (лес окружает просвет)
+            const placedGladeTrees = [];
+            for (let i = 0; i < 16; i++) {
+                let attempts = 0;
+                while (attempts < 12) {
+                    const x = Math.random() * width;
+                    const y = 100 + Math.random() * (height - 140);
+                    // Не в центре поляны (просвет) и без наложения
+                    const inClearing = Math.abs(x - width / 2) < width * 0.22 && Math.abs(y - height * 0.52) < height * 0.2;
+                    const clash = placedGladeTrees.some(p => Math.abs(p.x - x) < 56 && Math.abs(p.y - y) < 56);
+                    if (!inClearing && !clash) {
+                        const tex = TREE_KEYS[i % TREE_KEYS.length];
+                        this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
+                            .setScale(2.9).setOrigin(0.5, 0.88).setDepth(4);
+                        placedGladeTrees.push({ x, y });
+                        break;
+                    }
+                    attempts++;
+                }
+            }
+            // Бабочки над цветами (живность, не монстры)
+            if (seasonGlade !== 'winter' && this.textures.exists('particle_spark')) {
+                for (let i = 0; i < 4; i++) {
+                    const fx = width * 0.3 + Math.random() * width * 0.4;
+                    const fy = height * 0.4 + Math.random() * height * 0.3;
+                    const b = this.add.image(fx, fy, 'particle_spark')
+                        .setScale(0.35).setTint(0xf2e8b8).setDepth(7);
+                    this.tweens.add({
+                        targets: b,
+                        x: fx + Phaser.Math.Between(-40, 40),
+                        y: fy + Phaser.Math.Between(-24, 24),
+                        duration: 2600 + Math.random() * 2000,
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                    this.tweens.add({
+                        targets: b,
+                        alpha: { from: 0.35, to: 0.85 },
+                        duration: 500, yoyo: true, repeat: -1,
+                    });
                 }
             }
         } else if (locId === 'road' || locId === 'road_south') {
@@ -993,16 +1371,56 @@ export class LocationScene extends Phaser.Scene {
                 }
             }
         } else if (locId === 'pasture') {
-            // Выпас — луг с коровами, козами и лошадьми
+            // РАУНД 30 (п.2): ВЫПАС — ГУСТАЯ СОЧНАЯ ТРАВА И МНОЖЕСТВО ЦВЕТОВ.
+            // Заливной луг: многослойная трава, кочки, луговые цветы по всему
+            // полю (по сезону: зимой — снежные наметы вместо цветов).
             gfx.fillStyle(0x5a8a3a, 1);
             gfx.fillRect(0, 80, width, height - 80);
             gfx.setDepth(0);
-            // Сочная трава
-            gfx.fillStyle(0x6a9a4a, 0.5);
-            for (let i = 0; i < 80; i++) {
+            // Сочная двухцветная трава
+            gfx.fillStyle(0x6a9a4a, 0.6);
+            for (let i = 0; i < 90; i++) {
                 const x = Math.random() * width;
                 const y = 100 + Math.random() * (height - 120);
                 gfx.fillRect(x, y, 3, 5);
+            }
+            gfx.fillStyle(0x7aaa56, 0.45);
+            for (let i = 0; i < 60; i++) {
+                const x = Math.random() * width;
+                const y = 100 + Math.random() * (height - 120);
+                gfx.fillRect(x, y, 4, 6);
+            }
+            // Травяные пласты — густой покров
+            for (let i = 0; i < 26; i++) {
+                this.add.image(Math.random() * width, 105 + Math.random() * (height - 140),
+                    `tile_grass_${i % 4}`).setScale(1.7).setAlpha(0.5).setDepth(0.5);
+            }
+            // Пышные кочки
+            const tuftOkP = this.textures.exists('deco_grass_tuft');
+            const tsPast = getTime(this.registry);
+            const seasonPast = getSeason(tsPast ? tsPast.month : 5);
+            for (let i = 0; i < 40; i++) {
+                this.add.image(Math.random() * width, 105 + Math.random() * (height - 140),
+                    tuftOkP ? 'deco_grass_tuft' : 'tile_grass_0')
+                    .setScale(1.5 + Math.random() * 0.8).setDepth(1)
+                    .setTint(seasonPast === 'winter' ? 0xcfe0d8 : 0xffffff);
+            }
+            // МНОЖЕСТВО ЦВЕТОВ по всему лугу (не зимой — зимой снежные наметы)
+            if (seasonPast !== 'winter' && this.textures.exists('deco_flower_0')) {
+                for (let i = 0; i < 42; i++) {
+                    const fl = `deco_flower_${i % 3}`;
+                    const x = Math.random() * width;
+                    const y = 115 + Math.random() * (height - 165);
+                    const flower = this.add.image(x, y, fl)
+                        .setScale(1.7 + Math.random() * 0.7).setDepth(1.4);
+                    this.tweens.add({
+                        targets: flower,
+                        angle: { from: -6, to: 6 },
+                        duration: 1700 + Math.random() * 1500,
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                        delay: Math.random() * 1400,
+                    });
+                }
             }
             // Коровы (3 шт)
             for (let i = 0; i < 3; i++) {
