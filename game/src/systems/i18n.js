@@ -155,6 +155,12 @@ const EN = {
     'Дом Авдея': 'Avdey\'s house',
     'Дом Марфы': 'Marfa\'s house',
     'Дом пасечника': 'Beekeeper\'s house',
+    // Раунд 28 (п.1): дом на месте часовни — ДОМ ПАХАРЯ (не пасечника)
+    'Дом пахаря': 'Ploughman\'s house',
+    'Пахарь Тарас': 'Ploughman Taras',
+    'Фёкла, жена пахаря': 'Fyokla, the ploughman\'s wife',
+    'Изба полна детского гомона: у Тараса и Фёклы семеро детей. У крыльца — соха, на лавках — клубки шерсти, в углу — плетёные корзины для грибов.': 'The hut is full of children\'s chatter: Taras and Fyokla have seven of them. A wooden plough rests by the porch, balls of wool lie on the benches, and wicker baskets for mushrooms stand in the corner.',
+    'Расскажи о своей пашне.': 'Tell me about your ploughing.',
     'Церковь': 'Church',
     'Ворота': 'Gate',
     'Дом старосты': 'Elder\'s house',

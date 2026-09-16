@@ -82,21 +82,21 @@ export const INTERIORS = {
         decor: ['bed', 'icon'],
     },
 
-    // Раунд 27 (п.6): новый жилой дом на месте убранной часовни —
-    // многодетная семья пасечника: муж Тарас и жена Фёкла.
+    // Раунд 27 (п.6), раунд 28 (п.1): дом на месте убранной часовни —
+    // ДОМ ПАХАРЯ (не пасечника!): Тарас днём на поле, Фёкла с семерыми детьми.
     beekeeper_house: {
         id: 'beekeeper_house',
-        name: t('Дом пасечника'),
+        name: t('Дом пахаря'),
         npcId: 'beekeeper1',
-        npcName: t('Пасечник Тарас'),
+        npcName: t('Пахарь Тарас'),
         npcSprite: 'npc_merchant',
         portrait: 'portrait_peasant',
         dialogueId: 'beekeeper1',
-        description: t('Изба полна детского гомона: у Тараса и Фёклы семеро детей. На лавках сушатся соты, в углу — плетёные корзины для мёда.'),
+        description: t('Изба полна детского гомона: у Тараса и Фёклы семеро детей. У крыльца — соха, на лавках — клубки шерсти, в углу — плетёные корзины для грибов.'),
         decor: ['bed', 'table', 'cradle'],
         // Жена — вторая фигура в доме (как у старосты)
         secondaryNpcId: 'beekeeper_wife',
-        secondaryNpcName: t('Фёкла, жена пасечника'),
+        secondaryNpcName: t('Фёкла, жена пахаря'),
         secondaryNpcSprite: 'npc_elder',
         secondaryPortrait: 'portrait_villager_f',
         secondaryDialogueId: 'beekeeper_wife',
@@ -135,7 +135,7 @@ export const INTERIORS = {
 
 // Координаты зданий в деревне (col, row — верхний-левый угол двери)
 // Раунд 9: + Амбар (северо-восток). Раунд 26: часовня удалена — есть церковь.
-// Раунд 27 (п.6): на свободном месте часовни — дом многодетной семьи пасечника.
+// Раунд 27 (п.6), раунд 28 (п.1): на свободном месте часовни — ДОМ ПАХАРЯ.
 // Двери и дорожки строятся автоматически в world.buildMap(),
 // проходимость проверяет validateMap() (BFS от спавна).
 export const BUILDINGS = [
@@ -145,7 +145,7 @@ export const BUILDINGS = [
     { interiorId: 'barn', col: 20, row: 4, w: 3, h: 3, label: t('Амбар') },
     { interiorId: 'villager_house_1', col: 4, row: 11, w: 3, h: 3, label: t('Дом Авдея') },
     { interiorId: 'villager_house_2', col: 10, row: 11, w: 3, h: 3, label: t('Дом Марфы') },
-    { interiorId: 'beekeeper_house', col: 15, row: 11, w: 3, h: 3, label: t('Дом пасечника') },
+    { interiorId: 'beekeeper_house', col: 15, row: 11, w: 3, h: 3, label: t('Дом пахаря') },
     { interiorId: 'church', col: 20, row: 11, w: 3, h: 3, label: t('Церковь') },
 ];
 

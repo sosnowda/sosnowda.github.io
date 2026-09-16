@@ -13,11 +13,13 @@ import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js'
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
-import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
+import { getTime, formatDateTime, getDayNightOverlay, tickTime, realTimeString, getSeason } from '../systems/TimeSystem.js';
 import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES } from '../data/npcPresence.js';
+import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
+import { addMorningFog, addSeasonalGround } from '../systems/AmbientFX.js';
 
 // Раунд 27 (п.1): прозрачные деревья без фона вместо квадратных тайлов
 const TREE_KEYS = ['deco_tree_0', 'deco_tree_1', 'deco_tree_2', 'deco_pine_0', 'deco_pine_1'];
@@ -75,6 +77,22 @@ export class LocationScene extends Phaser.Scene {
         // ----- Погода (раунд 14): дождь/снег над текстовой локацией -----
         applyWeatherVisuals(this, { tintDepth: 94, precipDepth: 96 });
 
+        // ----- Раунд 28 (пп.4,5): УТРЕННИЙ ТУМАН + СЕЗОННАЯ ЗЕМЛЯ —
+        // на ВСЕХ локациях (туман с рассвета до 9 утра, снег зимой,
+        // листья осенью, цветы весной — по календарю игры) -----
+        const fogSeason = addSeasonalGround(this, { width, height, density: this.locationId === 'pogost' ? 0.6 : 1 });
+        addMorningFog(this, { width, height, yMin: 110, yMax: height - 60, depth: 55 });
+
+        // Раунд 28 (п.5): зимой/осенью кроны деревьев перекрашиваются
+        // (зимний иней / осеннее золото) — по календарю, не по погоде дня
+        if (fogSeason === 'winter' || fogSeason === 'autumn') {
+            this.children.list.forEach((ch) => {
+                if (ch.type === 'Image' && ch.texture && TREE_KEYS.includes(ch.texture.key)) {
+                    ch.setTint(fogSeason === 'winter' ? 0xd6e4ee : 0xe0b060);
+                }
+            });
+        }
+
         // ----- Заголовок -----
         this.add.text(width / 2, 20, `${loc.icon} ${loc.name}`, {
             fontSize: '28px', color: RUS.text, fontStyle: 'bold',
@@ -89,15 +107,24 @@ export class LocationScene extends Phaser.Scene {
             wordWrap: { width: width - 80 },
         }).setOrigin(0.5, 0);
 
-        // Дата и время (п.13) + погода дня (раунд 14)
+        // Дата и время (п.13) + погода дня (раунд 14) + реальные часы (раунд 28)
         if (timeState) {
             const weather = getWeather(this.registry);
-            this.add.text(width / 2, 80, `📅 ${formatDateTime(timeState)}   ${weather.icon} ${weather.name}`, {
+            this.dateLine = this.add.text(width / 2, 80, `📅 ${formatDateTime(timeState)}   ${weather.icon} ${weather.name}   🕐 ${realTimeString()}`, {
                 fontSize: '11px', color: '#8ab4f8',
                 fontFamily: 'Georgia, serif',
                 stroke: '#000', strokeThickness: 1,
                 backgroundColor: '#00000088', padding: { x: 6, y: 3 },
             }).setOrigin(0.5, 0).setDepth(100);
+            // Раунд 28 (п.5): часы реального времени тикают, пока игрок на локации
+            this.time.addEvent({
+                delay: 15000, loop: true,
+                callback: () => {
+                    if (this.dateLine && this.dateLine.active) {
+                        this.dateLine.setText(`📅 ${formatDateTime(timeState)}   ${weather.icon} ${weather.name}   🕐 ${realTimeString()}`);
+                    }
+                },
+            });
         }
 
         // ----- HUD -----
@@ -114,7 +141,10 @@ export class LocationScene extends Phaser.Scene {
         }).setDepth(100);
 
         // ----- Игрок -----
-        this.playerSprite = this.add.sprite(width * 0.2, height * 0.6, 'player', 0).setScale(2.5);
+        // Раунд 28 QA-фикс: у спрайта героя не было depth — на локациях,
+        // где фон рисуется graphics с depth 1 (поле/озеро), герой оказывался
+        // ПОД заливкой и «исчезал». Ставим его поверх фона, но под NPC.
+        this.playerSprite = this.add.sprite(width * 0.2, height * 0.6, 'player', 0).setScale(2.5).setDepth(40);
         this.playerSprite.play('player_idle_right');
         this.tweens.add({
             targets: this.playerSprite,
@@ -177,6 +207,8 @@ export class LocationScene extends Phaser.Scene {
      * Раунд 27: NPC по системе присутствия (npcPresence.js) — если по
      * расписанию житель сейчас на этой локации, рисуем его спрайт,
      * имя и даём поговорить (полное дерево диалога или короткая реплика).
+     * Раунд 28: спрайты — LPC-композиты (п.2); добавлен ВЫПАС (пастбище);
+     * дети пахаря видны на своих локациях (п.1) — до 4 штук, меньшего роста.
      */
     drawLocationNpcs(width, height) {
         const SPOTS = {
@@ -185,38 +217,59 @@ export class LocationScene extends Phaser.Scene {
             river:  { x: width * 0.5 + 120, y: height * 0.5 + 30 },
             forest: { x: width * 0.42, y: height * 0.62 },
             field:  { x: width / 6 + (width * 2 / 3) * 0.28, y: height * 0.58 },
+            pasture: { x: width * 0.55, y: height * 0.62 },   // раунд 28: дети на выпасе
         };
         const spot = SPOTS[this.locationId];
         if (!spot) return;
         const here = getNpcsAtPlace(this.registry, this.locationId);
-        here.slice(0, 2).forEach((npcId, i) => {
-            const npcData = findNpc(this.registry, npcId);
-            const displayName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
-            const spriteKey = (npcData && npcData.sprite) || 'npc_merchant';
-            const x = spot.x - i * 55;
-            const y = spot.y + i * 12;
-            const spr = this.add.sprite(x, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
-                .setScale(2.3).setDepth(50);
-            const animKey = `${spr.texture.key}_idle_down`;
-            if (this.anims.exists(animKey)) spr.play(animKey);
+        // Взрослые (до 2) и дети (до 4) рисуются отдельными группами
+        const adults = here.filter(id => !isChildNpc(findNpc(this.registry, id)));
+        const kids = here.filter(id => isChildNpc(findNpc(this.registry, id)));
+        adults.slice(0, 2).forEach((npcId, i) => {
+            this.drawLocationNpc(npcId, spot.x - i * 55, spot.y + i * 12, 2.3, i);
+        });
+        kids.slice(0, 4).forEach((npcId, i) => {
+            this.drawLocationNpc(npcId, spot.x + 40 + (i % 2) * 46, spot.y + 6 + Math.floor(i / 2) * 30, 1.5, i, true);
+        });
+    }
+
+    /** Один NPC на локации: спрайт (LPC), имя, подсказка, клик-диалог */
+    drawLocationNpc(npcId, x, y, scale, i = 0, kid = false) {
+        const npcData = findNpc(this.registry, npcId);
+        const displayName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
+        const spriteKey = getNpcSpriteKey(this, this.registry, npcId);
+        const spr = this.add.sprite(x, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
+            .setScale(scale).setDepth(50);
+        const animKey = `${spr.texture.key}_idle_down`;
+        if (this.anims.exists(animKey)) spr.play(animKey);
+        // Дети еро́зятся — слегка «прыгают» на месте (а если рядом ещё дети — бегают)
+        this.tweens.add({
+            targets: spr,
+            y: { from: y, to: y - 3 },
+            duration: 1600 + i * 240, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        });
+        if (kid && this.anims.exists(`${spr.texture.key}_walk_right`)) {
+            const rx = 26 + Math.random() * 22;
             this.tweens.add({
                 targets: spr,
-                y: { from: y, to: y - 3 },
-                duration: 1600 + i * 240, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                x: { from: x, to: x + (i % 2 === 0 ? -rx : rx) },
+                duration: 1300 + i * 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                onYoyo: () => spr.setFlipX(!spr.flipX),
+                onRepeat: () => spr.setFlipX(!spr.flipX),
             });
-            this.add.text(x, y + 42, displayName, {
-                fontSize: '13px', color: RUS.text,
-                backgroundColor: '#000000aa', padding: { x: 5, y: 2 },
-                stroke: '#000', strokeThickness: 2,
-            }).setOrigin(0.5).setDepth(50);
-            this.add.text(x, y - 46, t('💬 Нажми, чтобы поговорить'), {
-                fontSize: '10px', color: '#c9a14a',
-                backgroundColor: '#00000088', padding: { x: 4, y: 2 },
-            }).setOrigin(0.5).setDepth(50);
-            spr.setInteractive({ useHandCursor: true });
-            spr.on('pointerdown', (pointer) => {
-                if (pointer.leftButtonDown() && !this.busyDialog) this.talkToLocationNpc(npcId);
-            });
+        }
+        this.add.text(x, y + 42, displayName, {
+            fontSize: '13px', color: RUS.text,
+            backgroundColor: '#000000aa', padding: { x: 5, y: 2 },
+            stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(50);
+        this.add.text(x, y - 46, t('💬 Нажми, чтобы поговорить'), {
+            fontSize: '10px', color: '#c9a14a',
+            backgroundColor: '#00000088', padding: { x: 4, y: 2 },
+        }).setOrigin(0.5).setDepth(50);
+        spr.setInteractive({ useHandCursor: true });
+        spr.on('pointerdown', (pointer) => {
+            if (pointer.leftButtonDown() && !this.busyDialog) this.talkToLocationNpc(npcId);
         });
     }
 
@@ -297,21 +350,51 @@ export class LocationScene extends Phaser.Scene {
                 const y = 100 + Math.random() * (height - 120);
                 gfx.fillRect(x, y, 3, 3);
             }
-            // Гравийная дорога — горизонтальная полоса через весь экран
+            // ----- Раунд 28 (п.7): ГРАВИЙНАЯ ДОРОГА — настоящие тайлы вместо
+            // плоской полосы: гравий двух видов (с колеями) + кромки с травой,
+            // камешки и разметанные следы обоза — тракт больше не «жёлтая полоса»
             const roadY = height * 0.5;
             const roadH = 100;
             const roadTop = roadY - roadH / 2;
             const roadBottom = roadY + roadH / 2;
-            gfx.fillStyle(0x9a8060, 1);
-            gfx.fillRect(0, roadTop, width, roadH);
-            gfx.setDepth(1);
-            // Текстура гравия
-            gfx.fillStyle(0x7a6040, 0.6);
-            for (let i = 0; i < 80; i++) {
-                const x = Math.random() * width;
-                const y = roadTop + Math.random() * roadH;
-                gfx.fillCircle(x, y, 2);
+            const hasGravel = this.textures.exists('tile_gravel_0');
+            if (hasGravel) {
+                const step = 58;
+                for (let gx = 0; gx < width + step; gx += step) {
+                    const v = (Math.round(gx / step) % 3 === 0) && this.textures.exists('tile_gravel_1')
+                        ? 'tile_gravel_1' : 'tile_gravel_0';
+                    this.add.image(gx, roadY, v)
+                        .setDisplaySize(step + 6, roadH + 6)
+                        .setDepth(1.1);
+                }
+                // Кромки с травой (переход газон → гравий) сверху и снизу
+                if (this.textures.exists('tile_gravel_edge')) {
+                    for (let gx = 0; gx < width + 60; gx += 60) {
+                        this.add.image(gx, roadTop + 3, 'tile_gravel_edge')
+                            .setDisplaySize(64, 22).setDepth(1.15);
+                        this.add.image(gx, roadBottom - 3, 'tile_gravel_edge')
+                            .setDisplaySize(64, 22).setFlipY(true).setDepth(1.15);
+                    }
+                }
+            } else {
+                gfx.fillStyle(0x9a8060, 1);
+                gfx.fillRect(0, roadTop, width, roadH);
+                gfx.setDepth(1);
             }
+            // Камешки и колеи ПОВЕРХ гравия — ОТДЕЛЬНЫЙ graphics (не поднимаем
+            // общий фон gfx, иначе он закроет тайлы гравия!)
+            const roadGfx = this.add.graphics();
+            roadGfx.fillStyle(0x6a5c4a, 0.5);
+            for (let i = 0; i < 40; i++) {
+                const x = Math.random() * width;
+                const y = roadTop + 10 + Math.random() * (roadH - 20);
+                roadGfx.fillCircle(x, y, 1.6);
+            }
+            roadGfx.fillStyle(0x74654e, 0.4);
+            for (let i = 0; i < 6; i++) {
+                roadGfx.fillRect(0, roadTop + 20 + (i % 2) * 40, width, 4);
+            }
+            roadGfx.setDepth(1.2);
             // П.15: Камни на дороге — только ВНЕ дороги (на траве), чтобы не перекрывать
             const placedPositions = [];
             const isOnRoad = (y) => y > roadTop - 20 && y < roadBottom + 20;
@@ -349,11 +432,15 @@ export class LocationScene extends Phaser.Scene {
                     attempts++;
                 }
             }
-            // Тропинки травы у дороги — только выше дороги
+            // Тропинки травы у дороги — только выше дороги.
+            // Раунд 28: прозрачные кочки deco_grass_tuft вместо квадратных
+            // тайлов tile_grass_0 с фоном (продолжение п.1 раунда 27)
+            const tuftOk = this.textures.exists('deco_grass_tuft');
             for (let i = 0; i < 20; i++) {
                 const x = Math.random() * width;
                 const y = roadTop - 10 - Math.random() * 20;
-                this.add.image(x, y, 'tile_grass_0').setScale(2).setDepth(1);
+                this.add.image(x, y, tuftOk ? 'deco_grass_tuft' : 'tile_grass_0')
+                    .setScale(1.6).setDepth(1.25);
             }
         } else if (locId === 'river') {
             // П.10: Река — голубая полоса посередине, мост, заросли, дорога к мосту
@@ -392,6 +479,32 @@ export class LocationScene extends Phaser.Scene {
                     this.riverWaterTiles.forEach(w => w.setTexture(`tile_water_${this.riverWaterFrame}`));
                 },
             });
+
+            // ----- Раунд 28 (п.6): ТЕЧЕНИЕ РЕКИ СЛЕВА НАПРАВО -----
+            // Штрихи течения и пена плывут вдоль всей ленты реки (под мостом —
+            // глубина штрихов ниже настила моста, вода уходит «под него»).
+            if (this.textures.exists('river_streak')) {
+                for (let i = 0; i < 14; i++) {
+                    const streak = this.add.image(-60 - Math.random() * 260, riverY + 16 + Math.random() * (riverH - 30), 'river_streak')
+                        .setScale(1 + Math.random() * 1.7)
+                        .setAlpha(0.3 + Math.random() * 0.35)
+                        .setDepth(1.6);
+                    const dur = 5500 + Math.random() * 5500;
+                    this.tweens.add({
+                        targets: streak,
+                        x: width + 80,
+                        duration: dur,
+                        repeat: -1,
+                        delay: Math.random() * dur,
+                        ease: 'Linear',
+                        onRepeat: () => {
+                            streak.y = riverY + 16 + Math.random() * (riverH - 30);
+                            streak.setScale(1 + Math.random() * 1.7);
+                            streak.setAlpha(0.3 + Math.random() * 0.35);
+                        },
+                    });
+                }
+            }
             // Блики течения
             gfx.fillStyle(0x6a9bbc, 0.5);
             for (let i = 0; i < 60; i++) {
@@ -494,11 +607,13 @@ export class LocationScene extends Phaser.Scene {
                 const y = fieldY + Math.random() * fieldH;
                 gfx.fillRect(x, y, 2, 12);
             }
-            // Колышущиеся стебли (анимация наклона)
+            // Колышущиеся стебли (анимация наклона).
+            // Раунд 28: прозрачные кочки вместо квадратных тайлов с фоном
+            const stemTexF = this.textures.exists('deco_grass_tuft') ? 'deco_grass_tuft' : 'tile_grass_0';
             for (let i = 0; i < 25; i++) {
                 const x = fieldX + Math.random() * fieldW;
                 const y = fieldY + Math.random() * fieldH;
-                const stem = this.add.image(x, y, 'tile_grass_0').setScale(3).setTint(0xc8a838).setDepth(3);
+                const stem = this.add.image(x, y, stemTexF).setScale(2.6).setTint(0xc8a838).setDepth(3);
                 this.tweens.add({
                     targets: stem,
                     angle: { from: -8, to: 8 },
@@ -1098,7 +1213,24 @@ export class LocationScene extends Phaser.Scene {
                 }
             }
 
-            // Раунд 27 (п.4): влажный туман над ручьём УДАЛЕН — ручья больше нет.
+            // ----- Раунд 28 (п.4): ТУМАН ВЕРНУТ — низкие клочья сырости
+            // у подножия мельницы и вдоль дороги (как было до раунда 27,
+            // теперь мельница ветряная, туман — просто утренняя сырость;
+            // с рассвета до 9 утра добавляется ещё и общий туман локации) -----
+            if (this.textures.exists('fog_puff')) {
+                for (let i = 0; i < 3; i++) {
+                    const fogX = millX + (i - 1) * 150 + Phaser.Math.Between(-30, 30);
+                    const fogY = millY + 55 + Math.random() * 30;
+                    const fog = this.add.image(fogX, fogY, 'fog_puff')
+                        .setScale(1.1 + Math.random() * 0.9).setAlpha(0.06).setDepth(6.5);
+                    this.tweens.add({
+                        targets: fog,
+                        x: fogX + Phaser.Math.Between(-60, 60),
+                        duration: 12000 + Math.random() * 8000,
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                }
+            }
 
             // П.13: Много деревьев вокруг мельницы (с коллизиями).
             // Раунд 27: прозрачные спрайты, без проверки ручья (его больше нет).

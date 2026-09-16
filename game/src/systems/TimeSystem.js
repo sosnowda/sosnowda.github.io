@@ -60,19 +60,31 @@ export function seasonName(seasonKey) {
 }
 
 // Создать случайную дату в пределах 15 века (1401-1500 от Р.Х., 6909-7008 от С.М.)
+// Раунд 28 (п.5): РЕАЛЬНОЕ ВРЕМЯ — новая игра начинается в тот час и минуту,
+// которые сейчас у игрока (день/ночь при старте совпадает с настоящим).
 export function createRandomStartDate() {
     const yearFromChrist = 1401 + Math.floor(Math.random() * 100); // 1401..1500
     const yearFromCreation = yearFromChrist + 5508; // от сотворения мира
     const month = Math.floor(Math.random() * 12); // 0..11
     const day = 1 + Math.floor(Math.random() * 28); // 1..28
+    const now = new Date();
     return {
         yearFromChrist,
         yearFromCreation,
         month, // 0..11
         day, // 1..31
-        hour: 6 + Math.floor(Math.random() * 4), // 6..9 утра
-        minute: 0,
+        hour: now.getHours(),            // реальный час игрока (0..23)
+        minute: now.getMinutes(),        // реальная минута игрока
     };
+}
+
+/**
+ * Раунд 28 (п.5): текущее РЕАЛЬНОЕ время игрока «ЧЧ:ММ» — для живых часов
+ * в статус-баре деревни и на локациях.
+ */
+export function realTimeString() {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 }
 
 // Создать объект времени

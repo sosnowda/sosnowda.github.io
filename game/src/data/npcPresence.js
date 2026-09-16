@@ -12,6 +12,12 @@
 //   п.11 — все взрослые случайно (по-разному каждый день) ходят в
 //          таверну и сидят там по несколько часов в сутки.
 //
+// Раунд 28 (п.1): дом на месте часовни — ДОМ ПАХАРЯ, не пасечника!
+//   Тарас (beekeeper1) — ПАХАРЬ: днём работает НА ПОЛЕ (пашет/боронит).
+//   Ульев у дома больше нет. Семеро детей ДНЁМ:
+//     пасут скот НА ПАСТБИЩЕ (выпас), ловят рыбу НА ОЗЕРЕ или РЕКЕ,
+//     собирают грибы В ЛЕСУ или бегают по ДЕРЕВНЕ.
+//
 // Всё детерминировано: hash(seed, npcId, день, час) — один и тот же час
 // даёт одно и то же место (не мигает), но каждый игровой день расписание
 // новое. Работает и для старых сейвов (seed 0), и для новых NPC.
@@ -30,14 +36,19 @@ const NPC_ROLE = {
     hunter: 'hunter',
     guard: 'guard',
     fisherman: 'fisherman',
-    beekeeper1: 'beekeeper',     // п.6: муж-пасечник из новой семьи
-    beekeeper_wife: 'homemaker', // п.6: жена пасечника
+    beekeeper1: 'ploughman',     // Раунд 28 (п.1): Тарас — ПАХАРЬ (не пасечник)
+    beekeeper_wife: 'homemaker', // п.6: жена пахаря Фёкла
     elder_wife: 'homemaker',     // п.9: жена старосты
+    kid1: 'child', kid2: 'child', kid3: 'child', kid4: 'child',
+    kid5: 'child', kid6: 'child', kid7: 'child',  // Раунд 28 (п.1): семеро детей
 };
 
+// Дети семьи пахаря (видимые НПЦ: гуляют по деревне, работают по-детски)
+export const KIDS = ['kid1', 'kid2', 'kid3', 'kid4', 'kid5', 'kid6', 'kid7'];
+
 // Кто НЕ ходит в таверну (п.11): батюшка при службе, тавернщик всегда там,
-// стражник на страже у ворот.
-const NO_TAVERN = new Set(['priest', 'tavernkeeper', 'guard']);
+// стражник на страже у ворот, а ДЕТИ — им на постоялый двор нельзя.
+const NO_TAVERN = new Set(['priest', 'tavernkeeper', 'guard', 'child']);
 
 // Базовое расписание по роли: сегмент дня → место.
 // home = «свой интерьер» (у кузнеца это кузница, у тавернщика — двор).
@@ -47,6 +58,8 @@ const BASE_SCHEDULE = {
     tavernkeeper: { dawn: 'tavern',  morning: 'tavern',  noon: 'tavern',  evening: 'tavern',  dusk: 'tavern',  night: 'tavern' },
     blacksmith:   { dawn: 'home',    morning: 'home',    noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' },
     miller:       { dawn: 'mill',    morning: 'mill',    noon: 'mill',    evening: 'home',    dusk: 'home',    night: 'home' },
+    ploughman:    { dawn: 'field',   morning: 'field',   noon: 'field',   evening: 'home',    dusk: 'home',    night: 'home' },   // Раунд 28: Тарас днём НА ПОЛЕ
+    child:        { dawn: 'village', morning: 'work',    noon: 'work',    evening: 'village', dusk: 'home',    night: 'home' },   // Раунд 28: дети — день по делам (work = детерминированный выбор)
     beekeeper:    { dawn: 'apiary',  morning: 'apiary',  noon: 'apiary',  evening: 'home',    dusk: 'home',    night: 'home' },
     beekeeper_f:  { dawn: 'home',    morning: 'work',    noon: 'work',    evening: 'home',    dusk: 'home',    night: 'home' },
     homemaker:    { dawn: 'home',    morning: 'village', noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' },
@@ -77,6 +90,15 @@ const ACTIVITY = {
     beekeeper: {
         apiary: 'работает на пасеке', home: 'дома, после пасеки',
         village: 'несёт раму с сотами', tavern: 'отдыхает на постоялом дворе',
+    },
+    ploughman: {
+        field: 'пашет и боронит на поле', home: 'дома, после полевых работ',
+        village: 'несёт соху с поля', tavern: 'отдыхает на постоялом дворе',
+    },
+    child: {
+        pasture: 'пасёт скот на выпасе', lake: 'ловит рыбу у озера',
+        river: 'ловит рыбу на реке', forest: 'собирает грибы в лесу',
+        village: 'бегает и играет с братьями и сёстрами', home: 'дома, греется у печи',
     },
     beekeeper_f: {
         apiary: 'работает на пасеке', lake: 'собирает травы у озера',
@@ -111,7 +133,7 @@ export const PLACE_NAMES = {
     home: 'дома', village: 'на улице деревни', tavern: 'на постоялом дворе',
     mill: 'на мельнице', apiary: 'на пасеке', lake: 'у озера',
     river: 'на реке', forest: 'в лесу', field: 'в поле',
-    gate: 'у ворот', church: 'в церкви',
+    gate: 'у ворот', church: 'в церкви', pasture: 'на выпасе',
 };
 
 // Короткие уличные реплики для NPC без полного дерева диалогов
@@ -120,6 +142,15 @@ export const OUTDOOR_LINES = {
     hunter: '«Тихо в лесу сегодня. Слишком тихо — зверь чует неладное.»',
     guard: '«Прохода нет, всё проверяю. Порядок — он и в Африке порядок.»',
     fisherman: '«Клюёт хорошо. Хочешь свежей рыбки — заходи к вечеру.»',
+    // Раунд 28 (п.1): пахарь Тарас и его семеро детей
+    beekeeper1: '«Соха сама не спашет! Поле ждёт, а я тут стою...»',
+    kid1: '«А я раньше бати с поля прибежал! Честно-пречестно!»',
+    kid2: '«Не верь Степаниде — это она съела всю бражку... мёду то есть!»',
+    kid3: '«Смотри, сколько грибов набрал! Батя хвалить будет!»',
+    kid4: '«На выпасе козёл Прохор меня бодает. Злой очень!»',
+    kid5: '«Улов покажешь? А то у меня ни одной рыбки не клюнуло!»',
+    kid6: '«Батя говорит: кто поле любит, того и земля кормит.»',
+    kid7: '«А мама сказала в избу без ужина не приходить! Так что я гуляю!»',
 };
 
 // Диалоговое дерево по ID (полные диалоги; остальные — OUTDOOR_LINES)
@@ -179,6 +210,17 @@ function marfaWorkPlace(registry, time, hour, segId) {
     return noonPlace;
 }
 
+// Дети пахаря (раунд 28, п.1): днём каждый ребёнок — по СВОЕМУ детерминированному
+// делу на день: выпас (пастбище), рыбалка (озеро/река), грибы (лес) или беготня
+// по деревне. Утром и после полудня место может меняться (как у Марфы).
+const CHILD_PLACES = ['pasture', 'lake', 'river', 'forest', 'village'];
+
+function childDayPlace(registry, npcId, time, segId) {
+    const seed = registry.get('npcSeed') || 0;
+    const dk = dayKeyOf(time);
+    return CHILD_PLACES[Math.floor(hash01(`${seed}:${npcId}:${dk}:${segId}`) * CHILD_PLACES.length)];
+}
+
 /**
  * Где NPC находится в текущий час.
  * @returns {{ place: string, activity: string }}
@@ -212,6 +254,12 @@ export function getPresence(registry, npcId) {
     if (role === 'beekeeper_f' && (segId === 'morning' || segId === 'noon')) {
         const wp = marfaWorkPlace(registry, time, hour, segId);
         return { place: wp, activity: acts[wp] || 'занята работой' };
+    }
+
+    // --- Дети пахаря (раунд 28, п.1): днём пастбище/озеро/река/лес/деревня ---
+    if (role === 'child' && (segId === 'morning' || segId === 'noon')) {
+        const wp = childDayPlace(registry, npcId, time, segId);
+        return { place: wp, activity: acts[wp] || 'занят детскими делами' };
     }
 
     // --- Базовое расписание роли ---

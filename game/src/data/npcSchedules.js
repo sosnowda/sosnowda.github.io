@@ -19,6 +19,8 @@ export const PROFESSIONS = {
     MERCHANT: 'merchant',     // Купец
     GUARD: 'guard',           // Стражник
     MILLER: 'miller',         // Мельник
+    PLOUGHMAN: 'ploughman',   // Пахарь (раунд 28: Тарас — глава дома на месте часовни)
+    CHILD: 'child',           // Ребёнок (раунд 28: семеро детей пахаря)
     BEEKEEPER: 'beekeeper',   // Пасечник
     FISHERMAN: 'fisherman',   // Рыбак
     MONK: 'monk',             // Монах
@@ -115,6 +117,24 @@ export const PROFESSION_SCHEDULES = {
         noon:      { activity: 'обедает у мельницы', location: 'mill', available: true },
         evening:   { activity: 'дома', location: 'home', available: true },
         dusk:      { activity: 'дома', location: 'home', available: true },
+        night:     { activity: 'спит', location: 'home', available: false },
+    },
+    [PROFESSIONS.PLOUGHMAN]: {
+        dawn:      { activity: 'вышел с сохой на поле', location: 'field', available: false },
+        morning:   { activity: 'пашет и боронит', location: 'field', available: false },
+        noon:      { activity: 'обедает у межи', location: 'field', available: true },
+        evening:   { activity: 'возвращается с поля', location: 'home', available: true },
+        dusk:      { activity: 'чинит соху во дворе', location: 'home', available: true },
+        night:     { activity: 'спит', location: 'home', available: false },
+    },
+    // Раунд 28 (п.1): дети днём — выпас/рыбалка/грибы/деревня (точное место
+    // решает npcPresence.js детерминированно на день)
+    [PROFESSIONS.CHILD]: {
+        dawn:      { activity: 'проснулся с петухами', location: 'home', available: true },
+        morning:   { activity: 'по детским делам', location: 'village', available: true },
+        noon:      { activity: 'по детским делам', location: 'village', available: true },
+        evening:   { activity: 'бегает по деревне', location: 'village', available: true },
+        dusk:      { activity: 'ужинает дома', location: 'home', available: true },
         night:     { activity: 'спит', location: 'home', available: false },
     },
     [PROFESSIONS.BEEKEEPER]: {

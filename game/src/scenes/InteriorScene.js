@@ -15,6 +15,7 @@ import { getWeather } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
 import { buildNpcLookTextures, npcVariantKey, npcPortraitVariantKey } from '../systems/NpcLook.js';
+import { ensureNpcLpcTexture } from '../systems/NpcLpc.js';
 import { getPresence, PLACE_NAMES, getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES, ALL_NPC_IDS } from '../data/npcPresence.js';
 import {
     checkNpcWillingToTalk, getNpcRep, getReputationLevel,
@@ -121,10 +122,13 @@ export class InteriorScene extends Phaser.Scene {
             let npcSpriteKey = (this.npcData && this.npcData.sprite) || interior.npcSprite;
             // П.6: Проверяем существование текстуры
             let finalSpriteKey = this.textures.exists(npcSpriteKey) ? npcSpriteKey : 'npc_elder';
-            // Раунд 23 (п.4): уникальный облик NPC — перекрашенный вариант
-            // (строится один раз за игру; цвет одежды и рост — свои у каждого,
-            // перераздаются при каждом новом старте).
-            if (this.npcData && buildNpcLookTextures(this, this.npcData)) {
+            // Раунд 28 (п.2): LPC-композит жителя (Вариант A владельца) —
+            // тело/причёска/борода/одежда из палитры, уникально на каждую игру;
+            // если слои недоступны — прежний перекрашенный вариант (раунд 23)
+            const ownerLpc = this.npcData ? ensureNpcLpcTexture(this, this.registry, this.npcData) : null;
+            if (ownerLpc) {
+                finalSpriteKey = ownerLpc;
+            } else if (this.npcData && buildNpcLookTextures(this, this.npcData)) {
                 const variant = npcVariantKey(this.npcData);
                 if (variant && this.textures.exists(variant)) finalSpriteKey = variant;
             }
@@ -197,7 +201,10 @@ export class InteriorScene extends Phaser.Scene {
                     : interior.secondaryNpcName;
                 const secSpriteKey = (secData && secData.sprite) || interior.secondaryNpcSprite || 'npc_elder';
                 let secFinal = this.textures.exists(secSpriteKey) ? secSpriteKey : 'npc_elder';
-                if (secData && buildNpcLookTextures(this, secData)) {
+                const secLpc = secData ? ensureNpcLpcTexture(this, this.registry, secData) : null;
+                if (secLpc) {
+                    secFinal = secLpc;
+                } else if (secData && buildNpcLookTextures(this, secData)) {
                     const secVariant = npcVariantKey(secData);
                     if (secVariant && this.textures.exists(secVariant)) secFinal = secVariant;
                 }
@@ -242,7 +249,10 @@ export class InteriorScene extends Phaser.Scene {
                 const vName = vData ? getNpcDisplayName(this.registry, vId) : vId;
                 const vSpriteKey = (vData && vData.sprite) || 'npc_merchant';
                 let vFinal = this.textures.exists(vSpriteKey) ? vSpriteKey : 'npc_elder';
-                if (vData && buildNpcLookTextures(this, vData)) {
+                const vLpc = vData ? ensureNpcLpcTexture(this, this.registry, vData) : null;
+                if (vLpc) {
+                    vFinal = vLpc;
+                } else if (vData && buildNpcLookTextures(this, vData)) {
                     const vVariant = npcVariantKey(vData);
                     if (vVariant && this.textures.exists(vVariant)) vFinal = vVariant;
                 }

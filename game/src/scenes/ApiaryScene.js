@@ -23,6 +23,8 @@ import { t, tf, tk } from '../systems/i18n.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES } from '../data/npcPresence.js';
+import { getNpcSpriteKey } from '../systems/NpcLpc.js';
+import { addMorningFog } from '../systems/AmbientFX.js';
 
 const TS = 48;   // как в деревне/лесу — мир 1248×960, камера скроллится
 const WORLD_W = APIARY_COLS * TS;
@@ -438,7 +440,7 @@ export class ApiaryScene extends Phaser.Scene {
         here.slice(0, 2).forEach((npcId, i) => {
             const npcData = findNpc(this.registry, npcId);
             const displayName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
-            const spriteKey = (npcData && npcData.sprite) || 'npc_merchant';
+            const spriteKey = getNpcSpriteKey(this, this.registry, npcId);
             const x = baseX + i * 44;
             const y = baseY + i * 14;
             const spr = this.add.sprite(x, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
@@ -593,6 +595,9 @@ export class ApiaryScene extends Phaser.Scene {
 
         // ----- Погода (раунд 14): дождь/снег на пасеке. В осадки пчёлы спят -----
         applyWeatherVisuals(this, { tintDepth: 94, precipDepth: 99 });
+
+        // Раунд 28 (п.4): утренний туман на пасеке (с рассвета до 9 утра)
+        addMorningFog(this, { width: WORLD_W, height: WORLD_H, yMin: 2 * TS, yMax: WORLD_H - 2 * TS, depth: 90 });
 
         // Светлячки — ночные
         for (let i = 0; i < 7; i++) {

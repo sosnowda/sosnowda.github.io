@@ -418,37 +418,37 @@ export const DIALOGUES = {
         },
     },
 
-    // === ПАСЕЧНИК ТАРАС (раунд 27, п.6: новая многодетная семья) ===
+    // === ПАХАРЬ ТАРАС (раунд 27, п.6; раунд 28 п.1: ПАХАРЬ, не пасечник!) ===
     beekeeper1: {
         start: 'a',
         nodes: {
             a: {
-                speaker: 'Пасечник Тарас',
-                text: 'Мир тебе, путник! Ты в доме, где семеро детей — шумно, как на пасеке в летний день, а вслух. Сам-то я с ульями вожусь с рассвета.',
+                speaker: 'Пахарь Тарас',
+                text: 'Мир тебе, путник! Ты в доме, где семеро детей — шумно, как ярмарка в торговый день. Сам-то я с сохой вожусь с рассвета: поле само себя не вспашет.',
                 action: (scene) => {
                     DIALOGUES.beekeeper1.nodes.a.choices = withAskThief(scene, 'beekeeper1', [
-                        { text: t('Расскажи о пчёлах.'), next: 'bees' },
+                        { text: t('Расскажи о своей пашне.'), next: 'field' },
                         { text: t('Попросить денег'), next: 'ask_money' },
                         { text: t('Удачи тебе, Тарас.'), end: true },
                     ], 0);
                 },
                 choices: [],
             },
-            bees: {
-                speaker: 'Пасечник Тарас',
-                text: 'Пчела — работница Божья: трудится без присмотра, порядок держит сама. Мой мёд — детям на молоко, а торговый — у Марфы спрашивай: её пасека постарше, и мёд у неё целебный — здоровье ставит на ноги.',
+            field: {
+                speaker: 'Пахарь Тарас',
+                text: 'Земля кормит того, кто её любит. С утра бороню, после обеда — рожь сею. Дети мне в подмогу: кто на выпас скот гоняет, кто рыбу ловит, кто грибы в лесу ищет. А мёд к чаю — у Марфы спрашивай: её пасека постарше, и мёд у неё целебный — здоровье ставит на ноги.',
                 action: (scene) => {
-                    DIALOGUES.beekeeper1.nodes.bees.choices = withAskThief(scene, 'beekeeper1', [
+                    DIALOGUES.beekeeper1.nodes.field.choices = withAskThief(scene, 'beekeeper1', [
                         { text: t('Спасибо за рассказ.'), end: true },
                     ], 0);
                 },
                 choices: [],
             },
             ask_thief: {
-                speaker: 'Пасечник Тарас',
+                speaker: 'Пахарь Тарас',
                 text: '...',
                 action: (scene) => {
-                    const r = askNPC(scene.registry, 'beekeeper1', 'Пасечник Тарас');
+                    const r = askNPC(scene.registry, 'beekeeper1', 'Пахарь Тарас');
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -456,10 +456,10 @@ export const DIALOGUES = {
                 ],
             },
             ask_money: {
-                speaker: 'Пасечник Тарас',
+                speaker: 'Пахарь Тарас',
                 text: '...',
                 action: (scene) => {
-                    const r = askMoneyForHelp(scene.registry, 'beekeeper1', 'Пасечник Тарас');
+                    const r = askMoneyForHelp(scene.registry, 'beekeeper1', 'Пахарь Тарас');
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -467,7 +467,7 @@ export const DIALOGUES = {
                 ],
             },
             ask_result: {
-                speaker: 'Пасечник Тарас',
+                speaker: 'Пахарь Тарас',
                 text: '...',
                 choices: [
                     { text: 'Спасибо.', end: true },
@@ -476,7 +476,7 @@ export const DIALOGUES = {
         },
     },
 
-    // === ФЁКЛА, ЖЕНА ПАСЕЧНИКА (раунд 27, п.6) ===
+    // === ФЁКЛА, ЖЕНА ПАХАРЯ (раунд 27, п.6; раунд 28: муж — пахарь) ===
     beekeeper_wife: {
         start: 'a',
         nodes: {
@@ -494,7 +494,7 @@ export const DIALOGUES = {
             },
             family: {
                 speaker: 'Фёкла',
-                text: 'Живём впроголодь, да дружно: Тарас с пасеки воск и мёд, я — огород да скотину. Старшие за младшими смотрят. Хлеб с мёдом на столе — уже не бедность.',
+                text: 'Живём впроголодь, да дружно: Тарас с поля рожь приносит, я — огород да скотину. Старшие за младшими смотрят, а сам прибыльный — на выпас гоняют да в лес за грибами. Хлеб с молоком на столе — уже не бедность.',
                 action: (scene) => {
                     DIALOGUES.beekeeper_wife.nodes.family.choices = [
                         { text: t('Доброго вам достатка.'), end: true },

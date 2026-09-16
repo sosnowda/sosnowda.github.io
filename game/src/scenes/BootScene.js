@@ -3,6 +3,7 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { createCharacter } from '../systems/Character.js';
+import { paletteLayerFiles } from '../systems/NpcLpc.js';
 
 export class BootScene extends Phaser.Scene {
     constructor() {
@@ -32,6 +33,10 @@ export class BootScene extends Phaser.Scene {
         for (let v = 0; v < 2; v++) this.load.image(`tile_forest_${v}`, `assets/tiles/forest_${v}.png`);
         // Камень
         for (let v = 0; v < 2; v++) this.load.image(`tile_rock_${v}`, `assets/tiles/rock_${v}.png`);
+        // Раунд 28 (п.7): гравийная дорога для тракта (нарисовано PIL-ом)
+        this.load.image('tile_gravel_0', 'assets/tiles/gravel_0.png');
+        this.load.image('tile_gravel_1', 'assets/tiles/gravel_1.png');
+        this.load.image('tile_gravel_edge', 'assets/tiles/gravel_edge.png');
         // Дом (стена + крыша)
         for (let v = 0; v < 3; v++) this.load.image(`tile_house_wall_${v}`, `assets/tiles/house_wall_${v}.png`);
         for (let v = 0; v < 2; v++) this.load.image(`tile_house_roof_${v}`, `assets/tiles/house_roof_${v}.png`);
@@ -177,6 +182,16 @@ export class BootScene extends Phaser.Scene {
         // ----- Universal LPC Character Generator слои -----
         // Загружаем манифест с перечнем опций
         this.load.json('lpc_manifest', 'assets/lpc/manifest.json');
+
+        // ----- Раунд 28 (п.2): LPC-композиты жителей Вариант A -----
+        // Жители собираются системой композитинга как герой. Слои выбираются
+        // из фиксированной крестьянской палитры (NpcLpc.PALETTE) — здесь
+        // предзагружаются ровно эти файлы (небольшие PNG, суммарно ~1.5 МБ),
+        // чтобы жители выглядели LPC-персонажами в ЛЮБОМ пути старта игры
+        // (и «свой персонаж», и быстрый).
+        paletteLayerFiles().forEach(({ key, cat, name }) => {
+            this.load.image(key, `assets/lpc/${cat}/${name}.png`);
+        });
         // Загружаем все PNG-слои по списку из манифеста.
         // Это ~250 файлов, каждый 832×2944. Загрузка идёт в фоне с прогресс-баром.
         // Чтобы не блокировать игру, мы загружаем только манифест здесь,
@@ -715,6 +730,12 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(0x9a7b3f, 1); g.fillEllipse(5, 4, 10, 6);
         g.fillStyle(0x7d5f2a, 1); g.fillRect(0, 4, 10, 1);             // прожилка
         g.generateTexture('forest_leaf', 10, 8);
+
+        // ===== Раунд 28 (п.6): штрих течения реки (32×5) — плывёт слева направо =====
+        g.clear();
+        g.fillStyle(0xd8ecf8, 0.75); g.fillEllipse(16, 2.5, 30, 3.2);
+        g.fillStyle(0xffffff, 0.55); g.fillEllipse(13, 2.2, 14, 1.8);
+        g.generateTexture('river_streak', 32, 5);
 
         // ===== Погода (раунд 14): капля дождя 2×14 и снежинка 5×5 =====
         g.clear();

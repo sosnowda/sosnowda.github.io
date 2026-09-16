@@ -62,6 +62,7 @@ export const PROFESSIONS_BY_GENDER = {
         { id: 'tavernkeeper', name: 'тавернщик', femaleName: 'тавернщица' },
         { id: 'fisherman',  name: 'рыбак',      femaleName: null },
         { id: 'miller',     name: 'мельник',    femaleName: null },
+        { id: 'ploughman',  name: 'пахарь',     femaleName: null },  // раунд 28 (п.1): Тарас
         { id: 'beekeeper',  name: 'пасечник',   femaleName: null },
         { id: 'carpenter',  name: 'плотник',    femaleName: null },
         { id: 'guard',      name: 'стражник',   femaleName: null },
@@ -132,6 +133,12 @@ export function getStrangerDescription(age, gender, profession) {
     
     // Для младенца — без профессии
     if (ageGroup.id === 'infant') {
+        return ageGroup.name;
+    }
+    
+    // Раунд 28: дети — возрастная группа уже говорит всё («мальчик»/«девочка»),
+    // профессия-ребёнок не дублируется
+    if (profession.id === 'child') {
         return ageGroup.name;
     }
     
@@ -206,9 +213,19 @@ export function initNpcNames(registry) {
         { id: 'hunter',       gender: 'male',   age: 32, professionId: 'hunter',     sprite: 'npc_soldier',  portrait: 'portrait_hunter',     interiorId: 'villager_house_1' },
         { id: 'guard',        gender: 'male',   age: 28, professionId: 'guard',      sprite: 'npc_soldier',  portrait: 'portrait_guard',      interiorId: 'villager_house_1' },
         { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',  sprite: 'npc_merchant', portrait: 'portrait_fisherman',  interiorId: 'villager_house_1' },
-        // Раунд 27 (п.6): многодетная семья пасечника (на месте часовни)
-        { id: 'beekeeper1',   gender: 'male',   age: 38, professionId: 'beekeeper',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'beekeeper_house', name: 'Тарас' },
+        // Раунд 27 (п.6), уточнено раундом 28 (п.1): дом на месте часовни —
+        // ДОМ ПАХАРЯ (не пасечника!): Тарас днём на ПОЛЕ, жена Фёкла,
+        // семеро детей (видимые НПЦ — см. npcPresence.KIDS).
+        { id: 'beekeeper1',   gender: 'male',   age: 38, professionId: 'ploughman',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'beekeeper_house', name: 'Тарас' },
         { id: 'beekeeper_wife', gender: 'female', age: 34, professionId: 'homemaker', sprite: 'npc_elder',  portrait: 'portrait_villager_f', interiorId: 'beekeeper_house', name: 'Фёкла' },
+        // Раунд 28 (п.1): семеро детей пахаря — имена случайные на каждую игру
+        { id: 'kid1', gender: 'male',   age: 12, professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
+        { id: 'kid2', gender: 'female', age: 11, professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
+        { id: 'kid3', gender: 'male',   age: 9,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
+        { id: 'kid4', gender: 'female', age: 8,  professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
+        { id: 'kid5', gender: 'male',   age: 7,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
+        { id: 'kid6', gender: 'female', age: 6,  professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
+        { id: 'kid7', gender: 'male',   age: 5,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
         // Раунд 27 (п.9): жена старосты
         { id: 'elder_wife',   gender: 'female', age: 54, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'elder_house',     name: 'Любава' },
     ];
@@ -219,7 +236,12 @@ export function initNpcNames(registry) {
     const npcs = npcConfigs.map(cfg => {
         const name = cfg.name || getRandomName(cfg.gender);
         const professionPool = PROFESSIONS_BY_GENDER[cfg.gender];
-        const profession = professionPool.find(p => p.id === cfg.professionId) || professionPool[0];
+        // Раунд 28: у детей своя «профессия» — возрастная группа (вне общего
+        // пула, чтобы случайные взрослые незнакомцы не становились детьми)
+        const profession = professionPool.find(p => p.id === cfg.professionId)
+            || (cfg.professionId === 'child'
+                ? { id: 'child', name: cfg.gender === 'female' ? 'девочка' : 'мальчик' }
+                : professionPool[0]);
         const ageGroup = getAgeGroup(cfg.age, cfg.gender);
 
         return {

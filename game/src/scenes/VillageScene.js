@@ -16,7 +16,7 @@ import { checkGameEnd, chaseTicksLeft } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog } from '../utils/ui.js';
-import { tickTime, getTime, getDayNightOverlay, formatDateTime, getSeason } from '../systems/TimeSystem.js';
+import { tickTime, getTime, getDayNightOverlay, formatDateTime, getSeason, realTimeString } from '../systems/TimeSystem.js';
 import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
@@ -24,6 +24,8 @@ import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, 
 import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
 import { getPresence, ALL_NPC_IDS, NPC_DIALOGUE, OUTDOOR_LINES, PLACE_NAMES } from '../data/npcPresence.js';
+import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
+import { addMorningFog } from '../systems/AmbientFX.js';
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -180,7 +182,7 @@ export class VillageScene extends Phaser.Scene {
             blacksmith: 'deco_house_2',
             villager_house_1: 'deco_house_0',
             villager_house_2: 'deco_house_2',
-            beekeeper_house: 'deco_house_0',   // раунд 27: дом пасечника (отличают ульи)
+            beekeeper_house: 'deco_house_0',   // раунд 28: ДОМ ПАХАРЯ (огород и соха отличают)
             barn: 'deco_barn',               // раунд 17: у амбара свой облик — широкие ворота и сеновал
         };
         this.doors = [];
@@ -239,30 +241,41 @@ export class VillageScene extends Phaser.Scene {
             this.addBuildingDetails(b, ts, usedSprite);
 
             // ----- Ограда и грядки для жилых домов (п.6) -----
-            if (b.interiorId === 'villager_house_1' || b.interiorId === 'villager_house_2') {
+            // Раунд 28: дом пахаря тоже с огородом (порядок в хозяйстве)
+            if (b.interiorId === 'villager_house_1' || b.interiorId === 'villager_house_2' || b.interiorId === 'beekeeper_house') {
                 this.addYardAndGarden(b, ts);
             }
 
-            // ----- Раунд 27 (п.6): УЛЬИ и цветы у дома пасечника -----
+            // ----- Раунд 28 (п.1): у ДОМА ПАХАРЯ — соха и поленица дров
+            // вместо ульев и медоносов (пасека у дома убрана!) -----
             if (b.interiorId === 'beekeeper_house') {
-                const hx1 = (b.col - 1) * ts + ts * 0.4;
-                const hx2 = (b.col + b.w + 0.1) * ts;
-                const hy = (b.row + b.h + 0.9) * ts;
-                if (this.textures.exists('deco_beehive')) {
-                    this.add.image(hx1, hy, 'deco_beehive').setScale(1.4).setOrigin(0.5, 0.9)
-                        .setDepth(b.row + b.h + 1.2);
-                    this.add.image(hx2, hy - ts * 0.3, 'deco_beehive').setScale(1.1).setOrigin(0.5, 0.9)
-                        .setDepth(b.row + b.h + 1.4);
-                }
-                // Цветы-медоносы вокруг (пчёлам корм, глазу радость)
-                if (this.textures.exists('deco_flower_0')) {
-                    for (let fi = 0; fi < 7; fi++) {
-                        const fx = hx1 - ts * 0.8 + Math.random() * (hx2 - hx1 + ts * 1.4);
-                        const fy = hy + ts * 0.2 + (Math.random() - 0.5) * ts * 0.9;
-                        this.add.image(fx, fy, `deco_flower_${fi % 3}`).setScale(1.2)
-                            .setDepth(fy / ts);
-                    }
-                }
+                const ploughX = (b.col + b.w + 0.5) * ts;
+                const ploughY = (b.row + b.h + 0.55) * ts;
+                const pg = this.add.graphics();
+                // Тень
+                pg.fillStyle(0x000000, 0.22);
+                pg.fillEllipse(ploughX, ploughY + 14, 40, 8);
+                // Дышло и рукоятки (деревянные)
+                pg.lineStyle(4, 0x6a4a2a, 1);
+                pg.beginPath();
+                pg.moveTo(ploughX - 16, ploughY + 8);
+                pg.lineTo(ploughX + 14, ploughY - 12);
+                pg.strokePath();
+                pg.lineStyle(3, 0x7a5a38, 1);
+                pg.beginPath();
+                pg.moveTo(ploughX + 2, ploughY - 4);
+                pg.lineTo(ploughX + 16, ploughY - 18);
+                pg.strokePath();
+                pg.beginPath();
+                pg.moveTo(ploughX + 2, ploughY - 4);
+                pg.lineTo(ploughX + 18, ploughY - 6);
+                pg.strokePath();
+                // Сошник (железо) и лемех
+                pg.fillStyle(0x3a3a42, 1);
+                pg.fillTriangle(ploughX - 12, ploughY + 10, ploughX - 2, ploughY - 2, ploughX + 2, ploughY + 10);
+                pg.fillStyle(0x55555e, 1);
+                pg.fillTriangle(ploughX - 12, ploughY + 10, ploughX - 7, ploughY + 4, ploughX - 2, ploughY + 10);
+                pg.setDepth(ploughY / ts + 0.2);
             }
         });
 
@@ -287,6 +300,15 @@ export class VillageScene extends Phaser.Scene {
 
         // ----- Воробьи на дорогах (§3 village-visual-upgrade, раунд 16) -----
         this.spawnBirdFlocks();
+
+        // ----- Раунд 28 (п.4): УТРЕННИЙ ТУМАН над деревней (с 4 до 9 утра) -----
+        addMorningFog(this, { width: MAP_W * ts, height: MAP_H * ts, yMin: 4 * ts, yMax: MAP_H * ts - 2 * ts, depth: 8500 });
+
+        // ----- Раунд 28 (п.5): реальные часы — статус-бар обновляется каждую секунду,
+        // чтобы время на часах игрока шло живым (🕐 HH:MM реального времени) -----
+        this.realClockTimer = this.time.addEvent({
+            delay: 1000, loop: true, callback: () => this.updateHUD(),
+        });
 
         // ----- Ночное свечение окон (тёплый свет в темноте) -----
         this.windowGlows = [];
@@ -993,9 +1015,12 @@ export class VillageScene extends Phaser.Scene {
             if (!spot) return;
             const x = spot.x * ts;
             const y = spot.y * ts;
-            const spriteKey = (npcData && npcData.sprite) || 'npc_merchant';
+            // Раунд 28 (п.2): LPC-композит жителя (уникальная внешность),
+            // дети — меньшего роста и БЕГАЮТ по деревне (п.1)
+            const spriteKey = getNpcSpriteKey(this, this.registry, id);
+            const kid = isChildNpc(npcData);
             const spr = this.add.sprite(x, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
-                .setScale(2.2 * ((npcData && npcData.look && npcData.look.scale) || 1))
+                .setScale((kid ? 1.5 : 2.2) * ((npcData && npcData.look && npcData.look.scale) || 1))
                 .setDepth(y / ts + 0.3);
             const animKey = `${spr.texture.key}_idle_down`;
             if (this.anims.exists(animKey)) spr.play(animKey);
@@ -1004,6 +1029,19 @@ export class VillageScene extends Phaser.Scene {
                 y: { from: y, to: y - 3 },
                 duration: 1500 + Math.random() * 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
             });
+            // Раунд 28 (п.1): дети БЕГАЮТ — короткая пробежка туда-сюда
+            if (kid && this.anims.exists(`${spr.texture.key}_walk_right`)) {
+                const runRange = 1.6 * ts + Math.random() * ts;
+                const runDur = 1400 + Math.random() * 1200;
+                this.tweens.add({
+                    targets: spr,
+                    x: { from: x, to: Phaser.Math.Clamp(x + (Math.random() < 0.5 ? -runRange : runRange), 2 * ts, 22 * ts) },
+                    duration: runDur,
+                    yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    onYoyo: () => { spr.setFlipX(!spr.flipX); },
+                    onRepeat: () => { spr.setFlipX(!spr.flipX); },
+                });
+            }
             const label = this.add.text(x, y + 36, displayName, {
                 fontSize: '12px', color: RUS.text,
                 backgroundColor: '#000000aa', padding: { x: 5, y: 2 },
@@ -1025,7 +1063,7 @@ export class VillageScene extends Phaser.Scene {
         if (epres.place === 'village') {
             const npcData = findNpc(this.registry, 'elder');
             const displayName = npcData ? getNpcDisplayName(this.registry, 'elder') : 'Староста';
-            const spriteKey = (npcData && npcData.sprite) || 'npc_elder';
+            const spriteKey = getNpcSpriteKey(this, this.registry, 'elder');
             const y = 9.5 * ts; // главная улица (ряд 8-9)
             const minX = 3 * ts;
             const maxX = 21 * ts;
@@ -1076,7 +1114,7 @@ export class VillageScene extends Phaser.Scene {
         const SPOTS = {
             peasant1: { x: 5.5, y: 14.4 },      // у дома Авдея
             widow: { x: 11.4, y: 14.4 },        // у дома Марфы
-            beekeeper1: { x: 14.4, y: 14.4 },   // у дома пасечника
+            beekeeper1: { x: 14.4, y: 14.4 },   // у дома пахаря
             beekeeper_wife: { x: 9.2, y: 10.4 }, // у колодца
             elder_wife: { x: 10.9, y: 10.4 },   // у колодца с другой стороны
             blacksmith: { x: 17.5, y: 8.2 },    // у кузницы
@@ -1086,6 +1124,11 @@ export class VillageScene extends Phaser.Scene {
             guard: { x: 22.4, y: 9.5 },         // у ворот
             tavernkeeper: { x: 11.4, y: 7.6 },  // у постоялого двора
             priest: null,                       // батюшка не гуляет — он в церкви
+            // Раунд 28 (п.1): детские площадки — у колодца и у ворот
+            kid1: { x: 8.2, y: 9.8 }, kid2: { x: 12.6, y: 9.9 },
+            kid3: { x: 16.8, y: 10.1 }, kid4: { x: 7.6, y: 12.2 },
+            kid5: { x: 18.4, y: 12.3 }, kid6: { x: 13.2, y: 12.1 },
+            kid7: { x: 9.8, y: 9.6 },
         };
         return SPOTS[id] || { x: 7.5, y: 9.4 };
     }
@@ -1201,6 +1244,8 @@ export class VillageScene extends Phaser.Scene {
             statusLine += `  📅${formatDateTime(timeState)}`;
             // Раунд 14: иконка текущей погоды рядом с датой
             if (this.weather) statusLine += ` ${this.weather.icon}`;
+            // Раунд 28 (п.5): живые часы РЕАЛЬНОГО времени игрока
+            statusLine += `  🕐${realTimeString()}`;
         }
         if (ticksLeft > 0) {
             statusLine += `  ${tf(t('⏳{0}действ.'), ticksLeft)}`;

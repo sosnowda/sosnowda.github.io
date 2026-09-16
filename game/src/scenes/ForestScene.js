@@ -11,6 +11,7 @@ import {
 } from '../data/forest.js';
 import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals, isRainy } from '../systems/Weather.js';
+import { addMorningFog } from '../systems/AmbientFX.js';
 import { checkGameEnd, chaseTicksLeft } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
@@ -402,6 +403,9 @@ export class ForestScene extends Phaser.Scene {
         // ----- Погода (раунд 14): дождь/снег в лесу. Осадки поверх листвы (99).
         // В дождь волки хуже слышат — радиус агро срезается (см. wolfAggroRadius).
         applyWeatherVisuals(this, { tintDepth: 94, precipDepth: 99 });
+
+        // Раунд 28 (п.4): утренний туман в лесу (с рассвета до 9 утра)
+        addMorningFog(this, { width: WORLD_W, height: WORLD_H, yMin: 2 * TS, yMax: WORLD_H - 2 * TS, depth: 90 });
         this.wolfAggroRadius = WOLF_CFG.aggroRadius * (isRainy(this.weather) ? 0.65 : 1);
 
         // Светлячки — проявляются ночью (как в деревне)
