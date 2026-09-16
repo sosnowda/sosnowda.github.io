@@ -42,7 +42,18 @@ export class InteriorScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.dialogue = new DialogueRunner(this);
-        this.audioManager.playSceneMusic('village'); // ambient деревни
+        // Раунд 24: звуковая атмосфера интерьера — музыка (таверна/церковь),
+        // эмбиент и скрип двери при входе
+        this.audioManager.playRealDoorOpen();
+        if (this.interiorId === 'tavern') {
+            this.audioManager.playInteriorMusic('tavern');
+            this.audioManager.setAmbient('ambient_tavern');
+        } else if (this.interiorId === 'church') {
+            this.audioManager.playInteriorMusic('church');
+            this.audioManager.playChurchBell();
+        } else {
+            this.audioManager.playSceneMusic('village'); // тихий фон деревни в домах
+        }
 
         const interior = INTERIORS[this.interiorId];
         if (!interior) {
@@ -252,6 +263,8 @@ export class InteriorScene extends Phaser.Scene {
             buttons.push({ label: t('\u{1F392} Мой узел'), bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('barn') });
         }
         const exitAction = () => {
+            // Раунд 24: скрип двери при выходе
+            this.audioManager.playRealDoorClose();
             this.scene.stop();
             if (this.scene.isPaused(this.from)) this.scene.resume(this.from);
             else this.scene.start(this.from);
@@ -340,6 +353,7 @@ export class InteriorScene extends Phaser.Scene {
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
         const rewards = grantQuestRewards(this.registry, done);
         done.rewardClaimed = true;
+        this.audioManager.playGoldReceive(); // раунд 24: звон монет
         applyQuestCompleteBonus(this.registry, interior.npcId, done.difficulty);
         ActionLog.add(this.registry, `Награда за «${done.title}»: ${rewards.join(', ')}.`);
         this.busyDialog = true;
@@ -803,10 +817,11 @@ export class InteriorScene extends Phaser.Scene {
                 if (!canAfford) {
                     createDialog(this, 'Таверна', 'Не хватает денег!', [
                         { text: 'Понятно', callback: () => {} },
-                    ], { singleton: false, portraitKey: 'portrait_merchant' });
+                    ], { singleton: false, portraitKey: 'portrait_tavernkeeper' });
                     return;
                 }
                 player.dengas -= item.price;
+                this.audioManager.playGoldSpend(); // раунд 24: расплата монетами
                 player.HP = Math.min(player.HPmax, player.HP + item.heal);
                 player.MP = Math.min(player.MPmax, player.MP + item.mpHeal);
                 this.registry.set('player', player);
@@ -1001,10 +1016,11 @@ export class InteriorScene extends Phaser.Scene {
                 if (!canAfford) {
                     createDialog(this, 'Кузница', 'Не хватает денег!', [
                         { text: 'Понятно', callback: () => {} },
-                    ], { singleton: false, portraitKey: 'portrait_soldier' });
+                    ], { singleton: false, portraitKey: 'portrait_blacksmith' });
                     return;
                 }
                 player.dengas -= price;
+                this.audioManager.playGoldSpend(); // раунд 24: расплата монетами
                 if (tab === 'weapon') {
                     equipWeapon(player, item.id);
                     if (!player.inventory) player.inventory = [];
@@ -1124,6 +1140,7 @@ export class InteriorScene extends Phaser.Scene {
         const gain = Phaser.Math.Between(3, 8);
         player.MP = Math.min(player.MPmax || player.MP + gain, player.MP + gain);
         this.registry.set('player', player);
+        this.audioManager.playPrayerChant(); // раунд 24: тихая молитва
         this.updateHUD();
         ActionLog.add(this.registry, `Помолился в часовне — Воля +${gain}.`);
 

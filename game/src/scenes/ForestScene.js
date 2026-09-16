@@ -45,6 +45,12 @@ export class ForestScene extends Phaser.Scene {
         const { width, height } = this.scale;
         this.audioManager = new AudioManager(this);
         this.audioManager.playSceneMusic('village');
+        // Раунд 24: эмбиент леса — птицы днём, сверчки ночью
+        const fsTime = getTime(this.registry);
+        const fsHour = fsTime ? fsTime.hours : 12;
+        this.audioManager.setAmbient((fsHour >= 21 || fsHour < 5)
+            ? 'ambient_forest_night'
+            : 'ambient_forest_day');
 
         // ----- QA-валидация проходимости (как в деревне) -----
         const validation = validateForestMap();

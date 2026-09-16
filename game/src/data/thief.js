@@ -548,7 +548,7 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
             // Последний шанс упущен — вор сбежал
             createDialog(scene, t('🏃 Вор скрылся!'), result.message, [
                 { text: t('Итоги похода'), callback: () => scene.scene.start('End') },
-            ], { singleton: false, portraitKey: 'portrait_bandit', typing: true, typingSpeed: 25 });
+            ], { singleton: false, portraitKey: 'portrait_thief', typing: true, typingSpeed: 25 });
             return;
         }
         if (result.success) {
@@ -561,7 +561,7 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
         // Вор вырвался и бежит — остаёмся в локации
         createDialog(scene, t('💨 Вор вырвался!'), result.message, [
             { text: t('Продолжить'), callback: () => { scene.busyDialog = false; } },
-        ], { singleton: false, portraitKey: 'portrait_bandit', typing: true, typingSpeed: 25 });
+        ], { singleton: false, portraitKey: 'portrait_thief', typing: true, typingSpeed: 25 });
     };
 
     createDialog(scene, t('😱 Встреча с вором!'),
@@ -587,7 +587,7 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
                 callback: () => { scene.busyDialog = false; },
             },
         ],
-        { singleton: false, portraitKey: 'portrait_bandit', typing: true, typingSpeed: 25 });
+        { singleton: false, portraitKey: 'portrait_thief', typing: true, typingSpeed: 25 });
 
     return sprite;
 }

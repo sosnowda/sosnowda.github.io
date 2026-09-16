@@ -50,6 +50,12 @@ export class VillageScene extends Phaser.Scene {
 
         // Фоновая музыка деревни (ambient)
         this.audioManager.playSceneMusic('village');
+        // Раунд 24: эмбиент деревни — день/ночь по игровому времени
+        const vsTime = getTime(this.registry);
+        const vsHour = vsTime ? vsTime.hours : 12;
+        this.audioManager.setAmbient((vsHour >= 21 || vsHour < 5)
+            ? 'ambient_town_night'
+            : 'ambient_town_day');
 
         this.physics.world.setBounds(0, 0, this.worldW, this.worldH);
         this.cameras.main.setBounds(0, 0, this.worldW, this.worldH);

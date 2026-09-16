@@ -191,15 +191,15 @@ export function initNpcNames(registry) {
     // Используем фиксированные ID для соответствия интерьерам, но случайные имена
     const npcConfigs = [
         { id: 'elder',        gender: 'male',   age: 58, professionId: 'elder',        sprite: 'npc_elder',    portrait: 'portrait_elder',    interiorId: 'elder_house' },
-        { id: 'priest',       gender: 'male',   age: 62, professionId: 'priest',       sprite: 'npc_elder',    portrait: 'portrait_elder',    interiorId: 'church' },
-        { id: 'tavernkeeper', gender: 'male',   age: 45, professionId: 'tavernkeeper', sprite: 'npc_merchant', portrait: 'portrait_merchant', interiorId: 'tavern' },
-        { id: 'blacksmith',   gender: 'male',   age: 40, professionId: 'blacksmith',   sprite: 'npc_soldier',  portrait: 'portrait_soldier',  interiorId: 'blacksmith' },
-        { id: 'peasant1',     gender: 'male',   age: 35, professionId: 'peasant',      sprite: 'npc_merchant', portrait: 'portrait_narrator', interiorId: 'villager_house_1' },
-        { id: 'widow',        gender: 'female', age: 55, professionId: 'widow',        sprite: 'npc_elder',    portrait: 'portrait_narrator', interiorId: 'villager_house_2' },
-        { id: 'healer',       gender: 'female', age: 68, professionId: 'healer_f',     sprite: 'npc_elder',    portrait: 'portrait_narrator', interiorId: 'villager_house_2' },
-        { id: 'hunter',       gender: 'male',   age: 32, professionId: 'hunter',       sprite: 'npc_soldier',  portrait: 'portrait_soldier',  interiorId: 'villager_house_1' },
-        { id: 'guard',        gender: 'male',   age: 28, professionId: 'guard',        sprite: 'npc_soldier',  portrait: 'portrait_soldier',  interiorId: 'villager_house_1' },
-        { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',    sprite: 'npc_merchant', portrait: 'portrait_narrator', interiorId: 'villager_house_1' },
+        { id: 'priest',       gender: 'male',   age: 62, professionId: 'priest',       sprite: 'npc_elder',    portrait: 'portrait_priest',   interiorId: 'church' },
+        { id: 'tavernkeeper', gender: 'male',   age: 45, professionId: 'tavernkeeper', sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'tavern' },
+        { id: 'blacksmith',   gender: 'male',   age: 40, professionId: 'blacksmith',   sprite: 'npc_soldier',  portrait: 'portrait_blacksmith',  interiorId: 'blacksmith' },
+        { id: 'peasant1',     gender: 'male',   age: 35, professionId: 'peasant',      sprite: 'npc_merchant', portrait: 'portrait_peasant',  interiorId: 'villager_house_1' },
+        { id: 'widow',        gender: 'female', age: 55, professionId: 'widow',        sprite: 'npc_elder',    portrait: 'portrait_widow',    interiorId: 'villager_house_2' },
+        { id: 'healer',       gender: 'female', age: 68, professionId: 'healer_f',     sprite: 'npc_elder',    portrait: 'portrait_healer',   interiorId: 'villager_house_2' },
+        { id: 'hunter',       gender: 'male',   age: 32, professionId: 'hunter',       sprite: 'npc_soldier',  portrait: 'portrait_hunter',   interiorId: 'villager_house_1' },
+        { id: 'guard',        gender: 'male',   age: 28, professionId: 'guard',        sprite: 'npc_soldier',  portrait: 'portrait_guard',    interiorId: 'villager_house_1' },
+        { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',    sprite: 'npc_merchant', portrait: 'portrait_fisherman', interiorId: 'villager_house_1' },
     ];
 
     const npcs = npcConfigs.map(cfg => {

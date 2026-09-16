@@ -17,9 +17,18 @@ export class EndScene extends Phaser.Scene {
         const { width, height } = this.scale;
         this.cameras.main.setBackgroundColor(0x0a0604);
         this.audioManager = new AudioManager(this);
-        this.audioManager.playSceneMusic('menu');
-
         const quest = this.registry.get('quest') || {};
+        // Раунд 24: финальная музыка по исходу (если фоновый прелоадер успел;
+        // иначе — обычная менюшная)
+        const bgMusicKey = quest.thiefDefeated ? 'victory' : 'gameover';
+        const bgMusicAsset = quest.thiefDefeated ? 'music_victory' : 'music_game_over';
+        if (this.cache.audio.exists(bgMusicAsset)) {
+            this.audioManager.loadMusic();
+            this.audioManager.playSceneMusic(bgMusicKey);
+        } else {
+            this.audioManager.playSceneMusic('menu');
+        }
+
         const state = getHuntState(this.registry);
         const finalOutcome = checkGameEnd(this.registry); // 'victory' | 'defeat_thief_escaped' | 'defeat_hero_dead' | null
         const log = ActionLog.get(this.registry);

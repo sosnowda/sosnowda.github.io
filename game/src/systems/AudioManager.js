@@ -18,6 +18,8 @@ export default class AudioManager {
         this.sounds = {}; // объекты звуковых эффектов
         this.realSounds = {}; // реальные SFX-файлы (key -> Phaser.Sound.BaseSound)
         this.currentMusic = null; // ключ текущей проигрываемой музыки
+        this.ambient = null; // Раунд 24: текущий эмбиент-цикл
+        this.ambientKey = null; // Раунд 24: ключ эмбиента
 
         // Состояние времени выполнения (управляется из settings.audio.*)
         this.musicVolume = 0.7;
@@ -95,6 +97,8 @@ export default class AudioManager {
 
     /**
      * Загрузить музыкальные треки. Должна вызываться после preload.
+     * Раунд 24: + музыка таверны и церкви (треки подгружаются в фоне
+     * после загрузки меню — kickoffBackgroundMusicPreload).
      */
     loadMusic() {
         if (!this.scene?.sound) return;
@@ -102,6 +106,10 @@ export default class AudioManager {
             'menu': 'music_menu',
             'village': 'music_village',
             'combat': 'music_combat',
+            'tavern': 'music_town_tavern',
+            'church': 'music_town_church',
+            'victory': 'music_victory',
+            'gameover': 'music_game_over',
         };
         Object.entries(musicMap).forEach(([key, assetKey]) => {
             if (this.scene.sound.game.cache.audio.exists(assetKey) && !this.music[key]) {
@@ -177,6 +185,85 @@ export default class AudioManager {
                 music.setVolume(this.musicMuted ? 0 : this.musicVolume);
             }
         });
+        // Раунд 24: эмбиент привязан к настройкам музыки (это атмосфера, не SFX)
+        if (this.ambient?.isPlaying) {
+            this.ambient.setVolume(this.musicMuted ? 0 : this.musicVolume * 0.35);
+        }
+    }
+
+    // ==========================================
+    //  Раунд 24: эмбиент локаций (циклические звуки мира)
+    // ==========================================
+
+    /**
+     * Включить эмбиент-цикл для локации. Повторный вызов с тем же
+     * ключом ничего не делает (нет «заикания» при смене под-локаций).
+     * @param {string|null} key 'ambient_town_day' | 'ambient_town_night' |
+     *   'ambient_forest_day' | 'ambient_forest_night' | 'ambient_tavern' | null
+     */
+    setAmbient(key) {
+        if (!this.scene?.sound) return;
+        if (key === this.ambientKey) return;
+        if (this.ambient) {
+            try {
+                this.scene.tweens.add({
+                    targets: this.ambient,
+                    volume: 0,
+                    duration: 600,
+                    onComplete: () => {
+                        this.ambient?.stop();
+                        this.ambient?.destroy();
+                    },
+                });
+            } catch (e) {
+                this.ambient.stop();
+                this.ambient.destroy();
+            }
+            this.ambient = null;
+            this.ambientKey = null;
+        }
+        if (!key || !this.scene.sound.game.cache.audio.exists(key)) return;
+        try {
+            this.ambient = this.scene.sound.add(key, {
+                loop: true,
+                volume: this.musicMuted ? 0 : this.musicVolume * 0.35,
+            });
+            this.ambientKey = key;
+            this.ambient.play();
+        } catch (e) {
+            this.ambient = null;
+            this.ambientKey = null;
+        }
+    }
+
+    stopAmbient() {
+        this.setAmbient(null);
+    }
+
+    /**
+     * Раунд 24: музыка интерьера (таверна/церковь). Трек мог быть ещё
+     * не догружен фоновым прелоадером — тогда дожидаемся его и включаем.
+     */
+    playInteriorMusic(interiorId) {
+        const map = { tavern: 'tavern', church: 'church' };
+        const musicKey = map[interiorId];
+        if (!musicKey) return; // в домах — тишина/эмбиент
+        const assetKey = musicKey === 'tavern' ? 'music_town_tavern' : 'music_town_church';
+        if (this.scene?.sound?.game?.cache?.audio?.exists(assetKey)) {
+            this.loadMusic();
+            this.playSceneMusic(musicKey);
+        } else if (this.scene?.load) {
+            // Фоновая догрузка: когда файл дойдёт — запустим музыку
+            const loader = this.scene.load;
+            if (!loader.listenerCount(`filecomplete-audio-${assetKey}`)) {
+                loader.audio(assetKey, `assets/audio/music/${assetKey}.ogg`);
+                loader.once(`filecomplete-audio-${assetKey}`, () => {
+                    this.loadMusic();
+                    this.playSceneMusic(musicKey);
+                });
+                try { loader.start(); } catch (e) { /* лоадер занят */ }
+            }
+        }
     }
 
     _applyAll() {
@@ -387,6 +474,13 @@ export default class AudioManager {
         this.sounds = {};
         this.currentMusic = null;
 
+        // Раунд 24: остановить эмбиент
+        if (this.ambient) {
+            try { this.ambient.stop(); this.ambient.destroy(); } catch (e) { /* noop */ }
+            this.ambient = null;
+            this.ambientKey = null;
+        }
+
         if (this.audioEffects) {
             this.audioEffects.destroy();
             this.audioEffects = null;
@@ -509,6 +603,19 @@ export default class AudioManager {
     playStep() { this._playRealSfx('sfx_step', null, 0.4); }
     playDialogueOpen() { this._playRealSfx('sfx_dialogue_open', null); }
     playDialogueClose() { this._playRealSfx('sfx_dialogue_close', null); }
+
+    // ====== Раунд 24: мир и торговля (DarklandsReborn) ======
+    // Монеты: награды за квесты и работа
+    playGoldReceive() { this._playRealSfx('sfx_gold_receive', null, 0.9); }
+    // Монеты: покупки в таверне и кузнице
+    playGoldSpend() { this._playRealSfx('sfx_gold_spend', null, 0.9); }
+    // Колокол: вход в церковь, начало благословения
+    playChurchBell() { this._playRealSfx('sfx_church_bell', null, 0.9); }
+    // Молитва/благословение священника
+    playPrayerChant() { this._playRealSfx('sfx_prayer_chant', null, 0.9); }
+    // Двери домов
+    playRealDoorOpen() { this._playRealSfx('sfx_door_open', null, 0.8); }
+    playRealDoorClose() { this._playRealSfx('sfx_door_close', null, 0.8); }
 
     playRandomEffect() {
         if (this.audioEffects && !this.sfxMuted) {

@@ -46,9 +46,11 @@ export class BootScene extends Phaser.Scene {
             this.load.spritesheet(key, `assets/sprites/${key}.png`, { frameWidth: 64, frameHeight: 64 });
         });
 
-        // ----- ПОРТРЕТЫ -----
-        ['elder', 'merchant', 'soldier', 'bandit', 'narrator'].forEach((p) => {
-            this.load.image(`portrait_${p}`, `assets/sprites/portrait_${p}.png`);
+        // ----- ПОРТРЕТЫ (раунд 24: живописные портреты из DarklandsReborn) -----
+        // 1024×1024 webp, при показе сжимаются до 96×96, перекрашиваются под look NPC.
+        ['elder', 'priest', 'tavernkeeper', 'blacksmith', 'widow', 'healer',
+         'hunter', 'guard', 'fisherman', 'peasant', 'thief', 'narrator', 'villager_f'].forEach((p) => {
+            this.load.image(`portrait_${p}`, `assets/sprites/portraits/portrait_${p}.webp`);
         });
 
         // ----- UI -----
@@ -198,6 +200,9 @@ export class BootScene extends Phaser.Scene {
             'sfx_combat_miss_1', 'sfx_combat_miss_2', 'sfx_combat_swing',
             'sfx_combat_armor', 'sfx_combat_shield',
             'sfx_combat_death', 'sfx_wolf_howl',
+            // Раунд 24: мир и торговля (DarklandsReborn)
+            'sfx_church_bell', 'sfx_door_open', 'sfx_door_close',
+            'sfx_gold_receive', 'sfx_gold_spend', 'sfx_prayer_chant',
         ];
         sfxKeys.forEach((key) => {
             this.load.audio(key, `assets/audio/sfx/${key}.ogg`);
@@ -206,6 +211,12 @@ export class BootScene extends Phaser.Scene {
         this.load.audio('music_menu', 'assets/audio/music/music_menu.ogg');
         this.load.audio('music_village', 'assets/audio/music/music_village.ogg');
         this.load.audio('music_combat', 'assets/audio/music/music_combat.ogg');
+
+        // Раунд 24: эмбиент локаций (лёгкие циклы, DarklandsReborn)
+        ['ambient_town_day', 'ambient_town_night', 'ambient_forest_day',
+         'ambient_forest_night', 'ambient_tavern'].forEach((key) => {
+            this.load.audio(key, `assets/audio/ambient/${key}.ogg`);
+        });
 
         // Сохраняем список аудио-ключей в registry для AudioManager
         this.registry.set('audioKeys', sfxKeys);

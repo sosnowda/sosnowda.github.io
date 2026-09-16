@@ -60,17 +60,26 @@ const clamp255 = (v) => Math.max(0, Math.min(255, Math.round(v)));
 /**
  * Перекрасить изображение по look'у: сдвиг hue «цветных» пикселей
  * (одежды), множители насыщенности/яркости. Кожа не трогается.
+ * maxSide — ограничение размера результата (портреты 1024² перекрашивать
+ * по-пиксельно расточительно — они показываются в 96px).
  * Возвращает новый canvas.
  */
-function recolorImage(sourceImg, look) {
-    const w = sourceImg.width;
-    const h = sourceImg.height;
+function recolorImage(sourceImg, look, maxSide = 0) {
+    const sw = sourceImg.width;
+    const sh = sourceImg.height;
+    // Раунд 24: даунскейл больших портретов перед покраской (экономия ×16+)
+    let w = sw, h = sh;
+    if (maxSide > 0 && (sw > maxSide || sh > maxSide)) {
+        const k = maxSide / Math.max(sw, sh);
+        w = Math.max(1, Math.round(sw * k));
+        h = Math.max(1, Math.round(sh * k));
+    }
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(sourceImg, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(sourceImg, 0, 0, sw, sh, 0, 0, w, h);
 
     let imageData;
     try {
@@ -109,9 +118,9 @@ function recolorImage(sourceImg, look) {
 /**
  * Пересоздать canvas-текстуру из изображения с покраской.
  */
-function addRecoloredTexture(scene, outKey, sourceImg, look) {
+function addRecoloredTexture(scene, outKey, sourceImg, look, maxSide = 0) {
     if (scene.textures.exists(outKey)) scene.textures.remove(outKey);
-    const canvas = recolorImage(sourceImg, look);
+    const canvas = recolorImage(sourceImg, look, maxSide);
     scene.textures.addCanvas(outKey, canvas);
 }
 
@@ -175,12 +184,14 @@ export function buildNpcLookTextures(scene, npc) {
     createVariantAnims(scene, variantKey);
 
     // --- Портрет (если есть базовый) ---
+    // Раунд 24: портрет — живописный webp 1024²; перекрашиваем с даунскейлом
+    // до 256px (показывается в 96px) — быстрая покраска, мягкие тона
     const basePortrait = npc.portrait;
     if (basePortrait && scene.textures.exists(basePortrait)) {
         const pTex = scene.textures.get(basePortrait);
         const pImg = pTex.source && pTex.source[0] && pTex.source[0].image;
         if (pImg) {
-            addRecoloredTexture(scene, portraitKey, pImg, npc.look);
+            addRecoloredTexture(scene, portraitKey, pImg, npc.look, 256);
         }
     }
     return true;

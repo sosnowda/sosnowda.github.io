@@ -4,6 +4,22 @@ import AudioManager from '../systems/AudioManager.js';
 import { t, tf, tk, getLang, setLang } from '../systems/i18n.js';
 import { bindRestartOnResize } from '../utils/ui.js';
 
+/**
+ * Раунд 24: фоновый прелоадер «тяжёлой» музыки (таверна/церковь/финалы).
+ * 4 трека ~9.6 МБ НЕ входят в preload игры и в кэш SW — они догружаются
+ * лоадером Phaser прямо во время меню/игры, к моменту захода в таверну
+ * или церковь трек уже в кэше браузера. Не блокирует запуск.
+ */
+function kickoffBackgroundMusicPreload(scene) {
+    if (!scene?.load || scene.registry.get('bgMusicPreloadStarted')) return;
+    scene.registry.set('bgMusicPreloadStarted', true);
+    const tracks = ['music_town_tavern', 'music_town_church', 'music_victory', 'music_game_over'];
+    const pending = tracks.filter((k) => !scene.cache.audio.exists(k));
+    if (pending.length === 0) return;
+    pending.forEach((k) => scene.load.audio(k, `assets/audio/music/${k}.ogg`));
+    try { scene.load.start(); } catch (e) { /* лоадер недоступен — музыка просто не заиграет */ }
+}
+
 export class TitleScene extends Phaser.Scene {
     constructor() {
         super('Title');
@@ -17,6 +33,9 @@ export class TitleScene extends Phaser.Scene {
 
         // Фоновая музыка главного меню
         this.audioManager.playSceneMusic('menu');
+
+        // Раунд 24: тихо догружаем музыку таверны/церкви/финалов в фоне
+        kickoffBackgroundMusicPreload(this);
 
         // Декор: парящие золотые точки
         for (let i = 0; i < 40; i++) {
