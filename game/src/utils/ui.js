@@ -579,6 +579,14 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     const useTyping = !!opts.typing;
     const typingSpeed = Math.max(10, Number(opts.typingSpeed) || 30);
 
+    // Фаза 1: живописный пергамент (DarklandsReborn) вместо плоской заливки +
+    // лента-плашка под именем говорящего. Текст на тёмном пергаменте — светлый.
+    const hasParchment = scene.textures.exists('ui_parchment_b') || scene.textures.exists('ui_parchment_a');
+    const parchmentKey = scene.textures.exists('ui_parchment_b') ? 'ui_parchment_b' : 'ui_parchment_a';
+    const hasRibbon = scene.textures.exists('ui_ribbon');
+    const inkColor = hasParchment ? '#f8e9c8' : '#3a2818';
+    const inkStroke = hasParchment ? '#1d1208' : '#c9a14a';
+
     const getSceneMaxDepth = () => {
         const list = scene?.children?.list || [];
         let max = 0;
@@ -672,20 +680,26 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     const titleText = scene.add.text(0, 0, title, {
         fontSize: '26px',
         fontStyle: 'bold',
-        color: '#3a2818',  // тёмно-коричневый текст на пергаменте
+        color: inkColor,
         fontFamily: 'Georgia, serif',
-        stroke: '#c9a14a',
-        strokeThickness: 2,
+        stroke: inkStroke,
+        strokeThickness: hasParchment ? 3 : 2,
     }).setOrigin(0.5, 0);
 
     // Контент (текст реплики)
-    const contentText = scene.add.text(0, 0, content, {
+    const contentStyle = {
         fontSize: '18px',
-        color: '#3a2818',
+        color: inkColor,
         fontFamily: 'Georgia, serif',
         align: 'left',
         wordWrap: { width: portraitKey ? 380 : DIALOG_STYLES.content.wrapWidth }
-    }).setOrigin(0, 0);  // выравнивание по левому краю — текст идёт справа от портрета
+    };
+    if (hasParchment) {
+        contentStyle.stroke = '#1d1208';
+        contentStyle.strokeThickness = 2;
+    }
+    const contentText = scene.add.text(0, 0, content, contentStyle)
+        .setOrigin(0, 0);  // выравнивание по левому краю — текст идёт справа от портрета
 
     // Портрет (если задан)
     let portraitImg = null;
@@ -695,6 +709,18 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         portraitFrame = scene.add.graphics();
         portraitImg = scene.add.image(0, 0, portraitKey);
         portraitImg.setDisplaySize(96, 96);
+    }
+
+    // Фаза 1: живописный пергамент и лента-плашка имени (добавляются в контейнер ниже)
+    let parchmentImg = null;
+    if (hasParchment) {
+        parchmentImg = scene.add.image(0, 0, parchmentKey);
+        if (parchmentImg.setScrollFactor) parchmentImg.setScrollFactor(0);
+    }
+    let ribbonImg = null;
+    if (hasRibbon) {
+        ribbonImg = scene.add.image(0, 0, 'ui_ribbon');
+        if (ribbonImg.setScrollFactor) ribbonImg.setScrollFactor(0);
     }
 
     // Кнопки
@@ -742,6 +768,8 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         layout();
     });
 
+    if (parchmentImg) dialog.add(parchmentImg);
+    if (ribbonImg) dialog.add(ribbonImg);
     dialog.add(titleText);
     dialog.add(contentText);
     if (portraitImg) dialog.add(portraitFrame);
@@ -773,20 +801,39 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
 
         // Пергаментный фон панели
         panelBg.clear();
-        // Основная заливка пергамента
-        panelBg.fillStyle(0xe8d7a8, 1);
-        panelBg.fillRoundedRect(-dialogWidth / 2, -totalH / 2, dialogWidth, totalH, DIALOG_STYLES.cornerRadius);
-        // Тёмная золотая окантовка
-        panelBg.lineStyle(3, 0x8c6a30, 1);
-        panelBg.strokeRoundedRect(-dialogWidth / 2, -totalH / 2, dialogWidth, totalH, DIALOG_STYLES.cornerRadius);
-        // Внутренняя тонкая окантовка
-        panelBg.lineStyle(1, 0xc9a14a, 1);
-        panelBg.strokeRoundedRect(-dialogWidth / 2 + 4, -totalH / 2 + 4, dialogWidth - 8, totalH - 8, DIALOG_STYLES.cornerRadius - 2);
+        if (hasParchment && parchmentImg) {
+            // Фаза 1: живописный пергамент под размер панели (с запасом на «тёмные» края текстуры)
+            parchmentImg.setDisplaySize(dialogWidth + 36, totalH + 32);
+            // Graphics остаётся только тонкой тёмной рамкой поверх пергамента
+            panelBg.lineStyle(2, 0x120a05, 0.9);
+            panelBg.strokeRoundedRect(-dialogWidth / 2 - 15, -totalH / 2 - 14, dialogWidth + 30, totalH + 28, DIALOG_STYLES.cornerRadius);
+        } else {
+            // Основная заливка пергамента
+            panelBg.fillStyle(0xe8d7a8, 1);
+            panelBg.fillRoundedRect(-dialogWidth / 2, -totalH / 2, dialogWidth, totalH, DIALOG_STYLES.cornerRadius);
+            // Тёмная золотая окантовка
+            panelBg.lineStyle(3, 0x8c6a30, 1);
+            panelBg.strokeRoundedRect(-dialogWidth / 2, -totalH / 2, dialogWidth, totalH, DIALOG_STYLES.cornerRadius);
+            // Внутренняя тонкая окантовка
+            panelBg.lineStyle(1, 0xc9a14a, 1);
+            panelBg.strokeRoundedRect(-dialogWidth / 2 + 4, -totalH / 2 + 4, dialogWidth - 8, totalH - 8, DIALOG_STYLES.cornerRadius - 2);
+        }
         panelBg.setDepth(dialogDepth - 1);
         dialog.panelHeight = totalH;
 
         // Заголовок — сверху по центру
         titleText.setPosition(0, -totalH / 2 + pad.top);
+
+        // Фаза 1: плашка имени — золотая лента под заголовком,
+        // чуть выступает за верхний край панели
+        if (ribbonImg) {
+            const ribW = Math.min(Math.max(titleText.width + 120, 260), dialogWidth - 30);
+            const ribH = ribW * (143 / 530);
+            const ribCY = -totalH / 2 + ribH * 0.46;
+            ribbonImg.setDisplaySize(ribW, ribH);
+            ribbonImg.setPosition(0, ribCY);
+            titleText.setPosition(0, ribCY - titleText.height / 2);
+        }
 
         // Портрет — слева сверху (после заголовка)
         const contentTop = -totalH / 2 + pad.top + titleH + pad.title;
@@ -836,7 +883,9 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
 
     panelBg.setDepth(dialogDepth - 1);
     panelBg.setScrollFactor(0);
-    dialog.addAt(panelBg, 0);
+    // Фаза 1: при живописном пергаменте graphics-рамка должна быть НАД ним,
+    // иначе addAt(0) прячет рамку под текстурой
+    dialog.addAt(panelBg, parchmentImg ? 1 : 0);
 
     layout();
 

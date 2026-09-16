@@ -66,6 +66,8 @@ export class BootScene extends Phaser.Scene {
         this.load.image('particle_blood', 'assets/effects/particle_blood.png');
         this.load.image('particle_spark', 'assets/effects/particle_spark.png');
         this.load.image('particle_dust', 'assets/effects/particle_dust.png');
+        // Фаза 1: VFX крови — всплеск-декаль из DarklandsReborn (файл как есть)
+        this.load.image('fx_blood_splat', 'assets/effects/blood_splat.webp');
 
         // ----- ИНТЕРЬЕРНЫЕ ТАЙЛЫ И ДЕКОРАЦИИ (для InteriorScene) -----
         for (let v = 0; v < 2; v++) this.load.image(`int_floor_${v}`, `assets/interiors/floor_wood_${v}.png`);
@@ -80,6 +82,16 @@ export class BootScene extends Phaser.Scene {
         });
         // Анимированный огонь (4 кадра)
         for (let f = 0; f < 4; f++) this.load.image(`int_fire_${f}`, `assets/effects/fire_${f}.png`);
+
+        // ----- Фаза 1: живописные фоны интерьеров (DarklandsReborn, файлы как есть) -----
+        this.load.image('int_bg_tavern', 'assets/interiors/bg_tavern.jpg');
+        this.load.image('int_bg_blacksmith', 'assets/interiors/bg_blacksmith.jpg');
+        this.load.image('int_bg_church', 'assets/interiors/bg_church.jpg');
+
+        // ----- Фаза 1: пергамент GUI (DarklandsReborn) + лента-плашка имени -----
+        this.load.image('ui_parchment_a', 'assets/ui/parchment_03.webp');
+        this.load.image('ui_parchment_b', 'assets/ui/parchment_04.webp');
+        this.load.image('ui_ribbon', 'assets/ui/textribbon.webp');
 
         // ----- ОГРАДЫ И ГРЯДКИ (для деревни) -----
         this.load.image('tile_fence_h', 'assets/tiles/fence_h.png');
@@ -153,7 +165,10 @@ export class BootScene extends Phaser.Scene {
         // row 3=hurt(1+5), row 4=die(6). Все лицом вниз.
         this.load.spritesheet('wolf_combat', 'assets/sprites/wolf_combat.png',
             { frameWidth: 64, frameHeight: 64 });
-        // Полные LPC-листы (10×6) — для деревни/разных направлений
+        // Полные LPC-листы — для деревни/разных направлений. Фаза 1 ФИКС:
+        // боевые side-кадры волка берутся из ПУСТЫХ ячеек сетки 64×64
+        // (frame 5 — стойка, frames 35-37 — рык), т.к. frame 15 содержал
+        // обрывки двух соседних кадров («двойной волк» в бою).
         for (let i = 1; i <= 6; i++) {
             this.load.spritesheet(`wolf_full_${i}`, `assets/sprites/wolf_${i}.png`,
                 { frameWidth: 64, frameHeight: 64 });
@@ -223,6 +238,23 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
+        // ----- Фаза 1: мягкая виньетка (radial gradient) — канвас-текстура,
+        // создаётся ОДИН раз за игру, используется интерьерами и боем для читаемости -----
+        if (!this.textures.exists('vignette_soft')) {
+            const VS = 512;
+            const cv = this.textures.createCanvas('vignette_soft', VS, VS);
+            if (cv) {
+                const ctx = cv.getContext();
+                const grad = ctx.createRadialGradient(VS / 2, VS / 2, VS * 0.30, VS / 2, VS / 2, VS * 0.74);
+                grad.addColorStop(0, 'rgba(0,0,0,0)');
+                grad.addColorStop(0.62, 'rgba(0,0,0,0.20)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.66)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, VS, VS);
+                cv.refresh();
+            }
+        }
+
         // ----- Раунд 15: восстанавливаем аудио-настройки из localStorage -----
         // (пишет их Title-панель настроек; AudioManager всех сцен читает settings.audio.*)
         try {
@@ -1073,13 +1105,13 @@ export class BootScene extends Phaser.Scene {
         // row 3 cols 5-7 — рык/выпад. Для боя: игрок слева, волк справа,
         // поэтому спрайт волка флипается по X (мордой влево к игроку).
         if (this.textures.exists('wolf_full_1')) {
-            // Стойка (row 1, col 5 = frame 15) — лёгкое «дыхание» двумя кадрами
+            // Фаза 1 ФИКС «двойного волка»: одиночный кадр стойки (row 0, col 5 = frame 5)
             this.anims.create({
                 key: 'wolf_side_idle',
-                frames: [{ key: 'wolf_full_1', frame: 15 }],
+                frames: [{ key: 'wolf_full_1', frame: 5 }],
                 frameRate: 1,
             });
-            // Атака/рык (row 3, cols 5-7 = frames 35..37)
+            // Атака/рык — одиночные кадры (row 3, cols 5-7 = frames 35..37)
             this.anims.create({
                 key: 'wolf_side_attack',
                 frames: this.anims.generateFrameNumbers('wolf_full_1', {

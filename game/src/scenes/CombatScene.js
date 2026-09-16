@@ -102,7 +102,9 @@ export class CombatScene extends Phaser.Scene {
             if (e.spriteKey === 'enemy_wolf' && this.anims.exists('wolf_side_idle')) {
                 // Раунд 23: боковой вид волка (мордой вправо) — флипаем,
                 // чтобы морда была направлена ВЛЕВО, на игрока.
-                sp = this.add.sprite(x, y, 'wolf_full_1', 15).setScale(2.2);
+                // Фаза 1 ФИКС: одиночный кадр стойки (frame 5) вместо «двойного» 15;
+                // волк нарисован в верхней половине ячейки — смещаем origin вниз по форме
+                sp = this.add.sprite(x, y, 'wolf_full_1', 5).setScale(2.2).setOrigin(0.5, 0.25);
                 sp.setFlipX(true);
                 sp.play('wolf_side_idle');
                 isWolf = true;
@@ -156,6 +158,14 @@ export class CombatScene extends Phaser.Scene {
 
         // ----- Погода (раунд 14): дождь/снег видны и в бою -----
         applyWeatherVisuals(this, { tintDepth: 94, precipDepth: 96 });
+
+        // ----- Фаза 1: виньетка по краям — журнал боя и кнопки читаются лучше,
+        // край экрана мягко уходит в темноту (поверх погоды, ниже ничего интерактивного) -----
+        if (this.textures.exists('vignette_soft')) {
+            this.add.image(0, 0, 'vignette_soft')
+                .setOrigin(0, 0).setDisplaySize(width, height)
+                .setScrollFactor(0).setDepth(97).setAlpha(0.8);
+        }
     }
 
     createActions() {
@@ -299,6 +309,8 @@ export class CombatScene extends Phaser.Scene {
 
     /**
      * Проиграть эффект попадания по цели.
+     * Фаза 1: при попадании кровью — крупный всплеск-декаль fx_blood_splat
+     * (DarklandsReborn) со случайным поворотом и разлётом частиц.
      */
     playHitEffect(x, y, type = 'blood') {
         const texKey = type === 'blood' ? 'particle_blood' : (type === 'spark' ? 'particle_spark' : 'particle_dust');
@@ -315,8 +327,28 @@ export class CombatScene extends Phaser.Scene {
         });
         emitter.explode(count);
 
-        // Flash-эффект на цели
-        this.cameras.main.flash(80, 255, 50, 50);
+        // Фаза 1: кровавый всплеск — растёт и растворяется
+        if (type === 'blood' && this.textures.exists('fx_blood_splat')) {
+            const splat = this.add.image(x, y, 'fx_blood_splat')
+                .setDepth(38)
+                .setRotation(Phaser.Math.FloatBetween(0, Math.PI * 2))
+                .setScale(Phaser.Math.FloatBetween(0.45, 0.7))
+                .setAlpha(0.95);
+            this.tweens.add({
+                targets: splat,
+                scale: splat.scale * 1.7,
+                alpha: 0,
+                duration: 520,
+                ease: 'Quad.easeOut',
+                onComplete: () => splat.destroy(),
+            });
+        }
+
+        // Flash-эффект только при реальном попадании — на промахе/уклонении
+        // красная вспышка камеры была ложным сигналом
+        if (type !== 'dust') {
+            this.cameras.main.flash(80, 255, 50, 50);
+        }
 
         this.time.delayedCall(lifespan + 50, () => emitter.destroy());
     }
@@ -447,7 +479,7 @@ export class CombatScene extends Phaser.Scene {
                     } else {
                         this.playHitEffect(tw.sprite.x, tw.sprite.y, 'blood');
                     }
-                    this.cameras.main.shake(120, isCrit ? 0.010 : 0.005);
+                    this.cameras.main.shake(140, isCrit ? 0.012 : 0.006);
 
                     if (target.HP <= 0) {
                         this.pushLog(tf('{0} повержен!', t(target.name)));
@@ -570,7 +602,7 @@ export class CombatScene extends Phaser.Scene {
                                 }
                             }
                         }
-                        this.cameras.main.shake(120, 0.006);
+                        this.cameras.main.shake(160, actualDmg > 0 ? 0.009 : 0.005);
                         this.drawBars();
                         if (this.player.HP <= 0) {
                             this.time.delayedCall(400, () => this.endCombatDefeat());
