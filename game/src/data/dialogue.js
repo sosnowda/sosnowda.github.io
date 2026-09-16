@@ -4,7 +4,7 @@
 
 import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, checkGameEnd } from './thief.js';
 import { ActionLog } from './actionLog.js';
-import { tickTime } from '../systems/TimeSystem.js';
+import { tickTime, getTime } from '../systems/TimeSystem.js';
 import { t, tf } from '../systems/i18n.js';
 
 /**
@@ -244,24 +244,35 @@ export const DIALOGUES = {
         },
     },
 
-    // === КРЕСТЬЯНИН АВДЕЙ ===
+    // === МЕЛЬНИК АВДЕЙ (раунд 27, п.7: работал на мельнице днём) ===
     peasant1: {
         start: 'a',
         nodes: {
             a: {
-                speaker: 'Крестьянин Авдей',
-                text: 'Ох, путник... у меня беда. Корова пропала третьего дня, а тут ещё иконокража! Никакого спасу от лихих людей.',
+                speaker: 'Мельник Авдей',
+                text: 'Здравствуй, путник. С утра до заката я на мельнице — жернова не ждут, зерно само не смелется. А тут ещё иконокража — никакого спасу от лихих людей!',
                 action: (scene) => {
                     DIALOGUES.peasant1.nodes.a.choices = withAskThief(scene, 'peasant1', [
                         { text: t('Попросить денег'), next: 'ask_money' },
                         { text: t('Что с коровой?'), next: 'cow' },
+                        { text: t('Про мельницу расскажи.'), next: 'mill' },
                         { text: t('Сочувствую. Прощай.'), end: true },
                     ], 0);
                 },
                 choices: [],
             },
+            mill: {
+                speaker: 'Мельник Авдей',
+                text: 'Мельница у нас ветряная — на пригорке стоит, крылья ветер крутит. Неси зерно — смелет и на муку, и на крупу. А старая водяная давно сломалась — ручей обмелел, колесо убрали.',
+                action: (scene) => {
+                    DIALOGUES.peasant1.nodes.mill.choices = withAskThief(scene, 'peasant1', [
+                        { text: t('Спасибо за рассказ.'), end: true },
+                    ], 0);
+                },
+                choices: [],
+            },
             cow: {
-                speaker: 'Крестьянин Авдей',
+                speaker: 'Мельник Авдей',
                 text: 'Корова моя Машка ушла со двора и не вернулась. Ищу по окрестностям, но никак не найду. Может, в лес ушла?',
                 action: (scene) => {
                     DIALOGUES.peasant1.nodes.cow.choices = withAskThief(scene, 'peasant1', [
@@ -271,10 +282,10 @@ export const DIALOGUES = {
                 choices: [],
             },
             ask_thief: {
-                speaker: 'Крестьянин Авдей',
+                speaker: 'Мельник Авдей',
                 text: '...',
                 action: (scene) => {
-                    const r = askNPC(scene.registry, 'peasant1', 'Крестьянин Авдей');
+                    const r = askNPC(scene.registry, 'peasant1', 'Мельник Авдей');
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -282,10 +293,10 @@ export const DIALOGUES = {
                 ],
             },
             ask_money: {
-                speaker: 'Крестьянин Авдей',
+                speaker: 'Мельник Авдей',
                 text: '...',
                 action: (scene) => {
-                    const r = askMoneyForHelp(scene.registry, 'peasant1', 'Крестьянин Авдей');
+                    const r = askMoneyForHelp(scene.registry, 'peasant1', 'Мельник Авдей');
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -293,7 +304,7 @@ export const DIALOGUES = {
                 ],
             },
             ask_result: {
-                speaker: 'Крестьянин Авдей',
+                speaker: 'Мельник Авдей',
                 text: '...',
                 choices: [
                     { text: 'Спасибо.', end: true },
@@ -302,24 +313,71 @@ export const DIALOGUES = {
         },
     },
 
-    // === ВДОВА МАРФА ===
+    // === ПАСЕЧНИЦА МАРФА (раунд 27, пп.8,13) ===
+    // Бывшая вдова — теперь пасечница: работает на пасеке, собирает травы.
+    // У неё можно купить мёд (лечение, не более 3 раз в сутки, кулдаун 1 час).
     widow: {
         start: 'a',
         nodes: {
             a: {
-                speaker: 'Вдова Марфа',
-                text: 'Здравствуйте, молодой человек. Помолитесь со мной за упокой души моего мужа, царство ему небесное.',
+                speaker: 'Пасечница Марфа',
+                text: 'Здравствуйте, путник. Пчёлы мои нынче добрые — взяток славный. А ещё травы собираю — у озера, на реке, где найду. Нужен мёд — это ко мне.',
                 action: (scene) => {
                     DIALOGUES.widow.nodes.a.choices = withAskThief(scene, 'widow', [
+                        { text: t('🍯 Купить мёд (8 д.)'), next: 'honey' },
                         { text: t('Попросить денег'), next: 'ask_money' },
-                        { text: t('Помолюсь.'), next: 'pray' },
+                        { text: t('Помолюсь с вами.'), next: 'pray' },
                         { text: t('Извините, я спешу.'), end: true },
-                    ], 0);
+                    ], 1);
                 },
                 choices: [],
             },
+            // Раунд 27 (п.13): мёд восстанавливает здоровье.
+            // НЕ БОЛЕЕ 3 РАЗ В СУТКИ, кулдаун между приёмами — 1 час.
+            honey: {
+                speaker: 'Пасечница Марфа',
+                text: '...',
+                action: (scene) => {
+                    const player = scene.registry.get('player');
+                    const time = getTime(scene.registry);
+                    // В timeState час — поле `hour`; кулдаун считаем в минутах
+                    const hour = time ? (time.hour ?? 12) : 12;
+                    const day = time ? (time.yearFromChrist * 372 + time.month * 31 + time.day) : 0;
+                    const absMin = time ? (day * 1440 + hour * 60 + (time.minute || 0)) : 0;
+                    const st = scene.registry.get('honey') || { day: -1, uses: 0, lastAbsMin: -999 };
+                    if (st.day === day && st.uses >= 3) {
+                        scene._lastAskResult = { message: t('Марфа качает головой: «Мёд — он как лекарство: три ложки в день, и довольно. Больше — не на пользу, а во вред. Приходи завтра».') };
+                        return;
+                    }
+                    if (absMin - (st.lastAbsMin || -999) < 60) {
+                        scene._lastAskResult = { message: t('«Не раньше, чем через час. Мёд силён, дай ему разойтись по крови», — говорит Марфа.') };
+                        return;
+                    }
+                    if ((player.dengas || 0) < 8) {
+                        scene._lastAskResult = { message: t('«Без денег мёд не дам, — строго говорит Марфа. — Горшочек трудом достаётся». (Нужно 8 д.)') };
+                        return;
+                    }
+                    player.dengas -= 8;
+                    const heal = 8;
+                    const before = player.HP;
+                    player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
+                    // Новый день — счётчик заново
+                    if (st.day !== day) { st.day = day; st.uses = 0; }
+                    st.uses += 1;
+                    st.lastAbsMin = absMin;
+                    scene.registry.set('honey', st);
+                    scene.registry.set('player', player);
+                    if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
+                    ActionLog.add(scene.registry, t(`Купил мёд у Марфы (8 д.): +${player.HP - before} HP. Съедено за сегодня: ${st.uses}/3.`));
+                    scene._lastAskResult = { message: t('Марфа наливает полную ложку янтарного мёда. Тепло разливается по телу, силы возвращаются.') +
+                        `\n\n✚ Здоровье: +${player.HP - before} HP (${before} → ${player.HP})\n🍯 За сегодня: ${st.uses}/3 — следующая ложка не раньше, чем через час.` };
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
             pray: {
-                speaker: 'Вдова Марфа',
+                speaker: 'Пасечница Марфа',
                 text: 'Спаси вас Господь. Пусть хранит вас Пресвятая Богородица.',
                 action: (scene) => {
                     DIALOGUES.widow.nodes.pray.choices = withAskThief(scene, 'widow', [
@@ -329,10 +387,10 @@ export const DIALOGUES = {
                 choices: [],
             },
             ask_thief: {
-                speaker: 'Вдова Марфа',
+                speaker: 'Пасечница Марфа',
                 text: '...',
                 action: (scene) => {
-                    const r = askNPC(scene.registry, 'widow', 'Вдова Марфа');
+                    const r = askNPC(scene.registry, 'widow', 'Пасечница Марфа');
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -340,10 +398,10 @@ export const DIALOGUES = {
                 ],
             },
             ask_money: {
-                speaker: 'Вдова Марфа',
+                speaker: 'Пасечница Марфа',
                 text: '...',
                 action: (scene) => {
-                    const r = askMoneyForHelp(scene.registry, 'widow', 'Вдова Марфа');
+                    const r = askMoneyForHelp(scene.registry, 'widow', 'Пасечница Марфа');
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -351,7 +409,159 @@ export const DIALOGUES = {
                 ],
             },
             ask_result: {
-                speaker: 'Вдова Марфа',
+                speaker: 'Пасечница Марфа',
+                text: '...',
+                choices: [
+                    { text: 'Спасибо.', end: true },
+                ],
+            },
+        },
+    },
+
+    // === ПАСЕЧНИК ТАРАС (раунд 27, п.6: новая многодетная семья) ===
+    beekeeper1: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Пасечник Тарас',
+                text: 'Мир тебе, путник! Ты в доме, где семеро детей — шумно, как на пасеке в летний день, а вслух. Сам-то я с ульями вожусь с рассвета.',
+                action: (scene) => {
+                    DIALOGUES.beekeeper1.nodes.a.choices = withAskThief(scene, 'beekeeper1', [
+                        { text: t('Расскажи о пчёлах.'), next: 'bees' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Удачи тебе, Тарас.'), end: true },
+                    ], 0);
+                },
+                choices: [],
+            },
+            bees: {
+                speaker: 'Пасечник Тарас',
+                text: 'Пчела — работница Божья: трудится без присмотра, порядок держит сама. Мой мёд — детям на молоко, а торговый — у Марфы спрашивай: её пасека постарше, и мёд у неё целебный — здоровье ставит на ноги.',
+                action: (scene) => {
+                    DIALOGUES.beekeeper1.nodes.bees.choices = withAskThief(scene, 'beekeeper1', [
+                        { text: t('Спасибо за рассказ.'), end: true },
+                    ], 0);
+                },
+                choices: [],
+            },
+            ask_thief: {
+                speaker: 'Пасечник Тарас',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'beekeeper1', 'Пасечник Тарас');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Пасечник Тарас',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'beekeeper1', 'Пасечник Тарас');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Пасечник Тарас',
+                text: '...',
+                choices: [
+                    { text: 'Спасибо.', end: true },
+                ],
+            },
+        },
+    },
+
+    // === ФЁКЛА, ЖЕНА ПАСЕЧНИКА (раунд 27, п.6) ===
+    beekeeper_wife: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Фёкла',
+                text: 'Заходи, путник, только тихо — малых только уложила. Нас с Тарасом Господь семерым детками благословил: крики в избе от зари до зари!',
+                action: (scene) => {
+                    DIALOGUES.beekeeper_wife.nodes.a.choices = [
+                        { text: t('Как семья живёт?'), next: 'family' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Храни вас Бог.'), end: true },
+                    ];
+                },
+                choices: [],
+            },
+            family: {
+                speaker: 'Фёкла',
+                text: 'Живём впроголодь, да дружно: Тарас с пасеки воск и мёд, я — огород да скотину. Старшие за младшими смотрят. Хлеб с мёдом на столе — уже не бедность.',
+                action: (scene) => {
+                    DIALOGUES.beekeeper_wife.nodes.family.choices = [
+                        { text: t('Доброго вам достатка.'), end: true },
+                    ];
+                },
+                choices: [],
+            },
+            ask_money: {
+                speaker: 'Фёкла',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'beekeeper_wife', 'Фёкла');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Фёкла',
+                text: '...',
+                choices: [
+                    { text: 'Спасибо.', end: true },
+                ],
+            },
+        },
+    },
+
+    // === ЛЮБАВА, ЖЕНА СТАРОСТЫ (раунд 27, п.9) ===
+    elder_wife: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Любава',
+                text: 'Здравствуй, странник. Ты по делам к моему Мирославу? Он нынче по деревне ходит — дела смотрит, споры решает. А я в доме: печь, скотина, огород.',
+                action: (scene) => {
+                    DIALOGUES.elder_wife.nodes.a.choices = [
+                        { text: t('Как поживаете?'), next: 'husband' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Спасибо, хозяйка.'), end: true },
+                    ];
+                },
+                choices: [],
+            },
+            husband: {
+                speaker: 'Любава',
+                text: 'Староста он — воля деревенская. То с церковным старостой говорит, то стражу учит, то у колодца судит, кто чей телегой дорогу забил. Вечером придёт — отдохнём с ним за ужином.',
+                action: (scene) => {
+                    DIALOGUES.elder_wife.nodes.husband.choices = [
+                        { text: t('Дай Бог вам здоровья.'), end: true },
+                    ];
+                },
+                choices: [],
+            },
+            ask_money: {
+                speaker: 'Любава',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'elder_wife', 'Любава');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Любава',
                 text: '...',
                 choices: [
                     { text: 'Спасибо.', end: true },

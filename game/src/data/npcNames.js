@@ -77,6 +77,8 @@ export const PROFESSIONS_BY_GENDER = {
         { id: 'merchant',   name: 'торгарка',   maleName: 'торгарь' },
         { id: 'midwife',    name: 'повитуха',   maleName: null },
         { id: 'widow',      name: 'вдова',      maleName: null },
+        { id: 'beekeeper',  name: 'пасечница',  maleName: 'пасечник' },  // раунд 27 (п.8)
+        { id: 'homemaker',  name: 'хозяйка',    maleName: null },        // раунд 27 (пп.6,9)
     ],
 };
 
@@ -188,22 +190,34 @@ export function generateRandomNpc(npcId, spriteKey, portraitKey, interiorId) {
  * Вызывается при старте новой игры.
  */
 export function initNpcNames(registry) {
-    // Используем фиксированные ID для соответствия интерьерам, но случайные имена
+    // Используем фиксированные ID для соответствия интерьерам.
+    // Раунд 27: имя можно задать жёстко (name) — владельцу важны Авдей и
+    // Марфа по именам; у остальных — случайные имена на каждую игру.
+    // Раунд 27 (пп.6,7,8,9): Авдей — мельник, Марфа — пасечница,
+    // новые жители: семья пасечника (Тарас + Фёкла) и жена старосты.
     const npcConfigs = [
-        { id: 'elder',        gender: 'male',   age: 58, professionId: 'elder',        sprite: 'npc_elder',    portrait: 'portrait_elder',    interiorId: 'elder_house' },
-        { id: 'priest',       gender: 'male',   age: 62, professionId: 'priest',       sprite: 'npc_elder',    portrait: 'portrait_priest',   interiorId: 'church' },
+        { id: 'elder',        gender: 'male',   age: 58, professionId: 'elder',      sprite: 'npc_elder',    portrait: 'portrait_elder',      interiorId: 'elder_house' },
+        { id: 'priest',       gender: 'male',   age: 62, professionId: 'priest',     sprite: 'npc_elder',    portrait: 'portrait_priest',     interiorId: 'church' },
         { id: 'tavernkeeper', gender: 'male',   age: 45, professionId: 'tavernkeeper', sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'tavern' },
-        { id: 'blacksmith',   gender: 'male',   age: 40, professionId: 'blacksmith',   sprite: 'npc_soldier',  portrait: 'portrait_blacksmith',  interiorId: 'blacksmith' },
-        { id: 'peasant1',     gender: 'male',   age: 35, professionId: 'peasant',      sprite: 'npc_merchant', portrait: 'portrait_peasant',  interiorId: 'villager_house_1' },
-        { id: 'widow',        gender: 'female', age: 55, professionId: 'widow',        sprite: 'npc_elder',    portrait: 'portrait_widow',    interiorId: 'villager_house_2' },
-        { id: 'healer',       gender: 'female', age: 68, professionId: 'healer_f',     sprite: 'npc_elder',    portrait: 'portrait_healer',   interiorId: 'villager_house_2' },
-        { id: 'hunter',       gender: 'male',   age: 32, professionId: 'hunter',       sprite: 'npc_soldier',  portrait: 'portrait_hunter',   interiorId: 'villager_house_1' },
-        { id: 'guard',        gender: 'male',   age: 28, professionId: 'guard',        sprite: 'npc_soldier',  portrait: 'portrait_guard',    interiorId: 'villager_house_1' },
-        { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',    sprite: 'npc_merchant', portrait: 'portrait_fisherman', interiorId: 'villager_house_1' },
+        { id: 'blacksmith',   gender: 'male',   age: 40, professionId: 'blacksmith', sprite: 'npc_soldier',  portrait: 'portrait_blacksmith', interiorId: 'blacksmith' },
+        { id: 'peasant1',     gender: 'male',   age: 35, professionId: 'miller',     sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_1', name: 'Авдей' },
+        { id: 'widow',        gender: 'female', age: 55, professionId: 'beekeeper',  sprite: 'npc_elder',    portrait: 'portrait_widow',      interiorId: 'villager_house_2', name: 'Марфа' },
+        { id: 'healer',       gender: 'female', age: 68, professionId: 'healer_f',   sprite: 'npc_elder',    portrait: 'portrait_healer',     interiorId: 'villager_house_2' },
+        { id: 'hunter',       gender: 'male',   age: 32, professionId: 'hunter',     sprite: 'npc_soldier',  portrait: 'portrait_hunter',     interiorId: 'villager_house_1' },
+        { id: 'guard',        gender: 'male',   age: 28, professionId: 'guard',      sprite: 'npc_soldier',  portrait: 'portrait_guard',      interiorId: 'villager_house_1' },
+        { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',  sprite: 'npc_merchant', portrait: 'portrait_fisherman',  interiorId: 'villager_house_1' },
+        // Раунд 27 (п.6): многодетная семья пасечника (на месте часовни)
+        { id: 'beekeeper1',   gender: 'male',   age: 38, professionId: 'beekeeper',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'beekeeper_house', name: 'Тарас' },
+        { id: 'beekeeper_wife', gender: 'female', age: 34, professionId: 'homemaker', sprite: 'npc_elder',  portrait: 'portrait_villager_f', interiorId: 'beekeeper_house', name: 'Фёкла' },
+        // Раунд 27 (п.9): жена старосты
+        { id: 'elder_wife',   gender: 'female', age: 54, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'elder_house',     name: 'Любава' },
     ];
 
+    // Раунд 27: зерно для детерминированной системы присутствия (npcPresence.js)
+    registry.set('npcSeed', Math.floor(Math.random() * 1000000));
+
     const npcs = npcConfigs.map(cfg => {
-        const name = getRandomName(cfg.gender);
+        const name = cfg.name || getRandomName(cfg.gender);
         const professionPool = PROFESSIONS_BY_GENDER[cfg.gender];
         const profession = professionPool.find(p => p.id === cfg.professionId) || professionPool[0];
         const ageGroup = getAgeGroup(cfg.age, cfg.gender);

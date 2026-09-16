@@ -15,6 +15,7 @@ import { getWeather } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
 import { buildNpcLookTextures, npcVariantKey, npcPortraitVariantKey } from '../systems/NpcLook.js';
+import { getPresence, PLACE_NAMES, getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES, ALL_NPC_IDS } from '../data/npcPresence.js';
 import {
     checkNpcWillingToTalk, getNpcRep, getReputationLevel,
     applyGiftBonus, applyCompliment, applyTreatEveryoneBonus,
@@ -104,10 +105,19 @@ export class InteriorScene extends Phaser.Scene {
         // вместо него — декор-центр и особый набор действий в кнопках.
         // Раунд 26: часовня удалена — её богомолье/пожертвование/киот в церкви.
         const hasNpc = !interior.noNpc && !!interior.npcId;
+        // Раунд 27: хозяин сейчас в СВОЁМ интерьере? (пп.7,8,10,11 —
+        // Авдей на мельнице, Марфа на пасеке/с травами, староста гуляет,
+        // жители на постоялом дворе). Место «home» ИЛИ совпадает с интерьером
+        // (тавернщик: место «tavern», но его интерьер — и есть «tavern»).
+        this.ownerPresence = hasNpc
+            ? getPresence(this.registry, interior.npcId)
+            : { place: 'home', activity: '' };
+        const ownerHere = hasNpc &&
+            (this.ownerPresence.place === 'home' || this.ownerPresence.place === this.interiorId);
         // Портрет для диалогов интерьера (с учётом варианта внешности NPC);
         // для интерьеров без NPC — базовый портрет интерьера
         this.npcPortraitKey = (this.npcData && this.npcData.portrait) || interior.portrait;
-        if (hasNpc) {
+        if (hasNpc && ownerHere) {
             let npcSpriteKey = (this.npcData && this.npcData.sprite) || interior.npcSprite;
             // П.6: Проверяем существование текстуры
             let finalSpriteKey = this.textures.exists(npcSpriteKey) ? npcSpriteKey : 'npc_elder';
@@ -157,6 +167,111 @@ export class InteriorScene extends Phaser.Scene {
                 backgroundColor: '#00000088', padding: { x: 6, y: 3 },
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5).setDepth(20);
+        } else if (hasNpc && !ownerHere) {
+            // ----- Раунд 27: ХОЗЯИНА НЕТ ДОМА —
+            // показываем где его искать (живой мир, пп.7,8,10,11) -----
+            const absentName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+            const where = t(PLACE_NAMES[this.ownerPresence.place] || '') || '';
+            this.add.sprite(width * 0.65, height * 0.55, 'npc_elder').setAlpha(0.0).setDepth(5); // держим раскладку
+            this.add.text(width * 0.65, height * 0.42, t('🌙 Здесь сейчас никого нет...'), {
+                fontSize: '18px', color: RUS.textDim,
+                fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(20);
+            this.add.text(width * 0.65, height * 0.52, `${absentName}\n${this.ownerPresence.activity || ''}\n📍 ${where}`, {
+                fontSize: '15px', color: RUS.text, align: 'center',
+                backgroundColor: '#000000aa', padding: { x: 10, y: 8 },
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(20);
+            this.add.text(width * 0.65, height * 0.66, t('Найди(е) его там — или возвращайся в другой час.'), {
+                fontSize: '12px', color: '#c9a14a',
+                backgroundColor: '#00000088', padding: { x: 6, y: 3 },
+            }).setOrigin(0.5).setDepth(20);
+        }
+
+        // ----- Раунд 27 (пп.6,9): ВТОРАЯ ФИГУРА — ЖЕНА (староста/пасечник) -----
+        if (interior.secondaryNpcId) {
+            const secPresence = getPresence(this.registry, interior.secondaryNpcId);
+            if (secPresence.place === 'home') {
+                const secData = findNpc(this.registry, interior.secondaryNpcId);
+                const secName = secData ? getNpcDisplayName(this.registry, interior.secondaryNpcId)
+                    : interior.secondaryNpcName;
+                const secSpriteKey = (secData && secData.sprite) || interior.secondaryNpcSprite || 'npc_elder';
+                let secFinal = this.textures.exists(secSpriteKey) ? secSpriteKey : 'npc_elder';
+                if (secData && buildNpcLookTextures(this, secData)) {
+                    const secVariant = npcVariantKey(secData);
+                    if (secVariant && this.textures.exists(secVariant)) secFinal = secVariant;
+                }
+                const secScale = 2.2 * ((secData && secData.look && secData.look.scale) || 1);
+                const secSpr = this.add.sprite(width * 0.84, height * 0.66, secFinal)
+                    .setScale(secScale).setDepth(6);
+                const secAnim = `${secFinal}_idle_down`;
+                if (this.anims.exists(secAnim)) secSpr.play(secAnim);
+                this.tweens.add({
+                    targets: secSpr,
+                    scaleX: { from: secScale, to: secScale * 1.02 },
+                    scaleY: { from: secScale, to: secScale * 0.98 },
+                    duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                });
+                secSpr.setInteractive({ useHandCursor: true });
+                secSpr.on('pointerdown', (pointer) => {
+                    if (pointer.leftButtonDown() && !this.busyDialog) {
+                        this.busyDialog = true;
+                        this.dialogue.run(interior.secondaryDialogueId, () => { this.busyDialog = false; });
+                    }
+                });
+                this.add.text(secSpr.x, secSpr.y + 70, secName, {
+                    fontSize: '14px', color: RUS.text, stroke: '#000', strokeThickness: 2,
+                }).setOrigin(0.5).setDepth(20);
+                this.add.text(secSpr.x, secSpr.y - 64, t('💬 Нажми, чтобы поговорить'), {
+                    fontSize: '10px', color: '#c9a14a',
+                    backgroundColor: '#00000088', padding: { x: 5, y: 2 },
+                }).setOrigin(0.5).setDepth(20);
+            }
+        }
+
+        // ----- Раунд 27 (п.11): ПОСЕТИТЕЛИ ПОСТОЯЛОГО ДВОРА -----
+        // Взрослые жители, которые по расписанию сегодня сидят здесь за столами.
+        if (this.interiorId === 'tavern') {
+            const visitorIds = getNpcsAtPlace(this.registry, 'tavern')
+                .filter(id => id !== 'tavernkeeper').slice(0, 3);
+            const VISITOR_SPOTS = [
+                { x: 0.5, y: 0.74 }, { x: 0.84, y: 0.72 }, { x: 0.5, y: 0.42 },
+            ];
+            visitorIds.forEach((vId, vi) => {
+                const vData = findNpc(this.registry, vId);
+                const vName = vData ? getNpcDisplayName(this.registry, vId) : vId;
+                const vSpriteKey = (vData && vData.sprite) || 'npc_merchant';
+                let vFinal = this.textures.exists(vSpriteKey) ? vSpriteKey : 'npc_elder';
+                if (vData && buildNpcLookTextures(this, vData)) {
+                    const vVariant = npcVariantKey(vData);
+                    if (vVariant && this.textures.exists(vVariant)) vFinal = vVariant;
+                }
+                const vx = VISITOR_SPOTS[vi].x * width;
+                const vy = VISITOR_SPOTS[vi].y * height;
+                const vSpr = this.add.sprite(vx, vy, vFinal).setScale(2).setDepth(7);
+                const vAnim = `${vFinal}_idle_down`;
+                if (this.anims.exists(vAnim)) vSpr.play(vAnim);
+                vSpr.setInteractive({ useHandCursor: true });
+                vSpr.on('pointerdown', (pointer) => {
+                    if (pointer.leftButtonDown() && !this.busyDialog) {
+                        this.busyDialog = true;
+                        const dId = NPC_DIALOGUE[vId];
+                        if (dId) {
+                            this.dialogue.run(dId, () => { this.busyDialog = false; });
+                        } else {
+                            const line = OUTDOOR_LINES[vId] || t('«Хорошая медовуха нынче...»');
+                            createDialog(this, vName, line, [
+                                { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
+                            ], { singleton: true, portraitKey: (vData && vData.portrait) || 'portrait_villager_f' });
+                        }
+                    }
+                });
+                this.add.text(vx, vy + 44, vName, {
+                    fontSize: '12px', color: RUS.text,
+                    backgroundColor: '#000000aa', padding: { x: 5, y: 2 },
+                    stroke: '#000', strokeThickness: 2,
+                }).setOrigin(0.5).setDepth(20);
+            });
         }
 
         // ----- Игрок (слева от NPC) -----
@@ -230,7 +345,9 @@ export class InteriorScene extends Phaser.Scene {
         const villageRepValue = getVillageRep(this.registry);
 
         const buttons = [];
-        if (hasNpc) {
+        // Раунд 27: диалоговые кнопки — только если хозяин на месте
+        // (иначе в доме тихо, работает только «Выйти»)
+        if (hasNpc && ownerHere) {
             buttons.push({ label: t('\u{1F4AC} Поговорить'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.talkToNpc(interior) });
             buttons.push({ label: t('\u{1F4B0} Просить денег'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.askMoneyFromNpc(interior) });
             buttons.push({ label: t('\u{1F4DC} Задание'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.offerQuest(interior) });

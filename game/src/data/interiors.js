@@ -15,11 +15,19 @@ export const INTERIORS = {
         dialogueId: 'elder_quest',
         description: t('Уютная горница с иконами в углу. Староста сидит за столом, перебирая бумаги.'),
         decor: ['icons', 'table', 'candle'],
+        // Раунд 27 (п.9): у старосты есть жена — Любава (у печи)
+        secondaryNpcId: 'elder_wife',
+        secondaryNpcName: t('Любава, жена старосты'),
+        secondaryNpcSprite: 'npc_elder',
+        secondaryPortrait: 'portrait_villager_f',
+        secondaryDialogueId: 'elder_wife',
     },
 
+    // Раунд 27 (п.12): владелец переименовал таверну в «Постоялый двор»
+    // (внутренний id 'tavern' не меняем — на нём завязаны сейвы и код).
     tavern: {
         id: 'tavern',
-        name: t('Таверна «У дороги»'),
+        name: t('Постоялый двор «У дороги»'),
         npcId: 'tavernkeeper',
         npcName: t('Тавернщик Фёдор'),
         npcSprite: 'npc_merchant',
@@ -64,14 +72,34 @@ export const INTERIORS = {
 
     villager_house_2: {
         id: 'villager_house_2',
-        name: t('Дом вдовы'),
+        name: t('Дом Марфы'),
         npcId: 'widow',
-        npcName: t('Вдова Марфа'),
+        npcName: t('Пасечница Марфа'),
         npcSprite: 'npc_elder',
         portrait: 'portrait_widow',
         dialogueId: 'widow',
-        description: t('Тихий дом. У окна сидит пожилая женщина, перебирая чётки.'),
+        description: t('Тихий дом. Пахнет сушёными травами и мёдом. Хозяйка приглядывает за горшками с целебными настоями.'),
         decor: ['bed', 'icon'],
+    },
+
+    // Раунд 27 (п.6): новый жилой дом на месте убранной часовни —
+    // многодетная семья пасечника: муж Тарас и жена Фёкла.
+    beekeeper_house: {
+        id: 'beekeeper_house',
+        name: t('Дом пасечника'),
+        npcId: 'beekeeper1',
+        npcName: t('Пасечник Тарас'),
+        npcSprite: 'npc_merchant',
+        portrait: 'portrait_peasant',
+        dialogueId: 'beekeeper1',
+        description: t('Изба полна детского гомона: у Тараса и Фёклы семеро детей. На лавках сушатся соты, в углу — плетёные корзины для мёда.'),
+        decor: ['bed', 'table', 'cradle'],
+        // Жена — вторая фигура в доме (как у старосты)
+        secondaryNpcId: 'beekeeper_wife',
+        secondaryNpcName: t('Фёкла, жена пасечника'),
+        secondaryNpcSprite: 'npc_elder',
+        secondaryPortrait: 'portrait_villager_f',
+        secondaryDialogueId: 'beekeeper_wife',
     },
 
     // Амбар общины — подённая работа (молотьба зерна) за деньги.
@@ -107,15 +135,17 @@ export const INTERIORS = {
 
 // Координаты зданий в деревне (col, row — верхний-левый угол двери)
 // Раунд 9: + Амбар (северо-восток). Раунд 26: часовня удалена — есть церковь.
+// Раунд 27 (п.6): на свободном месте часовни — дом многодетной семьи пасечника.
 // Двери и дорожки строятся автоматически в world.buildMap(),
 // проходимость проверяет validateMap() (BFS от спавна).
 export const BUILDINGS = [
     { interiorId: 'elder_house', col: 4, row: 4, w: 3, h: 3, label: t('Староста') },
-    { interiorId: 'tavern', col: 10, row: 4, w: 3, h: 3, label: t('Таверна') },
+    { interiorId: 'tavern', col: 10, row: 4, w: 3, h: 3, label: t('Постоялый двор') },
     { interiorId: 'blacksmith', col: 16, row: 4, w: 3, h: 3, label: t('Кузница') },
     { interiorId: 'barn', col: 20, row: 4, w: 3, h: 3, label: t('Амбар') },
     { interiorId: 'villager_house_1', col: 4, row: 11, w: 3, h: 3, label: t('Дом Авдея') },
     { interiorId: 'villager_house_2', col: 10, row: 11, w: 3, h: 3, label: t('Дом Марфы') },
+    { interiorId: 'beekeeper_house', col: 15, row: 11, w: 3, h: 3, label: t('Дом пасечника') },
     { interiorId: 'church', col: 20, row: 11, w: 3, h: 3, label: t('Церковь') },
 ];
 

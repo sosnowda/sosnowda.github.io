@@ -147,16 +147,24 @@ const EN = {
     // --- Здания (интерьеры) ---
     'Староста': 'Elder',
     'Таверна': 'Tavern',
+    // Раунд 27 (п.12): таверна переименована владельцем в «Постоялый двор»
+    'Постоялый двор': 'The Wayside Inn',
+    'Постоялый двор «У дороги»': 'The Wayside Inn',
     'Кузница': 'Smithy',
     'Амбар': 'Barn',
     'Дом Авдея': 'Avdey\'s house',
     'Дом Марфы': 'Marfa\'s house',
+    'Дом пасечника': 'Beekeeper\'s house',
     'Церковь': 'Church',
     'Ворота': 'Gate',
     'Дом старосты': 'Elder\'s house',
     'Таверна «У дороги»': 'The Wayfarer\'s Tavern',
     'Дом крестьянина': 'Peasant\'s house',
     'Дом вдовы': 'Widow\'s house',
+    'Пасечница Марфа': 'Marfa the Beekeeper',
+    'Мельник Авдей': 'Avdey the Miller',
+    'Любава, жена старосты': 'Lyubava, the elder\'s wife',
+    'Фёкла, жена пасечника': 'Fyokla, the beekeeper\'s wife',
     'Амбар общины': 'Community barn',
     'Церковь Рождества Богородицы': 'Church of the Nativity of the Theotokos',
 
@@ -241,6 +249,9 @@ const EN = {
     'Святое озеро': 'The Holy Lake',
     'Погостъ': 'The Churchyard',
     'Водяная мельница': 'The Watermill',
+    // Раунд 27 (п.4): ветряная мельница (водяное колесо и ручей убраны)
+    'Ветряная мельница': 'The Windmill',
+    'Ветряная мельница на пригорке. Мельник мелет зерно для всей округи.': 'A windmill on the hill. The miller grinds grain for the whole area.',
     'Выпасъ': 'The Pasture',
     'Рѣка Кистерма': 'The Kisterma River',
     'Густой бор за рекой. Много зверья и грибов, но и разбойники водятся.': 'A dense forest across the river. Plenty of game and mushrooms — but bandits roam here too.',
@@ -600,7 +611,33 @@ const EN = {
     'Здоровье и Воля восстановлены ПОЛНОСТЬЮ.': 'Health and Will have been FULLY restored.',
     'Здоровье +{0}, Воля +{1}.': 'Health +{0}, Will +{1}.',
     'Ты полон сил!': 'You are full of strength!',
-    'Отдохнул в таверне ({0} ч) за {1} д. {2}': 'Rested at the tavern ({0} h) for {1} d. {2}',
+    'Отдохнул в таверне ({0} ч) за {1} д. {2}': 'Rested at the inn ({0} h) for {1} d. {2}',
+
+    // --- Раунд 27: живой мир (пп.6-13) ---
+    '🌙 Здесь сейчас никого нет...': '🌙 Nobody is here right now...',
+    'Найди(е) его там — или возвращайся в другой час.': 'Find them there — or come back at another hour.',
+    '💬 Поговорить': '💬 Talk',
+    'Продолжить': 'Continue',
+    'на постоялом дворе': 'at the wayside inn', 'на мельнице': 'at the mill',
+    'на пасеке': 'at the apiary', 'у озера': 'by the lake', 'на реке': 'at the river',
+    'в лесу': 'in the forest', 'в поле': 'in the field', 'у ворот': 'at the gate',
+    'в церкви': 'in the church', 'на улице деревни': 'in the village street', 'дома': 'at home',
+    '🍯 Купить мёд (8 д.)': '🍯 Buy honey (8 d.)',
+    'Марфа качает головой: «Мёд — он как лекарство: три ложки в день, и довольно. Больше — не на пользу, а во вред. Приходи завтра».':
+        'Marfa shakes her head: "Honey is like medicine: three spoonfuls a day, and that\'s it. More does harm, not good. Come back tomorrow."',
+    '«Не раньше, чем через час. Мёд силён, дай ему разойтись по крови», — говорит Марфа.':
+        '"Not before an hour passes. Honey is potent — let it settle in your blood first," Marfa says.',
+    '«Без денег мёд не дам, — строго говорит Марфа. — Горшочек трудом достаётся». (Нужно 8 д.)':
+        '"No honey without money," Marfa says sternly. "That pot is hard-won." (8 d. needed)',
+    'Марфа наливает полную ложку янтарного мёда. Тепло разливается по телу, силы возвращаются.':
+        'Marfa pours a full spoonful of amber honey. Warmth spreads through your body and your strength returns.',
+    '(продолжить)': '(continue)',
+    'Занят(а) своим делом. Заходи в другой раз.': 'Busy with their own affairs. Come back another time.',
+    'Занят(а) работой на пасеке.': 'Busy working at the apiary.',
+    '«Хорошая медовуха нынче...»': '"Fine mead this year..."',
+    'Помолюсь с вами.': 'I will pray with you.',
+    'Пасечница Марфа': 'Marfa the Beekeeper',
+    'Мельник Авдей': 'Avdey the Miller',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----

@@ -21,8 +21,9 @@ import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js'
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
 import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, dayKeyOf } from '../data/chests.js';
-import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
+import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
+import { getPresence, ALL_NPC_IDS, NPC_DIALOGUE, OUTDOOR_LINES, PLACE_NAMES } from '../data/npcPresence.js';
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -93,9 +94,26 @@ export class VillageScene extends Phaser.Scene {
                 const img = this.add.image(px, py, safeTex);
                 img.setScale(ts / 32);
                 if (angle) img.setAngle(angle);
-                // Y-сортировка высоких объектов; земля (трава/дороги/вода) — глубина 0
-                // Раунд 12: крест 'X' тоже высокий (Y-сортировка за/перед игроком)
-                if (t === 'T' || t === '#' || t === 'W' || t === 'X') {
+                // Раунд 27 (п.1): 'T' — под деревом рисуется трава, а СВЕРХУ —
+                // прозрачный спрайт дерева (deco_tree_*/deco_pine_*) с Y-сортировкой:
+                // больше нет квадратной «плашки» с фоном вокруг кроны.
+                if (t === 'T') {
+                    img.setDepth(0);
+                    const edge = x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1;
+                    const idx = (x * 7 + y * 13) % 5;
+                    const treeTex = edge
+                        ? `deco_pine_${(x + y) % 2}`
+                        : `deco_tree_${idx % 3}`;
+                    if (this.textures.exists(treeTex)) {
+                        const tree = this.add.image(px, py + 10, treeTex)
+                            .setScale(1.5).setOrigin(0.5, 0.9);
+                        tree.setDepth(y + 0.4);
+                    } else {
+                        // Страховка: нет процедурных деревьев — старый тайл с фоном
+                        img.setTexture(`tile_forest_${(x * 3 + y * 5) % 2}`);
+                        img.setDepth(y + 0.4);
+                    }
+                } else if (t === '#' || t === 'W' || t === 'X') {
                     img.setDepth(y + 0.4);
                 } else {
                     img.setDepth(0);
@@ -162,6 +180,7 @@ export class VillageScene extends Phaser.Scene {
             blacksmith: 'deco_house_2',
             villager_house_1: 'deco_house_0',
             villager_house_2: 'deco_house_2',
+            beekeeper_house: 'deco_house_0',   // раунд 27: дом пасечника (отличают ульи)
             barn: 'deco_barn',               // раунд 17: у амбара свой облик — широкие ворота и сеновал
         };
         this.doors = [];
@@ -223,6 +242,28 @@ export class VillageScene extends Phaser.Scene {
             if (b.interiorId === 'villager_house_1' || b.interiorId === 'villager_house_2') {
                 this.addYardAndGarden(b, ts);
             }
+
+            // ----- Раунд 27 (п.6): УЛЬИ и цветы у дома пасечника -----
+            if (b.interiorId === 'beekeeper_house') {
+                const hx1 = (b.col - 1) * ts + ts * 0.4;
+                const hx2 = (b.col + b.w + 0.1) * ts;
+                const hy = (b.row + b.h + 0.9) * ts;
+                if (this.textures.exists('deco_beehive')) {
+                    this.add.image(hx1, hy, 'deco_beehive').setScale(1.4).setOrigin(0.5, 0.9)
+                        .setDepth(b.row + b.h + 1.2);
+                    this.add.image(hx2, hy - ts * 0.3, 'deco_beehive').setScale(1.1).setOrigin(0.5, 0.9)
+                        .setDepth(b.row + b.h + 1.4);
+                }
+                // Цветы-медоносы вокруг (пчёлам корм, глазу радость)
+                if (this.textures.exists('deco_flower_0')) {
+                    for (let fi = 0; fi < 7; fi++) {
+                        const fx = hx1 - ts * 0.8 + Math.random() * (hx2 - hx1 + ts * 1.4);
+                        const fy = hy + ts * 0.2 + (Math.random() - 0.5) * ts * 0.9;
+                        this.add.image(fx, fy, `deco_flower_${fi % 3}`).setScale(1.2)
+                            .setDepth(fy / ts);
+                    }
+                }
+            }
         });
 
         // ----- Дым из труб (атмосфера, §3 village-visual-upgrade) -----
@@ -282,6 +323,14 @@ export class VillageScene extends Phaser.Scene {
 
         // ----- Раунд 17: рига, стога, поленница, телега (§3 village-visual-upgrade) -----
         this.drawYardProps(ts);
+
+        // ----- Раунд 27 (пп.6-11): ЖИТЕЛИ НА УЛИЦАХ -----
+        // Староста гуляет (п.10), жёны у колодца, стражник у ворот,
+        // жители случайно ходят/сидят на постоялом дворе (п.11).
+        this.streetNpcs = [];
+        this.elderWalker = null;
+        this._lastStreetHour = -1;
+        this.rebuildStreetNpcs();
 
         // ----- Метка ворот -----
         const gatePx = (MAP_W - 1) * ts + ts / 2;
@@ -796,6 +845,15 @@ export class VillageScene extends Phaser.Scene {
     update() {
         // Пока открыт диалог — не перебиваем его концом игры (раунд 21)
         if (this.busyDialog) return;
+
+        // Раунд 27: смена часа — пересчитать, кто где стоит (пп.6-11)
+        const tsNow = getTime(this.registry);
+        const hNow = tsNow ? tsNow.hour : -1;
+        if (hNow !== this._lastStreetHour) {
+            this._lastStreetHour = hNow;
+            this.rebuildStreetNpcs();
+        }
+
         // Проверка конца игры
         const endState = checkGameEnd(this.registry);
         if (endState) {
@@ -888,6 +946,168 @@ export class VillageScene extends Phaser.Scene {
         this.updateNearestInteractable();
         this.updateBirds();
         this.updateHUD();
+    }
+
+    /**
+     * Раунд 27 (пп.6-11): пересчитать видимых уличных жителей по системе
+     * присутствия. Вызывается при создании сцены и при смене часа.
+     */
+    rebuildStreetNpcs() {
+        const ts = this.tileSize;
+
+        // --- Убрать старых (спрайты, подписи, твины) ---
+        this.streetNpcs.forEach(n => {
+            if (n.spr) {
+                this.tweens.killTweensOf(n.spr);
+                n.spr.destroy();
+            }
+            if (n.label) {
+                this.tweens.killTweensOf(n.label);
+                n.label.destroy();
+            }
+            if (n.hint) n.hint.destroy();
+        });
+        this.streetNpcs = [];
+        if (this.elderWalker) {
+            const w = this.elderWalker;
+            [w.spr, w.label].forEach(o => {
+                if (!o) return;
+                this.tweens.killTweensOf(o);
+                o.destroy();
+            });
+            if (w.hint) w.hint.destroy();
+            this.elderWalker = null;
+        }
+
+        // --- Кто сейчас «на улице деревни»? ---
+        const registryIds = getNpcs(this.registry).map(n => n.id);
+        const allIds = registryIds.length ? registryIds : ALL_NPC_IDS;
+
+        allIds.forEach(id => {
+            if (id === 'elder') return; // староста — ходячий, отдельно ниже
+            const pres = getPresence(this.registry, id);
+            if (pres.place !== 'village') return;
+            const npcData = findNpc(this.registry, id);
+            const displayName = npcData ? getNpcDisplayName(this.registry, id) : id;
+            const spot = this.streetSpotFor(id);
+            if (!spot) return;
+            const x = spot.x * ts;
+            const y = spot.y * ts;
+            const spriteKey = (npcData && npcData.sprite) || 'npc_merchant';
+            const spr = this.add.sprite(x, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
+                .setScale(2.2 * ((npcData && npcData.look && npcData.look.scale) || 1))
+                .setDepth(y / ts + 0.3);
+            const animKey = `${spr.texture.key}_idle_down`;
+            if (this.anims.exists(animKey)) spr.play(animKey);
+            this.tweens.add({
+                targets: spr,
+                y: { from: y, to: y - 3 },
+                duration: 1500 + Math.random() * 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+            const label = this.add.text(x, y + 36, displayName, {
+                fontSize: '12px', color: RUS.text,
+                backgroundColor: '#000000aa', padding: { x: 5, y: 2 },
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(y / ts + 0.5);
+            const hint = this.add.text(x, y - 40, t('💬 Поговорить'), {
+                fontSize: '10px', color: '#c9a14a',
+                backgroundColor: '#00000088', padding: { x: 4, y: 2 },
+            }).setOrigin(0.5).setDepth(y / ts + 0.5);
+            spr.setInteractive({ useHandCursor: true });
+            spr.on('pointerdown', (pointer) => {
+                if (pointer.leftButtonDown() && !this.busyDialog) this.talkToStreetNpc(id);
+            });
+            this.streetNpcs.push({ id, spr, label, hint });
+        });
+
+        // --- Староста (п.10): днём ХОДИТ по деревне, а не сидит в доме ---
+        const epres = getPresence(this.registry, 'elder');
+        if (epres.place === 'village') {
+            const npcData = findNpc(this.registry, 'elder');
+            const displayName = npcData ? getNpcDisplayName(this.registry, 'elder') : 'Староста';
+            const spriteKey = (npcData && npcData.sprite) || 'npc_elder';
+            const y = 9.5 * ts; // главная улица (ряд 8-9)
+            const minX = 3 * ts;
+            const maxX = 21 * ts;
+            const startX = minX + Math.random() * (maxX - minX);
+            const spr = this.add.sprite(startX, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
+                .setScale(2.2 * ((npcData && npcData.look && npcData.look.scale) || 1))
+                .setDepth(y / ts + 0.3);
+            const walkKey = `${spr.texture.key}_walk_right`;
+            if (this.anims.exists(walkKey)) spr.play(walkKey);
+            const targetX = Math.random() < 0.5 ? minX : maxX;
+            const walkDur = 12000 + Math.random() * 8000;
+            this.tweens.add({
+                targets: spr,
+                x: { from: startX, to: targetX },
+                duration: walkDur,
+                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                onYoyo: () => spr.setFlipX(!spr.flipX),
+                onRepeat: () => spr.setFlipX(!spr.flipX),
+            });
+            const label = this.add.text(startX, y + 36, displayName, {
+                fontSize: '12px', color: '#ffd700',
+                backgroundColor: '#000000cc', padding: { x: 5, y: 2 },
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(y / ts + 0.5);
+            // Подпись ходит вместе со старостой
+            this.tweens.add({
+                targets: label,
+                x: { from: startX, to: targetX },
+                duration: walkDur,
+                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+            const hint = this.add.text(startX, y - 40, t('💬 Поговорить'), {
+                fontSize: '10px', color: '#c9a14a',
+                backgroundColor: '#00000088', padding: { x: 4, y: 2 },
+            }).setOrigin(0.5).setDepth(y / ts + 0.5);
+            spr.setInteractive({ useHandCursor: true });
+            spr.on('pointerdown', (pointer) => {
+                if (pointer.leftButtonDown() && !this.busyDialog) this.talkToStreetNpc('elder');
+            });
+            this.elderWalker = { spr, label, hint };
+        }
+    }
+
+    /**
+     * Точка на улице для жителя (в тайлах). Возле своего двора/колодца/ворот.
+     */
+    streetSpotFor(id) {
+        const SPOTS = {
+            peasant1: { x: 5.5, y: 14.4 },      // у дома Авдея
+            widow: { x: 11.4, y: 14.4 },        // у дома Марфы
+            beekeeper1: { x: 14.4, y: 14.4 },   // у дома пасечника
+            beekeeper_wife: { x: 9.2, y: 10.4 }, // у колодца
+            elder_wife: { x: 10.9, y: 10.4 },   // у колодца с другой стороны
+            blacksmith: { x: 17.5, y: 8.2 },    // у кузницы
+            healer: { x: 19.2, y: 10.3 },       // у церкви
+            hunter: { x: 19.2, y: 15.4 },       // у южной околицы
+            fisherman: { x: 8.4, y: 13.4 },     // у пруда
+            guard: { x: 22.4, y: 9.5 },         // у ворот
+            tavernkeeper: { x: 11.4, y: 7.6 },  // у постоялого двора
+            priest: null,                       // батюшка не гуляет — он в церкви
+        };
+        return SPOTS[id] || { x: 7.5, y: 9.4 };
+    }
+
+    /**
+     * Разговор с жителем на улице: полное дерево диалога (если есть)
+     * или короткая реплика. Работает и для сдачи поручений (староста
+     * принимает икону прямо на улице — раунд 27, п.10).
+     */
+    talkToStreetNpc(npcId) {
+        this.busyDialog = true;
+        const npcData = findNpc(this.registry, npcId);
+        const displayName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
+        const dialogueId = NPC_DIALOGUE[npcId];
+        if (dialogueId) {
+            this.dialogue.run(dialogueId, () => { this.busyDialog = false; });
+        } else {
+            const line = OUTDOOR_LINES[npcId] || t('Занят(а) своим делом. Заходи в другой раз.');
+            createDialog(this, displayName, line, [
+                { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
+            ], { singleton: true, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+        }
     }
 
     /**
@@ -1123,9 +1343,11 @@ export class VillageScene extends Phaser.Scene {
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
         const npcRep = getNpcRep(this.registry, interior.npcId);
         const repLevel = getReputationLevel(npcRep);
-        const timeState = getTime(this.registry);
-        const hour = timeState ? timeState.hour : 12;
-        const activity = this.npcData ? getNpcActivity(this.npcData, hour) : 'занят';
+        // Раунд 27: активность по системе присутствия (где человек сейчас)
+        const pres = interior.npcId ? getPresence(this.registry, interior.npcId) : null;
+        const activity = pres
+            ? `${pres.activity}${pres.place !== 'home' ? ` · ${t(PLACE_NAMES[pres.place] || '')}` : ''}`
+            : 'занят';
         const text = `${interior.name}\n${npcName}\n${tf('Реп: {0} ({1})', `${npcRep > 0 ? '+' : ''}${npcRep}`, t(repLevel.name))}\n${activity}`;
         this.buildingTooltipText.setText(text);
         // Не выходим за правый край экрана
@@ -1394,9 +1616,11 @@ export class VillageScene extends Phaser.Scene {
             const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
             const npcRep = getNpcRep(this.registry, interior.npcId);
             const repLevel = getReputationLevel(npcRep);
-            const timeState = getTime(this.registry);
-            const hour = timeState ? timeState.hour : 12;
-            const activity = this.npcData ? getNpcActivity(this.npcData, hour) : 'занят';
+            // Раунд 27: активность по системе присутствия (где человек сейчас)
+            const pres2 = interior.npcId ? getPresence(this.registry, interior.npcId) : null;
+            const activity = pres2
+                ? `${pres2.activity}${pres2.place !== 'home' ? ` · ${t(PLACE_NAMES[pres2.place] || '')}` : ''}`
+                : 'занят';
             info = `${interior.name}\n` +
                 `${tf('NPC: {0}', npcName)}\n` +
                 `${tf('Личная репутация: {0} ({1})', `${npcRep > 0 ? '+' : ''}${npcRep}`, t(repLevel.name))}\n` +

@@ -20,6 +20,9 @@ import { VirtualControls } from '../systems/VirtualControls.js';
 import { formatMoney } from '../systems/Character.js';
 import { getVillageRep } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
+import { DialogueRunner } from '../systems/DialogueRunner.js';
+import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
+import { getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES } from '../data/npcPresence.js';
 
 const TS = 48;   // как в деревне/лесу — мир 1248×960, камера скроллится
 const WORLD_W = APIARY_COLS * TS;
@@ -52,6 +55,7 @@ export class ApiaryScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
         this.audioManager = new AudioManager(this);
+        this.dialogue = new DialogueRunner(this);
         this.audioManager.playSceneMusic('village');
         // Раунд 24: эмбиент леса — птицы днём, сверчки ночью
         const fsTime = getTime(this.registry);
@@ -416,6 +420,60 @@ export class ApiaryScene extends Phaser.Scene {
 
         // Тень под ногами
         this.add.ellipse(pos.x, pos.y + 14, 22, 8, 0x000000, 0.3).setDepth(0.05);
+
+        // ----- Раунд 27 (пп.6,8): ЖИТЕЛИ НА ПАСЕКЕ -----
+        // Пасечник Тарас (и иногда Марфа с травами) — по системе присутствия.
+        this.drawApiaryNpcs();
+    }
+
+    /**
+     * Раунд 27: NPC по расписанию (npcPresence.js) — пасечник(и) у избушки.
+     * Клик — разговор (полное дерево диалога или короткая реплика).
+     */
+    drawApiaryNpcs() {
+        const here = getNpcsAtPlace(this.registry, 'apiary');
+        const hut = hutPos();
+        const baseX = hut.col * TS + TS / 2 + TS * 0.5;
+        const baseY = hut.row * TS + TS / 2 + TS * 1.6;
+        here.slice(0, 2).forEach((npcId, i) => {
+            const npcData = findNpc(this.registry, npcId);
+            const displayName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
+            const spriteKey = (npcData && npcData.sprite) || 'npc_merchant';
+            const x = baseX + i * 44;
+            const y = baseY + i * 14;
+            const spr = this.add.sprite(x, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
+                .setScale(TS / 32 * 0.85).setDepth(y / TS);
+            const animKey = `${spr.texture.key}_idle_down`;
+            if (this.anims.exists(animKey)) spr.play(animKey);
+            this.tweens.add({
+                targets: spr,
+                y: { from: y, to: y - 3 },
+                duration: 1500 + i * 250, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+            this.add.text(x, y + 30, displayName, {
+                fontSize: '12px', color: '#E8DCC4',
+                backgroundColor: '#000000aa', padding: { x: 5, y: 2 },
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(y / TS + 0.1);
+            this.add.text(x, y - 30, t('💬 Нажми, чтобы поговорить'), {
+                fontSize: '10px', color: '#c9a14a',
+                backgroundColor: '#00000088', padding: { x: 4, y: 2 },
+            }).setOrigin(0.5).setDepth(y / TS + 0.1);
+            spr.setInteractive({ useHandCursor: true });
+            spr.on('pointerdown', (pointer) => {
+                if (!pointer.leftButtonDown() || this.busyDialog) return;
+                this.busyDialog = true;
+                const dId = NPC_DIALOGUE[npcId];
+                if (dId) {
+                    this.dialogue.run(dId, () => { this.busyDialog = false; });
+                } else {
+                    const line = OUTDOOR_LINES[npcId] || t('Занят(а) работой на пасеке.');
+                    createDialog(this, displayName, line, [
+                        { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
+                    ], { singleton: true, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+                }
+            });
+        });
     }
 
     // ================= ПЧЁЛЫ-ДЕКОРАЦИИ =================

@@ -1,0 +1,240 @@
+// Раунд 27: живая система присутствия жителей (пп.6-11).
+// Каждый взрослый NPC в каждый час игры находится в ОДНОМ месте:
+//   home — в своём интерьере, village — на улице деревни, tavern — на
+//   постоялом дворе, mill/apiary/lake/river/forest/field/gate/church —
+//   на рабочих локациях за околицей.
+//
+// Правила владельца:
+//   п.7  — Авдей (peasant1) днём работает на МЕЛЬНИЦЕ;
+//   п.8  — Марфа (widow) — пасечница: иногда ПАСЕКА, иногда сбор трав
+//          на ОЗЕРЕ, РЕКЕ или в ЛЕСУ;
+//   п.10 — староста днём гуляет по деревне, а не сидит дома;
+//   п.11 — все взрослые случайно (по-разному каждый день) ходят в
+//          таверну и сидят там по несколько часов в сутки.
+//
+// Всё детерминировано: hash(seed, npcId, день, час) — один и тот же час
+// даёт одно и то же место (не мигает), но каждый игровой день расписание
+// новое. Работает и для старых сейвов (seed 0), и для новых NPC.
+
+import { getTime, getTimeOfDay } from '../systems/TimeSystem.js';
+
+// Профессия/роль по ID — не зависит от registry (старые сейвы тоже работают)
+const NPC_ROLE = {
+    elder: 'elder',
+    priest: 'priest',
+    tavernkeeper: 'tavernkeeper',
+    blacksmith: 'blacksmith',
+    peasant1: 'miller',          // п.7: Авдей — мельник
+    widow: 'beekeeper_f',        // п.8: Марфа — пасечница/травница
+    healer: 'healer',
+    hunter: 'hunter',
+    guard: 'guard',
+    fisherman: 'fisherman',
+    beekeeper1: 'beekeeper',     // п.6: муж-пасечник из новой семьи
+    beekeeper_wife: 'homemaker', // п.6: жена пасечника
+    elder_wife: 'homemaker',     // п.9: жена старосты
+};
+
+// Кто НЕ ходит в таверну (п.11): батюшка при службе, тавернщик всегда там,
+// стражник на страже у ворот.
+const NO_TAVERN = new Set(['priest', 'tavernkeeper', 'guard']);
+
+// Базовое расписание по роли: сегмент дня → место.
+// home = «свой интерьер» (у кузнеца это кузница, у тавернщика — двор).
+const BASE_SCHEDULE = {
+    elder:        { dawn: 'home',    morning: 'home',    noon: 'village', evening: 'village', dusk: 'home',    night: 'home' },
+    priest:       { dawn: 'church',  morning: 'church',  noon: 'church',  evening: 'church',  dusk: 'church',  night: 'church' },
+    tavernkeeper: { dawn: 'tavern',  morning: 'tavern',  noon: 'tavern',  evening: 'tavern',  dusk: 'tavern',  night: 'tavern' },
+    blacksmith:   { dawn: 'home',    morning: 'home',    noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' },
+    miller:       { dawn: 'mill',    morning: 'mill',    noon: 'mill',    evening: 'home',    dusk: 'home',    night: 'home' },
+    beekeeper:    { dawn: 'apiary',  morning: 'apiary',  noon: 'apiary',  evening: 'home',    dusk: 'home',    night: 'home' },
+    beekeeper_f:  { dawn: 'home',    morning: 'work',    noon: 'work',    evening: 'home',    dusk: 'home',    night: 'home' },
+    homemaker:    { dawn: 'home',    morning: 'village', noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' },
+    healer:       { dawn: 'field',   morning: 'home',    noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' },
+    hunter:       { dawn: 'forest',  morning: 'forest',  noon: 'forest',  evening: 'home',    dusk: 'home',    night: 'home' },
+    guard:        { dawn: 'gate',    morning: 'home',    noon: 'village', evening: 'gate',    dusk: 'gate',    night: 'gate' },
+    fisherman:    { dawn: 'river',   morning: 'river',   noon: 'river',   evening: 'home',    dusk: 'home',    night: 'home' },
+};
+
+// Активности по роли и месту (что видно в подсказках)
+const ACTIVITY = {
+    elder: {
+        dawn: 'молится дома', morning: 'решает дела в горнице',
+        noon: 'обходит деревню', evening: 'обходит деревню',
+        dusk: 'возвращается домой', night: 'спит',
+        tavern: 'заглянул на постоялом дворе', village: 'обходит деревню',
+    },
+    priest: { church: 'при службе в церкви' },
+    tavernkeeper: { tavern: 'работает на постоялом дворе' },
+    blacksmith: {
+        home: 'куёт в кузнице', tavern: 'отдыхает на постоялом дворе',
+        village: 'по делу во дворе',
+    },
+    miller: {
+        mill: 'мелет зерно на мельнице', home: 'дома, после мельничной работы',
+        village: 'по дороге с мешком муки', tavern: 'отдыхает на постоялом дворе',
+    },
+    beekeeper: {
+        apiary: 'работает на пасеке', home: 'дома, после пасеки',
+        village: 'несёт раму с сотами', tavern: 'отдыхает на постоялом дворе',
+    },
+    beekeeper_f: {
+        apiary: 'работает на пасеке', lake: 'собирает травы у озера',
+        river: 'собирает травы на реке', forest: 'собирает травы в лесу',
+        home: 'хозяйствует по дому', village: 'по воду',
+        tavern: 'отдыхает на постоялом дворе',
+    },
+    homemaker: {
+        home: 'хозяйствует по дому', village: 'у колодца',
+        tavern: 'болтает с соседками на постоялом дворе',
+    },
+    healer: {
+        field: 'собирает травы на росе', home: 'лечит больных',
+        village: 'променяет снадобья', tavern: 'отдыхает на постоялом дворе',
+    },
+    hunter: {
+        forest: 'на охоте в лесу', home: 'делит добычу',
+        village: 'проверяет силки', tavern: 'рассказывает байки на постоялом дворе',
+    },
+    guard: {
+        gate: 'на страже у ворот', village: 'патрулирует деревню',
+        home: 'отсыпается после стражи',
+    },
+    fisherman: {
+        river: 'ловит рыбу', home: 'коптит рыбу',
+        village: 'чини́т сети во дворе', tavern: 'хвастает улов на постоялом дворе',
+    },
+};
+
+// Где искать человека (для подсказок в пустых домах)
+export const PLACE_NAMES = {
+    home: 'дома', village: 'на улице деревни', tavern: 'на постоялом дворе',
+    mill: 'на мельнице', apiary: 'на пасеке', lake: 'у озера',
+    river: 'на реке', forest: 'в лесу', field: 'в поле',
+    gate: 'у ворот', church: 'в церкви',
+};
+
+// Короткие уличные реплики для NPC без полного дерева диалогов
+export const OUTDOOR_LINES = {
+    healer: '«Травы нынче добрые, да только болеть люди всё равно умеют...»',
+    hunter: '«Тихо в лесу сегодня. Слишком тихо — зверь чует неладное.»',
+    guard: '«Прохода нет, всё проверяю. Порядок — он и в Африке порядок.»',
+    fisherman: '«Клюёт хорошо. Хочешь свежей рыбки — заходи к вечеру.»',
+};
+
+// Диалоговое дерево по ID (полные диалоги; остальные — OUTDOOR_LINES)
+export const NPC_DIALOGUE = {
+    elder: 'elder_quest',
+    priest: 'priest',
+    tavernkeeper: 'tavernkeeper',
+    blacksmith: 'blacksmith',
+    peasant1: 'peasant1',
+    widow: 'widow',
+    beekeeper1: 'beekeeper1',
+    beekeeper_wife: 'beekeeper_wife',
+    elder_wife: 'elder_wife',
+};
+
+// ---- Детерминированный псевдорандом (FNV-1a → [0..1)) ----
+function hash01(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0) / 4294967296;
+}
+
+function dayKeyOf(time) {
+    if (!time) return 0;
+    return time.yearFromChrist * 372 + time.month * 31 + time.day;
+}
+
+// Окно посещения таверны на день (п.11): { start, len } | null.
+// 55% взрослых ходят каждый день, окно 2-4 часа между 11 и 22.
+export function tavernWindowFor(registry, npcId, time) {
+    const role = NPC_ROLE[npcId];
+    if (!role || NO_TAVERN.has(role)) return null;
+    const seed = registry.get('npcSeed') || 0;
+    const dk = dayKeyOf(time);
+    if (hash01(`${seed}:${npcId}:${dk}:tav`) >= 0.55) return null;
+    const start = 11 + Math.floor(hash01(`${seed}:${npcId}:${dk}:start`) * 9); // 11..19
+    const len = 2 + Math.floor(hash01(`${seed}:${npcId}:${dk}:len`) * 3);      // 2..4
+    return { start, len };
+}
+
+// Марфа (п.8): место сбора трав на день — детерминировано на день,
+// в полдень может смениться (полдня пасека — полдня травы).
+function marfaWorkPlace(registry, time, hour, segId) {
+    const seed = registry.get('npcSeed') || 0;
+    const dk = dayKeyOf(time);
+    const morningPlace = ['apiary', 'lake', 'river', 'forest'][
+        Math.floor(hash01(`${seed}:widow:${dk}:morn`) * 4)
+    ];
+    if (segId === 'morning') return morningPlace;
+    // После полудня — 50% смена места
+    const noonPlace = hash01(`${seed}:widow:${dk}:noon`) < 0.5
+        ? morningPlace
+        : ['apiary', 'lake', 'river', 'forest'][Math.floor(hash01(`${seed}:widow:${dk}:noon2`) * 4)];
+    return noonPlace;
+}
+
+/**
+ * Где NPC находится в текущий час.
+ * @returns {{ place: string, activity: string }}
+ */
+export function getPresence(registry, npcId) {
+    const time = getTime(registry);
+    // ВНИМАНИЕ: в timeState час хранится в поле `hour` (не `hours`)
+    const hour = time ? (time.hour ?? 12) : 12;
+    const seg = getTimeOfDay(hour) || { id: 'morning' };
+    const segId = seg.id;
+    const role = NPC_ROLE[npcId] || 'homemaker';
+    const acts = ACTIVITY[role] || {};
+
+    // --- Ночь: все спят дома (кроме при службе) ---
+    if (segId === 'night') {
+        const nightPlace = BASE_SCHEDULE[role] ? BASE_SCHEDULE[role].night : 'home';
+        return { place: nightPlace, activity: acts[nightPlace] || acts.night || 'спит' };
+    }
+
+    // --- Окно таверны (п.11) ---
+    const win = tavernWindowFor(registry, npcId, time);
+    if (win && hour >= win.start && hour < win.start + win.len && hour <= 21) {
+        // В первый час — ещё на улице (идёт/собирается), дальше сидит внутри
+        if (hour === win.start) {
+            return { place: 'village', activity: 'собирается на постоялый двор' };
+        }
+        return { place: 'tavern', activity: acts.tavern || 'сидит на постоялом дворе' };
+    }
+
+    // --- Особая роль Марфы (п.8): пасека ИЛИ травы на воде/в лесу ---
+    if (role === 'beekeeper_f' && (segId === 'morning' || segId === 'noon')) {
+        const wp = marfaWorkPlace(registry, time, hour, segId);
+        return { place: wp, activity: acts[wp] || 'занята работой' };
+    }
+
+    // --- Базовое расписание роли ---
+    const base = BASE_SCHEDULE[role] || {};
+    let place = base[segId] || 'home';
+    if (place === 'work') place = 'apiary'; // страховка
+    return { place, activity: acts[place] || acts[segId] || 'занят делами' };
+}
+
+/**
+ * Все NPC (по ID), находящиеся сейчас в данном месте.
+ */
+export function getNpcsAtPlace(registry, place, allIds) {
+    const ids = allIds || ALL_NPC_IDS;
+    return ids.filter(id => getPresence(registry, id).place === place);
+}
+
+/**
+ * Хозяин сейчас в своём интерьере? (для «домов без хозяина»)
+ */
+export function isOwnerHome(registry, npcId) {
+    return getPresence(registry, npcId).place === 'home';
+}
+
+// Полный список известных ID (для перебора)
+export const ALL_NPC_IDS = Object.keys(NPC_ROLE);

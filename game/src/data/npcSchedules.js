@@ -22,15 +22,17 @@ export const PROFESSIONS = {
     BEEKEEPER: 'beekeeper',   // Пасечник
     FISHERMAN: 'fisherman',   // Рыбак
     MONK: 'monk',             // Монах
+    HOMEMAKER: 'homemaker',   // Хозяйка дома (раунд 27: жёны старосты и пасечника)
 };
 
 // Расписания по времени суток для каждой профессии
 // Возвращает: { activity, location, available (можно ли говорить) }
 export const PROFESSION_SCHEDULES = {
+    // Раунд 27 (п.10): староста НЕ сидит в доме целый день — днём обходит деревню
     [PROFESSIONS.ELDER]: {
         dawn:      { activity: 'молится дома', location: 'home', available: false },
         morning:   { activity: 'решает дела в горнице', location: 'home', available: true },
-        noon:      { activity: 'обедает', location: 'home', available: false },
+        noon:      { activity: 'обходит деревню', location: 'village', available: true },
         evening:   { activity: 'обходит деревню', location: 'village', available: true },
         dusk:      { activity: 'возвращается домой', location: 'home', available: true },
         night:     { activity: 'спит', location: 'home', available: false },
@@ -95,9 +97,9 @@ export const PROFESSION_SCHEDULES = {
         dawn:      { activity: 'спит', location: 'tavern', available: false },
         morning:   { activity: 'выкладывает товар', location: 'village', available: true },
         noon:      { activity: 'торгует на площади', location: 'village', available: true },
-        evening:   { activity: 'в таверне, пьёт медовуху', location: 'tavern', available: true },
-        dusk:      { activity: 'в таверне', location: 'tavern', available: true },
-        night:     { activity: 'спит в таверне', location: 'tavern', available: false },
+        evening:   { activity: 'на постоялом дворе, пьёт медовуху', location: 'tavern', available: true },
+        dusk:      { activity: 'на постоялом дворе', location: 'tavern', available: true },
+        night:     { activity: 'спит на постоялом дворе', location: 'tavern', available: false },
     },
     [PROFESSIONS.GUARD]: {
         dawn:      { activity: 'сменяется со стражи', location: 'gate', available: true },
@@ -138,6 +140,16 @@ export const PROFESSION_SCHEDULES = {
         evening:   { activity: 'на вечерней молитве', location: 'church', available: true },
         dusk:      { activity: 'молится', location: 'church', available: true },
         night:     { activity: 'спит в келье', location: 'church', available: false },
+    },
+    // Раунд 27 (пп.6,9): хозяйки — жёны старосты и пасечника.
+    // Утром по хозяйству во дворе/у колодца, днём дома.
+    [PROFESSIONS.HOMEMAKER]: {
+        dawn:      { activity: 'топит печь', location: 'home', available: true },
+        morning:   { activity: 'у колодца, по хозяйству', location: 'village', available: true },
+        noon:      { activity: 'хозяйствует по дому', location: 'home', available: true },
+        evening:   { activity: 'готовит ужин', location: 'home', available: true },
+        dusk:      { activity: 'дома, за рукоделием', location: 'home', available: true },
+        night:     { activity: 'спит', location: 'home', available: false },
     },
 };
 

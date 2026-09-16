@@ -409,6 +409,100 @@ export class BootScene extends Phaser.Scene {
         g.generateTexture('deco_bird', 11, 8);
 
         // ============================================================
+        // РАУНД 27 (п.1): ДЕРЕВЬЯ БЕЗ ФОНА — прозрачные спрайты вместо
+        // квадратных тайлов tile_forest_N (у тех был непрозрачный фон,
+        // деревья выглядели «плашками» поверх травы).
+        // Рисуются один раз graphics-ом: ствол + многослойная крона.
+        // ============================================================
+
+        // ===== Лиственное дерево 3 вариантов (56×72) =====
+        // Варианты: 0 — сочная зелень, 1 — тёмный хвойный оттенок,
+        //           2 — светлая желтоватая листва.
+        const treeVariants = [
+            { under: 0x24471f, mid: 0x2f5a27, top: 0x3f6b2f, hi: 0x4d7d3a },
+            { under: 0x1f3d2a, mid: 0x2a4f30, top: 0x356038, hi: 0x436f42 },
+            { under: 0x3a5a22, mid: 0x4a6b2c, top: 0x5a7d38, hi: 0x6b8f46 },
+        ];
+        treeVariants.forEach((c, i) => {
+            g.clear();
+            // Ствол (сужается вверх) + корневое утолщение
+            g.fillStyle(0x4a3018, 1);
+            g.fillTriangle(26, 70, 30, 70, 28.5, 38);   // левая грань
+            g.fillTriangle(28.5, 70, 30.5, 70, 29.5, 38);
+            g.fillRect(26, 66, 6, 5);                    // корневая подушка
+            g.fillStyle(0x5a4028, 1);
+            g.fillRect(29, 42, 1.6, 26);                 // блик на стволе
+            // Ветви (торчат из кроны)
+            g.fillStyle(0x4a3018, 1);
+            g.fillRect(18, 44, 10, 2);                   // левая ветка
+            g.fillRect(30, 40, 10, 2);                   // правая ветка
+            // Крона: 3 слоя перекрывающихся эллипсов
+            g.fillStyle(c.under, 1);
+            g.fillEllipse(28, 34, 46, 30);               // нижний тёмный слой
+            g.fillEllipse(14, 40, 22, 16);
+            g.fillEllipse(43, 40, 22, 16);
+            g.fillStyle(c.mid, 1);
+            g.fillEllipse(28, 27, 40, 26);               // средний слой
+            g.fillEllipse(17, 34, 20, 15);
+            g.fillEllipse(40, 33, 19, 14);
+            g.fillStyle(c.top, 1);
+            g.fillEllipse(27, 20, 30, 20);               // верхний слой
+            g.fillEllipse(20, 27, 16, 11);
+            g.fillStyle(c.hi, 1);
+            g.fillEllipse(24, 16, 14, 9);                // светлая макушка
+            g.fillEllipse(33, 22, 8, 6);                 // блики листвы
+            g.fillEllipse(14, 32, 7, 5);
+            g.generateTexture(`deco_tree_${i}`, 56, 72);
+        });
+
+        // ===== Ель 2 вариантов (44×76): треугольные ярусы =====
+        const pineVariants = [
+            { a: 0x1a331c, b: 0x24471f, c: 0x2f5a27 },
+            { a: 0x20401f, b: 0x2a5228, c: 0x35602e },
+        ];
+        pineVariants.forEach((c, i) => {
+            g.clear();
+            g.fillStyle(0x4a3018, 1);
+            g.fillRect(20, 66, 5, 9);                    // ствол
+            g.fillStyle(0x5a4028, 1);
+            g.fillRect(22.6, 66, 1.4, 9);                // блик ствола
+            // Ярусы снизу вверх (широкие → узкие)
+            g.fillStyle(c.a, 1);
+            g.fillTriangle(2, 68, 42, 68, 22, 44);       // нижний ярус
+            g.fillStyle(c.b, 1);
+            g.fillTriangle(6, 52, 38, 52, 22, 30);       // средний
+            g.fillStyle(c.c, 1);
+            g.fillTriangle(10, 37, 34, 37, 22, 16);      // верхний
+            g.fillStyle(0x3f6b2f, 1);
+            g.fillTriangle(14, 24, 30, 24, 22, 8);       // макушка
+            g.fillStyle(0x4d7d3a, 1);
+            g.fillRect(21, 10, 2, 4);                    // световой блик на макушке
+            g.generateTexture(`deco_pine_${i}`, 44, 76);
+        });
+
+        // ===== Улей колодный (36×46) — у дома пасечника (раунд 27, п.6) =====
+        g.clear();
+        g.fillStyle(0x000000, 0.22);
+        g.fillEllipse(18, 43, 30, 6);                    // тень на земле
+        g.fillStyle(0x4a3018, 1);
+        g.fillRoundedRect(8, 14, 20, 28, 6);             // корпус-колода
+        g.fillStyle(0x5a4028, 1);
+        g.fillRect(10, 16, 3, 24);                       // блик слева
+        g.fillStyle(0x3a2417, 1);
+        g.fillRect(8, 22, 20, 2);                        // обручи
+        g.fillRect(8, 32, 20, 2);
+        g.fillStyle(0x6b4a2a, 1);
+        g.fillTriangle(4, 15, 32, 15, 18, 3);            // двускатная крышка
+        g.fillStyle(0x7d5834, 1);
+        g.fillTriangle(6, 14, 30, 14, 18, 6);            // блик крышки
+        g.fillStyle(0x2a1a0e, 1);
+        g.fillRect(15, 36, 6, 3);                        // леток
+        g.fillStyle(0xd9a521, 1);
+        g.fillCircle(14, 38, 1.2);                       // пчела у летка
+        g.fillCircle(22, 37, 1.2);                       // ещё пчела
+        g.generateTexture('deco_beehive', 36, 46);
+
+        // ============================================================
         // РАУНД 12: пруд, причал, костёр, крест, камыш
         // ============================================================
 

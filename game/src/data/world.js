@@ -81,7 +81,10 @@ export function tileTexture(t, x, y, grid) {
         case 'C':                       // под сундуком — трава (спрайт сундука сверху)
             return `tile_grass_${(x * 7 + y * 13) % 4}`;
         case 'X': return 'deco_cross';  // каменный крест (Y-сортировка)
-        case 'T': return `tile_forest_${(x * 3 + y * 5) % 2}`;
+        // Раунд 27 (п.1): под деревом — трава; само дерево рисуется
+        // ПРОЗРАЧНЫМ спрайтом deco_tree_*/deco_pine_* (VillageScene),
+        // чтобы не было квадратной «плашки» с фоном вокруг кроны.
+        case 'T': return `tile_grass_${(x * 7 + y * 13) % 4}`;
         case '#': return `tile_rock_${(x * 11 + y * 17) % 2}`;
         case 'H': return `tile_house_wall_${(x + y) % 3}`;
         case 'R': return `tile_house_roof_${(x * 2 + y) % 2}`;
