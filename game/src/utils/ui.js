@@ -28,6 +28,8 @@ import {
     PARTICLE_STYLES,
     ROUND_RECTANGLE_DEFAULTS
 } from '../config/StyleConfig.js';
+// Раунд 31 (пп.11,12): пауза реального времени в диалогах + час за разговор
+import { pauseWorldClock, resumeWorldClock, chargeTalkTime } from '../systems/WorldClock.js';
 
 // ============================================================
 // ВНУТРЕННИЕ ХЕЛПЕРЫ
@@ -1027,6 +1029,20 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         targets: blocker,
         alpha: coverAlpha,
         duration: DIALOG_STYLES.modal.durationIn
+    });
+
+    // ----- Раунд 31 (пп.11,12): мировые часы и разговоры -----
+    // Пока открыт ЛЮБОЙ диалог — отсчёт реального времени стоит (п.12).
+    // Если это разговор с НПЦ (opts.talkMinutes > 0), при закрытии беседы
+    // списывается ровно 1 час (п.11). talkKey объединяет поп-апы одной
+    // беседы (приветствие → результат расспроса), чтобы час был один.
+    const clockPauses = opts.pauseClock !== false;
+    if (clockPauses) pauseWorldClock(scene.registry);
+    dialog.once('destroy', () => {
+        if (clockPauses) resumeWorldClock(scene.registry);
+        if (opts.talkMinutes > 0) {
+            chargeTalkTime(scene.registry, opts.talkMinutes, opts.talkKey || title);
+        }
     });
 
     return dialog;

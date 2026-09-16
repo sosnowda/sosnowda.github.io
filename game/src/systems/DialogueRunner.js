@@ -1,8 +1,11 @@
 // Запуск диалоговых деревьев через готовый модальный диалог из ui.js.
 // Поддерживает портреты NPC, эффект печатной машинки, учёт пола и знакомства.
+// Раунд 31 (пп.11,12): пока идёт беседа — отсчёт реального времени стоит;
+// при закрытии беседы списывается ровно 1 час (chargeTalkTime).
 import { createDialog } from '../utils/ui.js';
 import { DIALOGUES } from '../data/dialogue.js';
 import { findNpc, getNpcDisplayName, meetNpc } from '../data/npcNames.js';
+import { pauseWorldClock, resumeWorldClock, chargeTalkTime, TALK_MINUTES } from './WorldClock.js';
 
 export class DialogueRunner {
     constructor(scene) {
@@ -17,6 +20,9 @@ export class DialogueRunner {
             if (onDone) onDone();
             return;
         }
+        this._talkKey = 'dlg:' + id;
+        // Раунд 31 (п.12): беседа открыта — мировые часы стоят до её конца
+        if (this.scene && this.scene.registry) pauseWorldClock(this.scene.registry);
         this._onDone = onDone;
         this._dialogId = id;
         this._dialogData = d;
@@ -89,6 +95,7 @@ export class DialogueRunner {
                 portraitKey: portraitKey,
                 typing: true,         // эффект печатной машинки
                 typingSpeed: 30,      // мс/символ
+                pauseClock: false,    // п.12: паузу ведёт сам DialogueRunner на всё дерево
             }
         );
     }
@@ -123,6 +130,13 @@ export class DialogueRunner {
             this._currentDialog.destroy();
         }
         this._currentDialog = null;
+        if (this.scene && this.scene.registry) {
+            // Раунд 31 (п.11): разговор с НПЦ — ВСЕГДА 1 час, списывается
+            // один раз при закрытии беседы (вор за час делает 4 шага).
+            // Без ключа-дедупликации: каждая новая беседа стоит свой час.
+            chargeTalkTime(this.scene.registry, TALK_MINUTES, null);
+            resumeWorldClock(this.scene.registry);
+        }
         if (this._onDone) {
             const cb = this._onDone;
             this._onDone = null;

@@ -18,7 +18,9 @@ import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/TimeSystem.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
-import { formatDateRus, slavonicHourReal, folkTimeReal, showChroniclePanel, eraYear } from '../systems/RusTime.js';
+import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear } from '../systems/RusTime.js';
+// Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
+import { attachWorldClock } from '../systems/WorldClock.js';
 import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
@@ -52,12 +54,15 @@ export class VillageScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.dialogue = new DialogueRunner(this);
+        // Раунд 31 (п.12): мировые часы тикают РЕАЛЬНЫМ временем (1 реальная
+        // минута = 1 игровая), а пока открыт разговор — стоят
+        attachWorldClock(this);
 
         // Фоновая музыка деревни (ambient)
         this.audioManager.playSceneMusic('village');
         // Раунд 24: эмбиент деревни — день/ночь по игровому времени
         const vsTime = getTime(this.registry);
-        const vsHour = vsTime ? vsTime.hours : 12;
+        const vsHour = vsTime ? vsTime.hour : 12; // раунд 31: фикс .hours → .hour (эмбиент день/ночь)
         this.audioManager.setAmbient((vsHour >= 21 || vsHour < 5)
             ? 'ambient_town_night'
             : 'ambient_town_day');
@@ -1152,9 +1157,15 @@ export class VillageScene extends Phaser.Scene {
             this.dialogue.run(dialogueId, () => { this.busyDialog = false; });
         } else {
             const line = OUTDOOR_LINES[npcId] || t('Занят(а) своим делом. Заходи в другой раз.');
+            // Раунд 31 (п.11): разговор с НПЦ — всегда 1 час (списывается при закрытии)
             createDialog(this, displayName, line, [
                 { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
-            ], { singleton: true, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+            ], {
+                singleton: true,
+                portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f',
+                talkMinutes: 60,
+                talkKey: npcId + '@' + Math.floor(Date.now() / 90000),
+            });
         }
     }
 
@@ -1250,8 +1261,10 @@ export class VillageScene extends Phaser.Scene {
             statusLine += `  📅${formatDateRus(timeState)}`;
             // Раунд 14: иконка текущей погоды рядом с датой
             if (this.weather) statusLine += ` ${this.weather.icon}`;
-            // Раунд 29: живые часы в косом счёте + народный ориентир (по реальному времени)
-            statusLine += `  🕐${slavonicHourReal()} · ${folkTimeReal()}`;
+            // Раунд 29: живые часы в косом счёте + народный ориентир.
+            // Раунд 31: часы — по МИРОВОМУ времени (оно течёт реальным временем
+            // и сдвигается на час за каждый разговор/обследование — пп.10–12)
+            statusLine += `  🕐${slavonicHourLine(timeState)} · ${folkTimeName(timeState.hour + (timeState.minute || 0) / 60)}`;
         }
         // Раунд 29: анонс новолетия (сигнал из tickTime) — показываем один раз
         const novoletie = this.registry.get('novoletie');

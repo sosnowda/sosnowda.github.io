@@ -228,6 +228,10 @@ export function initNpcNames(registry) {
         { id: 'kid7', gender: 'male',   age: 5,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
         // Раунд 27 (п.9): жена старосты
         { id: 'elder_wife',   gender: 'female', age: 54, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'elder_house',     name: 'Любава' },
+        // Раунд 31 (п.2): пастухи — водят коров и лошадей на водопой
+        // (утром и вечером: Выпас → Река/Озеро), днём на выпасе, ночью дома
+        { id: 'shepherd1',    gender: 'male',   age: 34, professionId: 'shepherd',   sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_1', name: 'Сила' },
+        { id: 'shepherd2',    gender: 'female', age: 24, professionId: 'shepherd',   sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'villager_house_1', name: 'Зоряна' },
     ];
 
     // Раунд 27: зерно для детерминированной системы присутствия (npcPresence.js)

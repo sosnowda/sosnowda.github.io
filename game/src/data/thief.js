@@ -2,7 +2,12 @@
 // раунд 22: ТРИ локации, следы и расспросы — по одному разу, побег вора из боя;
 // раунд 30: СЛЕДЫ — отдельные видимые метки: каждый след проверяется ОДИН раз,
 // после неудачи след исчезает, после удачи светится и показывает, где вор;
-// свидетели о воре — 3–5 случайных селян, выбираются на старте игры).
+// свидетели о воре — 3–5 случайных селян, выбираются на старте игры.
+// раунд 31 (пп.1,4,5,7,10 владельца): в лес вор входит ПОСЛЕДОВАТЕЛЬНО
+// (Опушка → Поляна → Чаща); следов НЕ БОЛЬШЕ ДВУХ на локацию (два — только
+// на Реке с двумя берегами); каждый след — цепочка из 6 чёрных отпечатков;
+// ночью следы читаются ХУЖЕ; дождь/снег смывают следы, оставленные ДО осадков;
+// обследование следа занимает ровно 1 час.
 //
 // Механика:
 // - Вор бежит из деревни в случайном направлении и проходит ПО ТРЁМ локациям
@@ -30,7 +35,8 @@ import { skillCheck } from '../systems/BRPEngine.js';
 import { ActionLog } from './actionLog.js';
 import { applyBeggingPenalty, changeVillageRep } from './reputation.js';
 import { getLocationById } from './mapLocations.js';
-import { tickTime } from '../systems/TimeSystem.js';
+import { tickTime, getTimeOfDay } from '../systems/TimeSystem.js';
+import { getWeather, isPrecip } from '../systems/Weather.js';
 import { consumeBlessing } from './questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
@@ -50,6 +56,21 @@ export const MIN_SPOT = 35;      // обследование следов (Вн�
 export const MIN_ORATORY = 30;   // расспрос селян (Красноречие)
 export const MIN_PERSUADE = 35;  // убеждение вора (Убеждение)
 export const MIN_BRAWL = 35;     // оглушение вора (Драка)
+// Раунд 31 (п.4): ночью проверка обнаружения следов СЛОЖНЕЕ, чем днём
+export const NIGHT_SPOT_PENALTY = 15;
+// Раунд 31 (п.10): обследование следов занимает ровно 1 час
+export const FOOTPRINT_EXAMINE_MINUTES = 60;
+
+/** Ночь ли сейчас по игровому часу (сегмент «ночь»: 21:00–04:59). */
+export function isNightHour(hour) {
+    return hour >= 21 || hour < 5;
+}
+
+/** Ночная ли проверка навыка по состоянию времени (для сообщений). */
+function isNightCheck(registry) {
+    const ts = registry.get('gameTime');
+    return !!(ts && (isNightHour(ts.hour) || (getTimeOfDay(ts.hour) || {}).id === 'night'));
+}
 // Лимит (для совместимости со старым UI/сохранениями)
 export const TURN_LIMIT = 20;
 
@@ -73,12 +94,75 @@ export const TRAVEL_COST = {
 };
 
 // ============================================================
-// РАУНД 30: СЛЕДЫ — ОТДЕЛЬНЫЕ ВИДИМЫЕ МЕТКИ
+// РАУНД 30/31: СЛЕДЫ — ОТДЕЛЬНЫЕ ВИДИМЫЕ МЕТКИ
 // ============================================================
 
-// Сколько отдельных следов вор оставляет на локации, с которой ушёл
-// (каждый след обследуется отдельно и только единожды).
-export const FOOTPRINTS_PER_TRACE = 3;
+// Раунд 31 (п.7): на локации НЕ БОЛЬШЕ ДВУХ следов вора. Два — только на
+// локации, состоящей из ДВУХ ЧАСТЕЙ (Река: два берега, разделённые мостом);
+// в простой открытой локации — ОДИН след.
+export const FOOTPRINTS_PER_TRACE = 2; // максимум (легаси-импорт для совместимости)
+export const TWO_PART_LOCATIONS = ['river'];
+
+/** Сколько отдельных следов вор оставляет на ЭТОЙ локации (п.7). */
+export function footprintsForLocation(locationId) {
+    return TWO_PART_LOCATIONS.includes(locationId) ? 2 : 1;
+}
+
+// Раунд 31 (п.1): лесные локации вор проходит СТРОГО ПОСЛЕДОВАТЕЛЬНО —
+// сначала ОПУШКА, потом ПОЛЯНА, и только в конце ГУСТОЙ ЛЕС.
+export const FOREST_SEQUENCE = ['forest_edge', 'forest_glade', 'forest'];
+
+/**
+ * Раунд 31 (п.1): расставить лесные локации маршрута в каноническом порядке
+ * (Опушка → Поляна → Чаща), не трогая позиции остальных локаций.
+ */
+export function applyForestSequence(route) {
+    const depth = (id) => FOREST_SEQUENCE.indexOf(id);
+    const idx = route.map((id, i) => (depth(id) >= 0 ? i : -1)).filter(i => i >= 0);
+    const sorted = idx.map(i => route[i]).sort((a, b) => depth(a) - depth(b));
+    idx.forEach((pos, k) => { route[pos] = sorted[k]; });
+    return route;
+}
+
+/** Мировое время в минутах от условной эпохи (для «возраста» следов). */
+export function worldMinutesOf(registry) {
+    const ts = registry.get('gameTime');
+    if (!ts) return 0;
+    return ((ts.yearFromChrist * 372 + ts.month * 31 + ts.day) * 24 + ts.hour) * 60 + (ts.minute || 0);
+}
+
+/**
+ * Раунд 31 (п.5): после дождя или снегопада ВСЕ следы вора, оставленные
+ * ДО начала осадков, пропадают (размыло/замело). Следы, оставленные уже
+ * ПОСЛЕ начала осадков, остаются. Погода в игре суточная — начало осадков
+ * совпадает с началом дня, поэтому смываются следы «вчерашние и старше».
+ * Вызывается на каждом тике времени.
+ */
+export function washTracksByWeather(registry) {
+    const q = registry.get('quest');
+    if (!q || !q.chase || !q.chase.traces) return false;
+    const weather = getWeather(registry);
+    if (!isPrecip(weather)) return false;
+    const ts = registry.get('gameTime');
+    if (!ts) return false;
+    const dayStart = ((ts.yearFromChrist * 372 + ts.month * 31 + ts.day) * 24) * 60;
+    let washed = false;
+    Object.keys(q.chase.traces).forEach((locId) => {
+        const tr = q.chase.traces[locId];
+        if (tr && typeof tr.leftAt === 'number' && tr.leftAt < dayStart) {
+            delete q.chase.traces[locId];
+            if (q.footprintStates) delete q.footprintStates[locId];
+            washed = true;
+        }
+    });
+    if (washed) {
+        registry.set('quest', q);
+        ActionLog.add(registry, weather.id === 'snow'
+            ? t('Снегопад замёл все старые следы вора — остались только свежие, оставленные уже под снегом.')
+            : t('Дождь размыл все старые следы вора — остались только свежие, оставленные уже под дождём.'));
+    }
+    return washed;
+}
 
 // Раунд 30: свидетели о воре — не всякий селянин его видел. На старте игры
 // (по спецификации владельца, п.9) случайным образом выбирается, КТО может
@@ -121,7 +205,8 @@ export function getFootprints(registry, locationId) {
     if (!q || !c || !c.traces || !c.traces[locationId]) return [];
     const st = (q.footprintStates && q.footprintStates[locationId]) || {};
     const list = [];
-    for (let i = 0; i < FOOTPRINTS_PER_TRACE; i++) {
+    const count = footprintsForLocation(locationId); // раунд 31 (п.7): 1, на Реке — 2
+    for (let i = 0; i < count; i++) {
         const id = `fp${i}`;
         list.push({ id, state: st[id] || 'fresh' });
     }
@@ -139,7 +224,9 @@ export function hasFreshFootprints(registry, locationId) {
  * - после НЕУДАЧНОЙ проверки след пропадает (затёрт);
  * - после УДАЧНОЙ след «светится» и появляется подсказка с названием
  *   локации текущего местоположения вора.
- * Тратит 1 тик (15 игровых минут).
+ * Раунд 31 (п.10): обследование занимает ровно 1 ЧАС реального времени
+ * (вор за этот час успевает уйти — четыре пятнадцатиминутных шага).
+ * Раунд 31 (п.4): НОЧЬЮ следы читаются хуже — штраф к Внимательности.
  */
 export function examineFootprint(registry, locationId, fpId) {
     const q = registry.get('quest') || {};
@@ -173,8 +260,10 @@ export function examineFootprint(registry, locationId, fpId) {
     }
 
     const wasActive = isChaseActive(registry);
-    // Обследование следа занимает время — вор тоже двигается
-    tickTime(registry, TICK_MINUTES);
+    // Раунд 31 (п.10): обследование следа занимает ровно 1 час —
+    // вор тоже двигается (четыре шага за час)
+    tickTime(registry, FOOTPRINT_EXAMINE_MINUTES);
+    const nightNote = isNightCheck(registry) ? `\n(${t('Ночь: в темноте и следы читаются куда хуже.')})` : '';
 
     if (q.thiefEscaped) {
         return { resolved: false, found: false, thiefEscaped: true, message: t('Пока ты склонялся над следом, вор успел скрыться из вида...') };
@@ -194,7 +283,9 @@ export function examineFootprint(registry, locationId, fpId) {
 
     const trace = c.traces[locationId];
     const player = registry.get('player');
-    const spotSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT));
+    // Раунд 31 (п.4): ночью проверка Внимательности СЛОЖНЕЕ (штраф)
+    const nightPenalty = isNightCheck(registry) ? NIGHT_SPOT_PENALTY : 0;
+    const spotSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT) - nightPenalty);
     const res = skillCheck(spotSkill);
     const success = res.result === 'critical' || res.result === 'success';
 
@@ -214,17 +305,18 @@ export function examineFootprint(registry, locationId, fpId) {
             const next = getLocationById(trace.wentTo);
             message += '\n' + tf(t('Сам след ведёт в сторону «{0}».'), next ? next.name : trace.wentTo);
         }
-        ActionLog.add(registry, `Обследовал след в «${loc.name}» — след прочитан (бросок ${res.roll}, успех): вор у «${nowLoc ? nowLoc.name : '?'}».`);
+        message += nightNote;
+        ActionLog.add(registry, `Обследовал след в «${loc.name}» — след прочитан (бросок ${res.roll}, успех${nightPenalty ? ', ночь' : ''}): вор у «${nowLoc ? nowLoc.name : '?'}».`);
         return { resolved: true, found: true, message, turnsLeft: chaseTicksLeft(registry), thiefEscaped: false };
     }
 
     // НЕУДАЧА: след пропадает (п.5)
     st[fpId] = 'gone';
     registry.set('quest', q);
-    ActionLog.add(registry, `Обследовал след в «${loc.name}» — провал (бросок ${res.roll}), след затёрт.`);
+    ActionLog.add(registry, `Обследовал след в «${loc.name}» — провал (бросок ${res.roll}${nightPenalty ? ', ночь' : ''}), след затёрт.`);
     return {
         resolved: true, found: false,
-        message: t('Ты пригляделся к следу, но неосторожно наступил — отпечаток затрётся и пропал. Больше этот след не обследовать.'),
+        message: t('Ты пригляделся к следу, но неосторожно наступил — отпечаток затрётся и пропал. Больше этот след не обследовать.') + nightNote,
         turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
     };
 }
@@ -258,8 +350,10 @@ export function initThiefHunt(registry) {
             3 + Math.floor(Math.random() * 3), // 3..5 тиков на третьей
         ],
         minutesAccum: 0,       // накопитель неполных тиков
-        traces: {},            // { locId: { wentTo: locId|null } }
+        traces: {},            // { locId: { wentTo, side, leftAt } }
     };
+    // Раунд 31 (п.1): в лес — строго последовательно: Опушка → Поляна → Чаща
+    applyForestSequence(route);
     quest.thiefEscaped = false;
     quest.thiefDefeated = null;    // 'killed' | 'captured' | 'convinced'
     quest.stolenItemRecovered = false;
@@ -335,6 +429,9 @@ function thiefWhereabouts(registry) {
 export function thiefChaseTick(registry, minutes) {
     const q = registry.get('quest');
     if (!q || !q.chase || q.thiefEscaped || q.thiefDefeated) return;
+    // Раунд 31 (п.5): дождь/снег смывают следы, оставленные ДО осадков
+    washTracksByWeather(registry);
+    if (!q.chase || q.thiefEscaped || q.thiefDefeated) return;
     const c = q.chase;
     c.minutesAccum = (c.minutesAccum || 0) + minutes;
     let guard = 0;
@@ -363,7 +460,9 @@ function thiefStep(registry, c) {
         // выбирается один раз при создании следа (детерминизм при перерисовках).
         const fromId = c.route[c.stop];
         const nextId = c.route[c.stop + 1] || null;
-        c.traces[fromId] = { wentTo: nextId, side: Math.random() < 0.5 ? 'before' : 'after' };
+        // Раунд 31 (п.5): у следа есть «возраст» (leftAt) — дождь/снег смоет
+        // его, только если он оставлен ДО начала осадков.
+        c.traces[fromId] = { wentTo: nextId, side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry) };
         c.stop++;
         if (c.stop >= c.route.length) {
             // После последней локации вор сбегает — проигрыш
@@ -384,7 +483,7 @@ export function escapeThief(registry) {
     if (!q || !q.chase) return;
     const c = q.chase;
     const lastLoc = c.route[c.route.length - 1];
-    if (lastLoc && !c.traces[lastLoc]) c.traces[lastLoc] = { wentTo: null, side: Math.random() < 0.5 ? 'before' : 'after' };
+    if (lastLoc && !c.traces[lastLoc]) c.traces[lastLoc] = { wentTo: null, side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry) };
     q.thiefEscaped = true;
     q.currentObjective = t('Вор скрылся с иконой. Погоня провалена.');
     ActionLog.add(registry, t('ПОРАЖЕНИЕ: вор покинул последнюю локацию и скрылся из вида. След ведёт за околицу.'));
@@ -421,8 +520,8 @@ export function searchLocation(registry, locationId) {
 
     const wasActive = isChaseActive(registry);
 
-    // Поиск занимает время — вор тоже двигается
-    tickTime(registry, TICK_MINUTES);
+    // Раунд 31 (п.10): исследование следов занимает ровно 1 час — вор тоже двигается
+    tickTime(registry, FOOTPRINT_EXAMINE_MINUTES);
 
     if (q.thiefEscaped) {
         return {
@@ -457,7 +556,9 @@ export function searchLocation(registry, locationId) {
     const trace = c.traces ? c.traces[locationId] : null;
     const player = registry.get('player');
     // Раунд 22: нижний порог Внимательности + благословение (+10, одна проверка)
-    const spotSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT));
+    // Раунд 31 (п.4): ночью проверка СЛОЖНЕЕ (штраф к Внимательности)
+    const nightPenaltyS = isNightCheck(registry) ? NIGHT_SPOT_PENALTY : 0;
+    const spotSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT) - nightPenaltyS);
 
     if (trace) {
         const res = skillCheck(spotSkill);
@@ -481,7 +582,7 @@ export function searchLocation(registry, locationId) {
                     ? ' ' + tf(t('По свежести примятой травы ясно: вор сейчас на дороге к «{0}»!'), nowLoc.name)
                     : ' ' + tf(t('Судя по свежести следов, вор сейчас где-то у «{0}»!'), nowLoc.name);
             }
-            ActionLog.add(registry, `Поиск следов в «${loc.name}» — следы прочитаны (бросок ${res.roll}, успех).`);
+            ActionLog.add(registry, `Поиск следов в «${loc.name}» — следы прочитаны (бросок ${res.roll}, успех${nightPenaltyS ? ', ночь' : ''}).`);
             return { found: true, direction: trace.wentTo, message, turnsLeft: chaseTicksLeft(registry), thiefEscaped: false };
         }
         ActionLog.add(registry, `Поиск следов в «${loc.name}» — провал (бросок ${res.roll}, следы были, но не разобраны).`);
@@ -504,7 +605,8 @@ export function searchLocation(registry, locationId) {
 }
 
 /**
- * Расспросить жителя о воре. Тратит 1 тик.
+ * Расспросить жителя о воре.
+ * Раунд 31: час за разговор списывается при закрытии диалога (пп.11,12).
  * Раунд 22: КАЖДЫЙ селянин расспрашивается ТОЛЬКО ОДИН РАЗ — повторный
  * запрос к нему невозможен, за наводками нужно идти к другим людям.
  * Раунд 30 (пп.7,9 спецификации владельца): рассказать о воре и месте его
@@ -531,16 +633,8 @@ export function askNPC(registry, npcId, npcName) {
     q.thiefAskedFrom.push(npcId);
     registry.set('quest', q);
 
-    // Разговор занимает время — вор тоже двигается
-    tickTime(registry, TICK_MINUTES);
-
-    if (q.thiefEscaped) {
-        return {
-            gotClue: false,
-            message: t('Пока вы говорили, вор успел скрыться из вида...'),
-            turnsLeft: 0, thiefEscaped: true,
-        };
-    }
+    // Раунд 31 (пп.11,12): час за разговор списывается при ЗАКРЫТИИ диалога
+    // (chargeTalkTime в ui.js/DialogueRunner) — здесь время больше не тратим.
 
     const c = q.chase;
     if (!c || q.thiefDefeated) {
@@ -607,16 +701,7 @@ export function askMoneyForHelp(registry, npcId, npcName) {
     }
     q.moneyAskedFrom.push(npcId);
 
-    // Разговор занимает время — вор тоже двигается
-    tickTime(registry, TICK_MINUTES);
-
-    if (q.thiefEscaped) {
-        return {
-            success: false, amount: 0,
-            message: t('Пока вы говорили, вор успел скрыться из вида...'),
-            turnsLeft: 0, thiefEscaped: true,
-        };
-    }
+    // Раунд 31: час за разговор списывается при закрытии диалога (п.11)
 
     // Модификатор щедрости по роли NPC
     const npcGenerosity = {
@@ -846,7 +931,7 @@ function thiefFleesNow(registry) {
     }
     // Немедленно в путь к следующей остановке
     const fromId = c.route[c.stop];
-    c.traces[fromId] = { wentTo: c.route[c.stop + 1] };
+    c.traces[fromId] = { wentTo: c.route[c.stop + 1], side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry) };
     c.stop++;
     c.phase = 'travel';
     c.ticksLeft = TRAVEL_TICKS;
@@ -866,17 +951,28 @@ export function thiefFleesFromFight(registry, fromLocationId) {
     if (!c) return false;
 
     const visited = c.route.slice(0, c.stop);
-    let pool = CHASE_LOCATIONS.filter(l => l !== fromLocationId && !visited.includes(l));
+    // Раунд 31 (п.1): в лес вор входит ПОСЛЕДОВАТЕЛЬНО — на Поляну можно
+    // бежать только побывав на Опушке, в Чащу — побывав на Поляне.
+    const forestAllowed = (id) => {
+        if (id === 'forest_glade') return visited.includes('forest_edge');
+        if (id === 'forest') return visited.includes('forest_glade');
+        return true;
+    };
+    let pool = CHASE_LOCATIONS.filter(l => l !== fromLocationId && !visited.includes(l) && forestAllowed(l));
+    if (pool.length === 0) pool = CHASE_LOCATIONS.filter(l => l !== fromLocationId && forestAllowed(l));
     if (pool.length === 0) pool = CHASE_LOCATIONS.filter(l => l !== fromLocationId);
     const dest = pool[Math.floor(Math.random() * pool.length)];
 
     // Следы, что вели к старой остановке, теперь ведут к новому месту
+    // (возраст следов не трогаем — дождь смоет их по своему расписанию)
     Object.keys(c.traces || {}).forEach(k => {
         if (c.traces[k] && c.traces[k].wentTo === c.route[c.stop]) c.traces[k].wentTo = dest;
     });
-    if (fromLocationId) c.traces[fromLocationId] = { wentTo: dest };
+    if (fromLocationId) c.traces[fromLocationId] = { wentTo: dest, side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry) };
 
     c.route[c.stop] = dest;
+    // Раунд 31 (п.1): хвост маршрута держим в лесном порядке
+    applyForestSequence(c.route);
     c.stays[c.stop] = (c.stays[c.stop] || 3) + 2;   // время его тиков увеличивается
     c.phase = 'stay';
     c.ticksLeft = c.stays[c.stop];

@@ -25,6 +25,8 @@ import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES } from '../data/npcPresence.js';
 import { getNpcSpriteKey } from '../systems/NpcLpc.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
+// Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
+import { attachWorldClock } from '../systems/WorldClock.js';
 
 const TS = 48;   // как в деревне/лесу — мир 1248×960, камера скроллится
 const WORLD_W = APIARY_COLS * TS;
@@ -58,10 +60,12 @@ export class ApiaryScene extends Phaser.Scene {
         const { width, height } = this.scale;
         this.audioManager = new AudioManager(this);
         this.dialogue = new DialogueRunner(this);
+        // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
+        attachWorldClock(this);
         this.audioManager.playSceneMusic('village');
         // Раунд 24: эмбиент леса — птицы днём, сверчки ночью
         const fsTime = getTime(this.registry);
-        const fsHour = fsTime ? fsTime.hours : 12;
+        const fsHour = fsTime ? fsTime.hour : 12; // раунд 31: фикс .hours → .hour
         this.audioManager.setAmbient((fsHour >= 21 || fsHour < 5)
             ? 'ambient_forest_night'
             : 'ambient_forest_day');
@@ -470,9 +474,15 @@ export class ApiaryScene extends Phaser.Scene {
                     this.dialogue.run(dId, () => { this.busyDialog = false; });
                 } else {
                     const line = OUTDOOR_LINES[npcId] || t('Занят(а) работой на пасеке.');
+                    // Раунд 31 (п.11): разговор с НПЦ — всегда 1 час
                     createDialog(this, displayName, line, [
                         { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
-                    ], { singleton: true, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+                    ], {
+                        singleton: true,
+                        portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f',
+                        talkMinutes: 60,
+                        talkKey: npcId + '@' + Math.floor(Date.now() / 90000),
+                    });
                 }
             });
         });

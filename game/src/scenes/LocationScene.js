@@ -16,7 +16,11 @@ import SaveManager from '../systems/SaveManager.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import { getTime, getDayNightOverlay, tickTime, getSeason } from '../systems/TimeSystem.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
-import { formatDateRus, slavonicHourReal, folkTimeReal, showChroniclePanel } from '../systems/RusTime.js';
+import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel } from '../systems/RusTime.js';
+// Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
+import { attachWorldClock } from '../systems/WorldClock.js';
+// Раунд 31 (п.2): стадо и пастухи на водопое
+import { getHerdState } from '../data/herd.js';
 import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
@@ -65,6 +69,9 @@ export class LocationScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.dialogue = new DialogueRunner(this);
+        // Раунд 31 (п.12): мировые часы тикают РЕАЛЬНЫМ временем, а пока
+        // открыт разговор (диалог) — стоят
+        attachWorldClock(this);
         this.audioManager.playSceneMusic('village');
 
         const loc = getLocationById(this.locationId) || FORK_LOCATIONS.find(l => l.id === this.locationId) || { name: this.locationId, icon: '❓', description: '' };
@@ -118,7 +125,9 @@ export class LocationScene extends Phaser.Scene {
         // Дата и время (п.13) + погода дня (раунд 14) + время «как на Руси» (раунд 29)
         if (timeState) {
             const weather = getWeather(this.registry);
-            const rusDateLine = () => `📅 ${formatDateRus(timeState)}   ${weather.icon} ${weather.name}   🕐 ${slavonicHourReal()} · ${folkTimeReal()}`;
+            // Раунд 31: часы — по МИРОВОМУ времени (пп.10–12: реальный ход +
+            // час за разговор/обследование; современные ЧЧ:ММ убраны)
+            const rusDateLine = () => `📅 ${formatDateRus(timeState)}   ${weather.icon} ${weather.name}   🕐 ${slavonicHourLine(timeState)} · ${folkTimeName(timeState.hour + (timeState.minute || 0) / 60)}`;
             this.dateLine = this.add.text(width / 2, 80, rusDateLine(), {
                 fontSize: '11px', color: '#8ab4f8',
                 fontFamily: 'Georgia, serif',
@@ -246,7 +255,9 @@ export class LocationScene extends Phaser.Scene {
         };
         const spot = SPOTS[this.locationId];
         if (!spot) return;
-        const here = getNpcsAtPlace(this.registry, this.locationId);
+        // Раунд 31 (п.2): пастухи рисуются ПРИ СТАДЕ (отдельными спотами)
+        const SHEPHERD_IDS = ['shepherd1', 'shepherd2'];
+        const here = getNpcsAtPlace(this.registry, this.locationId).filter(id => !SHEPHERD_IDS.includes(id));
         // Взрослые (до 2) и дети (до 4) рисуются отдельными группами
         const adults = here.filter(id => !isChildNpc(findNpc(this.registry, id)));
         const kids = here.filter(id => isChildNpc(findNpc(this.registry, id)));
@@ -256,6 +267,32 @@ export class LocationScene extends Phaser.Scene {
         kids.slice(0, 4).forEach((npcId, i) => {
             this.drawLocationNpc(npcId, spot.x + 40 + (i % 2) * 46, spot.y + 6 + Math.floor(i / 2) * 30, 1.5, i, true);
         });
+        // Раунд 31 (п.2): пастухи стоят у стада (выпас или водопой)
+        const herd = getHerdState(this.registry);
+        if (herd.place === this.locationId) {
+            const hs = this.herdShepherdSpots(width, height);
+            if (hs) {
+                if (hs.s1) this.drawLocationNpc('shepherd1', hs.s1.x, hs.s1.y, 2.2, 1);
+                if (hs.s2) this.drawLocationNpc('shepherd2', hs.s2.x, hs.s2.y, 2.1, 2);
+            }
+        }
+    }
+
+    /** Раунд 31 (п.2): где стоят пастухи у стада на этой локации. */
+    herdShepherdSpots(width, height) {
+        switch (this.locationId) {
+            case 'pasture':
+                return { s1: { x: width * 0.42, y: height * 0.56 }, s2: { x: width * 0.66, y: height * 0.68 } };
+            case 'river':
+                // южный берег, у дороги к мосту — там, где стадо пьёт
+                return { s1: { x: width / 2 + 84, y: height * 0.74 }, s2: { x: width / 2 - 96, y: height * 0.70 } };
+            case 'lake': {
+                const lakeR = Math.min(width, height) / 3.5;
+                return { s1: { x: width / 2 + lakeR * 0.75, y: height / 2 + 30 + lakeR * 0.62 }, s2: { x: width / 2 - lakeR * 0.7, y: height / 2 + 30 + lakeR * 0.72 } };
+            }
+            default:
+                return null;
+        }
     }
 
     /** Один NPC на локации: спрайт (LPC), имя, подсказка, клик-диалог */
@@ -317,15 +354,27 @@ export class LocationScene extends Phaser.Scene {
         const canAsk = chaseActive && !alreadyAsked;
 
         const closeCb = () => { this.busyDialog = false; };
+        // Раунд 31 (п.11): разговор с НПЦ — всегда 1 час (списывается при закрытии
+        // приветствия; поп-ап ответа о воре — та же беседа, второй час не берём)
+        const talkOpts = {
+            singleton: true,
+            portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f',
+            talkMinutes: 60,
+            talkKey: npcId + '@' + Math.floor(Date.now() / 90000),
+        };
         const choices = canAsk
             ? [
                 {
                     text: t('Расспросить о воре'),
-                    callback: () => {
+                    callback: (parentDlg) => {
                         const r = askNPC(this.registry, npcId, displayName);
+                        // Раунд 31-фикс: поп-ап ответа — ОТДЕЛЬНОЕ окно (не singleton
+                        // с тем же ключом, что приветствие — иначе ответ не виден),
+                        // приветствие закрываем: ответ — продолжение той же беседы
                         createDialog(this, displayName, r.message, [
                             { text: t('Продолжить'), callback: closeCb },
-                        ], { singleton: true, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+                        ], { singleton: false, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+                        if (parentDlg && parentDlg.closeDialog) parentDlg.closeDialog();
                     },
                 },
                 { text: t('Продолжить'), callback: closeCb },
@@ -333,7 +382,7 @@ export class LocationScene extends Phaser.Scene {
             : [{ text: t('Продолжить'), callback: closeCb }];
 
         const line = OUTDOOR_LINES[npcId] || t('Занят(а) своим делом. Заходи в другой раз.');
-        createDialog(this, displayName, line, choices, { singleton: true, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+        createDialog(this, displayName, line, choices, talkOpts);
     }
 
     update() {
@@ -348,17 +397,122 @@ export class LocationScene extends Phaser.Scene {
     // ============================================================
 
     /**
-     * Нарисовать следы на локации. Каждый след — отдельный интерактивный
-     * объект: проверяется ТОЛЬКО ЕДИНожды; после неудачи пропадает,
-     * после удачи светится (золотое сияние) и даёт подсказку с названием
-     * локации, где вор находится сейчас. Затёртые следы не рисуются.
+     * Нарисовать следы на локации (раунд 31, пп.8–9): каждый след — КОРОТКАЯ
+     * ЦЕПОЧКА ИЗ 6 ЧЁРНЫХ отпечатков, вытянутая ВДОЛЬ ДОРОГИ. След — отдельный
+     * интерактивный объект: проверяется ТОЛЬКО ЕДИНожды; после неудачи
+     * пропадает, после удачи светится (золотое сияние) и даёт подсказку с
+     * названием локации, где вор находится сейчас. Затёртые следы не рисуются.
      */
     drawFootprints(footprints, traceSide, width, height) {
         footprints.forEach((fp, idx) => {
             if (fp.state === 'gone') return; // п.5: неудачная проверка — след пропал
             const pos = this.footprintPosition(this.locationId, idx, traceSide, width, height);
             if (!pos) return;
-            this.drawOneFootprint(fp, pos.x, pos.y);
+            this.drawFootprintChain(fp, pos.x, pos.y, traceSide, width, height);
+        });
+    }
+
+    /**
+     * Раунд 31 (п.8): направление цепочки следов — вдоль дороги локации.
+     * На Реке дорога идёт вертикально (север → мост → юг): цепочка тянется
+     * вдоль неё; до моста — к мосту (юг), за мостом — тоже вдоль дороги.
+     */
+    footprintChainDir(locId, traceSide) {
+        switch (locId) {
+            case 'river':
+                // до моста цепочка идёт ЮЖЕ (к мосту), за мостом — СЕВЕРЕ (к мосту),
+                // чтобы цепочка осталась на дороге в дальней части локации
+                return (traceSide === 'after') ? { x: 0, y: -1 } : { x: 0, y: 1 };
+            case 'road_south':
+            case 'mill':
+                return { x: 1, y: 0 };      // гравийный тракт / дорога к мельнице
+            case 'field':
+                return { x: 0.8, y: 0.6 };
+            default:
+                return { x: 0.7, y: 0.7 };
+        }
+    }
+
+    /**
+     * Один след = цепочка из 6 чёрных отпечатков (п.9): шаг ~14px,
+     * лево/право чередуются, как при ходьбе. Найденный — светится золотом.
+     */
+    drawFootprintChain(fp, ax, ay, traceSide, width, height) {
+        const found = fp.state === 'found';
+        const cont = this.add.container(ax, ay).setDepth(45);
+        const dir = this.footprintChainDir(this.locationId, traceSide);
+        const step = 14;    // расстояние между отпечатками вдоль цепочки
+        const lat = 6;      // чередование лево/право (шаг человека)
+        const baseAngle = Math.atan2(dir.y, dir.x) * 180 / Math.PI + 90;
+        const perp = { x: -dir.y, y: dir.x };
+        const pts = [];
+        for (let i = 0; i < 6; i++) {
+            const side = (i % 2 === 0) ? -1 : 1;
+            let px = perp.x * side * lat + dir.x * step * i;
+            let py = perp.y * side * lat + dir.y * step * i;
+            // не выходим за пределы игрового поля
+            px = Phaser.Math.Clamp(ax + px, 40, width - 40) - ax;
+            py = Phaser.Math.Clamp(ay + py, 110, height - 60) - ay;
+            pts.push({ x: px, y: py, angle: baseAngle + (side < 0 ? -14 : 14) });
+        }
+        // центр цепочки — для сияния, подписи и зоны клика
+        const cx = (pts[0].x + pts[5].x) / 2;
+        const cy = (pts[0].y + pts[5].y) / 2;
+
+        if (found) {
+            // П.6: удачная проверка — след «СВЕТИТСЯ» (пульсирующее золотое сияние)
+            const halo = this.add.ellipse(cx, cy, 120, 44, 0xffe08a, 0.35)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            cont.add(halo);
+            this.tweens.add({
+                targets: halo,
+                alpha: { from: 0.22, to: 0.5 },
+                scale: { from: 0.9, to: 1.18 },
+                duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+        }
+
+        if (this.textures.exists('deco_footprint')) {
+            pts.forEach((p) => {
+                const img = this.add.image(p.x, p.y, 'deco_footprint')
+                    .setScale(1.9).setAngle(p.angle);
+                // П.9: отпечатки ЧЁРНЫЕ; найденный след — золотой
+                img.setTint(found ? 0xffd76a : 0x161616);
+                cont.add(img);
+            });
+        } else {
+            // Запасной вариант — графика: 6 чёрных отпечатков
+            const g = this.add.graphics();
+            pts.forEach((p) => {
+                g.fillStyle(found ? 0x6a5528 : 0x161616, 0.92);
+                g.fillEllipse(p.x, p.y, 7, 13);
+                if (found) {
+                    g.lineStyle(1.4, 0xffd76a, 0.95);
+                    g.strokeEllipse(p.x, p.y, 8, 14);
+                }
+            });
+            cont.add(g);
+        }
+
+        // Подпись следа — над центром цепочки
+        cont.add(this.add.text(cx, cy - 24, found ? t('✨ след прочитан') : t('🔍 след вора'), {
+            fontSize: '10px', color: found ? '#ffd76a' : '#e8d8a8',
+            fontFamily: 'Georgia, serif',
+            backgroundColor: '#000000aa', padding: { x: 4, y: 2 },
+        }).setOrigin(0.5));
+
+        // Клик — отдельная проверка этого следа (зона покрывает всю цепочку)
+        const minX = Math.min(...pts.map(p => p.x)) - 16;
+        const minY = Math.min(...pts.map(p => p.y)) - 16;
+        const maxX = Math.max(...pts.map(p => p.x)) + 16;
+        const maxY = Math.max(...pts.map(p => p.y)) + 16;
+        cont.setInteractive({
+            hitArea: new Phaser.Geom.Rectangle(minX, minY, maxX - minX, maxY - minY),
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+            useHandCursor: true,
+        });
+        cont.on('pointerdown', (pointer) => {
+            if (pointer.leftButtonDown() && !this.busyDialog) this.onFootprintClick(fp.id);
         });
     }
 
@@ -419,61 +573,6 @@ export class LocationScene extends Phaser.Scene {
             default:
                 return { x: width * 0.3 + (h1 % Math.max(60, width * 0.4)), y: height * 0.35 + ((h1 >> 5) % 80) + idx * 24 };
         }
-    }
-
-    /** Один след: пара отпечатков сапог; найденный — светится золотом. */
-    drawOneFootprint(fp, x, y) {
-        const found = fp.state === 'found';
-        const cont = this.add.container(x, y).setDepth(45);
-
-        if (found) {
-            // П.6: удачная проверка — след «СВЕТИТСЯ» (пульсирующее золотое сияние)
-            const halo = this.add.ellipse(0, 2, 44, 28, 0xffe08a, 0.35)
-                .setBlendMode(Phaser.BlendModes.ADD);
-            cont.add(halo);
-            this.tweens.add({
-                targets: halo,
-                alpha: { from: 0.22, to: 0.5 },
-                scale: { from: 0.9, to: 1.18 },
-                duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            });
-        }
-
-        if (this.textures.exists('deco_footprint')) {
-            const l = this.add.image(-6, -1, 'deco_footprint').setScale(2.3);
-            const r = this.add.image(6, 3, 'deco_footprint').setScale(2.3).setFlipX(true);
-            if (found) { l.setTint(0xffd76a); r.setTint(0xffd76a); }
-            cont.add([l, r]);
-        } else {
-            // Запасной вариант — графика
-            const g = this.add.graphics();
-            const boot = found ? 0x6a5528 : 0x33261a;
-            g.fillStyle(boot, 0.92);
-            g.fillEllipse(-6, -3, 7, 11); g.fillEllipse(-6, 4, 5, 4);
-            g.fillEllipse(6, -1, 7, 11); g.fillEllipse(6, 6, 5, 4);
-            if (found) {
-                g.lineStyle(1.4, 0xffd76a, 0.95);
-                g.strokeEllipse(-6, -3, 8, 12); g.strokeEllipse(6, -1, 8, 12);
-            }
-            cont.add(g);
-        }
-
-        // Подпись следа
-        cont.add(this.add.text(0, found ? -24 : -20, found ? t('✨ след прочитан') : t('🔍 след вора'), {
-            fontSize: '10px', color: found ? '#ffd76a' : '#e8d8a8',
-            fontFamily: 'Georgia, serif',
-            backgroundColor: '#000000aa', padding: { x: 4, y: 2 },
-        }).setOrigin(0.5));
-
-        // Клик — отдельная проверка этого следа
-        cont.setInteractive({
-            hitArea: new Phaser.Geom.Rectangle(-28, -26, 56, 48),
-            hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-            useHandCursor: true,
-        });
-        cont.on('pointerdown', (pointer) => {
-            if (pointer.leftButtonDown() && !this.busyDialog) this.onFootprintClick(fp.id);
-        });
     }
 
     /**
@@ -970,6 +1069,26 @@ export class LocationScene extends Phaser.Scene {
                     attempts++;
                 }
             }
+            // Раунд 31 (п.2): утром и вечером пастухи приводят стадо на водопой —
+            // коровы и лошадь стоят у южного берега, при дороге к мосту, и пьют
+            const herdR = getHerdState(this.registry);
+            if (herdR.place === 'river') {
+                const bankY = riverY + riverH + 24;
+                const herdAnimals = [
+                    { key: 'deco_cow', dx: -150 }, { key: 'deco_cow', dx: -84 },
+                    { key: 'deco_cow', dx: 118 }, { key: 'deco_horse', dx: 176 },
+                ];
+                herdAnimals.forEach((a, i) => {
+                    if (!this.textures.exists(a.key)) return;
+                    const ay = bankY + (i % 2) * 18;
+                    const animal = this.add.image(bridgeX + a.dx, ay, a.key)
+                        .setScale(2).setDepth(3).setFlipX(i % 2 === 1);
+                    this.tweens.add({
+                        targets: animal, y: ay - 2,
+                        duration: 1900 + i * 260, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                });
+            }
         } else if (locId === 'field') {
             // П.14: Поле — жёлтая высокая трава по центру на 2/3 площади
             // Фон — обычная зелёная трава
@@ -1089,6 +1208,23 @@ export class LocationScene extends Phaser.Scene {
                         break;
                     }
                     attempts++;
+                }
+            }
+            // Раунд 31 (п.2): утром и вечером стадо поят у Озера —
+            // коровы и лошадь стоят у южной кромки воды
+            const herdL = getHerdState(this.registry);
+            if (herdL.place === 'lake') {
+                for (let i = 0; i < 3; i++) {
+                    const key = i === 2 ? 'deco_horse' : 'deco_cow';
+                    if (!this.textures.exists(key)) continue;
+                    const ang = Math.PI * (0.3 + i * 0.2); // южная дуга берега
+                    const ax = lakeCX + Math.cos(ang) * (lakeR + 14);
+                    const ay = lakeCY + Math.sin(ang) * (lakeR + 14);
+                    const animal = this.add.image(ax, ay, key).setScale(2).setDepth(3);
+                    this.tweens.add({
+                        targets: animal, y: ay - 2,
+                        duration: 2100 + i * 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
                 }
             }
         } else if (locId === 'pogost') {
@@ -1422,6 +1558,11 @@ export class LocationScene extends Phaser.Scene {
                     });
                 }
             }
+            // Раунд 31 (п.2): Коровы, козы и лошадь на выпасе только ДНЁМ —
+            // утром и вечером пастухи водят стадо на водопой (Река/Озеро),
+            // а ночью скот загнан в хлев (на локациях никого нет)
+            const herdPast = getHerdState(this.registry);
+            if (herdPast.place === 'pasture') {
             // Коровы (3 шт)
             for (let i = 0; i < 3; i++) {
                 const x = 150 + i * 300 + Math.random() * 50;
@@ -1447,6 +1588,7 @@ export class LocationScene extends Phaser.Scene {
             // Лошадь (1 шт)
             if (this.textures.exists('deco_horse')) {
                 this.add.image(width * 0.7, height * 0.6, 'deco_horse').setScale(2).setDepth(3);
+            }
             }
             // Ограда выпаса (забор по периметру)
             for (let x = 0; x < width; x += 48) {

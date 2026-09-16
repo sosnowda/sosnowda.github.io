@@ -27,6 +27,8 @@ import {
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 import { STASHES, isOpenedToday, markOpened, rollLoot, lootDisplayName } from '../data/chests.js';
+// Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
+import { attachWorldClock } from '../systems/WorldClock.js';
 
 export class InteriorScene extends Phaser.Scene {
     constructor() {
@@ -44,6 +46,8 @@ export class InteriorScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.dialogue = new DialogueRunner(this);
+        // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
+        attachWorldClock(this);
         // Раунд 24: звуковая атмосфера интерьера — музыка (таверна/церковь),
         // эмбиент и скрип двери при входе
         this.audioManager.playRealDoorOpen();

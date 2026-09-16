@@ -23,6 +23,7 @@
 // новое. Работает и для старых сейвов (seed 0), и для новых NPC.
 
 import { getTime, getTimeOfDay } from '../systems/TimeSystem.js';
+import { getHerdState } from './herd.js';
 
 // Профессия/роль по ID — не зависит от registry (старые сейвы тоже работают)
 const NPC_ROLE = {
@@ -39,6 +40,8 @@ const NPC_ROLE = {
     beekeeper1: 'ploughman',     // Раунд 28 (п.1): Тарас — ПАХАРЬ (не пасечник)
     beekeeper_wife: 'homemaker', // п.6: жена пахаря Фёкла
     elder_wife: 'homemaker',     // п.9: жена старосты
+    shepherd1: 'shepherd',       // Раунд 31 (п.2): пастух — водит стадо на водопой
+    shepherd2: 'shepherd',       // Раунд 31 (п.2): пастушка Зоряна
     kid1: 'child', kid2: 'child', kid3: 'child', kid4: 'child',
     kid5: 'child', kid6: 'child', kid7: 'child',  // Раунд 28 (п.1): семеро детей
 };
@@ -47,8 +50,8 @@ const NPC_ROLE = {
 export const KIDS = ['kid1', 'kid2', 'kid3', 'kid4', 'kid5', 'kid6', 'kid7'];
 
 // Кто НЕ ходит в таверну (п.11): батюшка при службе, тавернщик всегда там,
-// стражник на страже у ворот, а ДЕТИ — им на постоялый двор нельзя.
-const NO_TAVERN = new Set(['priest', 'tavernkeeper', 'guard', 'child']);
+// стражник на страже у ворот, пастухи при стаде, а ДЕТИ — им на постоялый двор нельзя.
+const NO_TAVERN = new Set(['priest', 'tavernkeeper', 'guard', 'child', 'shepherd']);
 
 // Базовое расписание по роли: сегмент дня → место.
 // home = «свой интерьер» (у кузнеца это кузница, у тавернщика — двор).
@@ -67,7 +70,16 @@ const BASE_SCHEDULE = {
     hunter:       { dawn: 'forest',  morning: 'forest',  noon: 'forest',  evening: 'home',    dusk: 'home',    night: 'home' },
     guard:        { dawn: 'gate',    morning: 'home',    noon: 'village', evening: 'gate',    dusk: 'gate',    night: 'gate' },
     fisherman:    { dawn: 'river',   morning: 'river',   noon: 'river',   evening: 'home',    dusk: 'home',    night: 'home' },
+    shepherd:     { dawn: 'pasture', morning: 'pasture', noon: 'pasture', evening: 'pasture', dusk: 'home',    night: 'home' }, // Раунд 31: место пастуха = место стада
 };
+
+// Раунд 31 (п.3): НОЧЬЮ на локациях КРОМЕ ДЕРЕВНИ НИКОГО НЕТ.
+// Если расписание вдруг отправило жителя за околицу на ночь — он дома.
+// (вор не из этого списка — он может быть на локации и ночью)
+const NIGHT_FORBIDDEN_PLACES = new Set([
+    'mill', 'apiary', 'lake', 'river', 'forest', 'field', 'pasture',
+    'pogost', 'road', 'road_south', 'forest_edge', 'forest_glade', 'work',
+]);
 
 // Активности по роли и месту (что видно в подсказках)
 const ACTIVITY = {
@@ -126,6 +138,11 @@ const ACTIVITY = {
         river: 'ловит рыбу', home: 'коптит рыбу',
         village: 'чини́т сети во дворе', tavern: 'хвастает улов на постоялом дворе',
     },
+    shepherd: {
+        pasture: 'пасёт стадо на выпасе', river: 'поит стадо на реке',
+        lake: 'поит стадо у озера', home: 'отсыпается, скот в хлеву',
+        village: 'прогоняет стадо по улице', tavern: 'отдыхает на постоялом дворе',
+    },
 };
 
 // Где искать человека (для подсказок в пустых домах)
@@ -139,6 +156,8 @@ export const PLACE_NAMES = {
 // Короткие уличные реплики для NPC без полного дерева диалогов
 export const OUTDOOR_LINES = {
     healer: '«Травы нынче добрые, да только болеть люди всё равно умеют...»',
+    shepherd1: '«Тпру-у! Стадо к воде ведём — коровы да лошади пьют, а я гляжу, чтоб никто не разбрёлся.»',
+    shepherd2: '«Корова Мушка опять в камыши забралась... К лошадям пойду, проверю, как они.»',
     hunter: '«Тихо в лесу сегодня. Слишком тихо — зверь чует неладное.»',
     guard: '«Прохода нет, всё проверяю. Порядок — он и в Африке порядок.»',
     fisherman: '«Клюёт хорошо. Хочешь свежей рыбки — заходи к вечеру.»',
@@ -234,10 +253,20 @@ export function getPresence(registry, npcId) {
     const role = NPC_ROLE[npcId] || 'homemaker';
     const acts = ACTIVITY[role] || {};
 
-    // --- Ночь: все спят дома (кроме при службе) ---
+    // --- Ночь: все спят дома (кроме при службе); п.3: на локациях вне деревни НИКОГО
     if (segId === 'night') {
-        const nightPlace = BASE_SCHEDULE[role] ? BASE_SCHEDULE[role].night : 'home';
+        let nightPlace = BASE_SCHEDULE[role] ? BASE_SCHEDULE[role].night : 'home';
+        // Раунд 31 (п.3): если расписание вдруг отправило жителя за околицу — он дома.
+        // (вор — не отсюда: он может быть на локации и ночью)
+        if (NIGHT_FORBIDDEN_PLACES.has(nightPlace)) nightPlace = 'home';
         return { place: nightPlace, activity: acts[nightPlace] || acts.night || 'спит' };
+    }
+
+    // --- Пастухи (раунд 31, п.2): везде вместе со стадом; ночью — дома
+    if (role === 'shepherd') {
+        const herd = getHerdState(registry);
+        const place = herd.place === 'barn' ? 'home' : herd.place;
+        return { place, activity: acts[place] || 'при стаде' };
     }
 
     // --- Окно таверны (п.11) ---

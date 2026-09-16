@@ -182,13 +182,13 @@ export const DIALOGUES = {
                     const before = player.HP;
                     player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
                     scene.registry.set('player', player);
-                    // Еда занимает 1 час времени (п.11) — вор тоже двигается
-                    tickTime(scene.registry, 60);
+                    // Раунд 31 (пп.11,12): час списывается при закрытии беседы
+                    // (трапеза — внутри того же часа разговора с хозяином)
                     if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
-                    ActionLog.add(scene.registry, t(`Заказал еду у хозяина постоялого двора (2 д.): +${player.HP - before} HP, прошёл час.`));
+                    ActionLog.add(scene.registry, t(`Заказал еду у хозяина постоялого двора (2 д.): +${player.HP - before} HP.`));
                     scene._lastAskResult = {
                         message: t('Фёдор ставит перед тобой миску горячих щей, краюху ржаного хлеба и кружку кваса. Ешь не спеша — силы понемногу возвращаются.') +
-                            `\n\n✚ Здоровье: +${player.HP - before} HP (${before} → ${player.HP})\n⏳ ${t('Прошёл час времени — солнце сдвинулось по небу.')}` +
+                            `\n\n✚ Здоровье: +${player.HP - before} HP (${before} → ${player.HP})\n⏳ ${t('Трапеза пройдёт в тот час, что уйдёт на беседу с хозяином.')}` +
                             (scene.registry.get('quest')?.thiefEscaped ? '' : `\n⏳ ${t('Осталось действий')}: ${chaseTicksLeft(scene.registry)}`),
                     };
                 },
@@ -718,8 +718,7 @@ export const DIALOGUES = {
                     }
                     q.blessing = true;
                     scene.registry.set('quest', q);
-                    // Молитва занимает время — вор тоже двигается
-                    tickTime(scene.registry, 15);
+                    // Раунд 31: час на беседу с батюшкой списывается при закрытии
                     // Раунд 24: тихая молитва и колокол при благословении
                     if (scene.audioManager) {
                         scene.audioManager.playPrayerChant();

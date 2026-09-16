@@ -13,6 +13,8 @@ import { getWeather } from '../systems/Weather.js';
 import { getVillageName } from '../data/world.js';
 import { t, tf } from '../systems/i18n.js';
 import { onLocationVisited } from '../data/questGenerator.js';
+// Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
+import { attachWorldClock } from '../systems/WorldClock.js';
 
 export class ForkScene extends Phaser.Scene {
     constructor() {
@@ -26,6 +28,8 @@ export class ForkScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.audioManager.playSceneMusic('village');
+        // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
+        attachWorldClock(this);
 
         const q = this.registry.get('quest') || {};
         const state = getHuntState(this.registry);
