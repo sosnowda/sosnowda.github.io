@@ -27,7 +27,16 @@ export class DialogueRunner {
         this._onDone = onDone;
         this._dialogId = id;
         this._dialogData = d;
-        this._node(d, d.start);
+        // Раунд 35 (QA-фикс P1): если действие узла упало (любое исключение в
+        // askNPC/quest-логике), busyDialog сцены залипал в true, а мировой счётчик
+        // clockPauseCount — в +1: клики по сцене игнорировались, время навсегда стояло.
+        // Любой сбой теперь корректно закрывает беседу (_finish -> onDone).
+        try {
+            this._node(d, d.start);
+        } catch (e) {
+            console.error('Ошибка диалога', id, e);
+            this._finish();
+        }
     }
 
     _node(d, nodeId) {
@@ -36,14 +45,22 @@ export class DialogueRunner {
             this._finish();
             return;
         }
-        if (node.action && typeof node.action === 'function') {
-            node.action(this.scene);
+        try {
+            if (node.action && typeof node.action === 'function') {
+                node.action(this.scene);
+            }
+        } catch (e) {
+            console.error('Ошибка действия узла', nodeId, e);
         }
 
         const choices = (node.choices || []).map(c => ({
             text: c.text,
             callback: () => {
-                if (c.action && typeof c.action === 'function') c.action(this.scene);
+                try {
+                    if (c.action && typeof c.action === 'function') c.action(this.scene);
+                } catch (e) {
+                    console.error('Ошибка действия выбора', e);
+                }
                 if (c.end) {
                     this._finish();
                 } else if (c.next) {

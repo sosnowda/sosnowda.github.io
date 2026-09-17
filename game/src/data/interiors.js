@@ -33,7 +33,7 @@ export const INTERIORS = {
         npcSprite: 'npc_merchant',
         portrait: 'portrait_tavernkeeper',
         dialogueId: 'tavernkeeper',
-        description: t('Просторный зал с деревянными столами. Пахнет хлебом и медовухой. У камина греются путники.'),
+        description: t('Просторный зал с деревянными столами. Пахнет хлебом да хмельным мёдом. У печи греются путники.'),
         decor: ['bar', 'tables', 'fireplace'],
         services: ['eat', 'drink', 'rest'],
         // Раунд 30: цены — из репозитория игры ChroniclesRuthenia:

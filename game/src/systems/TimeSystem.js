@@ -59,12 +59,18 @@ export function seasonName(seasonKey) {
     return t(SEASONS[seasonKey] ? SEASONS[seasonKey].name : seasonKey);
 }
 
-// Создать случайную дату в пределах 15 века (1401-1500 от Р.Х., 6909-7008 от С.М.)
+// Создать случайную дату в пределах 15 века (1401-1500 от Р.Х.)
 // Раунд 28 (п.5): РЕАЛЬНОЕ ВРЕМЯ — новая игра начинается в тот час и минуту,
 // которые сейчас у игрока (день/ночь при старте совпадает с настоящим).
+// Раунд 35 (QA-фикс P2, историческая датировка): yearFromCreation хранил
+// startYear + 5508, но каноническое сентябрьское лето = год начала лета + 5509
+// (см. RusTime.eraYear и комментарий в tickTime: «Сентябрьский год =
+// stored yearFromChrist + 5509»). Из-за этого интерьеры/карта/итоги показывали
+// год на единицу меньше статус-бара деревни («6946 от С.М.» против
+// «лето 6947-е» на ту же дату).
 export function createRandomStartDate() {
     const yearFromChrist = 1401 + Math.floor(Math.random() * 100); // 1401..1500
-    const yearFromCreation = yearFromChrist + 5508; // от сотворения мира
+    const yearFromCreation = yearFromChrist + 5509; // от сотворения мира (сентябрьский стиль)
     const month = Math.floor(Math.random() * 12); // 0..11
     const day = 1 + Math.floor(Math.random() * 28); // 1..28
     const now = new Date();

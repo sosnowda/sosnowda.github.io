@@ -700,8 +700,8 @@ const EN = {
         'First talk with the priest: he told of the icon\'s theft and advised questioning the villagers.',
     'Уютная горница с иконами в углу. Староста сидит за столом, перебирая бумаги.':
         'A snug chamber with icons in the corner. The elder sits at the table, sorting through papers.',
-    'Просторный зал с деревянными столами. Пахнет хлебом и медовухой. У камина греются путники.':
-        'A spacious hall with wooden tables. The air smells of bread and mead. Travellers warm themselves by the hearth.',
+    'Просторный зал с деревянными столами. Пахнет хлебом да хмельным мёдом. У печи греются путники.':
+        'A spacious hall with wooden tables. The air smells of bread and honey mead. Travellers warm themselves by the stove.',
     'Жарко. Стук молота по наковальне. На стенах развешаны мечи и кольчуги.':
         'It is hot here. The hammer rings on the anvil. Swords and mail shirts hang on the walls.',
     'Скромная изба. Хозяин сидит на лавке, с обеспокоенным лицом.':

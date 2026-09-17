@@ -333,8 +333,10 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
     
     const npcGender = npc.gender;
     const npcRep = getNpcRep(registry, npcId);
-    const res = skillCheck(intimidateSkill);
-    
+    // Раунд 35 (QA-фикс P2): бросок «res» здесь был мёртвым — ниже бросается
+    // effectiveRes с учётом модификаторов (страдал двойной расход RNG,
+    // но на результат он не влиял). Убран.
+
     // П.10: Модификаторы в зависимости от пола
     // Мужчина чаще нападает на мужчину, чем на женщину
     // Мужчина сильнее реагирует на угрозы от женщины

@@ -427,10 +427,14 @@ export class CharacterSelectionScene extends Phaser.Scene {
         // Инициализируем систему репутации
         initReputation(this.registry);
         
-        ActionLog.add(this.registry, 
+        ActionLog.add(this.registry,
             `Игра началась. ${hero.name} (${hero.archetype}) — беженец из разорённой врагами деревни. ` +
             `Пришёл в незнакомую деревню ${villageName}. ` +
-            `Дата: ${startDate.day}.${startDate.month + 1}.${startDate.yearFromChrist} от Р.Х.`
+            // Раунд 35 (QA-фикс P2): раньше печатали month+1 по «январскому» счёту,
+            // хотя календарь игры — сентябрьский (месяц 0 = сентябрь), а год
+            // показывали год начала лета. Теперь AD-месяц и AD-год согласованы:
+            // AD-месяц = (month+8)%12+1; для января–августа (индексы 4..11) AD-год = start+1.
+            `Дата: ${startDate.day}.${((startDate.month + 8) % 12) + 1}.${startDate.yearFromChrist + (startDate.month >= 4 ? 1 : 0)} от Р.Х.`
         );
         // П.11: После выбора героя — переход в генератор внешности, а не сразу в деревню.
         this.scene.start('CharacterAppearance');

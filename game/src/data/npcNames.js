@@ -231,8 +231,9 @@ export function initNpcNames(registry) {
         { id: 'kid5', gender: 'male',   age: 7,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_boy',  interiorId: 'beekeeper_house' },
         { id: 'kid6', gender: 'female', age: 6,  professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_girl', interiorId: 'beekeeper_house' },
         { id: 'kid7', gender: 'male',   age: 5,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_boy',  interiorId: 'beekeeper_house' },
-        // Раунд 27 (п.9): жена старосты
-        { id: 'elder_wife',   gender: 'female', age: 54, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'elder_house',     name: 'Любава' },
+        // Раунд 27 (п.9): жена старосты. Раунд 35: собственный портрет седой старухи
+        // (был villager_f — молодой женщине, из-за чего «старуха» выглядела 20-летней)
+        { id: 'elder_wife',   gender: 'female', age: 54, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_elder_wife', interiorId: 'elder_house',     name: 'Любава' },
         // Раунд 31 (п.2): пастухи — водят коров и лошадей на водопой
         // (утром и вечером: Выпас → Река/Озеро), днём на выпасе, ночью дома
         { id: 'shepherd1',    gender: 'male',   age: 34, professionId: 'shepherd',   sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_1', name: 'Сила' },

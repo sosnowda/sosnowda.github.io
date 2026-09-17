@@ -1107,6 +1107,13 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         if (opts.talkMinutes > 0) {
             chargeTalkTime(scene.registry, opts.talkMinutes, opts.talkKey || title);
         }
+        // Раунд 35 (QA-фикс P1): блокировщик живёт в сцене ОТДЕЛЬНО от контейнера
+        // диалога. Раньше его удалял только onComplete твины closeDialog — но
+        // DialogueRunner при смене узла и при финале делает _currentDialog.destroy()
+        // напрямую, и полноэкранный чёрный прямоугольник (alpha ~0.7, интерактивный)
+        // оставался висеть: экран кумулятивно темнел, а клики по сцене съедались.
+        // Теперь блокировщик гарантированно умирает вместе с диалогом.
+        if (blocker && blocker.scene) blocker.destroy();
     });
 
     return dialog;

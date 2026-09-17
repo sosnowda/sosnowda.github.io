@@ -130,12 +130,25 @@ export class EndScene extends Phaser.Scene {
             align: 'left',
         }).setOrigin(0.5, 0);
 
-        // Обрезаем лог, если он слишком длинный
+        // Обрезаем лог, если он слишком длинный.
+        // Раунд 35 (QA-фикс P2): раньше резали по ЧИСЛУ логических строк
+        // (maxLogHeight / 14), но длинные записи переносятся на 2-3 визуальные
+        // строки — хроника вылезала под кнопки «Новая игра / В меню».
+        // Теперь ужимаем по ФАКТИЧЕСКОЙ высоте блока текста.
         const maxLogHeight = panelH - 360;
         if (logBox.height > maxLogHeight) {
-            const lines = log.getFormattedText();
-            const visibleLines = lines.slice(-Math.floor(maxLogHeight / 14));
-            logBox.setText('...\n' + visibleLines.join('\n'));
+            const lines = log.getFormattedText().slice();
+            // грубая начальная оценка с учётом переносов (2 визуальные строки на запись)
+            const approx = Math.max(1, Math.floor(maxLogHeight / 14 / 2));
+            if (lines.length > approx) {
+                logBox.setText('...\n' + lines.slice(-approx).join('\n'));
+            }
+            let guard = 0;
+            while (logBox.height > maxLogHeight && lines.length > 1 && guard < 50) {
+                lines.shift();
+                logBox.setText('...\n' + lines.join('\n'));
+                guard++;
+            }
         }
 
         // ----- Кнопки -----

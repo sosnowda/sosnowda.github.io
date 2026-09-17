@@ -552,7 +552,7 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'Фёкла',
-                text: 'Заходи, путник, только тихо — малых только уложила. Нас с Тарасом Господь семерым детками благословил: крики в избе от зари до зари!',
+                text: 'Заходи, путник, только тихо — малых только уложила. Нас с Тарасом Господь семерыми детками благословил: крики в избе от зари до зари!',
                 action: (scene) => {
                     // Раунд 30: Фёкла — возможный свидетель о воре (один раз)
                     DIALOGUES.beekeeper_wife.nodes.a.choices = withAskThief(scene, 'beekeeper_wife', [
@@ -762,7 +762,7 @@ export const DIALOGUES = {
             },
             about_icon: {
                 speaker: 'Отец Савватий',
-                text: 'Ох, горе нам, {address}! Ночью вор забрался в церковь и украл чудотворную икону Богородицы Одигитрии. Ей более ста лет, её написал монах-иконописец из Киево-Печерской лавры. Без неё деревня потеряла благословение Божье. Найди вора и верни святыню! Возьми задание у меня, если хочешь помочь.',
+                text: 'Ох, горе нам, {address}! Ночью вор забрался в церковь и украл чудотворную икону Богородицы Одигитрии. Ей более ста лет, её написал монах-иконописец Печерского монастыря. Без неё деревня потеряла благословение Божье. Найди вора и верни святыню! Возьми задание у меня, если хочешь помочь.',
                 action: (scene) => {
                     const q = scene.registry.get('quest');
                     q.elderTalked = true; // отмечаем, что игрок узнал о краже
@@ -841,8 +841,8 @@ export const DIALOGUES = {
             },
             games: {
                 speaker: 'ребёнок',
-                text: 'Мы рюхами бьёмся: кто больше бабок выбьет, тот и мошну собрал. А в жмурки да салочки — я всегда первый! Ну... почти всегда. Сенька вон быстрей, но у него отец кузнец, он гвоздями питается!',
-                en: 'We play rukhi: whoever knocks down the most knucklebones wins the pot. And blind-man\'s buff and chase — I am always first! Well... almost always. Senka is faster, but his father is the smith — the boy eats nails!',
+                text: 'Мы рюхами бьёмся: кто больше бабок выбьет, тот и мошну собрал. А в жмурки да салочки — я всегда первый! Ну... почти всегда. Сенька вон быстрей, да он по лесу за белкиными орехами бегает — вот ноги и разгоняются!',
+                en: 'We play rukhi: whoever knocks down the most knucklebones wins the pot. And blind-man\'s buff and chase — I am always first! Well... almost always. Senka is faster — he roams the woods after squirrel nuts, no wonder his legs are so quick!',
                 choices: [
                     { text: t('И кто же победил?'), next: 'games2' },
                 ],

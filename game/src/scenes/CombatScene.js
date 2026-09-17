@@ -486,10 +486,15 @@ export class CombatScene extends Phaser.Scene {
                     this.playHitEffect(targetSprite.x, targetSprite.y, 'dust');
                     if (this.audioManager) this.audioManager.playSwordMiss();
                 } else {
-                    // BRP SRD: урон = weapon dice + DB, особый успех ×2
-                    let dmg = rollDamage(w.dice, this.player.DB, res.special);
-                    dmg += (w.bonus || 0);
+                    // BRP SRD: урон = weapon dice + DB, особый успех ×2.
+                    // Раунд 35 (QA-фикс P1): критический успех одновременно
+                    // считался «особым» (крит — подмножество особых), и урон
+                    // получал ×2 (особый) и ×1.5 (крит) = ×3, хотя справка боя
+                    // обещает «крит ×1.5». Теперь крит не удваивает урон как
+                    // особый — применяется только обещанный множитель ×1.5.
                     const isCrit = res.result === ROLL_RESULT.CRITICAL;
+                    let dmg = rollDamage(w.dice, this.player.DB, res.special && !isCrit);
+                    dmg += (w.bonus || 0);
                     if (isCrit) dmg = Math.ceil(dmg * 1.5);
                     // Броня врага поглощает урон
                     const targetArmorDef = target.armor ? target.armor.def : 0;
@@ -554,8 +559,29 @@ export class CombatScene extends Phaser.Scene {
 
     useHerb() {
         const q = this.registry.get('quest');
-        if (!q.hasHerb) { this.pushLog(t('У тебя нет целебной травы.')); return; }
-        q.hasHerb = false;
+        const p = this.player;
+        // Раунд 35 (QA-фикс HIGH): кнопка «Трава» смотрела только на флаг
+        // q.hasHerb (выдаётся одному архетипу при создании), а целебная трава
+        // лежит у КАЖДОГО героя в инвентаре (стартовый предмет «herb»).
+        // Теперь трава расходуется из инвентаря; флаг остался запасным
+        // источником для совместимости со старыми сохранениями.
+        let invSlot = null;
+        if (Array.isArray(p.inventory)) {
+            invSlot = p.inventory.find(i => i && i.id === 'herb' && (i.count || 0) > 0);
+        }
+        if (invSlot) {
+            invSlot.count -= 1;
+            if (invSlot.count <= 0) {
+                p.inventory = p.inventory.filter(i => i !== invSlot);
+            }
+            this.registry.set('player', p);
+        } else if (q && q.hasHerb) {
+            q.hasHerb = false;
+            this.registry.set('quest', q);
+        } else {
+            this.pushLog(t('У тебя нет целебной травы.'));
+            return;
+        }
         const heal = 3 + Math.floor(Math.random() * 4) + Math.floor(this.player.CON / 10);
         this.player.HP = Math.min(this.player.HPmax, this.player.HP + heal);
         createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `+${heal}`, '#7CFC00');

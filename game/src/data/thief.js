@@ -422,8 +422,10 @@ export function initThiefHunt(registry) {
         ],
         minutesAccum: 0,       // накопитель неполных тиков (часов)
         traces: {},            // { locId: { wentTo, side, leftAt, life } }
-        hintLockHours: 0,      // раунд 32 (п.4): «заморозка» на 2/5 часов
+        hintLockHours: 0,      // раунд 32 (п.4): «заморозка» на 2/5 часов (сводная)
         hintLockFlee: false,   // раунд 32 (п.10): уйти ли принудительно по истечении
+        npcLockHours: 0,       // раунд 35: заморозка наводки НПЦ (уход по истечении)
+        traceLockHours: 0,     // раунд 35: заморозка прочитанного следа
     };
     // Раунд 31 (п.1): в лес — строго последовательно: Опушка → Поляна → Чаща
     applyForestSequence(route);
@@ -530,12 +532,22 @@ export function thiefChaseTick(registry, minutes) {
 function thiefStep(registry, c) {
     const q = registry.get('quest');
 
-    // Раунд 32 (пп.4,10): «заморозка» от подсказки/следа — вор не двигается
-    if ((c.hintLockHours || 0) > 0) {
-        c.hintLockHours--;
-        if (c.hintLockHours === 0 && c.hintLockFlee) {
+    // Раунд 32 (пп.4,10): «заморозка» от подсказки/следа — вор не двигается.
+    // Раунд 35 (QA-фикс P2): у заморозок «наводка НПЦ» (5 ч, по истечении вор
+    // принудительно уходит) и «прочитанный след» (2 ч, обычное продолжение)
+    // теперь РАЗНЫЕ счётчики. Раньше обе жили в одной паре
+    // hintLockHours/hintLockFlee, и поздний след перетирал флаг ухода активной
+    // наводки — вор переставал уходить по истечении срока наводки (п.10).
+    const npcLock = c.npcLockHours || 0;
+    const traceLock = c.traceLockHours || 0;
+    const effectiveLock = Math.max(npcLock, traceLock);
+    if (effectiveLock > 0) {
+        if (npcLock > 0) c.npcLockHours = npcLock - 1;
+        if (traceLock > 0) c.traceLockHours = traceLock - 1;
+        // легаси-поля отражают суммарную (эффективную) заморозку
+        c.hintLockHours = Math.max(c.npcLockHours || 0, c.traceLockHours || 0);
+        if (npcLock > 0 && npcLock - 1 === 0 && npcLock >= traceLock) {
             // Раунд 32 (п.10): срок наводки вышел — вор уходит в другую локацию
-            c.hintLockFlee = false;
             if (c.phase === 'stay' && c.stop < c.route.length - 1) {
                 thiefLeaveLocation(registry, c);
             }
@@ -1092,7 +1104,15 @@ export function pinThiefAtCurrentStop(registry, hours, forceFlee) {
         c.phase = 'stay';
         c.ticksLeft = c.stays[c.stop] || randomStayHours();
     }
-    c.hintLockHours = Math.max(c.hintLockHours || 0, hours);
+    // Раунд 35 (QA-фикс P2): раздельные заморозки для наводки (forceFlee=true,
+    // уход по истечении) и следа (forceFlee=false); легаси-пара
+    // hintLockHours/hintLockFlee остаётся как сводное отражение для UI/сейвов.
+    if (forceFlee) {
+        c.npcLockHours = Math.max(c.npcLockHours || 0, hours);
+    } else {
+        c.traceLockHours = Math.max(c.traceLockHours || 0, hours);
+    }
+    c.hintLockHours = Math.max(c.npcLockHours || 0, c.traceLockHours || 0);
     c.hintLockFlee = !!forceFlee;
     registry.set('quest', q);
     return c.route[c.stop];
@@ -1145,6 +1165,8 @@ export function thiefFleesFromFight(registry, fromLocationId) {
     // держит на месте срок из п.13
     c.hintLockHours = 0;
     c.hintLockFlee = false;
+    c.npcLockHours = 0;
+    c.traceLockHours = 0;
     void fromLocationId;
 
     ActionLog.add(registry, t('Вор затаился на месте — уйдёт не раньше, чем через три часа. Но и раны его не заживали: сил у него меньше, чем было.'));
