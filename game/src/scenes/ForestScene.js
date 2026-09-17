@@ -740,7 +740,10 @@ export class ForestScene extends Phaser.Scene {
                         this.registry.set('forestReturnPos', { x: this.playerObj.x, y: this.playerObj.y });
                         ActionLog.add(this.registry, 'Засада у тайника: бой с разбойником.');
                         tickTime(this.registry, 5);
-                        this.scene.start('Combat', { enemyKeys: ['bandit'], fromScene: 'Forest' });
+                        // Раунд 40 (QA-фикс): переход в бой — на следующий кадр
+                        this.time.delayedCall(0, () => {
+                            this.scene.start('Combat', { enemyKeys: ['bandit'], fromScene: 'Forest' });
+                        });
                     },
                 }], { singletonKey: 'forest-ambush' });
             });

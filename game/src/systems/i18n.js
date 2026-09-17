@@ -687,6 +687,34 @@ const EN = {
     'Ты полон сил!': 'You are full of strength!',
     'Отдохнул в таверне ({0} ч) за {1} д. {2}': 'Rested at the inn ({0} h) for {1} d. {2}',
 
+    // ----- Раунд 40: «⏳ Провести время» на постоялом дворе -----
+    '⏳ Время': '⏳ Time',
+    '⏳ Провести время': '⏳ Spend time',
+    'Сейчас: {0} · {1}': 'Now: {0} · {1}',
+    '⚠ Погоня за вором продолжается! Каждый час за столом — вор всё дальше.':
+        '⚠ The chase for the thief is still on! Every hour at the table — the thief gets farther away.',
+    '✍️ Своё время (1–24 ч):': '✍️ Custom duration (1–24 h):',
+    'Цифры, Backspace, Enter — или кнопки и шаблоны:': 'Digits, Backspace, Enter — or the buttons and presets:',
+    '−1 ч': '−1 h',
+    '+1 ч': '+1 h',
+    '⏳ Провести это время': '⏳ Spend this time',
+    '— или сразу —': '— or right away —',
+    '🌅 До утра (в 6:00)': '🌅 Until morning (6:00)',
+    '☀️ До полудня (в 12:00)': '☀️ Until noon (12:00)',
+    '🌇 До вечера (в 16:00)': '🌇 Until evening (16:00)',
+    'через {0}': 'in {0}',
+    '{0} ч': '{0} h',
+    '{0} мин': '{0} min',
+    '{0} ч {1} мин': '{0} h {1} min',
+    '⏳ Время прошло': '⏳ Time has passed',
+    'Ты провёл за столом в горнице {0}. Сейчас {1}, {2}.':
+        'You spent {0} at the table in the common room. It is now {1}, {2}.',
+    'Сил это не вернуло — для лечения есть платный «Отдых» (1 ч / 8 ч) и костёр во дворе.':
+        'It did not restore your strength — for healing there is the paid "Rest" (1 h / 8 h) and the campfire in the yard.',
+    'Провёл время на постоялом дворе ({0}).': 'Spent time at the inn ({0}).',
+    'Ты посидел за столом у Фёдора... но пока время шло, вор успел скрыться из вида!':
+        "You sat at Fyodor's table for hours... but while the time was passing, the thief managed to vanish from sight!",
+
     // --- Раунд 27: живой мир (пп.6-13) ---
     '🌙 Здесь сейчас никого нет...': '🌙 Nobody is here right now...',
     'Найди(е) его там — или возвращайся в другой час.': 'Find them there — or come back at another hour.',

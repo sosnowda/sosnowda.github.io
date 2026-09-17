@@ -10,7 +10,7 @@ import {
 } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
-import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js';
+import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
@@ -317,6 +317,10 @@ export class LocationScene extends Phaser.Scene {
             fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
             cornerRadius: 8,
         }).setScrollFactor(0).setDepth(50);
+
+        // Раунд 40 (заявка п.1): [📜 Персонаж] / [🎒 Инвентарь] вверху
+        // справа — ВО ВСЕХ локациях, единый стиль с деревней/лесом/пасекой
+        addSceneMenuButtons(this, 'Location');
 
         // ----- Раунд 27 (пп.7,8): ЖИТЕЛИ НА ЛОКАЦИЯХ —
         // Авдей на мельнице, Марфа с травами на озере/реке/в лесу и т.д.

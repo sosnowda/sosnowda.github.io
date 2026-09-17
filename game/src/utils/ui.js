@@ -30,6 +30,8 @@ import {
 } from '../config/StyleConfig.js';
 // Раунд 31 (пп.11,12): пауза реального времени в диалогах + час за разговор
 import { pauseWorldClock, resumeWorldClock, chargeTalkTime } from '../systems/WorldClock.js';
+// Раунд 40: локализация подписей кнопок меню (addSceneMenuButtons)
+import { t } from '../systems/i18n.js';
 
 // ============================================================
 // ВНУТРЕННИЕ ХЕЛПЕРЫ
@@ -1458,4 +1460,55 @@ export function createScrollableList(scene, config = {}) {
     container.setDepthAll = (d) => container.setDepth(d);
 
     return container;
+}
+
+// ============================================================
+// Раунд 40 (заявка п.1): кнопки [📜 Персонаж] / [🎒 Инвентарь]
+// в правом верхнем углу ЛЮБОЙ локации и помещения — единый
+// стиль с VillageScene/ForestScene/ApiaryScene.
+//   • нет персонажа → экран выбора/создания;
+//   • сцена ставится на паузу, «Назад» в свитке персонажа
+//     возвращает без потери состояния;
+//   • узкий экран (<640px) — компактная кнопка «📜» (вкладки
+//     доступны внутри свитка персонажа).
+// ============================================================
+export function addSceneMenuButtons(scene, fromKey, opts = {}) {
+    if (!scene || !scene.add) return;
+    const { width } = scene.scale;
+    const btnY = opts.y ?? 14;
+    const btnW = 70, btnH = 20;
+
+    const openSheet = (tab) => {
+        const p = scene.registry.get('player');
+        if (!p) {
+            scene.scene.start('CharacterSelection');
+            return;
+        }
+        scene.scene.pause();
+        scene.scene.launch('Character', { from: fromKey, tab });
+    };
+
+    const make = (x, label, tab) => {
+        const btn = scene.add.rectangle(x, btnY, btnW, btnH, 0x4a3520, 0.95)
+            .setStrokeStyle(1, 0xC9A961)
+            .setInteractive({ useHandCursor: true })
+            .setScrollFactor(0).setDepth(101);
+        const txt = scene.add.text(x, btnY, label, {
+            fontSize: '11px', color: '#E8DCC4',
+            stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+        btn.on('pointerup', () => openSheet(tab));
+        btn.on('pointerover', () => btn.setFillStyle(0x5a4530, 1));
+        btn.on('pointerout', () => btn.setFillStyle(0x4a3520, 0.95));
+        scene.__sceneMenuButtons = scene.__sceneMenuButtons || [];
+        scene.__sceneMenuButtons.push(btn, txt);
+        return btn;
+    };
+
+    if (width < 640) {
+        make(width - 46, '📜', 'stats');
+    } else {
+        make(width - 220, t('📜 Персонаж'), 'stats');
+        make(width - 100, t('🎒 Инвентарь'), 'inventory');
+    }
 }

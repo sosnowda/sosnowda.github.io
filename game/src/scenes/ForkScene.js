@@ -4,7 +4,7 @@
 import { RUS } from '../config/RusTheme.js';
 import { getHuntState, isChaseActive, chaseTicksLeft, checkGameEnd } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
-import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js';
+import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
 // Раунд 32 (пп.14,15): F1 — «Информация по игре» со соотношением времени 1:30
 import { timeRatioInfoLine } from '../systems/WorldClock.js';
 import AudioManager from '../systems/AudioManager.js';
@@ -94,6 +94,9 @@ export class ForkScene extends Phaser.Scene {
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5, 0);
         }
+
+        // Раунд 40 (заявка п.1): [📜 Персонаж] / [🎒 Инвентарь] на околице
+        addSceneMenuButtons(this, 'Fork');
 
         // ----- Подсказки, собранные у жителей -----
         if (state.cluesGathered && state.cluesGathered.length > 0) {

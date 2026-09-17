@@ -995,7 +995,14 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
                 text: t('⚔ Напасть'),
                 callback: finish(() => {
                     ActionLog.add(registry, t('Напал на вора в его убежище.'));
-                    scene.scene.start('Combat', { enemyKeys: ['thief'], npcId: 'thief', fromLocation: locationId });
+                    // Раунд 40 (QA-фикс): scene.start вызывался ИЗ колбэка клика
+                    // поверх активного диалога/твинов — фаза обновления Phaser
+                    // коррумпировалась и игровой цикл зависал (воспроизведено
+                    // agent-browser 3/3 раза). Переход переносится на СЛЕДУЮЩИЙ
+                    // кадр, вне стека обработчика ввода.
+                    scene.time.delayedCall(0, () => {
+                        scene.scene.start('Combat', { enemyKeys: ['thief'], npcId: 'thief', fromLocation: locationId });
+                    });
                 }),
             },
             {

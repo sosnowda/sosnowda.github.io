@@ -5,12 +5,12 @@ import { INTERIORS } from '../data/interiors.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
-import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js';
+import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
 import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd, askMoneyForHelp, askElderAdvance, isChaseActive } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
 import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion, onLocationVisited } from '../data/questGenerator.js';
-import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
+import { getTime, formatTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { getWeather } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
@@ -116,6 +116,10 @@ export class InteriorScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 1,
             wordWrap: { width: width * 0.42 },
         }).setOrigin(0, 0).setDepth(50);
+
+        // Раунд 40 (заявка п.1): [📜 Персонаж] / [🎒 Инвентарь] вверху справа
+        // ВО ВСЕХ помещениях (раньше — только кнопка у кузнеца)
+        addSceneMenuButtons(this, 'Interior');
 
         // ----- NPC в интерьере -----
         // Амбар — БЕЗ NPC (работник на поле):
@@ -396,12 +400,15 @@ export class InteriorScene extends Phaser.Scene {
                 // Раунд 22 (п.10/12): отдых в таверне — 1 час (частичное лечение)
                 // или 8 часов (полное восстановление)
                 buttons.push({ label: t('\u{1F6CF} Отдых'), bg: 0x4a3a5a, hover: 0x5a4a6a, cb: () => this.showTavernRestMenu(interior) });
+                // Раунд 40 (заявка): «⏳ Провести время» — перемотка 1–24 ч /
+                // до утра / до полудня / до вечера, чтобы не мотаться
+                // деревня↔околица (по 2 ч за цикл) ради часов.
+                buttons.push({ label: t('\u{23F3} Время'), bg: 0x2a4a5a, hover: 0x3a5a6a, cb: () => this.showSpendTimeMenu() });
                 // Раунд 39 (п.13): кнопка «Мой тюк» УДАЛЕНА вместе со всеми тюками
             } else if (interior.id === 'blacksmith') {
                 buttons.push({ label: t('\u{1F6D2} Купить оружие'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
-                // Раунд 39 (п.15 заявки): кнопка «Персонаж» — посмотреть, что надето
-                // и что в руках, не выходя из кузницы (свиток поверх кузницы)
-                buttons.push({ label: t('\u{1F9CD} Персонаж'), bg: 0x4a3520, hover: 0x5a4530, cb: () => this.openCharacterSheet() });
+                // Раунд 40: кнопка «Персонаж» теперь ПОСТОЯННАЯ вверху справа
+                // ВО ВСЕХ помещениях (addSceneMenuButtons) — дубликат у кузнеца снят
             }
             // Раунд 26: в церкви — богомолье и осмотр киота (переехали из удалённой часовни)
             if (interior.id === 'church') {
@@ -416,6 +423,12 @@ export class InteriorScene extends Phaser.Scene {
             // Раунд 39 (п.13): кнопка «Мой узел» УДАЛЕНА вместе со всеми тюками
         }
         const exitAction = () => {
+            // Раунд 40: пока открыто меню «Провести время» — ESC закрывает
+            // только меню, а не выбрасывает героя из постоялого двора.
+            // Раунд 40 (QA-фикс): если открыт ЛЮБОЙ диалог (busyDialog) — ESC
+            // вообще не должен срабатывать: scene.stop() поверх живого диалога
+            // замораживал канвас (диалог оставался на экране, ввод умирал).
+            if (this.__spendTimeOpen || this.busyDialog) return;
             // Раунд 24: скрип двери при выходе
             this.audioManager.playRealDoorClose();
             this.scene.stop();
@@ -456,7 +469,11 @@ export class InteriorScene extends Phaser.Scene {
             createDialog(this, t('Нападение!'),
                 `${getNpcDisplayName(this.registry, interior.npcId)} бросается на тебя с кулаками!`,
                 [{ text: 'Драться!', callback: () => {
-                    this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
+                    // Раунд 40 (QA-фикс): переход в бой — на следующий кадр,
+                    // вне стека обработчика клика (иначе зависание цикла Phaser)
+                    this.time.delayedCall(0, () => {
+                        this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
+                    });
                 }}],
                 { singleton: false, portraitKey: this.npcPortraitKey }
             );
@@ -786,7 +803,11 @@ export class InteriorScene extends Phaser.Scene {
             createDialog(this, 'Угроза — нападение!',
                 `${result.message}\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})`,
                 [{ text: 'Драться!', callback: () => {
-                    this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
+                    // Раунд 40 (QA-фикс): переход в бой — на следующий кадр,
+                    // вне стека обработчика клика (иначе зависание цикла Phaser)
+                    this.time.delayedCall(0, () => {
+                        this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
+                    });
                 }}],
                 { singleton: false, portraitKey: this.npcPortraitKey }
             );
@@ -1101,6 +1122,221 @@ export class InteriorScene extends Phaser.Scene {
         });
     }
 
+    // ============================================================
+    // Раунд 40 (заявка владельца): «⏳ Провести время» на постоялом дворе.
+    // Владелец: «Морочу время циклами деревня↔околица до утра (по 2 ч за
+    // цикл)». Решение: за столом у Фёдора время можно перемотать ЧЕСТНО:
+    //   1. Своё — от 1 до 24 часов (цифры с клавиатуры, «−/±» и шаблоны);
+    //   2. До утра (6:00);  3. До полудня (12:00);  4. До вечера (16:00).
+    // Бесплатно и БЕЗ лечения (лечение — платный «Отдых» и костёр во дворе).
+    // Пока герой сидит в горнице, погоня за вором тикает и поручения
+    // истекают: перемотка — осознанный выбор, а не чит.
+    // ============================================================
+
+    /** «X ч Y мин» из минут (для подписей «через …»). */
+    spendHoursLabel(minutes) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        if (h > 0 && m > 0) return tf(t('{0} ч {1} мин'), h, m);
+        if (h > 0) return tf(t('{0} ч'), h);
+        return tf(t('{0} мин'), m);
+    }
+
+    /** Минут до ближайшего N:00 (строго в будущем; ровно N:00 — полные сутки). */
+    minutesUntilHour(targetHour) {
+        const ts = getTime(this.registry);
+        const now = ts ? (ts.hour * 60 + ts.minute) : 0;
+        let mins = targetHour * 60 - now;
+        if (mins <= 0) mins += 24 * 60;
+        return mins;
+    }
+
+    /** Открыть панель «⏳ Провести время» (кнопка «⏳ Время» в таверне). */
+    showSpendTimeMenu() {
+        if (this.busyDialog) return;
+        this.busyDialog = true;
+        this.__spendTimeOpen = true;
+
+        const { width, height } = this.scale;
+        const cx = width / 2;
+        const top = height / 2 - 240;
+        const chaseActive = isChaseActive(this.registry);
+
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
+            .setOrigin(0).setInteractive().setDepth(200);
+        const panelW = Math.min(560, width - 24);
+        const panel = this.add.rectangle(cx, height / 2, panelW, 480, 0x241B15, 1)
+            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+        const ui = [overlay, panel];
+        const track = (el) => { ui.push(el); return el; };
+
+        // ----- Статика: заголовок, текущее время, подписи -----
+        track(this.add.text(cx, top + 30, t('⏳ Провести время'), {
+            fontSize: '20px', color: '#C9A961', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(202));
+
+        const nowText = track(this.add.text(cx, top + 58, '', {
+            fontSize: '13px', color: '#E8DCC4', stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setDepth(202));
+
+        track(this.add.text(cx, top + 80, chaseActive
+            ? t('⚠ Погоня за вором продолжается! Каждый час за столом — вор всё дальше.')
+            : '', {
+            fontSize: '10px', color: '#ff8a6a', wordWrap: { width: panelW - 40 },
+        }).setOrigin(0.5).setDepth(202));
+
+        track(this.add.text(cx, top + 108, t('✍️ Своё время (1–24 ч):'), {
+            fontSize: '12px', color: '#c9a14a', stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setDepth(202));
+
+        const hoursText = track(this.add.text(cx, top + 146, '2 ч', {
+            fontSize: '26px', color: '#E8DCC4', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(202));
+
+        track(this.add.text(cx, top + 172, t('Цифры, Backspace, Enter — или кнопки и шаблоны:'), {
+            fontSize: '9px', color: '#8a7a5a',
+        }).setOrigin(0.5).setDepth(202));
+
+        // ----- Своё время: переменная, степперы, шаблоны, ввод с клавиатуры -----
+        let hours = 2;
+        const clampHours = () => { hours = Math.min(24, Math.max(1, Math.round(hours) || 1)); };
+        const refreshHours = () => { clampHours(); hoursText.setText(tf(t('{0} ч'), hours)); };
+        const bump = (d) => { hours += d; refreshHours(); };
+
+        ui.push(createButton(this, cx - 170, top + 146, t('−1 ч'), () => bump(-1), {
+            backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: '#E8DCC4',
+            fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 }, cornerRadius: 6,
+        }).setDepth(202));
+        ui.push(createButton(this, cx + 170, top + 146, t('+1 ч'), () => bump(1), {
+            backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: '#E8DCC4',
+            fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 }, cornerRadius: 6,
+        }).setDepth(202));
+
+        // Шаблоны: 1 2 3 4 6 8 12 24
+        const presets = [1, 2, 3, 4, 6, 8, 12, 24];
+        const chipGap = Math.min(56, (panelW - 60) / presets.length);
+        const startX = cx - ((presets.length - 1) * chipGap) / 2;
+        presets.forEach((p, i) => {
+            ui.push(createButton(this, startX + i * chipGap, top + 204, String(p), () => { hours = p; refreshHours(); }, {
+                backgroundColor: p === 24 ? 0x5a3a2a : 0x3a3a30, hoverColor: 0x4a4a3c,
+                textColor: '#E8DCC4', fontSize: 12,
+                padding: { left: 6, right: 6, top: 4, bottom: 4 }, cornerRadius: 5,
+            }).setDepth(202));
+        });
+
+        ui.push(createButton(this, cx, top + 248, t('⏳ Провести это время'), () => confirmSpend(hours * 60), {
+            backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: '#E8DCC4',
+            fontSize: 15, padding: { left: 18, right: 18, top: 8, bottom: 8 }, cornerRadius: 6,
+        }).setDepth(202));
+
+        // ----- «Или сразу»: до утра / до полудня / до вечера -----
+        track(this.add.text(cx, top + 288, t('— или сразу —'), {
+            fontSize: '11px', color: '#8a7a5a',
+        }).setOrigin(0.5).setDepth(202));
+
+        const quickRows = [
+            { icon: '🌅', hour: 6, key: '🌅 До утра (в 6:00)', bg: 0x4a3a5a, hover: 0x5a4a6a },
+            { icon: '☀️', hour: 12, key: '☀️ До полудня (в 12:00)', bg: 0x4a4a2a, hover: 0x5a5a3a },
+            { icon: '🌇', hour: 16, key: '🌇 До вечера (в 16:00)', bg: 0x4a2a2a, hover: 0x5a3a3a },
+        ];
+        const inLabel = [];
+        quickRows.forEach((row, i) => {
+            const y = top + 320 + i * 38;
+            ui.push(createButton(this, cx - 90, y, t(row.key), () => confirmSpend(this.minutesUntilHour(row.hour)), {
+                backgroundColor: row.bg, hoverColor: row.hover, textColor: '#E8DCC4',
+                fontSize: 12, padding: { left: 12, right: 12, top: 7, bottom: 7 }, cornerRadius: 6,
+            }).setDepth(202));
+            const lbl = track(this.add.text(cx + 120, y, '', {
+                fontSize: '11px', color: '#c9a14a', stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0, 0.5).setDepth(202));
+            inLabel.push({ hour: row.hour, lbl });
+        });
+
+        ui.push(createButton(this, cx, top + 444, t('Закрыть'), () => closeMenu(), {
+            backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: '#E8DCC4',
+            fontSize: 14, padding: { left: 20, right: 20, top: 8, bottom: 8 }, cornerRadius: 6,
+        }).setDepth(202));
+
+        // ----- Живая строка «Сейчас: …» и durations «через …» (часы идут!) -----
+        const refreshLive = () => {
+            const ts = getTime(this.registry);
+            if (!ts) return;
+            const hhmm = `${String(ts.hour).padStart(2, '0')}:${String(ts.minute).padStart(2, '0')}`;
+            nowText.setText(tf(t('Сейчас: {0} · {1}'), hhmm, formatTime(ts)));
+            inLabel.forEach(({ hour, lbl }) => lbl.setText(tf(t('через {0}'), this.spendHoursLabel(this.minutesUntilHour(hour)))));
+        };
+        refreshLive();
+        const liveTimer = this.time.addEvent({ delay: 1000, loop: true, callback: refreshLive });
+
+        // ----- Ввод с клавиатуры: цифры / Backspace / Enter / Escape -----
+        const keyHandler = (e) => {
+            if (e.key >= '0' && e.key <= '9') {
+                hours = Math.min(24, hours * 10 + Number(e.key));
+                refreshHours();
+            } else if (e.key === 'Backspace') {
+                hours = Math.max(1, Math.floor(hours / 10));
+                refreshHours();
+            } else if (e.key === 'Enter') {
+                clampHours();
+                confirmSpend(hours * 60);
+            } else if (e.key === 'Escape') {
+                closeMenu();
+            }
+        };
+        this.input.keyboard.on('keydown', keyHandler);
+        this.events.once('shutdown', () => {
+            try { this.input.keyboard.off('keydown', keyHandler); } catch (err) { /* сцена уже снята */ }
+            liveTimer && liveTimer.remove();
+        });
+
+        // ----- Закрытие панели -----
+        function closeMenu() {
+            if (selfInput && selfInput.keyboard) selfInput.keyboard.off('keydown', keyHandler);
+            liveTimer && liveTimer.remove();
+            sceneRef.__spendTimeOpen = false;
+            sceneRef.busyDialog = false;
+            ui.forEach(c => c && c.destroy && c.destroy());
+        }
+        const sceneRef = this;
+        const selfInput = this.input;
+
+        // ----- Применить перемотку -----
+        function confirmSpend(minutes) {
+            if (!minutes || minutes <= 0) return;
+            closeMenu();
+            sceneRef.busyDialog = true;
+            sceneRef.cameras.main.fadeOut(500, 0, 0, 0);
+            sceneRef.time.delayedCall(550, () => {
+                // Время реально течёт: вор делает шаги, поручения тикают
+                tickTime(sceneRef.registry, minutes);
+                sceneRef.updateHUD();
+                ActionLog.add(sceneRef.registry, tf(t('Провёл время на постоялом дворе ({0}).'), sceneRef.spendHoursLabel(minutes)));
+                sceneRef.cameras.main.fadeIn(500, 0, 0, 0);
+
+                const end = checkGameEnd(sceneRef.registry);
+                if (end === 'defeat_thief_escaped') {
+                    createDialog(sceneRef, t('⏳ Время прошло'),
+                        t('Ты посидел за столом у Фёдора... но пока время шло, вор успел скрыться из вида!'),
+                        [{ text: t('Итоги похода'), callback: () => sceneRef.scene.start('End') }],
+                        { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
+                } else if (end) {
+                    sceneRef.scene.start('End');
+                } else {
+                    const ts = getTime(sceneRef.registry);
+                    const hhmm = ts ? `${String(ts.hour).padStart(2, '0')}:${String(ts.minute).padStart(2, '0')}` : '';
+                    createDialog(sceneRef, t('⏳ Время прошло'),
+                        tf(t('Ты провёл за столом в горнице {0}. Сейчас {1}, {2}.'),
+                            sceneRef.spendHoursLabel(minutes), hhmm, ts ? formatTime(ts) : '')
+                        + '\n' + t('Сил это не вернуло — для лечения есть платный «Отдых» (1 ч / 8 ч) и костёр во дворе.'),
+                        [{ text: t('Понятно'), callback: () => { sceneRef.busyDialog = false; } }],
+                        { singleton: false, portraitKey: sceneRef.npcPortraitKey, typing: true, typingSpeed: 25 });
+                }
+            });
+        }
+    }
+
     /**
      * Меню торговли у кузнеца — покупка оружия и доспехов (п.15).
      */
@@ -1225,10 +1461,8 @@ export class InteriorScene extends Phaser.Scene {
     }
 
     /**
-     * Раунд 39 (п.15 заявки): кнопка «Персонаж» у кузнеца — свиток персонажа
-     * ПОВЕРХ кузницы: видно, что надето (броня) и что в руках (оружие),
-     * плюс можно сразу переэкипироваться. Сцена кузницы ставится на паузу,
-     * «Назад» возвращает без потери состояния.
+     * Раунд 40: свиток персонажа поверх помещения (раньше — только у кузнеца).
+     * Кнопка постоянная вверху справа; метод сохранён для обратной совместимости.
      */
     openCharacterSheet() {
         if (this.busyDialog) return;
