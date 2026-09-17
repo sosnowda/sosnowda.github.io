@@ -1,5 +1,8 @@
 // Исторические имена Руси XV века для случайной генерации NPC.
 // Разделены по полу, исключены современные имена.
+// Раунд 34: описания NPC локализованы (EN-обёртки t()/isEn()).
+
+import { isEn, t } from '../systems/i18n.js';
 
 export const HISTORICAL_MALE_NAMES = [
     // Княжеские и боярские
@@ -130,19 +133,20 @@ export function getRandomProfession(gender) {
 export function getStrangerDescription(age, gender, profession) {
     const ageGroup = getAgeGroup(age, gender);
     const profName = gender === 'female' ? profession.femaleName || profession.name : profession.name;
-    
+
     // Для младенца — без профессии
     if (ageGroup.id === 'infant') {
-        return ageGroup.name;
+        return t(ageGroup.name);
     }
-    
+
     // Раунд 28: дети — возрастная группа уже говорит всё («мальчик»/«девочка»),
     // профессия-ребёнок не дублируется
     if (profession.id === 'child') {
-        return ageGroup.name;
+        return t(ageGroup.name);
     }
-    
-    // Комбинируем: возрастная группа + профессия
+
+    // Комбинируем: возрастная группа + профессия (раунд 34: EN-обёртка)
+    if (isEn()) return `${t(ageGroup.name)} ${t(profName)}`;
     return `${ageGroup.name} ${profName}`;
 }
 
@@ -152,17 +156,17 @@ export function getStrangerDescription(age, gender, profession) {
  */
 export function getKnownDescription(name, profession, gender) {
     const profName = gender === 'female' ? profession.femaleName || profession.name : profession.name;
-    
+
     // Для священников добавляем «Отец»
     if (profession.id === 'priest') {
-        return `Отец ${name} (${profName})`;
+        return isEn() ? `Father ${name} (${t(profName)})` : `Отец ${name} (${profName})`;
     }
     // Для иноков — «Брат»
     if (profession.id === 'monk') {
-        return `Брат ${name} (${profName})`;
+        return isEn() ? `Brother ${name} (${t(profName)})` : `Брат ${name} (${profName})`;
     }
-    
-    return `${name} (${profName})`;
+
+    return isEn() ? `${name} (${t(profName)})` : `${name} (${profName})`;
 }
 
 /**
@@ -218,14 +222,15 @@ export function initNpcNames(registry) {
         // семеро детей (видимые НПЦ — см. npcPresence.KIDS).
         { id: 'beekeeper1',   gender: 'male',   age: 38, professionId: 'ploughman',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'beekeeper_house', name: 'Тарас' },
         { id: 'beekeeper_wife', gender: 'female', age: 34, professionId: 'homemaker', sprite: 'npc_elder',  portrait: 'portrait_villager_f', interiorId: 'beekeeper_house', name: 'Фёкла' },
-        // Раунд 28 (п.1): семеро детей пахаря — имена случайные на каждую игру
-        { id: 'kid1', gender: 'male',   age: 12, professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
-        { id: 'kid2', gender: 'female', age: 11, professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
-        { id: 'kid3', gender: 'male',   age: 9,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
-        { id: 'kid4', gender: 'female', age: 8,  professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
-        { id: 'kid5', gender: 'male',   age: 7,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
-        { id: 'kid6', gender: 'female', age: 6,  professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
-        { id: 'kid7', gender: 'male',   age: 5,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_villager_f', interiorId: 'beekeeper_house' },
+        // Раунд 28 (п.1): семеро детей пахаря — имена случайные на каждую игру.
+        // Раунд 34: детские портреты (мальчик/девочка) вместо взрослой «селянки».
+        { id: 'kid1', gender: 'male',   age: 12, professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_boy',  interiorId: 'beekeeper_house' },
+        { id: 'kid2', gender: 'female', age: 11, professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_girl', interiorId: 'beekeeper_house' },
+        { id: 'kid3', gender: 'male',   age: 9,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_boy',  interiorId: 'beekeeper_house' },
+        { id: 'kid4', gender: 'female', age: 8,  professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_girl', interiorId: 'beekeeper_house' },
+        { id: 'kid5', gender: 'male',   age: 7,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_boy',  interiorId: 'beekeeper_house' },
+        { id: 'kid6', gender: 'female', age: 6,  professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_girl', interiorId: 'beekeeper_house' },
+        { id: 'kid7', gender: 'male',   age: 5,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_boy',  interiorId: 'beekeeper_house' },
         // Раунд 27 (п.9): жена старосты
         { id: 'elder_wife',   gender: 'female', age: 54, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'elder_house',     name: 'Любава' },
         // Раунд 31 (п.2): пастухи — водят коров и лошадей на водопой
@@ -326,7 +331,7 @@ export function meetNpc(registry, npcId) {
  */
 export function getNpcDisplayName(registry, npcId) {
     const npc = findNpc(registry, npcId);
-    if (!npc) return 'незнакомец';
+    if (!npc) return t('незнакомец');
     return npc.met ? npc.knownDescription : npc.strangerDescription;
 }
 
@@ -335,7 +340,7 @@ export function getNpcDisplayName(registry, npcId) {
  */
 export function getNpcShortName(registry, npcId) {
     const npc = findNpc(registry, npcId);
-    if (!npc) return 'незнакомец';
+    if (!npc) return t('незнакомец');
     if (npc.met) {
         return npc.name;
     }

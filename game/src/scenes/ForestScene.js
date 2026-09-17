@@ -23,6 +23,7 @@ import { formatMoney } from '../systems/Character.js';
 import { getVillageRep } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
+import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 
 const TS = 48;   // как в деревне — мир 1440×1056, камера скроллится
@@ -49,6 +50,7 @@ export class ForestScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
         attachWorldClock(this);
+        attachChurchBells(this, { volume: 0.3 });
         this.audioManager.playSceneMusic('village');
         // Раунд 24: эмбиент леса — птицы днём, сверчки ночью
         const fsTime = getTime(this.registry);

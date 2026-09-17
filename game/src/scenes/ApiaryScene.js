@@ -26,6 +26,7 @@ import { getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES } from '../data/npcPresence
 import { getNpcSpriteKey } from '../systems/NpcLpc.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
+import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 
 const TS = 48;   // как в деревне/лесу — мир 1248×960, камера скроллится
@@ -62,6 +63,7 @@ export class ApiaryScene extends Phaser.Scene {
         this.dialogue = new DialogueRunner(this);
         // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
         attachWorldClock(this);
+        attachChurchBells(this, { volume: 0.45 });
         this.audioManager.playSceneMusic('village');
         // Раунд 24: эмбиент леса — птицы днём, сверчки ночью
         const fsTime = getTime(this.registry);

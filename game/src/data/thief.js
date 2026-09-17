@@ -238,6 +238,8 @@ export const MIN_WITNESSES = 3;
 const WITNESS_POOL = [
     'peasant1', 'widow', 'beekeeper1', 'beekeeper_wife', 'elder_wife',
     'blacksmith', 'tavernkeeper', 'hunter', 'fisherman',
+    // Раунд 34: и ДЕТИ — у колодца да на выпасе заметнее всех
+    'kid1', 'kid2',
 ];
 
 /** Список свидетелей (ленивая инициализация — для старых сейвов тоже работает). */

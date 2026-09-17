@@ -20,6 +20,7 @@ import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/Tim
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
 import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear } from '../systems/RusTime.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
+import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
@@ -29,6 +30,7 @@ import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
 import { getPresence, ALL_NPC_IDS, NPC_DIALOGUE, OUTDOOR_LINES, PLACE_NAMES } from '../data/npcPresence.js';
 import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
+import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
 
 export class VillageScene extends Phaser.Scene {
@@ -58,6 +60,7 @@ export class VillageScene extends Phaser.Scene {
         // 1:30 (раунд 32, п.14: 1 реальная минута = 30 игровых минут),
         // а пока открыт разговор — стоят
         attachWorldClock(this);
+        attachChurchBells(this, { volume: 1.0 });
 
         // Фоновая музыка деревни (ambient)
         this.audioManager.playSceneMusic('village');
@@ -1158,6 +1161,15 @@ export class VillageScene extends Phaser.Scene {
         this.busyDialog = true;
         const npcData = findNpc(this.registry, npcId);
         const displayName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
+        // Раунд 34: полные деревья на улице тоже говорят «своим» портретом —
+        // перекрашенным вариантом NPC (а не рассказчиком, как раньше)
+        const pvKey = npcPortraitVariantKey(npcData);
+        this.activeNpc = {
+            id: npcId,
+            name: displayName,
+            portrait: (pvKey && this.textures.exists(pvKey)) ? pvKey
+                : (npcData && npcData.portrait) || 'portrait_villager_f',
+        };
         const dialogueId = NPC_DIALOGUE[npcId];
         if (dialogueId) {
             this.dialogue.run(dialogueId, () => { this.busyDialog = false; });

@@ -61,8 +61,10 @@ export class BootScene extends Phaser.Scene {
 
         // ----- ПОРТРЕТЫ (раунд 24: живописные портреты из DarklandsReborn) -----
         // 1024×1024 webp, при показе сжимаются до 96×96, перекрашиваются под look NPC.
+        // Раунд 34: thief — воровское лицо (капюшон/шрам/ухмылка), boy/girl — дети.
         ['elder', 'priest', 'tavernkeeper', 'blacksmith', 'widow', 'healer',
-         'hunter', 'guard', 'fisherman', 'peasant', 'thief', 'narrator', 'villager_f'].forEach((p) => {
+         'hunter', 'guard', 'fisherman', 'peasant', 'thief', 'narrator', 'villager_f',
+         'boy', 'girl'].forEach((p) => {
             this.load.image(`portrait_${p}`, `assets/sprites/portraits/portrait_${p}.webp`);
         });
 

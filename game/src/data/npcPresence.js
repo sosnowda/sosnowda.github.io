@@ -173,6 +173,7 @@ export const OUTDOOR_LINES = {
 };
 
 // Диалоговое дерево по ID (полные диалоги; остальные — OUTDOOR_LINES)
+// Раунд 34: у ВСЕХ семерых детей пахаря — полные детские диалоговые деревья
 export const NPC_DIALOGUE = {
     elder: 'elder_quest',
     priest: 'priest',
@@ -183,6 +184,8 @@ export const NPC_DIALOGUE = {
     beekeeper1: 'beekeeper1',
     beekeeper_wife: 'beekeeper_wife',
     elder_wife: 'elder_wife',
+    kid1: 'kid1', kid2: 'kid2', kid3: 'kid3', kid4: 'kid4',
+    kid5: 'kid5', kid6: 'kid6', kid7: 'kid7',
 };
 
 // ---- Детерминированный псевдорандом (FNV-1a → [0..1)) ----

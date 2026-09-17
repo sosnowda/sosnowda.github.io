@@ -6,6 +6,7 @@ import { createDialog } from '../utils/ui.js';
 import { DIALOGUES } from '../data/dialogue.js';
 import { findNpc, getNpcDisplayName, meetNpc } from '../data/npcNames.js';
 import { pauseWorldClock, resumeWorldClock, chargeTalkTime, TALK_MINUTES } from './WorldClock.js';
+import { isEn } from './i18n.js';
 
 export class DialogueRunner {
     constructor(scene) {
@@ -66,8 +67,9 @@ export class DialogueRunner {
             this.scene.audioManager.playDialogueOpen();
         }
 
-        // Если в node.text стоит '...' и есть _lastAskResult — используем сообщение оттуда
-        let displayText = node.text;
+        // Раунд 34: узел может нести EN-текст (node.en) — перевод глубоких
+        // диалогов живёт прямо в дереве, без раздувания словаря
+        let displayText = (isEn() && node.en) ? node.en : node.text;
         if (displayText === '...' && this.scene._lastAskResult && this.scene._lastAskResult.message) {
             displayText = this.scene._lastAskResult.message;
         }

@@ -28,6 +28,7 @@ import {
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 import { STASHES, isOpenedToday, markOpened, rollLoot, lootDisplayName } from '../data/chests.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
+import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 
 export class InteriorScene extends Phaser.Scene {
@@ -48,6 +49,7 @@ export class InteriorScene extends Phaser.Scene {
         this.dialogue = new DialogueRunner(this);
         // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
         attachWorldClock(this);
+        attachChurchBells(this, { volume: 0.45, muffled: true });
         // Раунд 32 (пп.14,15): F1 — «Информация по игре» и в интерьерах
         this.input.keyboard.on('keydown-F1', () => {
             if (this.busyDialog) return;

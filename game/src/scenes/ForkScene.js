@@ -18,6 +18,7 @@ import { getVillageName } from '../data/world.js';
 import { t, tf } from '../systems/i18n.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
+import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock } from '../systems/WorldClock.js';
 
 export class ForkScene extends Phaser.Scene {
@@ -34,6 +35,7 @@ export class ForkScene extends Phaser.Scene {
         this.audioManager.playSceneMusic('village');
         // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
         attachWorldClock(this);
+        attachChurchBells(this, { volume: 0.4 });
 
         const q = this.registry.get('quest') || {};
         const state = getHuntState(this.registry);

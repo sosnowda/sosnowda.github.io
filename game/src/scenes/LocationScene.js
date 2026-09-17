@@ -20,6 +20,7 @@ import { MAP_TRAVEL_MINUTES } from './ForkScene.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
 import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel } from '../systems/RusTime.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
+import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 // Раунд 31 (п.2): стадо и пастухи на водопое
 import { getHerdState } from '../data/herd.js';
@@ -27,6 +28,7 @@ import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES } from '../data/npcPresence.js';
+import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
 import { addMorningFog, addSeasonalGround } from '../systems/AmbientFX.js';
 
@@ -49,6 +51,23 @@ const LOCATION_BG = {
 export class LocationScene extends Phaser.Scene {
     constructor() {
         super('Location');
+    }
+
+    /**
+     * Раунд 34: громкость колокольного звона — насколько локация далеко
+     * от храма и часовни. Погост с часовней слышит звон почти целиком,
+     * лес и чаща — глухо.
+     */
+    bellVolume() {
+        switch (this.locationId) {
+            case 'pogost': return 0.85;   // часовня рядом
+            case 'field':
+            case 'pasture': return 0.65;  // открытые места
+            case 'lake':
+            case 'river': return 0.55;
+            case 'mill': return 0.5;
+            default: return 0.35;         // лес, чаща, дорога
+        }
     }
 
     init(data) {
@@ -74,6 +93,7 @@ export class LocationScene extends Phaser.Scene {
         // Раунд 31 (п.12): мировые часы тикают РЕАЛЬНЫМ временем, а пока
         // открыт разговор (диалог) — стоят
         attachWorldClock(this);
+        attachChurchBells(this, { volume: this.bellVolume() });
         // Раунд 32 (пп.14,15): F1 — «Информация по игре» и на локациях
         this.input.keyboard.on('keydown-F1', () => {
             if (this.busyDialog) return;
@@ -395,6 +415,14 @@ export class LocationScene extends Phaser.Scene {
         this.busyDialog = true;
         const npcData = findNpc(this.registry, npcId);
         const displayName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
+        // Раунд 34: и на локации полное дерево говорит «своим» портретом
+        const pvKey = npcPortraitVariantKey(npcData);
+        this.activeNpc = {
+            id: npcId,
+            name: displayName,
+            portrait: (pvKey && this.textures.exists(pvKey)) ? pvKey
+                : (npcData && npcData.portrait) || 'portrait_villager_f',
+        };
         const dialogueId = NPC_DIALOGUE[npcId];
         if (dialogueId) {
             this.dialogue.run(dialogueId, () => { this.busyDialog = false; });

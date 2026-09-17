@@ -812,4 +812,491 @@ export const DIALOGUES = {
             },
         },
     },
+
+    // ============================================================
+    // === ДЕТСКИЕ ДИАЛОГИ (раунд 34, заявка владельца) ===
+    // Семеро детей пахаря Тараса (5–12 лет): у каждого свой характер,
+    // темы — забавы, колокольный звон по службам, чужие края; дети тоже
+    // могут оказаться свидетелями вора (мелкий гость видел больше всех).
+    // Каждый узел несёт en-перевод (DialogueRunner выбирает по языку).
+    // ============================================================
+
+    // --- kid1: ПРОНЬКА (12) — старший, гоняет скот, важничает ---
+    kid1: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'ребёнок',
+                text: 'А я у бати старший помощник! Скотину гоняю — и на выпас, и на водопой. Вот вырасту — к старосте в конюхи пойду: у него конь сытый, по бокам лоснится! А ты кто, путник? Далёко ли идёшь?',
+                en: 'I am Father\'s eldest helper! I drive the herd — to pasture and to water. When I grow up I\'ll be the elder\'s stable-boy: his horse is sleek and glossy on both flanks! And who are you, wayfarer? Do you travel from afar?',
+                action: (scene) => {
+                    DIALOGUES.kid1.nodes.a.choices = withAskThief(scene, 'kid1', [
+                        { text: t('Во что играете?'), next: 'games' },
+                        { text: t('Слышишь, звонят?'), next: 'bells' },
+                        { text: t('А за околицей что?'), next: 'world' },
+                        { text: t('Береги себя, детка.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            games: {
+                speaker: 'ребёнок',
+                text: 'Мы рюхами бьёмся: кто больше бабок выбьет, тот и мошну собрал. А в жмурки да салочки — я всегда первый! Ну... почти всегда. Сенька вон быстрей, но у него отец кузнец, он гвоздями питается!',
+                en: 'We play rukhi: whoever knocks down the most knucklebones wins the pot. And blind-man\'s buff and chase — I am always first! Well... almost always. Senka is faster, but his father is the smith — the boy eats nails!',
+                choices: [
+                    { text: t('И кто же победил?'), next: 'games2' },
+                ],
+            },
+            games2: {
+                speaker: 'ребёнок',
+                text: 'Я победил, кого ж ещё! А как дождь пойдёт — так и игра: кто раньше до овина добежит. Я раньше всех. Прибежал — а там старший брат батиных снопов навалил... Так я первым и высох!',
+                en: 'I won, who else! And when the rain starts — a new game: whoever reaches the barn first. I got there first — and found Father\'s elder sons had piled up their sheaves inside. So I was the first to dry out, too!',
+                choices: [
+                    { text: t('Ну-ну, ври дальше.'), end: true },
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            bells: {
+                speaker: 'ребёнок',
+                text: 'Колокол? Я на колокольню лазил — только дядька Лука спалил меня! Благовест звонят спозаранку, к заутрене. В полдень — к обедне, как шестой час бить. А как к вечеру — вечерню звонят. А трезвон — это когда во ВСЕ колокола разом: весело так, аж в ушах звенит!',
+                en: 'The bell? I climbed the bell-tower — only uncle Luka caught me! The toll rings at first light, for Matins. At noon — for the Liturgy, when the sixth hour strikes. And toward evening — for Vespers. And the peal is when ALL the bells ring together: so merry your ears ring too!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            world: {
+                speaker: 'ребёнок',
+                text: 'Батя на ярмарку в город ездил — говорит, там палаты каменные, а колоколов больше, чем у нас овец! А ещё там переулки кривые, кто раз заблудился — до сей поры, может, бродит. Ты правда издалека? А в городе купцы правда мёд пьют вместо воды?',
+                en: 'Father went to the fair in town — he says there are stone mansions there, and more bells than we have sheep! And the lanes are crooked: whoever got lost once may still be wandering. Did you really come from far away? Do merchants in town truly drink honey instead of water?',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            ask_thief: {
+                speaker: 'ребёнок',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'kid1', t('мальчик'));
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'ребёнок',
+                text: '...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // --- kid2: ГОРПИНА (11) — сплетница, первая во всех новостях ---
+    kid2: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'ребёнок',
+                text: 'Ой, путник! А ты слыхал? У старосты корова на разные голоса мычит — я сама слышала! А ещё Степанида всю бражку съела, сама призналась, я первая узнала! Ты не гордый? Сядь рядышком, я тебе ещё новостей скажу!',
+                en: 'Oh, wayfarer! Have you heard? The elder\'s cow moos in different voices — I heard it myself! And Stepanida ate all the mash, she confessed it herself, I was the first to know! Are you proud? Sit down beside me, I have more news to tell!',
+                action: (scene) => {
+                    DIALOGUES.kid2.nodes.a.choices = withAskThief(scene, 'kid2', [
+                        { text: t('Во что играете?'), next: 'games' },
+                        { text: t('Слышишь, звонят?'), next: 'bells' },
+                        { text: t('А за околицей что?'), next: 'world' },
+                        { text: t('Береги себя, детка.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            games: {
+                speaker: 'ребёнок',
+                text: 'Мы с девчонками куколок из соломы вяжем да в «колечко» играем. А мальчишек не берём — они врут, что мы медлим! А я лучшая: у меня куколка с косой из льна, как настоящая, только говорить не умеет. Пока.',
+                en: 'We girls weave straw dolls and play "the ring". We don\'t take the boys — they lie that we dawdle! And I am the best: my doll has a flax braid like a real one, except she can\'t talk. Yet.',
+                choices: [
+                    { text: t('Возьми конфетку.'), end: true },
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            bells: {
+                speaker: 'ребёнок',
+                text: 'Это дядька Лука звонит, он у нас звонарь. По звону и узнаём всё: редкий-мерный звон — благовест, значит, служба скоро, народ собирается. А частый-весёлый — трезвон, значит, уже началось! Мамка говорит: благовест на три версты слышно. На ЧЕТЫРЕ слышно, я проверяла!',
+                en: 'Uncle Luka rings — he is our bell-ringer. The ringing tells us everything: the slow measured toll is the blagovest — the service is near, folk are gathering. The fast merry one is the trezvon — it has already begun! Mother says the toll carries three versts. It carries FOUR, I have checked!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            world: {
+                speaker: 'ребёнок',
+                text: 'Тётка Марфа говорила: за озером травы раньше зацветают, а в лесу-то волки... Ты правда издалека? В городе хлеб белый дают? А у нас хлеб белый только на Пасху. Ты не кумекай, что я много спрашиваю: я первая во всех новостях, мне положено!',
+                en: 'Aunt Marfa said: beyond the lake the herbs bloom earlier, and the forest has wolves... Did you truly come from far away? Do they give you white bread in town? We only have white bread at Easter. Don\'t mind my asking so much: I am first in all the news, it is my duty!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            ask_thief: {
+                speaker: 'ребёнок',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'kid2', t('девочка'));
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'ребёнок',
+                text: '...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // --- kid3: СЕНЬКА (9) — грибник-хвастун ---
+    kid3: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'ребёнок',
+                text: 'Смотри, сколько грибов набрал! Вон грузди, вон рыжики! Я один ходил, честно! Ну... почти один. Тузик со мной был — это собака, она не считается! Грибы я знаю лучше всех в деревне, даже лучше тётки Марфы, только она не признаёт.',
+                en: 'Look how many mushrooms I gathered! There — milk-caps, there — orange-caps! I went all alone, honestly! Well... almost alone. Tuzik was with me — he\'s a dog, dogs don\'t count! I know mushrooms better than anyone in the village, even better than aunt Marfa, she just won\'t admit it.',
+                action: (scene) => {
+                    DIALOGUES.kid3.nodes.a.choices = withAskThief(scene, 'kid3', [
+                        { text: t('Во что играете?'), next: 'games' },
+                        { text: t('Слышишь, звонят?'), next: 'bells' },
+                        { text: t('А за околицей что?'), next: 'world' },
+                        { text: t('Береги себя, детка.'), end: true },
+                    ], 2);
+                },
+                choices: [],
+            },
+            games: {
+                speaker: 'ребёнок',
+                text: 'А мы в прятки! Я в овин сел — меня до заката не нашли, каша стыла! А ещё я знаю, где белки орехи прячут. Только не скажу. Ну, если махнешь печёной репки — скажу!',
+                en: 'And we play hide-and-seek! I hid in the barn — they couldn\'t find me till sunset, the porridge went cold! And I know where the squirrels hide their nuts. But I won\'t tell. Well... if you toss me a baked turnip, I will!',
+                choices: [
+                    { text: t('Чур, не выдумывай!'), next: 'games2' },
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            games2: {
+                speaker: 'ребёнок',
+                text: 'Не вру! Я хоть маленький, а слово держу. Вот пойдёшь в лес за грибами — и увидишь: на старой сосне дупло, а в дупле — орехов целая горка. Это белкины запасы. Я взял всего горсть! Чуть-чуть. Самую малость...',
+                en: 'I\'m not lying! I may be small but I keep my word. Go mushrooming in the forest and you\'ll see: there\'s a hollow in the old pine, and in the hollow — a whole heap of nuts. The squirrels\' stores. I took just one handful! A tiny one. The very smallest...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            bells: {
+                speaker: 'ребёнок',
+                text: 'Как благовест услыху — так домой: мамка велела, значит, обедня скоро, надо печку топить да мойся. А в понедельник не звонят... почему-то. Дядька Лука, поди, отдыхает. А как трезвон — с берёзы листья сыплются! Сам видел!',
+                en: 'The moment I hear the toll — I go home: Mother says the Liturgy is soon, I must heat the stove and wash up. And on Mondays there\'s no ringing... for some reason. Uncle Luka must be resting. And when the peal rings — the birch drops its leaves! I saw it myself!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            world: {
+                speaker: 'ребёнок',
+                text: 'В лесу за чащей — волчье логово, мне охотник сказывал! Ты волков видал? Настоящих? А я больше в лес не хожу... то есть хожу, но теперь с рогатиной! Палка — это тоже рогатина, если уметь держать.',
+                en: 'Beyond the thickets lies a wolves\' den — the hunter told me! Have you seen wolves? Real ones? I don\'t go to the forest anymore... that is, I do, but now with a boar spear! A stick is also a spear, if you know how to hold it.',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            ask_thief: {
+                speaker: 'ребёнок',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'kid3', t('мальчик'));
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'ребёнок',
+                text: '...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // --- kid4: АКУЛЬКА (8) — мечтательная, боится козла Прохора ---
+    kid4: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'ребёнок',
+                text: 'На выпасе козёл Прохор меня бодает. Злой очень! Я ему травку несу, а он всё равно... А у тебя есть свой козёл? Нет? А зачем же ты тогда пришёл? Ой, ты путник! А я думала — новый пастух.',
+                en: 'On the pasture the goat Prokhor butts me. Very mean! I bring him grass, and he still... Do you have a goat of your own? No? Then why did you come? Oh — you\'re a wayfarer! And I thought you were the new herder.',
+                action: (scene) => {
+                    DIALOGUES.kid4.nodes.a.choices = withAskThief(scene, 'kid4', [
+                        { text: t('Во что играете?'), next: 'games' },
+                        { text: t('Слышишь, звонят?'), next: 'bells' },
+                        { text: t('А за околицей что?'), next: 'world' },
+                        { text: t('Береги себя, детка.'), end: true },
+                    ], 2);
+                },
+                choices: [],
+            },
+            games: {
+                speaker: 'ребёнок',
+                text: 'Я веночки плету да песни пою. А мальчишки бегают грязные, я с ними не играю... Ну, иногда играю. В салочки. Недолго. Чтобы мамка не видела, что я по колено в лужах — она любит чистоту, а лужи этого не уважают.',
+                en: 'I weave wreaths and sing songs. The boys run about dirty, I don\'t play with them... Well, sometimes I do. A game of chase. Not for long. So Mother doesn\'t see me knee-deep in puddles — she loves cleanliness, and puddles don\'t respect that.',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            bells: {
+                speaker: 'ребёнок',
+                text: 'Мамка говорит: колокол — Божий голос. Коли звонит — стало быть, пора молиться да хлебы печь. Я люблю трезвон: птицы с крыши так и взлетают, словно снегири! А благовест тихий — красивый. Слушаешь — и не страшно в темноте.',
+                en: 'Mother says: the bell is God\'s voice. When it rings — it is time to pray and bake bread. I love the peal: the birds burst off the roof like bullfinches! And the toll is quiet — beautiful. When you listen to it, the dark isn\'t frightening.',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            world: {
+                speaker: 'ребёнок',
+                text: 'Птицы улетают за море... а что там, за морем? А ты там был? А расскажи! Только не ври: я знаю, как врать, — сама умею. У вруна уши красные, а у тебя не красные. Значит, пока не врёшь.',
+                en: 'The birds fly away across the sea... and what lies beyond the sea? Have you been there? Tell me! But don\'t lie: I know what lying looks like — I can do it myself. A liar\'s ears turn red, and yours are not red. So you\'re not lying yet.',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            ask_thief: {
+                speaker: 'ребёнок',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'kid4', t('девочка'));
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'ребёнок',
+                text: '...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // --- kid5: ДАНЬКА (7) — рыбак-неудачник, озорной ---
+    kid5: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'ребёнок',
+                text: 'Улов покажешь? А то у меня ни одной рыбки не клюнуло! Весь день просидел! Ну... полдня. Часа два. Да оно и неважно! Места-то лучшие занял, после меня уже никто не сядет — омут мой!',
+                en: 'Show me your catch? Not a single fish bit for me! I sat there all day! Well... half a day. Two hours. But it doesn\'t matter! I took the best spot — nobody sits there after me — the pool is mine!',
+                action: (scene) => {
+                    DIALOGUES.kid5.nodes.a.choices = withAskThief(scene, 'kid5', [
+                        { text: t('Во что играете?'), next: 'games' },
+                        { text: t('Слышишь, звонят?'), next: 'bells' },
+                        { text: t('А за околицей что?'), next: 'world' },
+                        { text: t('Береги себя, детка.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            games: {
+                speaker: 'ребёнок',
+                text: 'А я камешки с мостков кидаю — у меня дальше всех! Честно! Ну, после Сеньки. Сенька — жулик, он до нас родился, потому и старше! А ещё я лягушек ловлю. Мамка кричит: «Брось эту мерзость!» А лягушка — не мерзость, она пища для аиста!',
+                en: 'I skip stones off the footbridge — mine fly farthest! Honestly! Well, after Senka. Senka is a rogue — he was born before us, that\'s why he\'s older! And I catch frogs. Mother shouts: "Drop that nasty thing!" A frog isn\'t nasty — it\'s food for the stork!',
+                choices: [
+                    { text: t('Покажи, как играешь.'), next: 'games2' },
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            games2: {
+                speaker: 'ребёнок',
+                text: 'Вот смотри: боком так — раз! Камешек три раза прыгнул, как жаба! Учишься, путник? Локоть выше, палец вот так... Ух, и намаешься, пока выучишь. Я с прошлого лета учусь — зато теперь все девчонки смотрят!',
+                en: 'Look: sideways like this — there! The stone hopped thrice, like a toad! Learning, wayfarer? Elbow higher, finger like so... Phew, you\'ll toil before you master it. I\'ve been learning since last summer — but now all the girls watch!',
+                choices: [
+                    { text: t('И кто же победил?'), end: true },
+                ],
+            },
+            bells: {
+                speaker: 'ребёнок',
+                text: 'Это дядька Лука звонит, у него колотушка с кожей! Как благовест — я рыбу из воды тяну: рыба-то тоже слушает, ей не до червяка! Дядька Сила говорит: «Как звон — рыба спит». А я говорю: как звон — я обедать!',
+                en: 'Uncle Luka rings — he has a beater with leather! When the toll sounds I pull the fish out of the water: the fish listens too, it has no time for worms! Uncle Sila says: "When the bell rings, the fish sleeps." And I say: when the bell rings — I go to dinner!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            world: {
+                speaker: 'ребёнок',
+                text: 'А в реке за омутом — сом! Водяной его стережёт, дядька Сила говорил! Ты сильный? А мог бы сома вытащить? Я бы помог! Ну, кричать буду: «Держи его!». И удочку держать. Вдвоём-то оно не так страшно... то есть не так трудно!',
+                en: 'Beyond the pool in the river lives a sheatfish! The water-spirit guards it, uncle Sila said. Are you strong? Could you pull a sheatfish out? I would help! Well... I\'d be shouting: "Hold it!" And holding the rod. With two of us it\'s not so scary... that is, not so hard!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            ask_thief: {
+                speaker: 'ребёнок',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'kid5', t('мальчик'));
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'ребёнок',
+                text: '...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // --- kid6: МАШУТКА (6) — пословичная, всё повторяет за взрослыми ---
+    kid6: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'ребёнок',
+                text: 'Батя говорит: кто поле любит, того и земля кормит. А мамка говорит: не суйся в лужу, обуй валенки. А я говорю: хочу в лужу! Вот и весь уговор. А ты кто? Ты большой. Большим всё можно, да?', 
+                en: 'Father says: who loves the field, the earth feeds. And Mother says: don\'t step in the puddle, put on your felt boots. And I say: I want the puddle! That\'s the whole bargain. And who are you? You\'re big. Big folk can do anything, can\'t they?',
+                action: (scene) => {
+                    DIALOGUES.kid6.nodes.a.choices = withAskThief(scene, 'kid6', [
+                        { text: t('Во что играете?'), next: 'games' },
+                        { text: t('Слышишь, звонят?'), next: 'bells' },
+                        { text: t('А за околицей что?'), next: 'world' },
+                        { text: t('Береги себя, детка.'), end: true },
+                    ], 2);
+                },
+                choices: [],
+            },
+            games: {
+                speaker: 'ребёнок',
+                text: 'Мне сестрёнки косички плетут, а я хочу в городки! Мне не дают... А я украдкой играл, и меня в лужу столкнули. За то и столкнули! За городки. А я не заплакала. Почти не заплакала.',
+                en: 'My sisters braid my hair, but I want to play rukhi! They won\'t let me... And I played on the sly, and they pushed me into a puddle. That\'s why they pushed me! For the rukhi. And I didn\'t cry. I almost didn\'t cry.',
+                choices: [
+                    { text: t('Покажи, как играешь.'), next: 'games2' },
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            games2: {
+                speaker: 'ребёнок',
+                text: 'Берёшь палку и бьёшь по рюхе! БАБАХ! Рюхи разлетаются, все кричат... Это дядька Демид сказал, что так играют взрослые. Я пока по лужам бью ладошкой. Тоже БАБАХ, только мокрый!',
+                en: 'You take a stick and strike the knucklebone! WHAM! The bones scatter, everyone shouts... Uncle Demid said grown folk play like that. For now I strike puddles with my palm. Also WHAM, only a wet one!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            bells: {
+                speaker: 'ребёнок',
+                text: 'Коли звонят — надо в избе затихнуть, мамка так сказала. Длинный звон — это батюшка зазывает, а быстрый — праздник! Ещё я умею голосом: дзынь-дзынь! Только тихонько, а то мамка: «Машутка, не гуди!»',
+                en: 'When the bell rings we hush in the izba — Mother said so. The long toll is the priest calling, and the fast one is a feast! And I can do it with my voice: ding-ding! Only quietly, or Mother goes: "Mashutka, don\'t ring!"',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            world: {
+                speaker: 'ребёнок',
+                text: 'Дядька Авдей сказал: у мельницы ручей быстрый. А где ручей кончается — не знаю. А ты знаешь, где ручей кончается? А море? А почему трава зелёная? А почему коза бодается? У тебя много ответов? У бати много ответов, а всё не все!',
+                en: 'Uncle Avdey said the stream runs fast by the mill. But where the stream ends — I don\'t know. Do you know where the stream ends? And the sea? And why is grass green? And why does the goat butt? Do you have many answers? Father has many answers, but not all of them!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            ask_thief: {
+                speaker: 'ребёнок',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'kid6', t('девочка'));
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'ребёнок',
+                text: '...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // --- kid7: ВАНЮШКА (5) — самый младший, гуляка ---
+    kid7: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'ребёнок',
+                text: 'А я раньше бати с поля прибежал! Честно-пречестно! ...Ну, после обеда прибежал. Батя сказал: ступай, малой, не мешай сохе сохать. Соха — она вот такая большая, а я ещё больше! Потом вырасту.',
+                en: 'And I came back from the field before Father! Honest-honest! ...Well, after dinner. Father said: off you go, little one, don\'t hinder the plough from ploughing. A plough is THIS big, and I\'m even bigger! When I grow up, that is.',
+                action: (scene) => {
+                    DIALOGUES.kid7.nodes.a.choices = withAskThief(scene, 'kid7', [
+                        { text: t('Во что играете?'), next: 'games' },
+                        { text: t('Слышишь, звонят?'), next: 'bells' },
+                        { text: t('А за околицей что?'), next: 'world' },
+                        { text: t('Береги себя, детка.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            games: {
+                speaker: 'ребёнок',
+                text: 'Я в догонялки! Меня все ловят, потому что я самый ловкий! Или самый маленький... А шишки я собираю! Большие! Вот такие! Это еловые. Их нельзя есть, я проверял.',
+                en: 'I play chase! Everybody catches me because I\'m the quickest! Or the smallest... And I collect pinecones! Big ones! Like THIS! Those are spruce ones. You can\'t eat them, I checked.',
+                choices: [
+                    { text: t('Возьми конфетку.'), end: true },
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            bells: {
+                speaker: 'ребёнок',
+                text: 'Дзынь! Это колокол! Мамка на руки берёт и говорит: «Слушай, малой, к обедне звонят». А я умею как колокол: дзыыынь! Только громко нельзя, у меня живот. У колокола тоже живот был бы, он бы тоже не звонил!',
+                en: 'Ding! That\'s the bell! Mother picks me up and says: "Listen, little one — they\'re ringing for the Liturgy." And I can do the bell: diiing! But not too loud, I have a tummy. If the bell had a tummy too, it wouldn\'t ring either!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            world: {
+                speaker: 'ребёнок',
+                text: 'А ты большой! Вот вырасту — тоже буду большой, пойду в город и... и... ну, за бабкой пойду! Бабка за яйцами ходит, я с ней. А ты за кем ходишь? У тебя есть своя бабка? А можно вашу? Хи!',
+                en: 'You\'re big! When I grow up I\'ll be big too, and go to town and... and... well, I\'ll go with Granny! Granny goes for eggs, I go with her. And who do you walk with? Do you have your own granny? Can I have yours? Hee!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            ask_thief: {
+                speaker: 'ребёнок',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'kid7', t('мальчик'));
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'ребёнок',
+                text: '...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+        },
+    },
 };

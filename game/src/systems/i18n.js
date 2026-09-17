@@ -659,6 +659,196 @@ const EN = {
     'Помолюсь с вами.': 'I will pray with you.',
     'Пасечница Марфа': 'Marfa the Beekeeper',
     'Мельник Авдей': 'Avdey the Miller',
+
+    // --- Раунд 34: добор EN для строк раундов 30–33 (трапеза, следы, охота на вора) ---
+    'Я помогу найти вора.': 'I will help find the thief.',
+    'Расскажи подробнее.': 'Tell me more.',
+    'Дай задаток за работу.': 'Give me an advance for the work.',
+    'Извини, я спешу.': 'Forgive me, I am in haste.',
+    '🍲 Заказать еду (2 д.)': '🍲 Order a meal (2 d.)',
+    '🎒 Купить рацион на день дороги (2 д.)': '🎒 Buy a day\'s travel ration (2 d.)',
+    'Фёдор качает головой: «Без денег и щи жидкие не варятся. Нужно 2 д.»':
+        'Fyodor shakes his head: "Without coin even the shchi come out thin. Two dengas needed."',
+    'Фёдор ставит перед тобой миску горячих щей, краюху ржаного хлеба и кружку кваса. Ешь не спеша — силы понемногу возвращаются.':
+        'Fyodor sets before you a bowl of hot shchi, a hunk of rye bread and a mug of kvass. Eat unhurried — your strength slowly returns.',
+    'Трапеза пройдёт в тот час, что уйдёт на беседу с хозяином.': 'The meal takes the same hour your talk with the host costs.',
+    '«Два дняги — цена хлеба да бурдюка воды. Без денег не выйдет», — говорит Фёдор.':
+        '"Two dengas — the price of a loaf and a waterskin. It won\'t happen without coin," Fyodor says.',
+    'Рацион (хлеб да вода на день дороги)': 'Ration (bread and water for a day\'s travel)',
+    'Купил рацион у хозяина постоялого двора (2 д.): хлеб и вода на день дороги.':
+        'Bought a ration from the innkeeper (2 d.): bread and water for a day\'s travel.',
+    'Фёдор заворачивает в тряпицу тёплый каравай ржаного хлеба и наливает бурдюк чистой воды — еды и питья на день дороги.':
+        'Fyodor wraps a warm loaf of rye bread in a cloth and fills a waterskin with clean water — food and drink for a day\'s road.',
+    'В кошеле': 'In your satchel',
+    'Про мельницу расскажи.': 'Tell me about the mill.',
+    'Спасибо за рассказ.': 'Thank you for the tale.',
+    'Удачи тебе, Тарас.': 'Good fortune to you, Taras.',
+    'Как семья живёт?': 'How does your family fare?',
+    'Храни вас Бог.': 'God keep you.',
+    'Доброго вам достатка.': 'May your household prosper.',
+    'Как поживаете?': 'How do you fare?',
+    'Спасибо, хозяйка.': 'Thank you, goodwife.',
+    'Дай Бог вам здоровья.': 'God grant you health.',
+    'Помолиться': 'Pray',
+    'Ох, горе нам, чадо... Ночью случилось дело великое: вор прокрался в храм Божий и выкрал чудотворную икону Богородицы из самого киота! Я молился в алтаре, свечи ещё теплились — и слыхал только, как скрипнула дверца. А под утро глянул: киот пуст, лишь лампада коптит и пыль на полу лежит, где святыня стояла.\n\nВидел я в церкви темного человека краем глаза, а разобрать не успел — мелькнёт и нет. Одно скажу точно: человек был ПРИШЛЫЙ, не из наших селян — одеждой и повадкой странник, такой же пришлый человек в деревне, как и ты, чадо.\n\nСам я лица его не разглядел и куда побежал — не видал, Бог миловал. Но в деревне народ разный ходит, всякий на виду: кто у колодца зорит, кто на выпас глядит во все стороны. Может, кто-то из селян и видел вора — куда он бежал да где нынче прячется. ПОРАСПРОСИ ЛЮДЕЙ, чадо: спроси каждого о воре и о том, куда он мог податься. Господь путь укажет, а люди — подскажут.':
+        'Oh, woe to us, my child... A great deed was done this night: a thief crept into the church of God and stole the wonderworking icon of the Mother of God from its very shrine! I was praying in the altar, the candles still burning — and all I heard was the little door creak. And at dawn I looked: the shrine empty, only the icon-lamp smoking and dust on the floor where the holy thing stood.\n\nI glimpsed a dark figure in the church from the corner of my eye, but could not make him out — a flash, and gone. One thing I can say for certain: he was a STRANGER, none of our villagers — a wayfarer in dress and manner, a newcomer to this village just as you are, my child.\n\nI did not see his face, nor where he ran — God spared me that. But many kinds of people walk about the village, all in plain sight: some keep watch by the well, some stare in every direction on the pasture. Perhaps one of the villagers did see the thief — where he ran and where he hides now. QUESTION THE PEOPLE, my child: ask everyone about the thief and where he might have gone. The Lord will show the way, and the people will help.',
+    'Мир тебе, чадо. Что привело тебя в дом Божий? Может, хочешь исповедаться или помолиться?':
+        'Peace to you, my child. What brings you to the house of God? Would you confess, or pray?',
+    'Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ Благословение…':
+        'The priest lays his hand on your head and whispers a prayer. Warmth spreads over your shoulders.\n\n✨ A blessing…',
+    'Первый разговор с батюшкой: он рассказал о краже иконы и посоветовал расспросить селян.':
+        'First talk with the priest: he told of the icon\'s theft and advised questioning the villagers.',
+    'Уютная горница с иконами в углу. Староста сидит за столом, перебирая бумаги.':
+        'A snug chamber with icons in the corner. The elder sits at the table, sorting through papers.',
+    'Просторный зал с деревянными столами. Пахнет хлебом и медовухой. У камина греются путники.':
+        'A spacious hall with wooden tables. The air smells of bread and mead. Travellers warm themselves by the hearth.',
+    'Жарко. Стук молота по наковальне. На стенах развешаны мечи и кольчуги.':
+        'It is hot here. The hammer rings on the anvil. Swords and mail shirts hang on the walls.',
+    'Скромная изба. Хозяин сидит на лавке, с обеспокоенным лицом.':
+        'A modest izba. The host sits on the bench, his face troubled.',
+    'Тихий дом. Пахнет сушёными травами и мёдом. Хозяйка приглядывает за горшками с целебными настоями.':
+        'A quiet house. It smells of dried herbs and honey. The mistress tends pots of healing infusions.',
+    'Снопы под потолком, мешки с зерном, пахнет сухой соломой и мышами. Община хранит здесь общее зерно — за молотьбу платят по копеечке.':
+        'Sheaves under the roof, sacks of grain, the smell of dry straw and mice. The community keeps its common grain here — a small coin is paid for threshing.',
+    'Небольшая деревянная церковь с резным иконостасом. Пахнет ладаном и воском. У алтаря молится седой священник, а ниша главного киота пуста — чудотворную икону этой ночью унесли воры.':
+        'A small wooden church with a carved iconostasis. It smells of incense and wax. A grey-haired priest prays by the altar — and the niche of the main shrine stands empty: thieves carried off the wonderworking icon this very night.',
+    'Опушка леса': 'Forest edge',
+    'Краешек леса, где кончается трава и начинаются деревья. Светло, грибные места да ягодные кусты.':
+        'The rim of the forest where grass gives way to trees. Bright and open, with mushroom grounds and berry bushes.',
+    'Лесная поляна': 'Forest glade',
+    'Солнечная поляна среди леса, в кольце деревьев. Много цветов, ягод и пчелиного звона.':
+        'A sunlit glade ringed by trees. Abundant flowers, berries and the humming of bees.',
+    'Густая чаща за опушкой и поляной. Много следов, но и много зверья.':
+        'Thick thicket beyond the edge and the glade. Many tracks — and much game.',
+    'Густая чаща за опушкой и поляной. Много зверья и грибов, но и разбойники водятся.':
+        'Thick thicket beyond the edge and the glade. Much game and mushrooms — but brigands roam here too.',
+    'Заливной луг с густой сочной травой и множеством цветов. Здесь пасутся деревенские коровы, козы и лошади, тут же пастух присматривает за стадом.':
+        'A water-meadow of thick, lush grass and countless flowers. The village cows, goats and horses graze here, and a shepherd watches over the herd.',
+    'Старые следы вора истёрлись за давностью — земля их больше не хранит.':
+        'The old footprints have worn away with time — the earth keeps them no longer.',
+    'Снегопад замёл все старые следы вора — остались только свежие, оставленные уже под снегом.':
+        'The snowfall has buried all the thief\'s old tracks — only fresh ones remain, left after the snow.',
+    'Дождь размыл все старые следы вора — остались только свежие, оставленные уже под дождём.':
+        'The rain has washed away all the thief\'s old tracks — only fresh ones remain, left after the rain.',
+    'Следов вора здесь нет.': 'No tracks of the thief here.',
+    '📍 Вор сейчас на дороге к «{0}»!': '📍 The thief is on the road to "{0}"!',
+    '📍 Вор сейчас где-то у «{0}»!': '📍 The thief is hiding somewhere at "{0}"!',
+    'След ещё хранит отпечаток, но свежесть ушла.': 'The print is still there, but its freshness is gone.',
+    'Этот след ты уже затоптал — больше он ничего не скажет.': 'You already trampled this print — it will tell you no more.',
+    'Ночь: в темноте и следы читаются куда хуже.': 'Night: in the darkness tracks are far harder to read.',
+    'Пока ты склонялся над следом, вор успел скрыться из вида...': 'While you bent over the print, the thief slipped out of sight...',
+    '📍 ПОП-АП: вор сейчас на дороге к «{0}»!': '📍 TIP: the thief is on the road to "{0}"!',
+    '📍 ПОП-АП: вор сейчас где-то у «{0}»!': '📍 TIP: the thief is hiding somewhere at "{0}"!',
+    'След прочитан, но человек он скрытный — куда подался, не разобрать.':
+        'The print is read, but he is a stealthy one — where he went is anyone\'s guess.',
+    'Сам след ведёт в сторону «{0}».': 'The print itself leads toward "{0}".',
+    'Ты пригляделся к следу, но неосторожно наступил — отпечаток затрётся и пропал. Больше этот след не обследовать.':
+        'You studied the print, but stepped carelessly — the print will smear away. This track can be examined no more.',
+    'Видел я его, темного человека! Он бежит к «{0}» — поспеши, догонешь!':
+        'I saw him, the dark man! He is running toward "{0}" — hurry, you will catch him!',
+    'Видел я его, темного человека! Он сейчас прячется у «{0}» — поспеши!':
+        'I saw him, the dark man! He is hiding at "{0}" right now — hurry!',
+    'Видел я вора, да куда он подался — не ведаю.': 'I saw the thief, but where he went — I cannot say.',
+    'Вор? Здесь не пробегал. Я бы заметил — весь день на виду был.':
+        'The thief? No one ran past here. I would have noticed — I was in plain sight all day.',
+    'Темных людей не видал, батиушко упаси. Может, в другой стороне ищешь?':
+        'I saw no dark figures, God forbid. Perhaps you should search another way?',
+    'Вор затаился на месте — уйдёт не раньше, чем через три часа. Но и раны его не заживали: сил у него меньше, чем было.':
+        'The thief is lying low — he will not move for at least three hours. But his wounds have not healed: his strength is less than it was.',
+    'Вор ещё не залечил раны с прошлой схватки — он ослаблен!': 'The thief has not yet healed from your last fight — he is weakened!',
+    '⚔ Бой пошаговый (BRP d100): атака, уклон, трава, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.':
+        '⚔ Combat is turn-based (BRP d100): attack, dodge, herbs, escape.\nSkill checks roll d100: success is within the skill value,\ncritical is 1/20 of it (damage ×1.5), special success — 1/5 (damage ×2).\n🛡 Armour absorbs damage from every hit.',
+    'Вор повержен! Икона у тебя!': 'The thief is defeated! The icon is yours!',
+    '🐺 Стая напугана — волки держатся подальше': '🐺 The pack is frightened — the wolves keep their distance',
+    '⏳ Вор скроется примерно через {0} ч.': '⏳ The thief will vanish in about {0} h.',
+    '⏳ Часов до побега вора: {0}': '⏳ Hours until the thief escapes: {0}',
+    'Опушка': 'Forest Edge',
+    'Поляна': 'Glade',
+    '🗺 Околица — карта местности: выбирай локацию и в путь.\nКаждый переход по карте занимает ровно 1 игровой час.\nСледы вора живут от 12 до 24 часов — а дождь и снег смывают их и раньше.':
+        '🗺 The outskirts — a map of the area: pick a location and set out.\nEvery crossing on the map takes exactly 1 game hour.\nThe thief\'s tracks last 12 to 24 hours — and rain or snow washes them away even sooner.',
+    '🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n📦 Сундуки и тайники открываются раз в игровой день.\n◀ Выход — кнопка внизу.':
+        '🏠 Talking to a host takes 1 game hour —\nchoose whom and what to speak about.\n📦 Chests and hiding places open once per game day.\n◀ Leave by the button below.',
+    '💬 Поговорить': '💬 Talk',
+    '💰 Просить денег': '💰 Ask for money',
+    '📜 Задание': '📜 Quest',
+    '🎁 Подарить': '🎁 Give a gift',
+    '👍 Похвалить': '👍 Praise',
+    '😠 Угрожать': '😠 Threaten',
+    '💍 Свататься': '💍 Court',
+    '🍻 Угостить (20д)': '🍻 Treat (20 d.)',
+    '🛒 Купить еды': '🛒 Buy food',
+    '🛏 Отдых': '🛏 Rest',
+    '🎒 Мой тюк': '🎒 My bundle',
+    '🛒 Купить оружие': '🛒 Buy weapons',
+    '🙏 Помолиться': '🙏 Pray',
+    '🕯 Пожертвовать (5д)': '🕯 Donate (5 d.)',
+    '🔍 Осмотреть киот': '🔍 Examine the shrine',
+    '⚒ Работать (1 час)': '⚒ Work (1 hour)',
+    '🌾 Осмотреть зерно': '🌾 Inspect the grain',
+    '🎒 Мой узел': '🎒 My pack',
+    '🚪 Выйти': '🚪 Leave',
+    '📜 Персонаж': '📜 Character',
+    '🎒 Инвентарь': '🎒 Inventory',
+    '🔍 Каждый след проверяется отдельно и только один раз;\nнеудача затирает след. Ночью следы читаются хуже.\n🕐 Обследование следа занимает ровно 1 игровой час.\n◀ Назад к развилке — тоже час дороги.':
+        '🔍 Each track is examined separately and only once;\na failure smears the print away. At night tracks are harder to read.\n🕐 Examining a track takes exactly 1 game hour.\n◀ Back to the crossroads — another hour of road.',
+    '⟳ Наводка устарела': '⟳ The tip has gone stale',
+    '📍 Ты по адресу!': '📍 You are on the spot!',
+    'Селяне говорили, что вора видели у «{0}». Но с той поры прошло больше пяти часов — наводка больше не верна: вор давно перебрался в другое место. Ищи свежие следы или расспроси новых людей!':
+        'The villagers said the thief was seen at "{0}". But more than five hours have passed — the tip no longer holds: the thief moved elsewhere long ago. Look for fresh tracks or question new people!',
+    'Селяне говорили правду: вора видели именно здесь, у «{0}»! Но помни: наводка живёт только 5 часов с разговора — осталось около {1} ч. Потом вор уйдёт в другое место!':
+        'The villagers spoke true: the thief was seen here at "{0}"! But remember: a tip lives only 5 hours from the talk — about {1} h remain. Then the thief will move elsewhere!',
+    'Расспросить о воре': 'Question about the thief',
+    '✨ след прочитан': '✨ print read',
+    '🔍 след вора': '🔍 thief\'s print',
+    '✨ След прочитан!': '✨ Print read!',
+    '🔍 След': '🔍 Print',
+    '🔍 След затёрт': '🔍 Print smeared away',
+
+    // --- Раунд 34: возрастные группы и обращения (дети и не только) ---
+    'младенец': 'babe in arms',
+    'мальчик': 'boy', 'девочка': 'girl',
+    'парень': 'lad', 'девушка': 'lass',
+    'мужчина': 'man', 'женщина': 'woman',
+    'старик': 'old man', 'старуха': 'old woman',
+    'незнакомец': 'stranger',
+    'селянин': 'peasant', 'селянка': 'peasant woman',
+    'кузнец': 'blacksmith', 'священник': 'priest', 'староста': 'village elder',
+    'охотник': 'hunter', 'травник': 'herbalist', 'травница': 'herbal woman',
+    'пастух': 'shepherd', 'пастушка': 'shepherd girl',
+    'тавернщик': 'innkeeper', 'тавернщица': 'innkeeper\'s wife',
+    'рыбак': 'fisherman', 'мельник': 'miller', 'пахарь': 'ploughman',
+    'пасечник': 'beekeeper', 'пасечница': 'beekeeper woman',
+    'плотник': 'carpenter', 'стражник': 'guard', 'инок': 'monk',
+    'торгарь': 'trader', 'торгарка': 'trader woman',
+    'ткачиха': 'weaver', 'повитуха': 'midwife', 'вдова': 'widow',
+    'хозяйка': 'goodwife', 'ребёнок': 'child', 'дитя': 'child',
+
+    // --- Раунд 34: колокольный звон по службам ---
+    'заутреня': 'Matins', 'обедня': 'the Divine Liturgy', 'вечерня': 'Vespers',
+    'повечерие': 'Compline', 'всенощное бдение': 'the All-Night Vigil',
+    '🔔 Благовѣстъ къ заутрени…': '🔔 The bell tolls for Matins…',
+    '🔔 Благовѣстъ къ обеднѣ…': '🔔 The bell tolls for the Divine Liturgy…',
+    '🔔 Благовѣстъ къ вечернѣ…': '🔔 The bell tolls for Vespers…',
+    '🔔 Благовѣстъ къ всенощной…': '🔔 The bell tolls for the All-Night Vigil…',
+    '🔔 Благовѣстъ къ повечерію…': '🔔 The bell tolls for Compline…',
+    '🔔 Трезвонъ! В храмѣ — заутреня': '🔔 The peal rings out — Matins at the church',
+    '🔔 Трезвонъ! В храмѣ — обедня': '🔔 The peal rings out — the Divine Liturgy at the church',
+    '🔔 Трезвонъ! В храмѣ — вечерня': '🔔 The peal rings out — Vespers at the church',
+    '🔔 Трезвонъ! В храмѣ — всенощное бдение': '🔔 The peal rings out — the All-Night Vigil at the church',
+    '🔔 Трезвонъ! В храмѣ — повечерие': '🔔 The peal rings out — Compline at the church',
+    'Слышишь, колокол звонит?': 'Do you hear the bell ringing?',
+
+    // --- Раунд 34: детские диалоги (реплики-выборы) ---
+    'Мир и тебе, малой.': 'Peace to you too, little one.',
+    'Во что играете?': 'What are you playing?',
+    'Слышишь, звонят?': 'Do you hear the ringing?',
+    'А за околицей что?': 'What lies beyond the outskirts?',
+    'Береги себя, детка.': 'Take care, little one.',
+    'Ну-ну, ври дальше.': 'Sure, keep making things up.',
+    'Покажи, как играешь.': 'Show me how you play.',
+    'И кто же победил?': 'And who won?',
+    'Возьми конфетку.': 'Here, take a sweet.',
+    'Чур, не выдумывай!': 'Don\'t make things up!',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----
@@ -670,7 +860,9 @@ const EN_KEYS = {
         '  Any travel between locations on the map takes EXACTLY 1 game hour.\n' +
         '  Talking to an NPC costs 1 hour; examining a footprint costs 1 hour.\n' +
         '  While a conversation is open, the real-time countdown is PAUSED.\n' +
-        '  The thief moves AT MOST ONE STEP per game hour.',
+        '  The thief moves AT MOST ONE STEP per game hour.\n' +
+        '  🔔 Bells ring for the services: a toll before Matins (~6 o\'clock),\n' +
+        '  the Liturgy (at noon), Vespers (toward 3 pm) and Compline (toward 6 pm).',
     'title.about': '«The Chronicles of Ruthenia» — a browser RPG set in 15th-century Rus\'.\n' +
         'Role-playing system: BRP (Basic Roleplaying Universal Game Engine SRD) — ' +
         'characteristics 3d6×5, d100 skill checks, critical success 1/20 of the skill, ' +
