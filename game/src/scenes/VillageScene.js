@@ -170,18 +170,20 @@ export class VillageScene extends Phaser.Scene {
         // Спрайты домов: рисованные избы (deco_house_0..3) вместо плоских
         // двухтекстурных коробок. Крыльцо/окна/труба уже «запечены» в спрайте.
         const HOUSE_SPRITE_BY_ID = {
-            elder_house: 'deco_house_3',
-            tavern: 'deco_house_1',
-            blacksmith: 'deco_house_2',
-            villager_house_1: 'deco_house_0',
-            villager_house_2: 'deco_house_2',
-            beekeeper_house: 'deco_house_0',   // раунд 28: ДОМ ПАХАРЯ (огород и соха отличают)
-            // Раунд 37 (вариант Б): дома новой улицы + гончар на месте амбара
-            potter_house: 'deco_house_1',
-            healer_house: 'deco_house_3',
-            carpenter_house: 'deco_house_0',
-            fisher_house: 'deco_house_2',
-            weaver_house: 'deco_house_1',
+            // Раунд 38 (этап 2 Варианта Б): каждое здание — уникальный спрайт,
+            // сконвертированный из 3D-моделей владельца (glb → 2D-рендер).
+            // deco_house_0..3 остаются запасным вариантом, если texture не загрузилась.
+            elder_house: 'house3d_elder',        // большая изба с моховой крышей
+            tavern: 'house3d_tavern',            // двухэтажный постоялый двор с крыльцом
+            blacksmith: 'house3d_blacksmith',    // кузница с навесом и горном
+            potter_house: 'house3d_potter',      // мастерская с большими воротами (место амбара)
+            villager_house_1: 'house3d_villager1', // длинная изба Авдея
+            villager_house_2: 'house3d_villager2', // двойная изба Марфы
+            beekeeper_house: 'house3d_ploughman',  // высокая изба пахаря
+            healer_house: 'house3d_healer',      // сложная изба знахарки
+            carpenter_house: 'house3d_carpenter',// изба плотника
+            fisher_house: 'house3d_fisher',      // изба рыбака
+            weaver_house: 'house3d_weaver',      // изба ткачихи
         };
         this.doors = [];
         BUILDINGS.forEach(b => {
@@ -231,7 +233,8 @@ export class VillageScene extends Phaser.Scene {
             this.doors.push({ x: doorX, y: doorY, interiorId: b.interiorId, label, marker: doorMarker });
 
             // ----- П.7: Уникальные детали зданий (без дублей со спрайтом) -----
-            this.addBuildingDetails(b, ts, usedSprite);
+            // Раунд 38: передаём ключ спрайта — 3D-дома имеют собственные трубы.
+            this.addBuildingDetails(b, ts, !!usedSprite, usedSprite ? sprKey : null);
 
             // ----- Ограда и грядки для жилых домов (п.6) -----
             // Раунд 28: дом пахаря тоже с огородом (порядок в хозяйстве)
@@ -558,7 +561,8 @@ export class VillageScene extends Phaser.Scene {
      * usedSprite — дом отрисован спрайтом: пропускаем графику, дублирующую спрайт
      * (купол церкви уже «запечён» в deco_church_building).
      */
-    addBuildingDetails(b, ts, usedSprite = false) {
+    addBuildingDetails(b, ts, usedSprite = false, sprKey = null) {
+        const is3d = !!(sprKey && sprKey.indexOf('house3d_') === 0); // 3D-спрайт: трубы уже запечены
         const cx = b.col * ts + b.w * ts / 2;
         const topY = b.row * ts;
 
@@ -610,22 +614,26 @@ export class VillageScene extends Phaser.Scene {
             this.add.text(cx, topY - ts * 0.4, '🍺', {
                 fontSize: '18px',
             }).setOrigin(0.5).setDepth(9);
-            // Дымоход
-            const chimney = this.add.graphics();
-            chimney.fillStyle(0x5a4030, 1);
-            chimney.fillRect(cx + ts * 0.6, topY - ts * 0.5, ts * 0.25, ts * 0.5);
-            chimney.setDepth(8);
+            // Дымоход (для 3D-спрайта труба уже в текстуре — не рисуем)
+            if (!is3d) {
+                const chimney = this.add.graphics();
+                chimney.fillStyle(0x5a4030, 1);
+                chimney.fillRect(cx + ts * 0.6, topY - ts * 0.5, ts * 0.25, ts * 0.5);
+                chimney.setDepth(8);
+            }
 
         } else if (b.interiorId === 'blacksmith') {
             // Кузница: молот + наковальня (эмблема)
             this.add.text(cx, topY - ts * 0.4, '🔨', {
                 fontSize: '18px',
             }).setOrigin(0.5).setDepth(9);
-            // Труба кузницы
-            const chimney = this.add.graphics();
-            chimney.fillStyle(0x4a3a25, 1);
-            chimney.fillRect(cx - ts * 0.8, topY - ts * 0.5, ts * 0.3, ts * 0.6);
-            chimney.setDepth(8);
+            // Труба кузницы (для 3D-спрайта труба уже в текстуре — не рисуем)
+            if (!is3d) {
+                const chimney = this.add.graphics();
+                chimney.fillStyle(0x4a3a25, 1);
+                chimney.fillRect(cx - ts * 0.8, topY - ts * 0.5, ts * 0.3, ts * 0.6);
+                chimney.setDepth(8);
+            }
 
         } else if (b.interiorId === 'elder_house') {
             // Дом старосты: флаг/вымпел

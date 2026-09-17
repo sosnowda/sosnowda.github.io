@@ -145,6 +145,10 @@ export class BootScene extends Phaser.Scene {
         this.load.image('deco_horse', 'assets/sprites/deco_horse.png');
         this.load.image('deco_church_building', 'assets/sprites/deco_church_building.png');
         for (let v = 0; v < 4; v++) this.load.image(`deco_house_${v}`, `assets/sprites/deco_house_${v}.png`);
+        // Раунд 38 (этап 2 Варианта Б): дома, сконвертированные из 3D-моделей
+        // (Google Drive glb → орто-рендер с UV-текстурами → квантование палитры + контур)
+        const house3dKeys = ['elder', 'tavern', 'blacksmith', 'potter', 'villager1', 'villager2', 'ploughman', 'healer', 'carpenter', 'fisher', 'weaver'];
+        house3dKeys.forEach(k => this.load.image(`house3d_${k}`, `assets/sprites/house3d_${k}.png`));
 
         // ===== НОВЫЕ АССЕТЫ (п.1-5 ТЗ) =====
 
