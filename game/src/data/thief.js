@@ -899,10 +899,18 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
     scene.busyDialog = true;
 
     const { width, height } = scene.scale;
-    const x = (opts.x !== undefined) ? opts.x : width * 0.68;
-    const y = (opts.y !== undefined) ? opts.y : height * 0.27;
-    const texKey = scene.textures.exists('enemy_bandit') ? 'enemy_bandit' : 'knight_idle';
-    const sprite = scene.add.image(x, y, texKey).setScale(2.6).setDepth(60);
+    // Раунд 33: вор стоит В ПРАВОЙ свободной зоне (панель диалога занимает
+    // ~26–73% ширины по центру — раньше фигурка пряталась за ней).
+    const x = (opts.x !== undefined) ? opts.x : width * 0.83;
+    const y = (opts.y !== undefined) ? opts.y : height * 0.40;
+    // Раунд 33 (владелец): у вора — УНИКАЛЬНАЯ фигурка (капюшон, серый плащ,
+    // кинжал), а не общий «крестьянин», как у игрока. Рисуем ОДИН кадр листа
+    // (раньше add.image показывал всю сетку 4×4), профиль ВЛЕВО — на игрока.
+    const texKey = scene.textures.exists('enemy_thief') ? 'enemy_thief'
+        : (scene.textures.exists('enemy_bandit') ? 'enemy_bandit' : 'knight_idle');
+    // кадр 4 = строка 1 (профиль влево), колонка 0 (стойка)
+    const thiefFrame = (texKey === 'knight_idle') ? 0 : 4;
+    const sprite = scene.add.sprite(x, y, texKey, thiefFrame).setScale(2.6).setDepth(60);
     scene.tweens.add({
         targets: sprite,
         y: y - 4,

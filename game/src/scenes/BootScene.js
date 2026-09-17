@@ -53,7 +53,8 @@ export class BootScene extends Phaser.Scene {
         this.load.image('deco_fence', 'assets/tiles/fence_0.png');
 
         // ----- СПРАЙТЫ ПЕРСОНАЖЕЙ (spritesheets 64×64, 16 кадров: 4 строки × 4 колонки) -----
-        const spriteKeys = ['player', 'npc_elder', 'npc_merchant', 'npc_soldier', 'npc_bandit', 'enemy_bandit', 'enemy_wolf'];
+        // Раунд 33: 'enemy_thief' — уникальная фигурка вора (капюшон/плащ/кинжал)
+        const spriteKeys = ['player', 'npc_elder', 'npc_merchant', 'npc_soldier', 'npc_bandit', 'enemy_bandit', 'enemy_thief', 'enemy_wolf'];
         spriteKeys.forEach((key) => {
             this.load.spritesheet(key, `assets/sprites/${key}.png`, { frameWidth: 64, frameHeight: 64 });
         });
@@ -296,6 +297,7 @@ export class BootScene extends Phaser.Scene {
         this.createWalkAnimations('npc_soldier');
         this.createWalkAnimations('npc_bandit');
         this.createWalkAnimations('enemy_bandit');
+        this.createWalkAnimations('enemy_thief');   // раунд 33: фигурка вора
         this.createWalkAnimations('enemy_wolf');
 
         // ----- Анимации Fantasy Knight (для CombatScene) -----

@@ -113,7 +113,12 @@ export function bootScreenshotDirector() {
     // Ждём полной загрузки игры (window.game создан в index.html) и запускаем
     const t0 = Date.now();
     const tryStart = () => {
-        if (window.game && window.game.scene && window.game.scene.getScene('Title')) {
+        // Раунд 33 (фикс): ждать не только СУЩЕСТВОВАНИЯ сцены Title (экземпляры
+        // создаются при старте игры), но и её АКТИВАЦИИ — иначе сценарий мог
+        // стартовать до BootScene.create, анимации рыцаря/вора ещё не были
+        // созданы, и вор в бою отрисовывался запасным рыцарем (как у игрока).
+        const title = window.game && window.game.scene && window.game.scene.getScene('Title');
+        if (title && title.scene.isActive()) {
             SCENARIOS[shot]().catch(err => console.error('[shots] scenario failed:', shot, err));
             return;
         }

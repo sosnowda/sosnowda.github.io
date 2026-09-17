@@ -53,7 +53,10 @@ export const ENEMY_TEMPLATES = {
         attackSkill: 50,
         dodge: 35,   // раунд 32: вёрткий вор (было 30) — слабые бойцы мажут чаще
         db: { min: 1, max: 4 },
-        spriteKey: 'enemy_bandit',
+        // Раунд 33 (владелец): уникальная фигурка вора — капюшон, серый
+        // плащ, кинжал (LPC-композит, см. game/tools/make_thief_sprite.py).
+        // Раньше был 'enemy_bandit' — тот же «крестьянин», что у игрока.
+        spriteKey: 'enemy_thief',
         color: 0x222222,
         armorId: 'leather',  // кожаная броня, def 2
     },

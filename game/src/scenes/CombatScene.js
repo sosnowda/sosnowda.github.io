@@ -129,6 +129,11 @@ export class CombatScene extends Phaser.Scene {
                 // Fallback — стандартный спрайт (top-down)
                 sp = this.add.sprite(x, y, e.spriteKey, 0).setScale(2.5);
                 sp.play(`${e.spriteKey}_idle_down`);
+            } else if (this.textures.exists(e.spriteKey)) {
+                // Раунд 33 (фикс): если анимации не успели создаться (гонка при
+                // старте) — показываем СТАТИЧНЫЙ кадр собственного спрайта врага
+                // (вид спереди), а НЕ запасного рыцаря, одинакового с игроком.
+                sp = this.add.sprite(x, y, e.spriteKey, 0).setScale(2.5);
             } else {
                 // Fallback на рыцаря (для других врагов тоже используем knight_c2)
                 sp = this.add.sprite(x, y, 'knight_idle_c2', 0).setScale(2.5);
