@@ -240,17 +240,14 @@ export class CharacterAppearanceScene extends Phaser.Scene {
         this.nameText.setInteractive({ useHandCursor: true });
         this.nameText.on('pointerdown', () => this.editName());
 
-        // Легенда выбранных слоёв (2 строки под превью)
-        this.legendLine1 = this.add.text(this.previewX, this.previewY + 170, '', {
+        // Легенда выбранных слоёв (раунд 39: ОДИН текстовый блок — строки больше
+        // не наезжают друг на друга при переносе на узких экранах)
+        this.legendText = this.add.text(this.previewX, this.previewY + 162, '', {
             fontSize: '13px', color: RUS.text, align: 'center',
-            wordWrap: { width: 420 },
+            wordWrap: { width: 430 },
+            lineSpacing: 4,
             stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5);
-        this.legendLine2 = this.add.text(this.previewX, this.previewY + 192, '', {
-            fontSize: '13px', color: RUS.text, align: 'center',
-            wordWrap: { width: 420 },
-            stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5);
+        }).setOrigin(0.5, 0);
 
         // --- Левая колонка: пресеты + категории (кнопки ниже) ---
 
@@ -262,7 +259,9 @@ export class CharacterAppearanceScene extends Phaser.Scene {
             fontSize: 16, padding: { left: 20, right: 20, top: 10, bottom: 10 },
         });
 
-        createButton(this, width / 2, height - 110, t('🎲 Случайный облик'), () => {
+        // Раунд 39: «Случайный облик» — в нижний ряд кнопок (была по центру
+        // над низом — перекрывала текст легенды под превью)
+        createButton(this, width / 2, height - 40, t('🎲 Случайный облик'), () => {
             this.randomizeLook();
             this.chosenPresetIdx = -1;
             this.refreshPresetHighlight();
@@ -621,6 +620,8 @@ export class CharacterAppearanceScene extends Phaser.Scene {
             feet: s.feet,
             torso: this.isVestFinish() ? s.finish : s.torsoBase,
         };
+        // Раунд 39 (п.4 заявки): женский силуэт — оверлей груди поверх одежды
+        if (this.gender === 'female') app.chest = 'female';
         if (this.gender === 'male' && s.beardShape && s.beardShape !== 'none') {
             app.beards = `${s.beardShape}_${s.beardColor}`;
         }
@@ -705,7 +706,7 @@ export class CharacterAppearanceScene extends Phaser.Scene {
     // ============================================================
 
     updateLegend() {
-        if (!this.legendLine1) return;
+        if (!this.legendText) return;
         const s = this.lpc;
         const male = this.gender === 'male';
         const beardText = (male && s.beardShape !== 'none')
@@ -715,12 +716,10 @@ export class CharacterAppearanceScene extends Phaser.Scene {
         if (this.isVestFinish()) finishText = ' + ' + t(FINISH_VEST_LABELS[s.finish]);
         else if (s.finish === 'cape') finishText = ' + ' + t('Плащ');
 
-        this.legendLine1.setText(
+        this.legendText.setText(
             `${t('Телосложение')}: ${t(BODY_TONE_LABELS[s.body.split('_')[1]])} · ` +
             `${t('Причёска')}: ${t(HAIR_SHAPE_LABELS[s.hairShape])}, ${t(HAIR_COLOR_LABELS[s.hairColor])} · ` +
-            `${t('Борода')}: ${beardText}`
-        );
-        this.legendLine2.setText(
+            `${t('Борода')}: ${beardText}\n` +
             `${t('Рубаха/куртка')}: ${t(TORSO_LABELS[s.torsoBase])}${finishText} · ` +
             `${t('Штаны/юбка')}: ${t(LEGS_LABELS[s.legs] || s.legs)} · ` +
             `${t('Обувь')}: ${t(FEET_LABELS[s.feet] || s.feet)}`

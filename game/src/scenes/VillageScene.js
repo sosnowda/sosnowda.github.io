@@ -81,6 +81,23 @@ export class VillageScene extends Phaser.Scene {
         this.map = buildMap();
         this.solids = this.physics.add.staticGroup();
 
+        // ----- Раунд 39 (п.6 заявки): тайлы, ПОКРЫТЫЕ НОВЫМИ СПРАЙТАМИ —
+        // под ними рисуется трава, чтобы старые тайлы стен/крыш (tile_house_*)
+        // не «выглядывали» из-под домов, построек и овчарни.
+        // Коллизии не меняются ('H'/'R' остаются непроходимыми).
+        const coveredTiles = new Set();
+        BUILDINGS.forEach((b) => {
+            for (let dy = 0; dy < b.h; dy++) {
+                for (let dx = 0; dx < b.w; dx++) coveredTiles.add(`${b.col + dx},${b.row + dy}`);
+            }
+        });
+        YARD_PROPS.forEach((p) => {
+            for (let dy = 0; dy < p.h; dy++) {
+                for (let dx = 0; dx < p.w; dx++) coveredTiles.add(`${p.col + dx},${p.row + dy}`);
+            }
+        });
+        for (let gx = 22; gx <= 24; gx++) coveredTiles.add(`${gx},19`); // овчарня-загон
+
         // ----- QA коллизий и проходимости: BFS-проверка карты -----
         const validation = validateMap(this.map);
         if (validation.problems.length) {
@@ -104,6 +121,16 @@ export class VillageScene extends Phaser.Scene {
                     angle = spec.angle;
                 } else {
                     texKey = tileTexture(t, x, y, this.map);
+                    // Раунд 39 (п.6): под новыми спрайтами — трава вместо старых
+                    // тайлов домов (они полностью скрыты 3D-спрайтами здания)
+                    if ((t === 'H' || t === 'R' || t === 'D') && coveredTiles.has(`${x},${y}`)) {
+                        texKey = `tile_grass_${(x * 7 + y * 13) % 4}`;
+                    }
+                    // Раунд 39 (п.20): ворота рисуются спрайтом drawVillageGate —
+                    // старый tile_gate (повёрнутый не в ту сторону) не используется
+                    if (t === 'G') {
+                        texKey = `tile_grass_${(x * 7 + y * 13) % 4}`;
+                    }
                 }
                 // Проверяем существование текстуры, fallback на траву
                 const safeTex = this.textures.exists(texKey) ? texKey : 'tile_grass_0';
@@ -145,23 +172,9 @@ export class VillageScene extends Phaser.Scene {
             }
         }
 
-        // ----- Анимация колодца (deco_well_0..3) —
-        // раунд 37 (п.11): темп снижен 260 → 520 мс, вода не «мигает», а плещется
-        if (this.wellTiles.length) {
-            let wellFrame = 0;
-            this.time.addEvent({
-                delay: 520,
-                loop: true,
-                callback: () => {
-                    wellFrame = (wellFrame + 1) % 4;
-                    this.wellTiles.forEach(w => {
-                        if (this.textures.exists(`deco_well_${wellFrame}`)) {
-                            w.img.setTexture(`deco_well_${wellFrame}`);
-                        }
-                    });
-                },
-            });
-        }
+        // ----- КОЛОДЕЦ (п.17 заявки раунда 39): СТАТИЧНЫЙ, БЕЗ АНИМАЦИИ —
+        // сруб с воротилом (deco_well_0) стоит ровно, вода не «плещется» кадрами.
+        // (Анимация deco_well_0..3 удалена по заявке владельца.)
 
         // ----- Анимация воды (раунд 36: пруд в деревне удалён — тайлы '~'
         // больше не появляются на карте деревни, рыбалка переехала на Реку) -----
@@ -192,12 +205,9 @@ export class VillageScene extends Phaser.Scene {
             const px = doorX * ts + ts / 2;
             const py = doorY * ts + ts / 2;
 
-            // Метка здания над дверью (глубина 20 — поверх спрайта дома)
-            const label = this.add.text(b.col * ts + b.w * ts / 2, (b.row - 1) * ts - 10, b.label, {
-                fontSize: '14px', color: RUS.text, backgroundColor: '#00000088',
-                padding: { x: 6, y: 3 },
-                stroke: '#000', strokeThickness: 2,
-            }).setOrigin(0.5).setDepth(20);
+            // Метка здания — РАУНД 39 (п.21 заявки): ПОСТОЯННЫЕ НАДПИСИ НАД ДОМАМИ
+            // УДАЛЕНЫ. Название и владелец показываются ТОЛЬКО поп-апом при
+            // наведении (showBuildingTooltip — уже работает по pointermove).
 
             // ----- Дом спрайтом + тень (псевдо-2.5D: Y-сортировка) -----
             const sprKey = b.interiorId === 'church'
@@ -211,8 +221,12 @@ export class VillageScene extends Phaser.Scene {
                 // Тень у основания дома (мягкий овал)
                 this.add.ellipse(cx, bottomRow * ts - 4, b.w * ts * 0.94, ts * 0.6, 0x000000, 0.25)
                     .setDepth(bottomRow - 0.7);
-                this.add.image(cx, cy, sprKey)
-                    .setDisplaySize(b.w * ts + 8, b.h * ts + 6)
+                // Раунд 39 (п.7): пропорции спрайта СОХРАНЯЮТСЯ (fit по меньшей
+                // стороне) — раньше setDisplaySize растягивал дом в квадрат,
+                // из-за чего узкие избы выглядели перекошенными, высокие — сплющенными.
+                const houseImg = this.add.image(cx, cy, sprKey);
+                const fitS = Math.min((b.w * ts + 8) / houseImg.width, (b.h * ts + 6) / houseImg.height);
+                houseImg.setScale(fitS)
                     .setDepth(bottomRow - 0.55);          // Y-сортировка: игрок ниже дома — перед домом;
                                                           // на строке двери (bottomRow-0.5) игрок тоже ПЕРЕД домом (п.15)
             } else {
@@ -230,7 +244,7 @@ export class VillageScene extends Phaser.Scene {
                 .setDisplaySize(20, 20)
                 .setAlpha(0.85)
                 .setDepth(20);
-            this.doors.push({ x: doorX, y: doorY, interiorId: b.interiorId, label, marker: doorMarker });
+            this.doors.push({ x: doorX, y: doorY, interiorId: b.interiorId, marker: doorMarker });
 
             // ----- П.7: Уникальные детали зданий (без дублей со спрайтом) -----
             // Раунд 38: передаём ключ спрайта — 3D-дома имеют собственные трубы.
@@ -349,10 +363,14 @@ export class VillageScene extends Phaser.Scene {
         this._lastStreetHour = -1;
         this.rebuildStreetNpcs();
 
-        // ----- Метка ворот -----
+        // ----- Ворота (п.20 заявки раунда 39): НОВЫЕ ВОРОТА —
+        // старый тайл tile_gate был «повёрнут не в ту сторону». Ворота стоят
+        // на ВОСТОЧНОЙ околице: рисуем сторожевую башенку со створками во всю
+        // ширину дороги (проезд с запада на восток), столбы по бокам дороги.
         const gatePx = (MAP_W - 1) * ts + ts / 2;
         const gatePy = VILLAGE_GATE.row * ts + ts / 2;
-        const gateLabel = this.add.text(gatePx, gatePy - ts, 'ВЫХОД ▶', {
+        this.drawVillageGate(gatePx, gatePy, ts);
+        const gateLabel = this.add.text(gatePx - ts * 1.6, gatePy - ts * 1.15, 'ВЫХОД ▶', {
             fontSize: '16px', color: '#ff8060', backgroundColor: '#00000088',
             padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
@@ -429,7 +447,6 @@ export class VillageScene extends Phaser.Scene {
                     'Управление: WASD/стрелки — движение, E/пробел — действие, M — обзор деревни, ESC — меню.\n\n' +
                     '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
                     '🔒 Закрытые избы: хозяин ушёл — подскажут, где искать.\n' +
-                    '📦 Сундуки и тайники — раз в игровой день.\n' +
                     '✝ Крест — молитва. 🎣 Рыбалка — на Реке (по карте). 🐑 Овчарня — на востоке новой улицы.\n' +
                     '🐺 За воротами, в Тёмном лесу, водятся волки — там же грибы и ягоды.\n' +
                     '🚪 Выход за околицу (по карте) занимает ровно 1 игровой час.'),
@@ -848,14 +865,9 @@ export class VillageScene extends Phaser.Scene {
             }
         }
 
-        // Калитка — декоративные столбики по бокам от прохода
-        const gateX = doorX * ts + ts / 2;
-        if (this.textures.exists('tile_fence_v')) {
-            this.add.image(gateX - ts / 3, fenceRow * ts + ts / 2, 'tile_fence_v')
-                .setScale(ts / 32 * 0.7).setDepth(fenceRow + 0.4);
-            this.add.image(gateX + ts / 3, fenceRow * ts + ts / 2, 'tile_fence_v')
-                .setScale(ts / 32 * 0.7).setDepth(fenceRow + 0.4);
-        }
+        // Калитка — проход в ограде напротив двери.
+        // Раунд 39 (п.5 заявки): декоративные столбики по бокам прохода УДАЛЕНЫ —
+        // они стояли прямо на дорожке к двери («ограда на дорожках»).
     }
 
     /**
@@ -882,6 +894,67 @@ export class VillageScene extends Phaser.Scene {
                 solid.setVisible(false);
             }
         }
+    }
+
+    /**
+     * Раунд 39 (п.20 заявки): НОВЫЕ ВОРОТА деревни.
+     * Ворота стоят на восточной околице, дорога подходит С ЗАПАДА — проезд
+     * «на восток». Рисуем в 3/4-виде: два бревенчатых столба по краям проезда,
+     * верхний прогон с двускатной крышей и распахнутые створки. Тайл tile_gate
+     * (повёрнутый не в ту сторону) больше не используется — под воротами трава.
+     */
+    drawVillageGate(gx, gy, ts) {
+        const g = this.add.graphics();
+        const depth = gy / ts + 0.45;   // Y-сортировка: игрок проходит «сквозь» ворота
+
+        // Тень под воротами
+        g.fillStyle(0x000000, 0.22);
+        g.fillEllipse(gx, gy + ts * 0.34, ts * 1.5, ts * 0.28);
+
+        // Столбы (брёвна) по краям проезда — северный и южный
+        const postW = ts * 0.2;
+        const postH = ts * 0.66;
+        [gy - ts * 0.34, gy + ts * 0.34].forEach((py) => {
+            g.fillStyle(0x4a3520, 1);
+            g.fillRect(gx - postW / 2, py - postH / 2, postW, postH);
+            g.fillStyle(0x5f462c, 1);
+            g.fillRect(gx - postW / 2 + 2, py - postH / 2 + 2, 3, postH - 4);
+            g.lineStyle(1, 0x241708, 1);
+            g.strokeRect(gx - postW / 2, py - postH / 2, postW, postH);
+            // Торец бревна
+            g.fillStyle(0x7a5c38, 1);
+            g.fillEllipse(gx, py - postH / 2, postW * 0.9, postW * 0.42);
+        });
+
+        // Верхний прогон — брус через оба столба
+        g.fillStyle(0x3e2c18, 1);
+        g.fillRect(gx - ts * 0.3, gy - ts * 0.62, ts * 0.6, ts * 0.14);
+        g.lineStyle(1, 0x241708, 1);
+        g.strokeRect(gx - ts * 0.3, gy - ts * 0.62, ts * 0.6, ts * 0.14);
+
+        // Двускатная крышка над прогоном
+        g.fillStyle(0x6b4a2a, 1);
+        g.fillTriangle(gx - ts * 0.42, gy - ts * 0.6, gx + ts * 0.42, gy - ts * 0.6, gx, gy - ts * 0.92);
+        g.fillStyle(0x513620, 1);
+        g.fillTriangle(gx - ts * 0.42, gy - ts * 0.6, gx, gy - ts * 0.6, gx, gy - ts * 0.92);
+        g.lineStyle(1, 0x241708, 0.9);
+        g.lineBetween(gx - ts * 0.42, gy - ts * 0.6, gx, gy - ts * 0.92);
+        g.lineBetween(gx + ts * 0.42, gy - ts * 0.6, gx, gy - ts * 0.92);
+
+        // Распахнутые створки (двери открыты настежь — гостей ждут)
+        g.fillStyle(0x6a4a2a, 1);
+        g.fillRect(gx - ts * 0.34, gy - ts * 0.30, ts * 0.10, ts * 0.56);  // западная створка
+        g.fillRect(gx + ts * 0.24, gy - ts * 0.30, ts * 0.10, ts * 0.56);  // восточная створка
+        g.lineStyle(1, 0x241708, 0.8);
+        g.strokeRect(gx - ts * 0.34, gy - ts * 0.30, ts * 0.10, ts * 0.56);
+        g.strokeRect(gx + ts * 0.24, gy - ts * 0.30, ts * 0.10, ts * 0.56);
+
+        // Скважины-петли и засов
+        g.fillStyle(0xc9a14a, 0.9);
+        g.fillCircle(gx - ts * 0.29, gy - ts * 0.05, 1.6);
+        g.fillCircle(gx + ts * 0.29, gy - ts * 0.05, 1.6);
+
+        g.setDepth(depth);
     }
 
     /**

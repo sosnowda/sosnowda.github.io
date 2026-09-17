@@ -28,10 +28,12 @@ export const MAP_LOCATIONS = [
     },
     {
         // Раунд 30: глубокий лес — тёмная чаща (бывшая единственная локация «Лес»)
+        // Раунд 39 (п.23): название по терминологии владельца — ГУСТОЙ ЛЕС,
+        // глубина леса за поляной (вход в лес — только через Опушку).
         id: 'forest',
-        name: t('Тёмный лес'),
+        name: t('Густой лес'),
         icon: '🌲',
-        description: t('Густая чаща за опушкой и поляной. Много зверья и грибов, но и разбойники водятся.'),
+        description: t('Глубина леса: тёмная чаща за опушкой и поляной. Много зверья и грибов, но и разбойники водятся.'),
         type: 'forest',
         danger: 'medium',
         canFight: true,
@@ -119,10 +121,37 @@ export function getLocationById(id) {
     return MAP_LOCATIONS.find(l => l.id === id);
 }
 
-// Получить все доступные с развилки локации (п.4: финальный список;
-// раунд 30: лес в трёх частях — опушка, поляна, чаща)
+// ===== РАУНД 39 (п.23 заявки): ЛЕС — ЕДИНАЯ ЛОКАЦИЯ ЦЕПОЧКОЙ =====
+// Лес отображается на карте местности ОДНИМ узлом «Лес», но внутри — это
+// цепочка из трёх локаций: вход только через ОПУШКУ, дальше ПОСЛЕДОВАТЕЛЬНО
+// Лесная поляна → Густой лес. Выход из леса — тоже последовательно, обратно.
+export const FOREST_CHAIN = ['forest_edge', 'forest_glade', 'forest'];
+
+/** Это лесная локация цепочки? */
+export function isForestLocation(id) {
+    return FOREST_CHAIN.includes(id);
+}
+
+/** Следующая (более глубокая) лесная локация или null. */
+export function forestDeeper(id) {
+    const i = FOREST_CHAIN.indexOf(id);
+    if (i < 0 || i >= FOREST_CHAIN.length - 1) return null;
+    return FOREST_CHAIN[i + 1];
+}
+
+/** Предыдущая (более близкая) лесная локация или null (выход на околицу). */
+export function forestShallower(id) {
+    const i = FOREST_CHAIN.indexOf(id);
+    if (i <= 0) return null;
+    return FOREST_CHAIN[i - 1];
+}
+
+// Получить все доступные с развилки локации.
+// Раунд 39 (п.23): лес на карте — ОДНА кнопка «Лес» (вход через Опушку);
+// Поляна и Густой лес в списке развилки больше не показываются —
+// в них можно попасть только последовательно, из глубины леса.
 export function getForkLocations() {
-    return MAP_LOCATIONS.filter(l => 
-        ['forest_edge', 'forest_glade', 'forest', 'road_south', 'field', 'lake', 'pogost', 'mill', 'apiary', 'pasture', 'river'].includes(l.id)
+    return MAP_LOCATIONS.filter(l =>
+        ['forest_edge', 'road_south', 'field', 'lake', 'pogost', 'mill', 'apiary', 'pasture', 'river'].includes(l.id)
     );
 }

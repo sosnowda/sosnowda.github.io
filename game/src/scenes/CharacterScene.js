@@ -235,28 +235,61 @@ export class CharacterScene extends Phaser.Scene {
             aY += 36;
         });
 
-        // Предметы (травы, зелья и т.п.)
-        this.add.text(width / 2, top + 320, 'Предметы:', {
+        // Предметы (травы, зелья и т.п.) — раунд 39: блок поднят выше,
+        // чтобы сетка и плашки «НАДЕТО» не задевали кнопку «Назад» внизу
+        this.add.text(width / 2, top + 285, 'Предметы:', {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
 
-        const items = p.inventory || [];
+        // Раунд 39 (п.14 заявки): НАДЕТЫЕ предметы (броня и оружие) теперь
+        // отображаются ПЕРВЫМИ СЛОТАМИ окна «Предметы» — раньше в ячейках
+        // был только содержимое сумки, экипировка не показывалась.
+        const equipped = [];
+        const wIcon = ['icon_' + currentWeapon.id, 'icon_sword', 'icon_weapon']
+            .find(k => this.textures.exists(k));
+        const aIcon = ['icon_' + currentArmor.id, 'icon_armor']
+            .find(k => this.textures.exists(k));
+        equipped.push({
+            id: 'equipped_weapon',
+            name: `${t('В руках')}: ${currentWeapon.name}`,
+            iconKey: wIcon || null,
+            emoji: '⚔',
+            count: 1,
+            equipped: true,
+        });
+        equipped.push({
+            id: 'equipped_armor',
+            name: `${t('Надето')}: ${currentArmor.name}`,
+            iconKey: aIcon || null,
+            emoji: '🛡',
+            count: 1,
+            equipped: true,
+        });
+
+        const items = equipped.concat(p.inventory || []);
         if (items.length === 0) {
-            this.add.text(width / 2, top + 350, 'Сумка пуста', {
+            this.add.text(width / 2, top + 320, 'Сумка пуста', {
                 fontSize: '14px', color: RUS.textDim,
             }).setOrigin(0.5);
         } else {
-            let iX = width / 2 - (items.length * 80) / 2;
+            const cols = Math.min(items.length, 6);
+            const rows = Math.ceil(items.length / cols);
+            const gridW = cols * 80;
+            const startX = width / 2 - gridW / 2 + 40;
+            const startY = top + 330;
             items.forEach((item, i) => {
-                const ix = iX + i * 80 + 40;
-                const iy = top + 380;
+                const ix = startX + (i % cols) * 80;
+                const iy = startY + Math.floor(i / cols) * 78;
                 // Фон ячейки
                 this.add.rectangle(ix, iy, 64, 64, 0x2a1f15, 0.8)
-                    .setStrokeStyle(2, RUS.border, 1);
-                // Иконка
-                if (this.textures.exists(`icon_${item.id}`)) {
-                    this.add.image(ix, iy, `icon_${item.id}`).setDisplaySize(48, 48);
+                    .setStrokeStyle(2, item.equipped ? RUS.accent : RUS.border, 1);
+                // Иконка / эмодзи-заглушка
+                if (item.iconKey) {
+                    this.add.image(ix, iy, item.iconKey).setDisplaySize(48, 48);
+                } else {
+                    this.add.text(ix, iy, item.emoji || '📦', { fontSize: '26px' })
+                        .setOrigin(0.5);
                 }
                 // Количество
                 if (item.count > 1) {
@@ -265,21 +298,29 @@ export class CharacterScene extends Phaser.Scene {
                         stroke: '#000', strokeThickness: 2,
                     }).setOrigin(1, 1);
                 }
+                // Плашка «НАДЕТО» на экипировке
+                if (item.equipped) {
+                    this.add.text(ix, iy - 24, t('НАДЕТО'), {
+                        fontSize: '8px', color: '#ffd700',
+                        backgroundColor: '#000000dd', padding: { x: 3, y: 1 },
+                        stroke: '#000', strokeThickness: 1,
+                    }).setOrigin(0.5).setDepth(51);
+                }
                 // Подсказка
                 const hitArea = this.add.zone(ix, iy, 64, 64).setInteractive({ useHandCursor: true });
                 const tooltip = this.add.text(ix, iy - 40, item.name, {
                     fontSize: '12px', color: RUS.text, backgroundColor: '#000000dd',
                     padding: { x: 6, y: 4 },
                     stroke: '#000', strokeThickness: 1,
-                }).setOrigin(0.5).setVisible(false).setDepth(50);
+                }).setOrigin(0.5).setVisible(false).setDepth(52);
                 hitArea.on('pointerover', () => tooltip.setVisible(true));
                 hitArea.on('pointerout', () => tooltip.setVisible(false));
             });
         }
 
-        // Деньги
-        this.add.text(width / 2, top + 470, `💰 Денег: ${formatMoney(p.dengas || 0)}`, {
-            fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
+        // Деньги — под строкой снаряжения (раунд 39: не пересекается с сеткой предметов)
+        this.add.text(width / 2, top + 58, `💰 Денег: ${formatMoney(p.dengas || 0)}`, {
+            fontSize: '15px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
     }

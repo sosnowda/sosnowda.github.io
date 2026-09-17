@@ -125,6 +125,11 @@ export function changeNpcRep(registry, npcId, delta, reason) {
 
 // === ПРОВЕРКИ ПОВЕДЕНИЯ NPC ===
 
+// Раунд 39 (п.11 заявки): NPC, которые НИКОГДА не отказываются от разговора
+// и не ругаются на ночной разговор (всегда на ногах по роду службы).
+// Тавернщик Фёдор живёт на постоялом дворе и всегда рад гостю.
+const ALWAYS_AWAKE_NPCS = new Set(['tavernkeeper']);
+
 /**
  * Проверить, хочет ли NPC говорить с игроком.
  * Учитывает: время суток, занятость, репутацию, исключения.
@@ -173,6 +178,10 @@ export function checkNpcWillingToTalk(registry, npcId, options = {}) {
     // П.3: Ночью люди не любят, когда их будят
     // ИСПРАВЛЕНО (п.3): убраны из ночных исключений: новый человек, подарок, поручение
     if (tod.id === 'night' || tod.id === 'dusk') {
+        // Раунд 39 (п.11 заявки): тавернщик — ХОЗЯИН ПОСТОЯЛОГО ДВОРА.
+        // Он всегда на ногах, всегда готов поговорить (круглосуточно) и
+        // НИКОГДА не ругается на ночной разговор — это его работа.
+        const alwaysAwake = ALWAYS_AWAKE_NPCS.has(npcId);
         // Оставшиеся исключения:
         // 2. Срочные/важные дела, опасность
         const isUrgent = options.urgent === true;
@@ -180,9 +189,8 @@ export function checkNpcWillingToTalk(registry, npcId, options = {}) {
         const isDanger = options.danger === true;
         // 6. Выполненное задание
         const isQuestComplete = options.questComplete === true;
-        
-        // Убраны: isNew, isGift, isErrand (п.3)
-        if (!isUrgent && !isDanger && !isQuestComplete) {
+
+        if (!alwaysAwake && !isUrgent && !isDanger && !isQuestComplete) {
             changeNpcRep(registry, npcId, -3, 'разбужен ночью');
             return {
                 canTalk: false,

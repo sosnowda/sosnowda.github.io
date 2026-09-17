@@ -130,25 +130,33 @@ export class TitleScene extends Phaser.Scene {
             .setOrigin(0)
             .setInteractive();
 
-        const panelW = 500, panelH = 250;
+        // Раунд 39: панель растёт по высоте текста — кнопка «ОК» всегда НИЖЕ текста
+        const msgText0 = this.add.text(0, 0, message, {
+            fontFamily: 'Arial', fontSize: '16px', color: '#E8DCC4',
+            align: 'center', wordWrap: { width: 440 },
+        }).setOrigin(0.5);
+        const panelW = 500;
+        const panelH = Math.min(height - 24, Math.max(250, msgText0.height + 150));
+        msgText0.destroy();
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(2, 0xC9A961);
 
-        const titleText = this.add.text(width / 2, height / 2 - 80, title, {
+        const titleText = this.add.text(width / 2, height / 2 - panelH / 2 + 34, title, {
             fontFamily: 'Georgia, serif', fontSize: '24px', color: '#C9A961',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
 
-        const msgText = this.add.text(width / 2, height / 2, message, {
+        const msgText = this.add.text(width / 2, height / 2 - 10, message, {
             fontFamily: 'Arial', fontSize: '16px', color: '#E8DCC4',
             align: 'center', wordWrap: { width: 440 },
         }).setOrigin(0.5);
 
         const btnW = 140, btnH = 40;
-        const btnBg = this.add.rectangle(width / 2, height / 2 + 85, btnW, btnH, 0x8B2C1A, 1)
+        const btnY = height / 2 + panelH / 2 - 34;
+        const btnBg = this.add.rectangle(width / 2, btnY, btnW, btnH, 0x8B2C1A, 1)
             .setStrokeStyle(2, 0xC9A961)
             .setInteractive({ useHandCursor: true });
-        const btnText = this.add.text(width / 2, height / 2 + 85, t('ОК'), {
+        const btnText = this.add.text(width / 2, btnY, t('ОК'), {
             fontFamily: 'Georgia, serif', fontSize: '18px', color: '#E8DCC4',
         }).setOrigin(0.5);
 
@@ -179,6 +187,9 @@ export class TitleScene extends Phaser.Scene {
     }
 
     // П.14: Полное окно помощи
+    // Раунд 39 (п.1 заявки): кнопка «Закрыть» БОЛЬШЕ НЕ перекрывает текст —
+    // раскладка честная: панель по высоте экрана, текст в своей зоне,
+    // при нехватке места шрифт уменьшается, в крайнем случае — прокрутка колесом.
     showHelp() {
         const { width, height } = this.scale;
         // Очищаем старый диалог если есть
@@ -186,7 +197,8 @@ export class TitleScene extends Phaser.Scene {
 
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
             .setOrigin(0).setInteractive().setDepth(200);
-        const panelW = 700, panelH = 600;
+        const panelW = Math.min(700, width - 24);
+        const panelH = Math.min(640, height - 24);
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
@@ -196,7 +208,7 @@ export class TitleScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
 
-        const helpText = tk('title.help.body', [
+        const helpBody = tk('title.help.body', [
             '🎯 ЦЕЛЬ ИГРЫ:',
             'Ты — беженец в незнакомой деревне. Прижись, найди работу,',
             'завоюй доверие жителей. Достигни репутации +100 или женись.',
@@ -227,15 +239,46 @@ export class TitleScene extends Phaser.Scene {
             '  ≤ −30: NPC не говорит. ≤ −50: не торгует. ≤ −80: может напасть.',
         ].join('\n'));
 
-        this.add.text(width / 2 - panelW / 2 + 20, height / 2 - panelH / 2 + 60, helpText, {
-            fontSize: '13px', color: '#E8DCC4',
+        // Зона текста: между заголовком и кнопкой «Закрыть» (кнопка — внизу панели)
+        const padX = 20;
+        const btnZoneH = 52;
+        const textX = width / 2 - panelW / 2 + padX;
+        const textY = height / 2 - panelH / 2 + 56;
+        const availTextH = Math.max(80, panelH - 56 - btnZoneH - 12);
+
+        const createHelpText = (fs) => this.add.text(textX, textY, helpBody, {
+            fontSize: fs + 'px', color: '#E8DCC4',
             fontFamily: 'Arial, sans-serif',
             stroke: '#000', strokeThickness: 1,
             lineSpacing: 3,
-            wordWrap: { width: panelW - 40 },
+            wordWrap: { width: panelW - padX * 2 },
         }).setOrigin(0, 0).setDepth(202);
 
-        // Кнопка закрытия
+        // Подбор шрифта: 13 → 10, пока текст не влезет в свою зону
+        let fs = 13;
+        let helpText = createHelpText(fs);
+        while (helpText.height > availTextH && fs > 10) {
+            fs -= 1;
+            helpText.setStyle({ ...helpText.style, fontSize: fs + 'px' });
+        }
+
+        // Если текст всё ещё выше зоны — маска + прокрутка колесом
+        let scrollY = 0;
+        let wheelHandler = null;
+        let maskGfx = null;
+        const overflow = Math.max(0, helpText.height - availTextH);
+        if (overflow > 0) {
+            maskGfx = this.make.graphics({ add: false });
+            maskGfx.fillRect(textX - 4, textY - 4, panelW - padX * 2 + 12, availTextH + 10);
+            helpText.setMask(maskGfx.createGeometryMask());
+            wheelHandler = (pointer, over, dx, dy) => {
+                scrollY = Phaser.Math.Clamp(scrollY + dy, 0, overflow);
+                helpText.y = textY - scrollY;
+            };
+            this.input.on('wheel', wheelHandler);
+        }
+
+        // Кнопка закрытия — ВСЕГДА ниже зоны текста (п.1: без перекрытия)
         const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 30, 140, 35, 0x8B2C1A, 1)
             .setStrokeStyle(2, 0xC9A961)
             .setInteractive({ useHandCursor: true }).setDepth(202);
@@ -244,6 +287,8 @@ export class TitleScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(203);
 
         const closeHelp = () => {
+            if (wheelHandler) { this.input.removeListener('wheel', wheelHandler); wheelHandler = null; }
+            if (maskGfx) { maskGfx.destroy(); maskGfx = null; }
             this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
         };
         btnBg.on('pointerup', closeHelp);

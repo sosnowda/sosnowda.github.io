@@ -129,6 +129,9 @@ export function rollLpcAppearance(registry, npc) {
         feet: pick(female ? PALETTE.feet_female : PALETTE.feet_male, rnd('feet')),
         torso: pick(PALETTE.torso, rnd('torso')),
     };
+    // Раунд 39 (п.4 заявки): женский силуэт — оверлей груди поверх одежды
+    // (слой lpc_chest_female генерируется в BootScene.ensureFemaleChestTexture)
+    if (female) appearance.chest = 'female';
 
     // Борода — только взрослым мужчинам (65%), цвет совпадает с волосами
     if (!female && !isChild && rnd('beard.want') < 0.65) {

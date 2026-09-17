@@ -768,6 +768,24 @@ const EN = {
     'Опушка леса': 'Forest edge',
     'Краешек леса, где кончается трава и начинаются деревья. Светло, грибные места да ягодные кусты.':
         'The rim of the forest where grass gives way to trees. Bright and open, with mushroom grounds and berry bushes.',
+    // Раунд 39 (п.23): лес — единая локация цепочкой
+    'Лес': 'Forest',
+    'Густой лес': 'Dense Forest',
+    'Глубина леса: тёмная чаща за опушкой и поляной. Много зверья и грибов, но и разбойники водятся.':
+        'The deep forest: dark thicket beyond the edge and the glade. Much game and mushrooms — and robbers, too.',
+    'Глубина леса: тёмная чаща за опушкой и поляной. Много следов, но и много зверья.':
+        'The deep forest: dark thicket beyond the edge and the glade. Many tracks — and much game.',
+    '🌲 Лес цепочкой: Опушка леса → Лесная поляна → Густой лес. Вход — только через Опушку, выход — последовательно.':
+        '🌲 The Forest is a chain: Forest edge → Forest glade → Dense forest. Enter only via the Edge; leave step by step.',
+    '🌿 Глубже в лес: {0} →': '🌿 Deeper into the forest: {0} →',
+    '◀ К околице': '◀ To the outskirts',
+    'Вход: Опушка': 'Entry: Forest edge',
+    'Центр: Лесная поляна': 'Center: Forest glade',
+    'Глубина: Густой лес': 'Depth: Dense forest',
+    '🌲 Лес — единая локация цепочкой: вход через Опушку → Поляна → Густой лес; выход последовательно.':
+        '🌲 The Forest is one chained location: enter via the Edge → Glade → Dense forest; leave step by step.',
+    '🌲 Лес — единая локация цепочкой: вход через Опушку → Поляна → Густой лес; выход последовательно.':
+        '🌲 The Forest is one chained location: enter via the Edge → Glade → Dense forest; leave step by step.',
     'Лесная поляна': 'Forest glade',
     'Солнечная поляна среди леса, в кольце деревьев. Много цветов, ягод и пчелиного звона.':
         'A sunlit glade ringed by trees. Abundant flowers, berries and the humming of bees.',
@@ -1066,8 +1084,8 @@ const EN = {
 const EN_KEYS = {
     // Раунд 32 (пп.14,15): обязательная строка «Информации по игре» (F1)
     'help.timeRatio':
-        '⏱ TIME: 1 minute of real time = 30 minutes of game time (1:30 ratio),\n' +
-        '  a full game day passes in 48 real minutes.\n' +
+        '⏱ TIME: 1 minute of real time = 20 minutes of game time (1:20 ratio),\n' +
+        '  a full game day passes in 72 real minutes.\n' +
         '  Any travel between locations on the map takes EXACTLY 1 game hour.\n' +
         '  Talking to an NPC costs 1 hour; examining a footprint costs 1 hour.\n' +
         '  While a conversation is open, the real-time countdown is PAUSED.\n' +
@@ -1086,8 +1104,8 @@ const EN_KEYS = {
         'You are a refugee in an unfamiliar village. Settle in, find work,\n' +
         'earn the villagers\' trust. Reach +100 reputation — or get married.\n' +
         '\n' +
-        '⏱ TIME: 1 minute of real time = 30 minutes of game time (1:30 ratio),\n' +
-        '  a full game day passes in 48 real minutes. Any travel between locations\n' +
+        '⏱ TIME: 1 minute of real time = 20 minutes of game time (1:20 ratio),\n' +
+        '  a full game day passes in 72 real minutes. Any travel between locations\n' +
         '  on the map takes EXACTLY 1 game hour. Talking to an NPC costs 1 hour;\n' +
         '  examining a footprint costs 1 hour. While a conversation is open, the\n' +
         '  real-time countdown is PAUSED. The thief moves at most one step per hour.\n' +

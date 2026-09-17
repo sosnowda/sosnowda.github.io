@@ -9,7 +9,7 @@ import { createButton, createDialog, bindRestartOnResize } from '../utils/ui.js'
 import { timeRatioInfoLine } from '../systems/WorldClock.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
-import { getForkLocations } from '../data/mapLocations.js';
+import { getForkLocations, isForestLocation, FOREST_CHAIN } from '../data/mapLocations.js';
 import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 // Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
 export const MAP_TRAVEL_MINUTES = 60;
@@ -138,9 +138,11 @@ export class ForkScene extends Phaser.Scene {
             const x = twoCols ? (gridLeft - colW / 2 + col * colW + colW / 2) : width / 2;
             const y = startY + row * step;
             const alreadySearched = state.locationsSearched.includes(loc.id);
+            // Раунд 39 (п.23): лес — ЕДИНАЯ локация; вход только через Опушку
+            const isForestEntry = loc.id === 'forest_edge';
             const label = alreadySearched
-                ? tf('{0} (обыскано)', `${loc.icon} ${loc.name}`)
-                : `${loc.icon} ${loc.name}`;
+                ? tf('{0} (обыскано)', isForestEntry ? `${loc.icon} ${t('Лес')}` : `${loc.icon} ${loc.name}`)
+                : (isForestEntry ? `${loc.icon} ${t('Лес')}` : `${loc.icon} ${loc.name}`);
 
             createButton(this, x, y, label, () => {
                 ActionLog.add(this.registry, `Игрок отправился в локацию «${loc.name}».`);
@@ -155,19 +157,30 @@ export class ForkScene extends Phaser.Scene {
                 }
                 this.scene.start('Location', { locationId: loc.id, from: 'Fork' });
             }, {
-                backgroundColor: alreadySearched ? 0x3a3a3a : 0x4a6a4a,
-                hoverColor: alreadySearched ? 0x4a4a4a : 0x5a7a5a,
+                backgroundColor: alreadySearched ? 0x3a3a3a : (isForestEntry ? 0x2e4a2e : 0x4a6a4a),
+                hoverColor: alreadySearched ? 0x4a4a4a : (isForestEntry ? 0x3c5c3c : 0x5a7a5a),
                 pressColor: 0x2a3a2a,
-                textColor: alreadySearched ? '#888' : RUS.text,
+                textColor: alreadySearched ? '#888' : (isForestEntry ? '#c9e0b0' : RUS.text),
                 fontSize: twoCols ? 13 : 14, padding: { left: 12, right: 12, top: 6, bottom: 6 },
                 cornerRadius: 6,
             });
         });
 
+        // Раунд 39 (п.23): подсказка-цепочка леса — карта местности показывает
+        // лес ЕДИНЫМ узлом, внутри — последовательный проход из трёх локаций
+        this.add.text(width / 2, startY + Math.ceil(locations.length / cols) * step + 6,
+            t('🌲 Лес цепочкой: Опушка леса → Лесная поляна → Густой лес. Вход — только через Опушку, выход — последовательно.'), {
+            fontSize: '11px', color: '#8fae7a',
+            fontFamily: 'Georgia, serif',
+            stroke: '#000', strokeThickness: 1,
+            align: 'center',
+            wordWrap: { width: width - 40 },
+        }).setOrigin(0.5, 0).setDepth(50);
+
         // ----- Кнопка "Тёмный лес — прогулка" (раунд 13) -----
         // Раунд 30: чаща — теперь через опушку и поляну; прогулка остаётся
         // отдельной сценой лесной чащи (ForestScene).
-        const backBtnY = startY + rows * step + 14;
+        const backBtnY = startY + rows * step + 36;   // раунд 39: ниже — строка-подсказка цепочки леса
         createButton(this, width / 2, backBtnY, t('🌲 Тёмный лес — прогулка'), () => {
             ActionLog.add(this.registry, 'Игрок отправился гулять в Тёмный лес.');
             tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
@@ -251,13 +264,12 @@ export class ForkScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(203);
 
         // Локации вокруг деревни (п.4: финальный список).
-        // Раунд 32: лес — ТРЕМЯ узлами (Опушка → Поляна → Чаща, раунд 30);
-        // цепочка леса рисуется дугой на северо-западе: опушка ближе к деревне,
-        // чаща — дальше всех. Все 11 узлов умещаются в панель 700×550.
+        // Раунд 39 (п.23): лес — ЕДИНАЯ локация цепочкой: линия к деревне только
+        // у Опушки (единственный вход), дальше СТРЕЛКИ Опушка → Поляна → Густой лес.
         const positions = [
-            { id: 'forest_edge', name: t('Опушка'), icon: '🌳', angle: -150, dist: 140 },
-            { id: 'forest_glade', name: t('Поляна'), icon: '🌿', angle: -125, dist: 205 },
-            { id: 'forest', name: t('Тёмный лес'), icon: '🌲', angle: -103, dist: 222 },
+            { id: 'forest_edge', name: t('Вход: Опушка'), icon: '🌳', angle: -150, dist: 140 },
+            { id: 'forest_glade', name: t('Центр: Лесная поляна'), icon: '🌿', angle: -125, dist: 205 },
+            { id: 'forest', name: t('Глубина: Густой лес'), icon: '🌲', angle: -103, dist: 222 },
             { id: 'apiary', name: t('Пасека'), icon: '🐝', angle: -50, dist: 215 },
             { id: 'lake', name: t('Озеро'), icon: '🏞', angle: -20, dist: 250 },
             { id: 'pasture', name: t('Выпас'), icon: '🐄', angle: 8, dist: 170 },
@@ -268,13 +280,18 @@ export class ForkScene extends Phaser.Scene {
             { id: 'river', name: t('Река'), icon: '🌊', angle: 178, dist: 185 },
         ];
 
+        const nodePos = {};
         positions.forEach(pos => {
             const rad = Phaser.Math.DegToRad(pos.angle);
             const x = cx + Math.cos(rad) * pos.dist;
             const y = cy + Math.sin(rad) * pos.dist;
-            // Линия от деревни к локации
-            mapGfx.lineStyle(1, 0x5a5a3a, 0.5);
-            mapGfx.lineBetween(cx, cy, x, y);
+            nodePos[pos.id] = { x, y };
+            // Линия от деревни к локации (лесная цепочка: только ОПУШКА связана
+            // с деревней — единственный вход в лес, п.23 раунда 39)
+            if (!isForestLocation(pos.id) || pos.id === 'forest_edge') {
+                mapGfx.lineStyle(1, 0x5a5a3a, 0.5);
+                mapGfx.lineBetween(cx, cy, x, y);
+            }
             // Точка локации
             mapGfx.fillStyle(0x3a5a3a, 1);
             mapGfx.fillCircle(x, y, 15);
@@ -302,6 +319,33 @@ export class ForkScene extends Phaser.Scene {
                 fontSize: '10px', color: '#a0a080',
             }).setOrigin(0.5).setDepth(203);
         });
+
+        // Раунд 39 (п.23): цепочка леса — стрелки Опушка → Поляна → Густой лес
+        for (let i = 0; i < FOREST_CHAIN.length - 1; i++) {
+            const a = nodePos[FOREST_CHAIN[i]];
+            const b = nodePos[FOREST_CHAIN[i + 1]];
+            if (!a || !b) continue;
+            mapGfx.lineStyle(2.5, 0x8fae7a, 0.95);
+            mapGfx.lineBetween(a.x, a.y, b.x, b.y);
+            // Наконечник стрелки по направлению a → b
+            const ang = Math.atan2(b.y - a.y, b.x - a.x);
+            const tipX = b.x - Math.cos(ang) * 18;
+            const tipY = b.y - Math.sin(ang) * 18;
+            mapGfx.fillStyle(0x8fae7a, 1);
+            mapGfx.fillTriangle(
+                tipX, tipY,
+                tipX - Math.cos(ang - 0.5) * 9, tipY - Math.sin(ang - 0.5) * 9,
+                tipX - Math.cos(ang + 0.5) * 9, tipY - Math.sin(ang + 0.5) * 9,
+            );
+        }
+        // Подпись цепочки в углу карты
+        this.add.text(width / 2, height / 2 + panelH / 2 - 66,
+            t('🌲 Лес — единая локация цепочкой: вход через Опушку → Поляна → Густой лес; выход последовательно.'), {
+            fontSize: '11px', color: '#9dbb86', fontFamily: 'Georgia, serif',
+            stroke: '#000', strokeThickness: 1,
+            align: 'center',
+            wordWrap: { width: panelW - 60 },
+        }).setOrigin(0.5, 0).setDepth(203);
 
         // Игрок — в деревне (зелёная точка)
         mapGfx.fillStyle(0x60ff60, 1);

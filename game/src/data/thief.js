@@ -66,9 +66,14 @@ export const CHASE_STOPS = 3;
 export const TRAVEL_TICKS = 1;
 // Сколько тиков (часов) вор идёт из деревни до первой локации
 export const START_TRAVEL_TICKS = 1;
-// Раунд 32 (п.3): вор ВСЕГДА сидит на локации ОТ 1 ДО 3 ЧАСОВ (случайно)
-export const MIN_STAY_HOURS = 1;
-export const MAX_STAY_HOURS = 3;
+// Раунд 32 (п.3), раунд 39 (п.22): вор ВСЕГДА сидит на обычной локации
+// ОТ 2 ДО 5 ЧАСОВ (случайно) — раньше было 1–3, вор «слишком быстро убегал».
+export const MIN_STAY_HOURS = 2;
+export const MAX_STAY_HOURS = 5;
+// Раунд 39 (п.25): в ЛЕСНЫХ локациях (Опушка/Поляна/Густой лес) вор задерживается
+// ДОЛЬШЕ — от 4 до 7 часов (лес скрывает беглеца).
+export const FOREST_STAY_MIN_HOURS = 4;
+export const FOREST_STAY_MAX_HOURS = 7;
 // Раунд 32 (п.4): прочитанный след или подсказка держат вора на месте 2 часа
 export const TRAIL_LOCK_HOURS = 2;
 // Раунд 32 (п.10): наводка от НПЦ действительна 5 игровых часов; когда срок
@@ -87,9 +92,22 @@ export function randomTraceLifetime() {
         Math.floor(Math.random() * (TRACE_LIFETIME_MAX_MINUTES - TRACE_LIFETIME_MIN_MINUTES + 1));
 }
 
-/** Случайная длительность сидения вора на локации в часах (1–3, п.3). */
+/** Случайная длительность сидения вора на локации в часах (2–5, п.22 раунда 39). */
 export function randomStayHours() {
     return MIN_STAY_HOURS + Math.floor(Math.random() * (MAX_STAY_HOURS - MIN_STAY_HOURS + 1));
+}
+
+/** Раунд 39 (п.25): срок сидения вора в ЛЕСНОЙ локации — 4–7 часов. */
+export function randomForestStayHours() {
+    return FOREST_STAY_MIN_HOURS +
+        Math.floor(Math.random() * (FOREST_STAY_MAX_HOURS - FOREST_STAY_MIN_HOURS + 1));
+}
+
+/** Раунд 39: срок ожидания вора для конкретной локации (лес — дольше). */
+export function randomStayHoursFor(locationId) {
+    return FOREST_SEQUENCE.includes(locationId)
+        ? randomForestStayHours()
+        : randomStayHours();
 }
 // Нижние пороги проверок (раунд 22, баланс: даже у воина-непрофильника
 // должны быть реальные шансы — проверки решают исход погони)
@@ -402,24 +420,33 @@ export function examineFootprint(registry, locationId, fpId) {
 export function initThiefHunt(registry) {
     const quest = registry.get('quest') || {};
 
-    // Маршрут: ТРИ РАЗНЫЕ локации в случайном порядке (раунд 22)
+    // Маршрут: ТРИ РАЗНЫЕ локации в случайном порядке (раунд 22).
+    // Раунд 39 (п.24): если вор решит бежать ЧЕРЕЗ ЛЕС — он обязан пройти
+    // ВСЕ ТРИ лесные локации цепочкой (Опушка → Поляна → Густой лес),
+    // и сбежать сможет только после срока ожидания в Густом лесу.
     const pool = [...CHASE_LOCATIONS];
-    const route = [];
+    const picks = [];
     for (let i = 0; i < CHASE_STOPS; i++) {
-        route.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+        picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     }
+    let route;
+    if (picks.some(id => FOREST_SEQUENCE.includes(id))) {
+        // Лес в маршруте: НЕлесные остановки вперёд, затем ВСЯ лесная цепочка
+        route = picks.filter(id => !FOREST_SEQUENCE.includes(id)).concat(FOREST_SEQUENCE);
+    } else {
+        route = picks;
+    }
+    // Раунд 39 (пп.22,25): срок ожидания на каждой остановке:
+    // обычные локации 2–5 ч, лесные (Опушка/Поляна/Густой лес) 4–7 ч.
+    const stays = route.map((id) => randomStayHoursFor(id));
 
     quest.chase = {
         route,
         phase: 'travel',       // 'travel' (в пути) | 'stay' (сидит на локации)
         stop: 0,               // индекс текущей остановки в route
         ticksLeft: START_TRAVEL_TICKS,
-        // Раунд 32 (п.3): на КАЖДОЙ локации вор сидит 1–3 часа (случайно)
-        stays: [
-            randomStayHours(),
-            randomStayHours(),
-            randomStayHours(),
-        ],
+        // Раунд 39 (пп.22,25): 2–5 ч на обычных локациях, 4–7 ч в лесных
+        stays,
         minutesAccum: 0,       // накопитель неполных тиков (часов)
         traces: {},            // { locId: { wentTo, side, leftAt, life } }
         hintLockHours: 0,      // раунд 32 (п.4): «заморозка» на 2/5 часов (сводная)
@@ -428,6 +455,7 @@ export function initThiefHunt(registry) {
         traceLockHours: 0,     // раунд 35: заморозка прочитанного следа
     };
     // Раунд 31 (п.1): в лес — строго последовательно: Опушка → Поляна → Чаща
+    // (раунд 39: маршрут уже строится цепочкой — перестановка идемпотентна)
     applyForestSequence(route);
     quest.thiefEscaped = false;
     quest.thiefDefeated = null;    // 'killed' | 'captured' | 'convinced'

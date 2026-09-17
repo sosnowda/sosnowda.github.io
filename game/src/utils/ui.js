@@ -797,6 +797,43 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     let layoutOverflow = 0;
     let layoutContentTop = 0;
     let maxContentHCache = 120;
+
+    // ----- Раунд 39 (пп.2,12 заявки): ЧЕСТНАЯ РАСКЛАДКА КНОПОК ПО ШИРИНЕ -----
+    // Раньше: perRow = n>3 ? 2 : n — 3 длинные кнопки (например меню отдыха
+    // «Отдохнуть 1 час (4 д.) — лечение ~1/3») сжимались в один ряд,
+    // НАКЛАДЫВАЛИСЬ друг на друга и вылезали за панель. Теперь кнопки
+    // упаковываются в ряды по фактической ширине (жадная упаковка).
+    const BTN_ROW_GAP = 12;
+    const BTN_ROW_H = 50;
+    const getBtnWidth = (btn) => {
+        try {
+            const bg = btn.getElement ? btn.getElement('background') : null;
+            const w = bg ? (bg.width || 0) * Math.abs(bg.scaleX || 1) : 0;
+            return (w > 10) ? w : 120;
+        } catch (e) { return 120; }
+    };
+    const packButtonRows = () => {
+        const n = actionContainers.length;
+        if (n === 0) return [];
+        const maxRowW = Math.max(180, dialogWidth - 40);
+        const widths = actionContainers.map(getBtnWidth);
+        const rows = [];
+        let cur = [], curW = 0;
+        widths.forEach((w, i) => {
+            const addW = cur.length ? w + BTN_ROW_GAP : w;
+            if (cur.length && curW + addW > maxRowW) {
+                rows.push(cur);
+                cur = [i];
+                curW = w;
+            } else {
+                cur.push(i);
+                curW += addW;
+            }
+        });
+        if (cur.length) rows.push(cur);
+        return rows;
+    };
+
     const layout = () => {
         const titleH = titleText.height || 30;
         const availH = Math.max(280, cam.height * 0.9);
@@ -806,9 +843,8 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             const contentH = contentText.height || 60;
             let th = pad.top + titleH + pad.title + contentH + pad.content;
             if (actionContainers.length > 0) {
-                th += pad.action + 50;
-                const perRow = actionContainers.length > 3 ? 2 : actionContainers.length;
-                th += (Math.ceil(actionContainers.length / perRow) - 1) * 50;
+                const rowsCount = packButtonRows().length;
+                th += pad.action + 50 + (rowsCount - 1) * BTN_ROW_H;
             }
             th += pad.bottom;
             return th;
@@ -824,8 +860,12 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         // Панель не выше 90% экрана, даже если текст ещё не убрался
         const totalH = Math.min(naturalH, availH);
         const contentTop = -totalH / 2 + pad.top + titleH + pad.title;
+        const btnRows = packButtonRows();
+        const btnBlockH = actionContainers.length > 0
+            ? pad.action + 50 + (btnRows.length - 1) * BTN_ROW_H
+            : 0;
         const maxContentH = Math.max(60,
-            totalH - (pad.top + titleH + pad.title) - (pad.content + pad.bottom + (actionContainers.length > 0 ? pad.action + 50 + (Math.ceil(actionContainers.length / (actionContainers.length > 3 ? 2 : actionContainers.length)) - 1) * 50 : 0)));
+            totalH - (pad.top + titleH + pad.title) - (pad.content + pad.bottom + btnBlockH));
 
         // Маска + колесо прокрутки, если контент выше отведённой области.
         // Саму маску создаём В КОНЦЕ layout() — когда contentText.x уже
@@ -897,27 +937,23 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             contentText.setPosition(-contentText.width / 2, contentTop - contentScrollY);
         }
 
-        // Кнопки — внизу; при 4+ кнопках сетка 2×N (раунд 21: в один ряд
-        // подписи обрезались/перекрывались)
-        const n = actionContainers.length;
-        if (n > 0) {
-            const perRow = n > 3 ? 2 : n;
-            const rows = Math.ceil(n / perRow);
-            const rowH = 50;
-            const btnYBase = totalH / 2 - pad.bottom - 25 - (rows - 1) * rowH / 2;
-            for (let r = 0; r < rows; r++) {
-                const rowBtns = actionContainers.slice(r * perRow, (r + 1) * perRow);
-                const m = rowBtns.length;
+        // Кнопки — внизу; ряды упакованы по фактической ширине кнопок
+        // (раунд 39: без наложений и выхода за панель при любых подписях)
+        if (btnRows.length > 0) {
+            const rowH = BTN_ROW_H;
+            const btnYBase = totalH / 2 - pad.bottom - 25 - (btnRows.length - 1) * rowH / 2;
+            btnRows.forEach((rowIdxs, r) => {
                 const y = btnYBase + r * rowH;
-                if (m === 1) {
-                    rowBtns[0].setPosition(0, y);
-                } else {
-                    const spacing = (dialogWidth - 40) / m;
-                    rowBtns.forEach((btn, i) => {
-                        btn.setPosition(-dialogWidth / 2 + 20 + spacing / 2 + i * spacing, y);
-                    });
-                }
-            }
+                const rowW = rowIdxs.reduce((s, bi) => s + getBtnWidth(actionContainers[bi]), 0)
+                    + (rowIdxs.length - 1) * BTN_ROW_GAP;
+                let x = -rowW / 2;
+                rowIdxs.forEach((bi) => {
+                    const btn = actionContainers[bi];
+                    const w = getBtnWidth(btn);
+                    btn.setPosition(x + w / 2, y);
+                    x += w + BTN_ROW_GAP;
+                });
+            });
         }
 
         // ----- Раунд 32: маска длинного текста (в МИРОВЫХ координатах —

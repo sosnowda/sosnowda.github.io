@@ -26,7 +26,7 @@ import {
     getVillageRep, changeVillageRep,
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
-import { STASHES, isOpenedToday, markOpened, rollLoot, lootDisplayName } from '../data/chests.js';
+// Раунд 39 (п.13): STASHES/тюки/сундуки/ларцы удалены из игры целиком
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
@@ -396,10 +396,12 @@ export class InteriorScene extends Phaser.Scene {
                 // Раунд 22 (п.10/12): отдых в таверне — 1 час (частичное лечение)
                 // или 8 часов (полное восстановление)
                 buttons.push({ label: t('\u{1F6CF} Отдых'), bg: 0x4a3a5a, hover: 0x5a4a6a, cb: () => this.showTavernRestMenu(interior) });
-                // Раунд 12: свой тюк, оставленный на сохранение у тавернщика
-                buttons.push({ label: t('\u{1F392} Мой тюк'), bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('tavern') });
+                // Раунд 39 (п.13): кнопка «Мой тюк» УДАЛЕНА вместе со всеми тюками
             } else if (interior.id === 'blacksmith') {
                 buttons.push({ label: t('\u{1F6D2} Купить оружие'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
+                // Раунд 39 (п.15 заявки): кнопка «Персонаж» — посмотреть, что надето
+                // и что в руках, не выходя из кузницы (свиток поверх кузницы)
+                buttons.push({ label: t('\u{1F9CD} Персонаж'), bg: 0x4a3520, hover: 0x5a4530, cb: () => this.openCharacterSheet() });
             }
             // Раунд 26: в церкви — богомолье и осмотр киота (переехали из удалённой часовни)
             if (interior.id === 'church') {
@@ -411,8 +413,7 @@ export class InteriorScene extends Phaser.Scene {
             // Раунд 37 (вариант Б): мастерская гончара — подённая работа
             // переехала сюда из удалённого амбара (п.18 заявки)
             buttons.push({ label: t('\u{1FAB5} Помочь в мастерской (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInPotter() });
-            // Раунд 12: свой работничий узел в углу
-            buttons.push({ label: t('\u{1F392} Мой узел'), bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('potter') });
+            // Раунд 39 (п.13): кнопка «Мой узел» УДАЛЕНА вместе со всеми тюками
         }
         const exitAction = () => {
             // Раунд 24: скрип двери при выходе
@@ -1224,48 +1225,18 @@ export class InteriorScene extends Phaser.Scene {
     }
 
     /**
-     * Раунд 12: домашний тайник («свой тюк») — раз в игровой день.
-     * Работает через q.chestsOpened (те же помощники, что у уличных сундуков).
-     * Лут скромный: перекус и мелочь. Забирает 5 минут.
+     * Раунд 39 (п.15 заявки): кнопка «Персонаж» у кузнеца — свиток персонажа
+     * ПОВЕРХ кузницы: видно, что надето (броня) и что в руках (оружие),
+     * плюс можно сразу переэкипироваться. Сцена кузницы ставится на паузу,
+     * «Назад» возвращает без потери состояния.
      */
-    openStash(stashKey) {
+    openCharacterSheet() {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
         if (!player) return;
-        const stash = STASHES[stashKey];
-        if (!stash) return;
-
-        const q = this.registry.get('quest') || {};
-        const today = this.dayKey();
-        if (isOpenedToday(q, stash.id, today)) {
-            createDialog(this, '\u{1F392} Твой тюк',
-                `Сегодня ты уже заглядывал в ${stash.label} — там больше ничего нет.`,
-                [{ text: 'Ладно', callback: () => {} }]);
-            return;
-        }
-        markOpened(q, stash.id, today);
-        this.registry.set('quest', q);
-
-        const loot = rollLoot(stash);
-        let msg = 'Пусто... только старая тряпица.';
-        if (loot.kind === 'money') {
-            const amount = Phaser.Math.Between(loot.min, loot.max);
-            player.dengas = (player.dengas || 0) + amount;
-            msg = lootDisplayName(loot, amount);
-            this.audioManager.playSound('sfx_button_click');
-        } else if (loot.kind === 'apple') {
-            player.HP = Math.min(player.HPmax || player.HP + 2, player.HP + 2);
-            msg = lootDisplayName(loot);
-            this.audioManager.playSound('sfx_heal');
-        }
-        this.registry.set('player', player);
-        this.updateHUD();
-        tickTime(this.registry, 5);
-        ActionLog.add(this.registry, `Заглянул в ${stash.label}: ${msg}.`);
-
-        createDialog(this, '\u{1F392} Твой тюк',
-            `Ты развязываешь узел и проверяешь припасы. ${stash.label} — тут всегда найдётся что-то пригодное.\n\n${msg}`,
-            [{ text: 'Прибрать узел', callback: () => {} }]);
+        ActionLog.add(this.registry, 'Осмотрел себя у кузнеца (свиток персонажа).');
+        this.scene.pause();
+        this.scene.launch('Character', { from: 'Interior', tab: 'inventory' });
     }
 
     /**
@@ -1462,38 +1433,18 @@ export class InteriorScene extends Phaser.Scene {
     /**
      * П.5 (4-й раз!): Пол и стены рисуем НАДЁЖНО — сначала заливаем прямоугольниками
      * коричневый фон, потом поверх — тайлы 32×32. Это исключает любую «зелёную сетку».
+     *
+     * РАУНД 39 (п.10 заявки): ЖИВОПИСНЫЕ БЭКГРАУНДЫ DarklandsReborn УДАЛЕНЫ —
+     * все интерьеры (таверна, кузница, церковь, дома) рисуются ЕДИНОЙ тайловой
+     * графикой (wall_wood + floor_wood + окна + декор), как остальные дома.
+     * Рисунки bg_* отличались по стилю от браузерной игры — больше не используются.
      */
     addDecorations(interior) {
         const { width, height } = this.scale;
         const decor = interior.decor || [];
         const ts = 32;
-
-        // === Фаза 1: живописный фон интерьера (DarklandsReborn) ===
-        // Таверна/кузница/церковь получают нарисованный
-        // интерьер на весь экран вместо тайловых стен; пол и окна тайлами не рисуются.
-        // (Раунд 26: часовня удалена — kirche_inner.jpg только у церкви.)
-        const BG_MAP = {
-            tavern: 'int_bg_tavern',
-            blacksmith: 'int_bg_blacksmith',
-            church: 'int_bg_church',
-        };
-        const bgKey = BG_MAP[interior.id];
-        const painted = !!(bgKey && this.textures.exists(bgKey));
-        // Фаза 1 (после QA): village_elder.jpg оказался живописным ПОРТРЕТОМ старосты,
-        // а не интерьером — дом старосты остаётся с тайловым оформлением
-        if (painted) {
-            // Aspect-fill: закрываем весь экран, центр кадра — по центру экрана
-            const bg = this.add.image(0, 0, bgKey)
-                .setOrigin(0, 0).setScrollFactor(0).setDepth(-6);
-            const s = Math.max(width / bg.width, height / bg.height);
-            bg.setScale(s);
-            bg.setPosition((width - bg.width * s) / 2, (height - bg.height * s) / 2);
-            // Затемнение поверх фона — фон уходит назад, декор и текст читаются
-            // (церковь светлее — затемняем меньше)
-            const dimMap = { tavern: 0.34, blacksmith: 0.34, church: 0.20 };
-            this.add.rectangle(0, 0, width, height, 0x140d08, dimMap[interior.id] || 0.30)
-                .setOrigin(0, 0).setScrollFactor(0).setDepth(-5);
-        }
+        // Раунд 39: painted-ветка удалена — ВСЕ интерьеры тайловые (единая рисовка)
+        const painted = false;
 
         // === Раунд 9: инфраструктура света ===
         // Собираем источники света (печь, свечи, лампада, камин),
@@ -1665,10 +1616,7 @@ export class InteriorScene extends Phaser.Scene {
             if (this.textures.exists('int_deco_shelf')) {
                 this.add.image(width * 0.5, height * 0.25, 'int_deco_shelf').setScale(1.2).setDepth(5);
             }
-            // Сундук у входа
-            if (this.textures.exists('int_deco_chest')) {
-                this.add.image(width * 0.15, height * 0.75, 'int_deco_chest').setScale(1).setDepth(5);
-            }
+            // Раунд 39 (п.13): сундук у входа УДАЛЕН (все сундуки/тюки/ларцы — из игры)
         } else if (interior.id === 'blacksmith' && !painted) {
             // Кузница: наковальня, горн, поленница, оружие, сундук
             // (в «живописной» кузнице весь декор уже в фоне)
@@ -1691,10 +1639,7 @@ export class InteriorScene extends Phaser.Scene {
             if (this.textures.exists('int_deco_firewood')) {
                 this.add.image(width * 0.95, height * 0.6, 'int_deco_firewood').setScale(1.2).setDepth(5);
             }
-            // Сундук с готовой продукцией
-            if (this.textures.exists('int_deco_chest')) {
-                this.add.image(width * 0.15, height * 0.65, 'int_deco_chest').setScale(1).setDepth(5);
-            }
+            // Раунд 39 (п.13): сундук с готовой продукцией УДАЛЕН
             this.add.text(width * 0.2, 80, '⚔ 🔨 🛡', { fontSize: '32px' }).setOrigin(0.5).setDepth(10);
         } else if (interior.id === 'elder_house') {
             // Дом старосты: стол, свеча, икона, сундук с документами, лавка, ПЕЧЬ,
@@ -1724,9 +1669,7 @@ export class InteriorScene extends Phaser.Scene {
             if (this.textures.exists('int_deco_bench')) {
                 this.add.image(width * 0.2, height * 0.7, 'int_deco_bench').setScale(1).setDepth(5);
             }
-            if (this.textures.exists('int_deco_chest')) {
-                this.add.image(width * 0.8, height * 0.7, 'int_deco_chest').setScale(1).setDepth(5);
-            }
+            // Раунд 39 (п.13): сундук с документами УДАЛЕН
         } else if (interior.id === 'potter_house') {
             // Раунд 37 (вариант Б): мастерская гончара — круг, горшки, дрова
             if (this.textures.exists('int_deco_barrel')) {

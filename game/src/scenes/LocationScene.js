@@ -2,7 +2,7 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { FORK_LOCATIONS } from '../data/interiors.js';
-import { getLocationById } from '../data/mapLocations.js';
+import { getLocationById, isForestLocation, forestDeeper, forestShallower } from '../data/mapLocations.js';
 import {
     searchLocation, getHuntState, checkGameEnd,
     isChaseActive, isThiefAt, presentThiefEncounter, chaseTicksLeft,
@@ -239,18 +239,52 @@ export class LocationScene extends Phaser.Scene {
         const isRiver = this.locationId === 'river';
         const isRoad = this.locationId === 'road' || this.locationId === 'road_south';
         const searchLabel = isRiver ? t('🔍 Поиск') : (isRoad ? t('🔍 Осмотр') : t('🔍 Искать следы'));
-        const exitLabel = (isRiver || isRoad) ? t('🚪 Выход') : t('◀ Назад к развилке');
+
+        // ===== РАУНД 39 (п.23 заявки): ЛЕС — ЦЕПОЧКА ЛОКАЦИЙ =====
+        // Вход в лес только через Опушку; глубже — последовательно
+        // (Опушка → Поляна → Густой лес); выход из леса тоже последовательно.
+        const inForest = isForestLocation(this.locationId);
+        const deeperId = inForest ? forestDeeper(this.locationId) : null;
+        const shallowerId = inForest ? forestShallower(this.locationId) : null;
+        const deeperLoc = deeperId ? getLocationById(deeperId) : null;
+        const shallowerLoc = shallowerId ? getLocationById(shallowerId) : null;
+
+        let exitLabel;
+        if (inForest && shallowerLoc) {
+            exitLabel = `◀ ${shallowerLoc.name}`;           // шаг назад по цепочке
+        } else if (inForest) {
+            exitLabel = t('◀ К околице');                    // Опушка → развилка
+        } else {
+            exitLabel = (isRiver || isRoad) ? t('🚪 Выход') : t('◀ Назад к развилке');
+        }
 
         // ----- Кнопка поиска/осмотра (только пока активна погоня и НЕТ следов:
         // раунд 30 — где вор прошёл, там следы проверяются по одному кликом) -----
-        if (chaseActive && !alreadySearched && !hasFootprints) {
+        const hasSearchBtn = chaseActive && !alreadySearched && !hasFootprints;
+        if (hasSearchBtn) {
             createButton(this, width / 2, height - 100, tf('{0} (проверка Внимательности)', searchLabel), () => {
                 this.doSearch();
             }, {
                 backgroundColor: RUS.accent, hoverColor: RUS.accentLight, textColor: RUS.text,
                 fontSize: 18, padding: { left: 24, right: 24, top: 14, bottom: 14 },
                 cornerRadius: 8,
-            });
+            }).setScrollFactor(0).setDepth(50);
+        }
+
+        // ----- Кнопка «глубже в лес» — только в лесной цепочке (п.23) -----
+        if (deeperLoc) {
+            const hasSearch = hasSearchBtn;
+            const deeperY = hasSearch ? height - 152 : height - 100;
+            createButton(this, width / 2, deeperY, tf('🌿 Глубже в лес: {0} →', deeperLoc.name), () => {
+                tickTime(this.registry, MAP_TRAVEL_MINUTES);   // переход = 1 игровой час
+                ActionLog.add(this.registry, `Игрок углубился в лес: «${deeperLoc.name}».`);
+                onLocationVisited(this.registry, deeperId);
+                this.scene.restart({ locationId: deeperId, from: this.from });
+            }, {
+                backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, textColor: '#c9e0b0',
+                fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
+                cornerRadius: 8,
+            }).setScrollFactor(0).setDepth(50);
         }
 
         // ----- Кнопка рыбалки на Реке (раунд 36: пруд в деревне удалён,
@@ -263,20 +297,26 @@ export class LocationScene extends Phaser.Scene {
                 backgroundColor: 0x2a4a5a, hoverColor: 0x3a5a6a, textColor: RUS.text,
                 fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
                 cornerRadius: 8,
-            });
+            }).setScrollFactor(0).setDepth(50);
         }
 
-        // ----- Кнопка выхода (дорога обратно к развилке занимает время) -----
+        // ----- Кнопка выхода: из леса — НАЗАД ПО ЦЕПОЧКЕ (п.23);
+        // с опушки и из обычных локаций — на околицу/разилку -----
         createButton(this, width / 2, height - 50, exitLabel, () => {
             // Раунд 32 (п.5): любое перемещение по карте — РОВНО 1 игровой час
             tickTime(this.registry, MAP_TRAVEL_MINUTES);
-            ActionLog.add(this.registry, `Игрок покинул локацию «${loc.name}».`);
-            this.scene.start(this.from);
+            if (inForest && shallowerLoc) {
+                ActionLog.add(this.registry, `Игрок вышел из леса на «${shallowerLoc.name}».`);
+                this.scene.restart({ locationId: shallowerId, from: this.from });
+            } else {
+                ActionLog.add(this.registry, `Игрок покинул локацию «${loc.name}».`);
+                this.scene.start(this.from);
+            }
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
             fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
             cornerRadius: 8,
-        });
+        }).setScrollFactor(0).setDepth(50);
 
         // ----- Раунд 27 (пп.7,8): ЖИТЕЛИ НА ЛОКАЦИЯХ —
         // Авдей на мельнице, Марфа с травами на озере/реке/в лесу и т.д.

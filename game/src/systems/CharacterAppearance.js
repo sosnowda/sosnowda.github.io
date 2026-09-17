@@ -22,7 +22,34 @@ const WALK_ROW_OFFSET = 8; // в LPC-листе walk начинается с 8-�
 const WALK_FRAMES = 8;     // 8 кадров walk в каждом ряду LPC (0-7, последний ~ пустой)
 const IDLE_FRAME_IDX = 0;  // первый кадр ряда — idle
 
-const DIRECTIONS = ['down', 'left', 'right', 'up'];
+// РАУНД 39 (пп.3,8,9 заявки): КРИТИЧЕСКИЙ ФИКС ориентации.
+// В универсальном LPC-листе walk-строки идут в порядке UP → LEFT → DOWN → RIGHT:
+//   строка 8 = СПИНОЙ к камере (up), 9 = влево, 10 = ЛИЦОМ к камере (down), 11 = вправо.
+// Это подтверждено попиксельной проверкой слоя глаз (глаза есть только на строках 9/10/11,
+// на строке 10 — ровно вдвое больше пикселей глаз, чем в профиль).
+// Раньше строки мапились как down/left/right/up — все персонажи «спиной к игроку»,
+// с лицом, закрытым волосами (задача 9) и без лица у героя (задача 8).
+export const LPC_WALK_ROW = { up: 8, left: 9, down: 10, right: 11 };
+
+// РАУНД 39: вертикальная привязка слоёв. Пак собран из LPC-наборов с РАЗНЫМИ
+// базовыми линиями: тело нарисовано в нижней половине кадра (голова y33-42),
+// а глаза/волосы/борода/одежда — под «высокого» персонажа (голова y25-38).
+// Без смещений рубаха закрывает лицо, волосы висят над головой, глаза — в волосах
+// («лица не видно / закрыты причёсками» — пп.3,8,9 заявки). Смещения выверены
+// попиксельно: тело — эталон (0), остальное подтянуто к нему.
+const CATEGORY_Y_OFFSET = {
+    body: 0,
+    eyes: 8,
+    beards: 7,
+    hair: 7,
+    legs: 0,
+    feet: 0,
+    torso: 8,
+    chest: 0,   // оверлей груди генерируется уже привязанным
+    extra: 0,
+};
+
+const DIRECTIONS = ['down', 'left', 'right', 'up']; // порядок строк в НАШЕМ выходном листе
 
 /**
  * Compose — собирает единый spritesheet из выбранных LPC-слоёв.
@@ -59,14 +86,18 @@ export function composeCharacterTexture(scene, appearance, textureKey = 'player_
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, OUT_W, OUT_H);
 
-    // Порядок слоёв (снизу вверх): body, eyes, beards, hair, legs, feet, torso
-    const layerOrder = manifest.layer_order || ['body', 'eyes', 'beards', 'hair', 'legs', 'feet', 'torso'];
+    // Порядок слоёв (снизу вверх): body, eyes, beards, hair, legs, feet, torso,
+    // chest (раунд 39, п.4: грудь у женских персонажей — поверх одежды), extra (плащ)
+    const layerOrder = manifest.layer_order
+        ? [...manifest.layer_order, 'chest']
+        : ['body', 'eyes', 'beards', 'hair', 'legs', 'feet', 'torso', 'chest'];
 
     // Для каждого направления (down, left, right, up)
     let allFound = true;
     for (let dirIdx = 0; dirIdx < DIRECTIONS.length; dirIdx++) {
         const dir = DIRECTIONS[dirIdx];
-        const lpcRow = WALK_ROW_OFFSET + dirIdx;
+        // РАУНД 39: источник — ПРАВИЛЬНАЯ строка LPC-листа (up=8, left=9, down=10, right=11)
+        const lpcRow = LPC_WALK_ROW[dir];
         const outRow = dirIdx;
 
         // Idle кадр (первый в ряду LPC)
@@ -98,7 +129,20 @@ export function composeCharacterTexture(scene, appearance, textureKey = 'player_
                 if (sx + FRAME_SIZE > sourceImg.width || sy + FRAME_SIZE > sourceImg.height) {
                     continue;
                 }
-                ctx.drawImage(sourceImg, sx, sy, FRAME_SIZE, FRAME_SIZE, outX, outY, FRAME_SIZE, FRAME_SIZE);
+                // Раунд 39: слой рисуется со СВОИМ вертикальным смещением
+                // (привязка всех слоёв к телу). Clip — чтобы смещённый кадр
+                // не залезал в соседнюю строку выходного листа.
+                const yOff = CATEGORY_Y_OFFSET[category] || 0;
+                if (yOff === 0) {
+                    ctx.drawImage(sourceImg, sx, sy, FRAME_SIZE, FRAME_SIZE, outX, outY, FRAME_SIZE, FRAME_SIZE);
+                } else {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(outX, outY, FRAME_SIZE, FRAME_SIZE);
+                    ctx.clip();
+                    ctx.drawImage(sourceImg, sx, sy, FRAME_SIZE, FRAME_SIZE, outX, outY + yOff, FRAME_SIZE, FRAME_SIZE);
+                    ctx.restore();
+                }
             }
         }
     }
@@ -134,6 +178,72 @@ export function composeCharacterTexture(scene, appearance, textureKey = 'player_
     }
 
     return allFound;
+}
+
+/**
+ * РАУНД 39 (п.4 заявки): ГРУДЬ У ЖЕНСКИХ ПЕРСОНАЖЕЙ.
+ * Генерирует оверлей `lpc_chest_female` — тонкая тень/блик выреза груди,
+ * который рисуется ПОВЕРХ одежды (torso) в композите. Женское тело LPC почти
+ * не отличается от мужского, пока персонаж одет — оверлей даёт читаемое
+ * различие силуэта, не ломая пиксельный стиль.
+ *
+ * Раскладка совпадает с универсальным LPC-листом (64px кадры, строки walk
+ * up=8/left=9/down=10/right=11), поэтому composeCharacterTexture берёт кадры
+ * из этого слоя тем же кодом, что и остальные слои.
+ *
+ * Координаты выверены попиксельно по body/torso-слоям пака:
+ *   down  — торс x≈24..39, линия груди y≈38..41;
+ *   left/right — грудь у переднего края силуэта (ставим симметрично).
+ *
+ * @param {Phaser.Scene} scene
+ * @returns {boolean} true — текстура создана (или уже была)
+ */
+export function ensureFemaleChestTexture(scene) {
+    const KEY = 'lpc_chest_female';
+    if (scene.textures.exists(KEY)) return true;
+    if (typeof document === 'undefined') return false;
+
+    // Холст покрывает строки walk 8..11 (высота 12×64 = 768)
+    const W = 13 * FRAME_SIZE;   // 832 — как у Universal-листа
+    const H = 12 * FRAME_SIZE;   // 768 — достаточно для строк 8..11
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+
+    const DARK = 'rgba(30, 14, 8, 0.42)';    // тень ложбинки
+    const LIGHT = 'rgba(255, 238, 210, 0.34)'; // блик под грудью
+
+    // Точка внутри кадра: col*64 + x, row*64 + y
+    const dot = (row, col, x, y, color) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(col * FRAME_SIZE + x, row * FRAME_SIZE + y, 1, 1);
+    };
+
+    // Строки 9 (left), 10 (down), 11 (right) — на спине (8) груди не видно.
+    // Координаты — в ПРИВЯЗАННОЙ системе (после смещения торса на +8 кадр:
+    // рубха занимает y40-54, линия груди y45-47).
+    [LPC_WALK_ROW.left, LPC_WALK_ROW.down, LPC_WALK_ROW.right].forEach((row) => {
+        for (let col = 0; col < 9; col++) {           // 9 кадров walk/idle
+            if (row === LPC_WALK_ROW.down) {
+                // Вид спереди: две симметричные ложбинки + блики под ними
+                dot(row, col, 29, 45, DARK); dot(row, col, 29, 46, DARK);
+                dot(row, col, 34, 45, DARK); dot(row, col, 34, 46, DARK);
+                dot(row, col, 27, 47, LIGHT); dot(row, col, 28, 47, LIGHT);
+                dot(row, col, 35, 47, LIGHT); dot(row, col, 36, 47, LIGHT);
+            } else {
+                // Профиль: бугор груди у переднего края (ставим симметрично —
+                // у LPC-паков перед профилем left/right зеркалится)
+                dot(row, col, 27, 45, DARK); dot(row, col, 28, 45, DARK);
+                dot(row, col, 35, 45, DARK); dot(row, col, 36, 45, DARK);
+                dot(row, col, 27, 47, LIGHT); dot(row, col, 36, 47, LIGHT);
+            }
+        }
+    });
+
+    scene.textures.addCanvas(KEY, canvas);
+    return scene.textures.exists(KEY);
 }
 
 /**

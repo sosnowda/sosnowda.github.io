@@ -5,6 +5,7 @@ import { RUS } from '../config/RusTheme.js';
 import { createCharacter } from '../systems/Character.js';
 import { paletteLayerFiles } from '../systems/NpcLpc.js';
 import { isEn } from '../systems/i18n.js';  // раунд 37 (п.7): полоска загрузки по языку
+import { ensureFemaleChestTexture } from '../systems/CharacterAppearance.js'; // раунд 39 (п.4)
 
 export class BootScene extends Phaser.Scene {
     constructor() {
@@ -272,6 +273,10 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
+        // ----- Раунд 39 (п.4 заявки): оверлей груди для женских LPC-персонажей —
+        // canvas-слой «поверх одежды», один раз за игру (см. CharacterAppearance.js) -----
+        ensureFemaleChestTexture(this);
+
         // ----- Фаза 1: мягкая виньетка (radial gradient) — канвас-текстура,
         // создаётся ОДИН раз за игру, используется интерьерами и боем для читаемости -----
         if (!this.textures.exists('vignette_soft')) {
