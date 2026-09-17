@@ -23,8 +23,8 @@ v17 — релиз: все скриншоты пересняты из актуа
 v4 — добавлено кеширование /game/assets/ (cache-first).
    Сцены игры (/game/src/) НЕ кешируются — для горячей перезагрузки. */
 
-var CACHE_NAME = 'chronicles-ruthenia-v34';
-var GAME_ASSETS_CACHE = 'game-assets-v5';
+var CACHE_NAME = 'chronicles-ruthenia-v35';
+var GAME_ASSETS_CACHE = 'game-assets-v6';
 
 self.addEventListener('install', function (event) {
     self.skipWaiting();

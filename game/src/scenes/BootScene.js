@@ -4,6 +4,7 @@
 import { RUS } from '../config/RusTheme.js';
 import { createCharacter } from '../systems/Character.js';
 import { paletteLayerFiles } from '../systems/NpcLpc.js';
+import { isEn } from '../systems/i18n.js';  // раунд 37 (п.7): полоска загрузки по языку
 
 export class BootScene extends Phaser.Scene {
     constructor() {
@@ -18,7 +19,9 @@ export class BootScene extends Phaser.Scene {
         this.load.on('progress', (val) => {
             bar.width = 400 * val;
         });
-        this.add.text(width / 2, height / 2 + 20, 'Загрузка...', {
+        // Раунд 37 (п.7 заявки): надпись у полоски загрузки — НА ЯЗЫКЕ ИГРЫ
+        // (?lang=en с EN-лендинга / localStorage 'gameLang' / <html lang>)
+        this.add.text(width / 2, height / 2 + 20, isEn() ? 'Loading…' : 'Загрузка...', {
             fontFamily: 'Georgia, serif', fontSize: '20px', color: '#E8DCC4',
         }).setOrigin(0.5);
 
@@ -294,7 +297,59 @@ export class BootScene extends Phaser.Scene {
             }
         } catch (e) { /* noop */ }
 
+        // ----- Раунд 37 (п.1): текстуры ИКОНКИ ВЕТРЯНОЙ МЕЛЬНИЦЫ для карты
+        // развилки (ForkScene). Башня с шатровой крышей + крестовина крыльев
+        // (крылья рисуются отдельной текстурой — ForkScene медленно вращает их).
+        try {
+            if (!this.textures.exists('icon_windmill_tower')) {
+                const g = this.make.graphics({ x: 0, y: 0, add: false });
+                // Тень
+                g.fillStyle(0x000000, 0.25);
+                g.fillEllipse(26, 42, 40, 8);
+                // Сруб-башня (сужается вверх)
+                g.fillStyle(0x8a6a42, 1);
+                g.fillTriangle(12, 42, 40, 42, 34, 14);
+                g.fillTriangle(18, 42, 34, 42, 31, 16);
+                g.fillStyle(0x6a4a2a, 1);
+                g.fillTriangle(12, 42, 18, 42, 20, 16);
+                // Брёвна
+                g.lineStyle(1, 0x5a3a20, 0.8);
+                for (let i = 0; i < 4; i++) {
+                    g.lineBetween(13 + i * 1.5, 38 - i * 6, 39 - i * 1.5, 38 - i * 6);
+                }
+                // Дверь
+                g.fillStyle(0x3a2417, 1);
+                g.fillRect(23, 32, 8, 10);
+                // Шатровая крыша (тёс)
+                g.fillStyle(0x4a3a25, 1);
+                g.fillTriangle(10, 15, 42, 15, 26, 2);
+                g.fillStyle(0x5a4830, 1);
+                g.fillTriangle(12, 14, 40, 14, 26, 4);
+                // Ось крыльев (ступица)
+                g.fillStyle(0x2a1a0e, 1);
+                g.fillCircle(26, 13, 2.5);
+                g.generateTexture('icon_windmill_tower', 52, 46);
+                g.destroy();
+            }
+            if (!this.textures.exists('icon_windmill_blades')) {
+                const b = this.make.graphics({ x: 0, y: 0, add: false });
+                b.lineStyle(2, 0x3a2a18, 1);
+                b.lineBetween(26, 26, 26, 2);   // вверх
+                b.lineBetween(26, 26, 50, 26);  // вправо
+                b.lineBetween(26, 26, 26, 50);  // вниз
+                b.lineBetween(26, 26, 2, 26);   // влево
+                b.fillStyle(0xd8cfae, 0.95);    // парусины (треугольные крылья)
+                b.fillTriangle(26, 2, 26, 13, 37, 12);
+                b.fillTriangle(50, 26, 39, 26, 40, 37);
+                b.fillTriangle(26, 50, 26, 39, 15, 40);
+                b.fillTriangle(2, 26, 13, 26, 12, 15);
+                b.generateTexture('icon_windmill_blades', 52, 52);
+                b.destroy();
+            }
+        } catch (e) { console.warn('windmill icon:', e); }
+
         // ----- Создаём walk-анимации для каждого персонажа -----
+        this.addThiefFace();                 // раунд 37 (п.3): лицо вора ДО анимаций
         this.createWalkAnimations('player');
         this.createWalkAnimations('npc_elder');
         this.createWalkAnimations('npc_merchant');
@@ -1031,6 +1086,63 @@ export class BootScene extends Phaser.Scene {
      * Создать walk-анимации в 4 направлениях для spritesheet 4×4.
      * Структура: строки 0=down, 1=left, 2=right, 3=up; колонки 0..3 = кадры.
      */
+    /**
+     * Раунд 37 (п.3 заявки «у модели вора нет лица»): дорисовываем вору ЛИЦО.
+     * Спрайт enemy_thief (256×256, 4×4 кадра 64px) — тёмный капюшон с чёрной
+     * пустотой внутри. Поверх каждого кадра (кроме вида со спины, ряд 3)
+     * рисуем бледные глаза в тени капюшона: зловещий прищур убийцы икон.
+     * Вызывать ДО createWalkAnimations('enemy_thief').
+     */
+    addThiefFace() {
+        if (!this.textures.exists('enemy_thief')) return;
+        const tex = this.textures.get('enemy_thief');
+        const srcImg = tex.source && tex.source[0] && tex.source[0].image;
+        if (!srcImg) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(srcImg, 0, 0);
+
+        const drawEye = (cx, cy) => {
+            // мягкое свечение
+            ctx.fillStyle = 'rgba(210, 190, 150, 0.35)';
+            ctx.fillRect(cx - 1, cy - 1, 4, 4);
+            // сам глаз
+            ctx.fillStyle = '#d8cba8';
+            ctx.fillRect(cx, cy, 2, 3);
+            // блик
+            ctx.fillStyle = '#fff8e0';
+            ctx.fillRect(cx, cy, 1, 1);
+        };
+
+        // Ряд 0 (лицом вниз) — глаза по центру капюшона;
+        // ряд 1 (влево) / ряд 2 (вправо) — смещение по ходу взгляда;
+        // ряд 3 (спина) — глаз нет.
+        const rows = [
+            { y: 0, eyes: [[27, 17], [35, 17]] },
+            { y: 1, eyes: [[24, 17], [32, 17]] },
+            { y: 2, eyes: [[29, 17], [37, 17]] },
+        ];
+        rows.forEach(({ y, eyes }) => {
+            for (let col = 0; col < 4; col++) {
+                const ox = col * 64, oy = y * 64;
+                eyes.forEach(([ex, ey]) => drawEye(ox + ex, oy + ey));
+            }
+        });
+
+        this.textures.remove('enemy_thief');
+        this.textures.addCanvas('enemy_thief', canvas);
+        // Восстанавливаем разметку кадров 4×4 по 64px
+        const newTex = this.textures.get('enemy_thief');
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                try { newTex.add(`${r * 4 + c}`, 0, c * 64, r * 64, 64, 64); } catch (e) { /* есть */ }
+            }
+        }
+    }
+
     createWalkAnimations(key) {
         const dirs = ['down', 'left', 'right', 'up'];
         dirs.forEach((dir, row) => {

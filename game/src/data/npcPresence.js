@@ -44,10 +44,21 @@ const NPC_ROLE = {
     shepherd2: 'shepherd',       // Раунд 31 (п.2): пастушка Настасья
     kid1: 'child', kid2: 'child', kid3: 'child', kid4: 'child',
     kid5: 'child', kid6: 'child', kid7: 'child',  // Раунд 28 (п.1): семеро детей
+    // Раунд 37 (вариант Б): жители новой улицы
+    carpenter1: 'carpenter',     // плотник Микула
+    carpenter_wife: 'homemaker', // Матрёна
+    potter1: 'potter',           // гончар Игнат (глина — на Реке!)
+    potter_wife: 'homemaker',    // Анна
+    weaver1: 'weaver',           // вдова-ткачиха Пелагея
+    shepherd_boy: 'shepherd',    // Ивашка, сын Пелагеи — при овчарне
+    fisher_wife: 'homemaker',    // Домна
+    kid8: 'child',               // Дунька, дочка гончара
+    kid9: 'child',               // Ульяна, внучка знахарки
 };
 
 // Дети семьи пахаря (видимые НПЦ: гуляют по деревне, работают по-детски)
-export const KIDS = ['kid1', 'kid2', 'kid3', 'kid4', 'kid5', 'kid6', 'kid7'];
+// Раунд 37: + Дунька (дочка гончара) и Ульяна (внучка знахарки)
+export const KIDS = ['kid1', 'kid2', 'kid3', 'kid4', 'kid5', 'kid6', 'kid7', 'kid8', 'kid9'];
 
 // Кто НЕ ходит в таверну (п.11): батюшка при службе, тавернщик всегда там,
 // стражник на страже у ворот, пастухи при стаде, а ДЕТИ — им на постоялый двор нельзя.
@@ -59,7 +70,10 @@ const BASE_SCHEDULE = {
     elder:        { dawn: 'home',    morning: 'home',    noon: 'village', evening: 'village', dusk: 'home',    night: 'home' },
     priest:       { dawn: 'church',  morning: 'church',  noon: 'church',  evening: 'church',  dusk: 'church',  night: 'church' },
     tavernkeeper: { dawn: 'tavern',  morning: 'tavern',  noon: 'tavern',  evening: 'tavern',  dusk: 'tavern',  night: 'tavern' },
-    blacksmith:   { dawn: 'home',    morning: 'home',    noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' },
+    // Раунд 37 (п.20 заявки): кузнец днём говорит «собираюсь на постоялый двор» —
+    // теперь расписание с этим СОГЛАСОВАНО: в полдень он там и есть,
+    // кузница в этот час честно закрыта (см. VillageScene.getInteriorClosure)
+    blacksmith:   { dawn: 'home',    morning: 'home',    noon: 'tavern',  evening: 'home',    dusk: 'home',    night: 'home' },
     miller:       { dawn: 'mill',    morning: 'mill',    noon: 'mill',    evening: 'home',    dusk: 'home',    night: 'home' },
     ploughman:    { dawn: 'field',   morning: 'field',   noon: 'field',   evening: 'home',    dusk: 'home',    night: 'home' },   // Раунд 28: Тарас днём НА ПОЛЕ
     child:        { dawn: 'village', morning: 'work',    noon: 'work',    evening: 'village', dusk: 'home',    night: 'home' },   // Раунд 28: дети — день по делам (work = детерминированный выбор)
@@ -71,6 +85,10 @@ const BASE_SCHEDULE = {
     guard:        { dawn: 'gate',    morning: 'home',    noon: 'village', evening: 'gate',    dusk: 'gate',    night: 'gate' },
     fisherman:    { dawn: 'river',   morning: 'river',   noon: 'river',   evening: 'home',    dusk: 'home',    night: 'home' },
     shepherd:     { dawn: 'pasture', morning: 'pasture', noon: 'pasture', evening: 'pasture', dusk: 'home',    night: 'home' }, // Раунд 31: место пастуха = место стада
+    // Раунд 37 (вариант Б): новые профессии второй улицы
+    carpenter:    { dawn: 'home',    morning: 'home',    noon: 'village', evening: 'home',    dusk: 'home',    night: 'home' }, // Микула днём чинит дворы
+    potter:       { dawn: 'home',    morning: 'river',   noon: 'river',   evening: 'home',    dusk: 'home',    night: 'home' }, // Игнат за глиной ходит на Реку
+    weaver:       { dawn: 'home',    morning: 'village', noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' }, // Пелагея при стане, отлучается по делу
 };
 
 // Раунд 31 (п.3): НОЧЬЮ на локациях КРОМЕ ДЕРЕВНИ НИКОГО НЕТ.
@@ -143,6 +161,19 @@ const ACTIVITY = {
         lake: 'поит стадо у озера', home: 'отсыпается, скот в хлеву',
         village: 'прогоняет стадо по улице', tavern: 'отдыхает на постоялом дворе',
     },
+    // Раунд 37 (вариант Б): новые профессии
+    carpenter: {
+        home: 'тешет ложки и чинит избу', village: 'носит брёвна для починки дворов',
+        tavern: 'приходит с топором за мёдом', field: 'рубит лес на дрова',
+    },
+    potter: {
+        river: 'роет глину у брода', home: 'мнёт глину и лепит горшки',
+        village: 'сушит горшки на солнце', tavern: 'согревается у печи',
+    },
+    weaver: {
+        home: 'ткёт холст на стане', village: 'несёт холст соседкам',
+        tavern: 'болтает за прялкой', field: 'теребит лён на поле',
+    },
 };
 
 // Где искать человека (для подсказок в пустых домах)
@@ -170,10 +201,22 @@ export const OUTDOOR_LINES = {
     kid5: '«Улов покажешь? А то у меня ни одной рыбки не клюнуло!»',
     kid6: '«Батя говорит: кто поле любит, того и земля кормит.»',
     kid7: '«А мама сказала в избу без ужина не приходить! Так что я гуляю!»',
+    // Раунд 37 (вариант Б): жители новой улицы
+    carpenter1: '«Топор — мой напарник: изба без него — что без углов. Слушай, а крыльцо у тебя не скрипит?»',
+    potter1: '«Глина нынче жирная, с речки привёз. Горшок добрый — тот, что не треснул в печи, как и человек.»',
+    weaver1: '«Стан гудит с утра до ночи. Холст — он как судьба: нить за нитью, не спеши.»',
+    shepherd_boy: '«Тс-с! Овцы дремлют. Как Рыжая заблеет — конец сну!»',
+    fisher_wife: '«Ерёма на броду ушел. Рыба у нас есть — заходи к вечеру.»',
+    carpenter_wife: '«Микула весь в стружке, а я весь день пряду. Заходи, чаем с брусникой напою.»',
+    potter_wife: '«Игнат на речку за глиной ушёл. А я горшки обжигаю — загляните, какой узор вышел!»',
+    kid8: '«Я горшочек слепила! Батя сказал — на обжиг! А он у нас самый лучший!»',
+    kid9: '«Бабушка лечит всю деревню, а меня учит травы разбирать. Эта — от живота, эта — от тоски!»',
 };
 
 // Диалоговое дерево по ID (полные диалоги; остальные — OUTDOOR_LINES)
 // Раунд 34: у ВСЕХ семерых детей пахаря — полные детские диалоговые деревья
+// Раунд 37 (вариант Б): + плотник, гончар, ткачиха, рыбак, знахарка,
+// пастушок Ивашка, жёны и двое новых детей
 export const NPC_DIALOGUE = {
     elder: 'elder_quest',
     priest: 'priest',
@@ -186,6 +229,16 @@ export const NPC_DIALOGUE = {
     elder_wife: 'elder_wife',
     kid1: 'kid1', kid2: 'kid2', kid3: 'kid3', kid4: 'kid4',
     kid5: 'kid5', kid6: 'kid6', kid7: 'kid7',
+    carpenter1: 'carpenter1',
+    carpenter_wife: 'carpenter_wife',
+    potter1: 'potter1',
+    potter_wife: 'potter_wife',
+    weaver1: 'weaver1',
+    shepherd_boy: 'shepherd_boy',
+    fisherman: 'fisherman1',
+    fisher_wife: 'fisher_wife',
+    healer: 'healer1',
+    kid8: 'kid8', kid9: 'kid9',
 };
 
 // ---- Детерминированный псевдорандом (FNV-1a → [0..1)) ----

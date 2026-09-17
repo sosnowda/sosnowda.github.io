@@ -278,7 +278,26 @@ export class ForkScene extends Phaser.Scene {
             // Точка локации
             mapGfx.fillStyle(0x3a5a3a, 1);
             mapGfx.fillCircle(x, y, 15);
-            this.add.text(x, y, pos.icon, { fontSize: '16px' }).setOrigin(0.5).setDepth(203);
+            // Раунд 37 (п.1 заявки): мельница — ВЕТРЯНАЯ (иконка-спрайт с
+            // вращающимися крыльями вместо безликой «🏭 фабрики»)
+            if (pos.id === 'mill' && this.textures.exists('icon_windmill_tower')) {
+                this.add.image(x + 2, y + 9, 'icon_windmill_tower')
+                    .setScale(0.95)
+                    .setOrigin(0.5, 1)
+                    .setDepth(203);
+                const blades = this.add.image(x + 2, y + 9 - 33, 'icon_windmill_blades')
+                    .setScale(0.62)
+                    .setDepth(204);
+                this.tweens.add({
+                    targets: blades,
+                    angle: 360,
+                    duration: 9000,
+                    repeat: -1,
+                    ease: 'Linear',
+                });
+            } else {
+                this.add.text(x, y, pos.icon, { fontSize: '16px' }).setOrigin(0.5).setDepth(203);
+            }
             this.add.text(x, y + 18, pos.name, {
                 fontSize: '10px', color: '#a0a080',
             }).setOrigin(0.5).setDepth(203);

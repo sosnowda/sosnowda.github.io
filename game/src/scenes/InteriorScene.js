@@ -153,9 +153,16 @@ export class InteriorScene extends Phaser.Scene {
             if (portraitVariant && this.textures.exists(portraitVariant)) {
                 this.npcPortraitKey = portraitVariant;
             }
-            // Рост NPC (look.scale 0.93..1.07)
-            this.npcBaseScale = 2.5 * ((this.npcData && this.npcData.look && this.npcData.look.scale) || 1);
+            // Рост NPC — раунд 37 (п.4): ЕДИНЫЙ масштаб по возрасту:
+            // взрослый = 2.5 (как игрок в интерьере), подросток ×0.85, ребёнок ×0.7
+            this.npcBaseScale = 2.5 * this.interiorAgeScale(this.npcData);
             this.npcSprite = this.add.sprite(width * 0.65, height * 0.55, finalSpriteKey).setScale(this.npcBaseScale).setDepth(5);
+            // Раунд 37 (п.21): тавернщик ВСЕГДА ЗА СТОЙКОЙ (инт. 'tavern') —
+            // стойка рисуется в (0.5w, 0.45h); хозяин стоит за ней, чуть выше
+            if (this.interiorId === 'tavern') {
+                this.npcSprite.setPosition(width * 0.5, height * 0.45 - 62);
+                this.npcSprite.setDepth(4); // за стойкой (стойка — глубина 5)
+            }
             // Проверяем существование анимации
             const animKey = `${finalSpriteKey}_idle_down`;
             if (this.anims.exists(animKey)) {
@@ -224,7 +231,7 @@ export class InteriorScene extends Phaser.Scene {
                     const secVariant = npcVariantKey(secData);
                     if (secVariant && this.textures.exists(secVariant)) secFinal = secVariant;
                 }
-                const secScale = 2.2 * ((secData && secData.look && secData.look.scale) || 1);
+                const secScale = 2.5 * this.interiorAgeScale(secData);
                 const secSpr = this.add.sprite(width * 0.84, height * 0.66, secFinal)
                     .setScale(secScale).setDepth(6);
                 const secAnim = `${secFinal}_idle_down`;
@@ -258,7 +265,7 @@ export class InteriorScene extends Phaser.Scene {
             const visitorIds = getNpcsAtPlace(this.registry, 'tavern')
                 .filter(id => id !== 'tavernkeeper').slice(0, 3);
             const VISITOR_SPOTS = [
-                { x: 0.5, y: 0.74 }, { x: 0.84, y: 0.72 }, { x: 0.5, y: 0.42 },
+                { x: 0.5, y: 0.74 }, { x: 0.84, y: 0.72 }, { x: 0.26, y: 0.44 },  // раунд 37: 3-й гость сдвинут с места тавернщика у стойки
             ];
             visitorIds.forEach((vId, vi) => {
                 const vData = findNpc(this.registry, vId);
@@ -274,7 +281,7 @@ export class InteriorScene extends Phaser.Scene {
                 }
                 const vx = VISITOR_SPOTS[vi].x * width;
                 const vy = VISITOR_SPOTS[vi].y * height;
-                const vSpr = this.add.sprite(vx, vy, vFinal).setScale(2).setDepth(7);
+                const vSpr = this.add.sprite(vx, vy, vFinal).setScale(2.5 * this.interiorAgeScale(vData)).setDepth(7);
                 const vAnim = `${vFinal}_idle_down`;
                 if (this.anims.exists(vAnim)) vSpr.play(vAnim);
                 vSpr.setInteractive({ useHandCursor: true });
@@ -400,12 +407,12 @@ export class InteriorScene extends Phaser.Scene {
                 buttons.push({ label: t('\u{1F56F} Пожертвовать (5\u0434)'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.donateInChurch() });
                 buttons.push({ label: t('\u{1F50D} Осмотреть киот'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectChurchKiot() });
             }
-        } else if (interior.id === 'barn') {
-            // Амбар: подённая работа
-            buttons.push({ label: t('\u{2692} Работать (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInBarn() });
-            buttons.push({ label: t('\u{1F33E} Осмотреть зерно'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectBarnGrain() });
+        } else if (interior.id === 'potter_house') {
+            // Раунд 37 (вариант Б): мастерская гончара — подённая работа
+            // переехала сюда из удалённого амбара (п.18 заявки)
+            buttons.push({ label: t('\u{1FAB5} Помочь в мастерской (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInPotter() });
             // Раунд 12: свой работничий узел в углу
-            buttons.push({ label: t('\u{1F392} Мой узел'), bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('barn') });
+            buttons.push({ label: t('\u{1F392} Мой узел'), bg: 0x5a4530, hover: 0x6a5540, cb: () => this.openStash('potter') });
         }
         const exitAction = () => {
             // Раунд 24: скрип двери при выходе
@@ -1370,39 +1377,68 @@ export class InteriorScene extends Phaser.Scene {
      * Подённая работа (молотьба): 1 час времени, −4 здоровья, +3..6 денег,
      * 15% шанс найти монетку в соломе. При истощении (HP ≤ 5) отказ.
      */
-    workInBarn() {
+    /**
+     * Раунд 37 (п.4): единый масштаб по возрасту в интерьерах.
+     * Взрослый — 1.0 (базовый 2.5, как игрок), подросток — 0.85, ребёнок — 0.7.
+     */
+    interiorAgeScale(npcData) {
+        const age = (npcData && npcData.age) || 30;
+        if (age <= 12) return 0.7;
+        if (age <= 17) return 0.85;
+        return ((npcData && npcData.look && npcData.look.scale) || 1);
+    }
+
+    workInPotter() {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
         if (!player) return;
 
         if ((player.HP || 0) <= 5) {
-            createDialog(this, 'Силы кончились', 'Руки не поднимаются на цеп. Нужно поесть и отдохнуть в таверне, прежде чем браться за работу.', [
+            createDialog(this, 'Силы кончились', 'Руки не поднимаются таскать дрова и мять глину. Нужно поесть и отдохнуть, прежде чем браться за работу.', [
                 { text: 'Справедливо...', callback: () => {} },
             ]);
             return;
         }
         tickTime(this.registry, 60);
-        player.HP = Math.max(1, (player.HP || 1) - 4);
+        player.HP = Math.max(1, (player.HP || 1) - 3);
         const wage = Phaser.Math.Between(3, 6);
         let bonus = 0;
         let bonusMsg = '';
         if (Math.random() < 0.15) {
             bonus = Phaser.Math.Between(2, 4);
-            bonusMsg = '\n\nВ соломе блеснула чужая монетка — видать, обронил кто-то из работников. Она твоя: +' + bonus + ' д.';
+            bonusMsg = '\n\nВ углу мастерской блеснула чужая монетка — видать, обронил кто-то из заказчиков. Она твоя: +' + bonus + ' д.';
         }
         player.dengas = (player.dengas || 0) + wage + bonus;
         this.registry.set('player', player);
         this.updateHUD();
-        ActionLog.add(this.registry, `Отработал час в амбаре: +${wage + bonus} д., усталость −4 HP.`);
+        ActionLog.add(this.registry, `Отработал час в гончарной мастерской: +${wage + bonus} д., усталость −3 HP.`);
 
-        createDialog(this, 'Подённая работа',
-            'Час за цепом и лопатой: снопы, веяние, мешки. Спина гудит, но в мошне звенит.\n\n' +
-            'Заработано: +' + wage + ' д. Усталость: −4 здоровья.' + bonusMsg,
-            [{ text: 'Отдышаться.', callback: () => {} }]);
+        createDialog(this, 'Помощь в мастерской',
+            'Час у круга и печи: носил дрова, мешал глину, ставил горшки на обжиг. Игнат доволен: «Работник, что надо!»\n\n' +
+            'Заработано: +' + wage + ' д. Усталость: −3 здоровья.' + bonusMsg,
+            [
+                { text: t('Спасибо'), callback: () => {} },
+            ]);
+    }
+
+    workInBarn() {
+        // Раунд 37: амбар удалён (п.18) — работа переехала в мастерскую гончара
+        // (workInPotter). Метод оставлен для старых сейвов/ссылок.
+        this.workInPotter();
+    }
+
+    inspectBarnGrain() {
+        // Раунд 37: зерно амбара больше не осматривается — амбара нет (п.18).
+        createDialog(this, 'Мастерская',
+            'Гончарного зерна тут нет — только глина, дрова и ряды горшков на просушке.',
+            [
+                { text: t('Понятно'), callback: () => {} },
+            ]);
     }
 
     /**
      * Осмотр зерна: атмосферная деталь + редкий съедобный бонус.
+     * Раунд 37: амбар удалён (п.18) — заглушка (зерно переехало в ригу/мастерскую).
      */
     inspectBarnGrain() {
         if (this.busyDialog) return;
@@ -1413,12 +1449,12 @@ export class InteriorScene extends Phaser.Scene {
             player.HP = Math.min(player.HPmax || player.HP + 2, player.HP + 2);
             this.registry.set('player', player);
             this.updateHUD();
-            extra = '\n\nВ закромах нашлась горсть сушёных яблок — хозяева не обидятся. +2 здоровья.';
-            ActionLog.add(this.registry, 'Подкрепился сушёными яблоками в амбаре: +2 HP.');
+            extra = '\n\nВ углу мастерской нашлась горсть сушёных яблок — Игнат не обидится. +2 здоровья.';
+            ActionLog.add(this.registry, 'Подкрепился сушёными яблоками в мастерской: +2 HP.');
         }
-        const mice = ['мышь-хвостунья черкнула за мешками', 'воробей вылетел в слуховое окно', 'кот-невидимка оставил следы на пшенице'];
-        createDialog(this, 'Осмотр зерна',
-            'Закрома полны: рожь, пшеница, горох. Зерно в амбре сухое, не сопрело — стараниями общины.\n\n' +
+        const mice = ['мышь-хвостунья черкнула за мешками глины', 'воробей вылетел в слуховое окно', 'кот-невидимка оставил следы на просушке'];
+        createDialog(this, 'Осмотр мастерской',
+            'Всё при деле: глина вымешена, горшки на просушке, дрова в поленнице. Пахнет печным жаром.\n\n' +
             'Мимо ' + mice[Phaser.Math.Between(0, mice.length - 1)] + '.' + extra,
             [{ text: 'Довольно.', callback: () => {} }]);
     }
@@ -1691,13 +1727,17 @@ export class InteriorScene extends Phaser.Scene {
             if (this.textures.exists('int_deco_chest')) {
                 this.add.image(width * 0.8, height * 0.7, 'int_deco_chest').setScale(1).setDepth(5);
             }
-        } else if (interior.id === 'barn') {
-            // Амбар общины (раунд 9): снопы, мешки зерна, поленница, весы
-            if (this.textures.exists('int_deco_hay')) {
-                this.add.image(width * 0.2, height * 0.42, 'int_deco_hay').setScale(1.4).setDepth(5);
-                this.add.image(width * 0.78, height * 0.62, 'int_deco_hay').setScale(1.1).setDepth(5);
+        } else if (interior.id === 'potter_house') {
+            // Раунд 37 (вариант Б): мастерская гончара — круг, горшки, дрова
+            if (this.textures.exists('int_deco_barrel')) {
+                this.add.image(width * 0.2, height * 0.42, 'int_deco_barrel').setScale(1.2).setDepth(5);
             }
-            // Мешки зерна — рисованные (текстуры мешков нет)
+            if (this.textures.exists('int_deco_sacks')) {
+                this.add.image(width * 0.78, height * 0.62, 'int_deco_sacks').setScale(1.1).setDepth(5);
+            }
+            if (this.textures.exists('int_deco_shelf')) {
+                this.add.image(width * 0.5, height * 0.3, 'int_deco_shelf').setScale(1.2).setDepth(5);
+            }
             const sackGfx = this.add.graphics().setDepth(5);
             [[width * 0.38, height * 0.62], [width * 0.44, height * 0.58], [width * 0.62, height * 0.66]].forEach(([sx, sy]) => {
                 sackGfx.fillStyle(0xb89b6a, 1);

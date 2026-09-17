@@ -213,10 +213,11 @@ export function initNpcNames(registry) {
         { id: 'blacksmith',   gender: 'male',   age: 40, professionId: 'blacksmith', sprite: 'npc_soldier',  portrait: 'portrait_blacksmith', interiorId: 'blacksmith' },
         { id: 'peasant1',     gender: 'male',   age: 35, professionId: 'miller',     sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_1', name: 'Авдей' },
         { id: 'widow',        gender: 'female', age: 55, professionId: 'beekeeper',  sprite: 'npc_elder',    portrait: 'portrait_widow',      interiorId: 'villager_house_2', name: 'Марфа' },
-        { id: 'healer',       gender: 'female', age: 68, professionId: 'healer_f',   sprite: 'npc_elder',    portrait: 'portrait_healer',     interiorId: 'villager_house_2' },
+        // Раунд 37: у знахарки и рыбака — СОБСТВЕННЫЕ дома (вариант Б: вторая улица)
+        { id: 'healer',       gender: 'female', age: 68, professionId: 'healer_f',   sprite: 'npc_elder',    portrait: 'portrait_healer',     interiorId: 'healer_house', name: 'Февронья' },
         { id: 'hunter',       gender: 'male',   age: 32, professionId: 'hunter',     sprite: 'npc_soldier',  portrait: 'portrait_hunter',     interiorId: 'villager_house_1' },
         { id: 'guard',        gender: 'male',   age: 28, professionId: 'guard',      sprite: 'npc_soldier',  portrait: 'portrait_guard',      interiorId: 'villager_house_1' },
-        { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',  sprite: 'npc_merchant', portrait: 'portrait_fisherman',  interiorId: 'villager_house_1' },
+        { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',  sprite: 'npc_merchant', portrait: 'portrait_fisherman',  interiorId: 'fisher_house', name: 'Ерёма' },
         // Раунд 27 (п.6), уточнено раундом 28 (п.1): дом на месте часовни —
         // ДОМ ПАХАРЯ (не пасечника!): Тарас днём на ПОЛЕ, жена Фёкла,
         // семеро детей (видимые НПЦ — см. npcPresence.KIDS).
@@ -238,6 +239,17 @@ export function initNpcNames(registry) {
         // (утром и вечером: Выпас → Река/Озеро), днём на выпасе, ночью дома
         { id: 'shepherd1',    gender: 'male',   age: 34, professionId: 'shepherd',   sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_1', name: 'Сила' },
         { id: 'shepherd2',    gender: 'female', age: 24, professionId: 'shepherd',   sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'villager_house_1', name: 'Настасья' },
+        // Раунд 37 (вариант Б): жители новой улицы — плотник, гончар, ткачиха,
+        // жена рыбака, пастушок-подросток и дети. Все — со своими домами и семьями.
+        { id: 'carpenter1',   gender: 'male',   age: 41, professionId: 'carpenter',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'carpenter_house', name: 'Микула' },
+        { id: 'carpenter_wife', gender: 'female', age: 38, professionId: 'homemaker', sprite: 'npc_elder',   portrait: 'portrait_villager_f', interiorId: 'carpenter_house', name: 'Матрёна' },
+        { id: 'potter1',      gender: 'male',   age: 36, professionId: 'potter',     sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'potter_house', name: 'Игнат' },
+        { id: 'potter_wife',  gender: 'female', age: 33, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'potter_house', name: 'Анна' },
+        { id: 'kid8',         gender: 'female', age: 9,  professionId: 'child',      sprite: 'npc_elder',    portrait: 'portrait_girl',       interiorId: 'potter_house', name: 'Дунька' },
+        { id: 'weaver1',      gender: 'female', age: 47, professionId: 'weaver',     sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'weaver_house', name: 'Пелагея' },
+        { id: 'shepherd_boy', gender: 'male',   age: 14, professionId: 'shepherd',   sprite: 'npc_merchant', portrait: 'portrait_boy',        interiorId: 'weaver_house', name: 'Ивашка' },
+        { id: 'fisher_wife',  gender: 'female', age: 39, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'fisher_house', name: 'Домна' },
+        { id: 'kid9',         gender: 'female', age: 11, professionId: 'child',      sprite: 'npc_elder',    portrait: 'portrait_girl',       interiorId: 'healer_house', name: 'Ульяна' },
     ];
 
     // Раунд 27: зерно для детерминированной системы присутствия (npcPresence.js)

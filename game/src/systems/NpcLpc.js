@@ -31,11 +31,13 @@ export const PALETTE = {
     hair_female_shapes: ['bangslong', 'loose', 'wavy'],
     hair_girl_extra_shapes: ['bunches'],
     torso: [
+        // Раунд 37 (п.16 заявки «НПЦ просвечиваются»): открытые жилеты vest_open_*
+        // убраны — сквозь них виднеется голое тело. Только полная одежда.
         'longsleeve_longsleeve_forest', 'longsleeve_longsleeve_tan', 'longsleeve_longsleeve_charcoal',
         'longsleeve_longsleeve_maroon', 'longsleeve_longsleeve_white',
         'longsleeve_laced_forest', 'longsleeve_laced_tan', 'longsleeve_laced_charcoal',
         'longsleeve_laced_maroon', 'longsleeve_laced_white',
-        'vest_open_forest', 'vest_open_tan', 'vest_open_charcoal', 'vest_white', 'vest_tan',
+        'vest_charcoal', 'vest_forest', 'vest_maroon', 'vest_tan', 'vest_white',
     ],
     // Раунд 28: штаны/юбки по полу — мужчины без юбок, женщины без «мужских»
     legs_male: [
@@ -57,7 +59,8 @@ export const PALETTE = {
         'shoes2_tan', 'shoes2_charcoal', 'male_brown',
     ],
     // Цвет бороды = цвет волос (см. rollLpcAppearance)
-    beards: ['beard_medium', 'beard_trimmed', 'beard_winter', 'mustache_bigstache'],
+    // Раунд 37: добавлена короткая борода beard_basic (6 форм теперь)
+    beards: ['beard_medium', 'beard_trimmed', 'beard_winter', 'mustache_bigstache', 'beard_basic'],
     beard_colors: ['black', 'dark_brown', 'chestnut', 'white', 'blonde'],
     eyes: ['human_adult_brown', 'human_adult_blue', 'human_adult_gray', 'human_adult_green'],
 };

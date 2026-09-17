@@ -48,7 +48,8 @@
     "hair",
     "legs",
     "feet",
-    "torso"
+    "torso",
+    "extra"
   ],
   "categories": {
     "body": {

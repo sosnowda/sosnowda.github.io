@@ -1,11 +1,15 @@
 // Phaser загружен глобально через CDN
 
+// Раунд 37 (task 37-a): строки экрана загрузки — строго на одном языке
+// (раньше был двуязычный текст «EN / RU» в одной строке)
+import { isEn } from '../systems/i18n.js';
+
 /**
  * Сцена загрузки — страница ожидания генерации ИИ
  * Loading Scene - AI generation waiting page
  * 
- * Отображает милую анимацию загрузки с поддержкой двуязычности (EN/RU)
- * Displays a cute loading animation with bilingual support (EN/RU)
+ * Отображает анимацию загрузки на языке пользователя (EN/RU)
+ * Displays a loading animation in the user's language (EN/RU)
  */
 export class Loading extends Phaser.Scene {
     constructor() {
@@ -343,8 +347,9 @@ export class Loading extends Phaser.Scene {
     }
 
     createLoadingText(centerX, centerY) {
-        // Главный заголовок (двуязычный) / Main title (bilingual)
-        this.loadingTitle = this.add.text(centerX, centerY + 80, '✨ AI Creating... / ИИ создаёт... ✨', {
+        // Главный заголовок — ТОЛЬКО на языке игры (isEn: EN, иначе RU)
+        const titleText = isEn() ? '✨ AI is creating... ✨' : '✨ ИИ создаёт... ✨';
+        this.loadingTitle = this.add.text(centerX, centerY + 80, titleText, {
             fontFamily: 'Arial, sans-serif',
             fontSize: '26px',
             fontStyle: 'bold',
@@ -363,8 +368,9 @@ export class Loading extends Phaser.Scene {
             ease: 'Sine.easeInOut'
         });
 
-        // Подзаголовок с анимированными точками (двуязычный) / Subtitle with animated dots (bilingual)
-        this.loadingDots = this.add.text(centerX, centerY + 120, 'Please wait / Пожалуйста, подождите', {
+        // Подзаголовок с анимированными точками — только на языке игры
+        this.waitBase = isEn() ? 'Please wait' : 'Пожалуйста, подождите';
+        this.loadingDots = this.add.text(centerX, centerY + 120, this.waitBase, {
             fontFamily: 'Arial, sans-serif',
             fontSize: '18px',
             color: '#a29bfe'
@@ -377,7 +383,7 @@ export class Loading extends Phaser.Scene {
             callback: () => {
                 this.dotsCount = (this.dotsCount + 1) % 4;
                 const dots = '.'.repeat(this.dotsCount);
-                this.loadingDots.setText(`Please wait / Пожалуйста, подождите${dots}`);
+                this.loadingDots.setText(`${this.waitBase}${dots}`);
             },
             loop: true
         });

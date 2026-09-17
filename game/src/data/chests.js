@@ -3,33 +3,12 @@
 // validateMap-логикой вручную), подпись, таблица лута и редкость.
 // Открывается один раз в игровой день: в q.chestsOpened хранится [{id, day}].
 // Раунд 15: подписи локализованы (i18n).
+// Раунд 37 (п.14 заявки): сундук у постоялого двора и сундук за амбаром
+// УДАЛЕНЫ («удалить все сундуки… около постоялого двора»); церковный
+// ларец перенесён с бывшей дороги (20,14) на чистую траву (18,12).
 import { t, tf } from '../systems/i18n.js';
 
 export const CHESTS = [
-    {
-        id: 'tavern_side',
-        col: 9,
-        row: 6,
-        label: t('Сундук у таверны'),
-        rare: false,
-        // Путники обронили мелочь
-        loot: [
-            { kind: 'money', min: 2, max: 5, weight: 7 },
-            { kind: 'apple', weight: 3 },
-        ],
-    },
-    {
-        id: 'barn_back',
-        col: 21,
-        row: 3,
-        label: t('Сундук за амбаром'),
-        rare: false,
-        // Работник амбара держит тут припасы
-        loot: [
-            { kind: 'apple', weight: 5 },
-            { kind: 'money', min: 3, max: 6, weight: 5 },
-        ],
-    },
     {
         id: 'well_bundle',
         col: 11,
@@ -44,14 +23,27 @@ export const CHESTS = [
     },
     {
         id: 'church_relic',
-        col: 20,
-        row: 14,
+        col: 18,
+        row: 12,
         label: t('Позолоченный ларец'),
         rare: true,
         // Редкий ларец за церковью — заметная награда
         loot: [
             { kind: 'money', min: 10, max: 16, weight: 7 },
             { kind: 'icon_scrap', weight: 3 },
+        ],
+    },
+    // Раунд 37: новый сундук у овчарни (взамен убранных) — чабан прячет
+    // выручку от шерсти за частоколом
+    {
+        id: 'sheepfold_bundle',
+        col: 21,
+        row: 19,
+        label: t('Узел чабана у овчарни'),
+        rare: false,
+        loot: [
+            { kind: 'money', min: 2, max: 5, weight: 6 },
+            { kind: 'apple', weight: 4 },
         ],
     },
 ];
@@ -74,9 +66,9 @@ export const STASHES = {
             { kind: 'money', min: 1, max: 3, weight: 5 },
         ],
     },
-    barn: {
-        id: 'stash_barn',
-        label: t('твой узел в углу амбара'),
+    potter: {
+        id: 'stash_potter',
+        label: t('твой узел в углу мастерской'),
         // Работничий узел: хлеб да несколько монет за смену
         loot: [
             { kind: 'apple', weight: 6 },

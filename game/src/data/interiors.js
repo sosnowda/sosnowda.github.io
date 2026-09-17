@@ -35,6 +35,7 @@ export const INTERIORS = {
         dialogueId: 'tavernkeeper',
         description: t('Просторный зал с деревянными столами. Пахнет хлебом да хмельным мёдом. У печи греются путники.'),
         decor: ['bar', 'tables', 'fireplace'],
+        public: true,  // раунд 37: постоялый двор открыт всегда (тавернщик за стойкой 24/7)
         services: ['eat', 'drink', 'rest'],
         // Раунд 30: цены — из репозитория игры ChroniclesRuthenia:
         // еда (трапеза) 2 д. = каравай хлеба 1 д. + похлёбка 1 д. (FoodCatalog);
@@ -106,19 +107,25 @@ export const INTERIORS = {
         secondaryDialogueId: 'beekeeper_wife',
     },
 
-    // Амбар общины — подённая работа (молотьба зерна) за деньги.
-    // Без NPC: кнопки «Работать» и «Осмотреть зерно» — особый набор действий.
-    barn: {
-        id: 'barn',
-        name: t('Амбар общины'),
-        npcId: null,
-        npcName: t('Работник не показывается'),
+    // РАУНД 37 (вариант Б, п.18 заявки): АМБАР УДАЛЁН — на его месте
+    // ДОМ ГОНЧАРА: Игнат, жена Анна, дочка Дунька. Подённая работа
+    // (молотьба) переехала сюда как «помощь в мастерской».
+    potter_house: {
+        id: 'potter_house',
+        name: t('Дом гончара'),
+        npcId: 'potter1',
+        npcName: t('Гончар Игнат'),
         npcSprite: 'npc_merchant',
-        portrait: null,
-        dialogueId: null,
-        description: t('Снопы под потолком, мешки с зерном, пахнет сухой соломой и мышами. Община хранит здесь общее зерно — за молотьбу платят по копеечке.'),
-        decor: ['hay', 'sacks', 'firewood', 'shelf'],
-        noNpc: true,
+        portrait: 'portrait_peasant',
+        dialogueId: 'potter1',
+        description: t('Тесная мастерская: круг, стопки сырых горшков, запах глины и печного жара. Хозяин приглядывает к заготовкам, вымазанный по локти.'),
+        decor: ['bed', 'table', 'pottery'],
+        // Жена — вторая фигура в доме (как у старосты)
+        secondaryNpcId: 'potter_wife',
+        secondaryNpcName: t('Анна, жена гончара'),
+        secondaryNpcSprite: 'npc_elder',
+        secondaryPortrait: 'portrait_villager_f',
+        secondaryDialogueId: 'potter_wife',
     },
 
     // Церковь со священником — выдаёт основное задание (поиск иконы).
@@ -134,23 +141,99 @@ export const INTERIORS = {
         dialogueId: 'priest',
         description: t('Небольшая деревянная церковь с резным иконостасом. Пахнет ладаном и воском. У алтаря молится седой священник, а ниша главного киота пуста — чудотворную икону этой ночью унесли воры.'),
         decor: ['empty_kiot', 'altar', 'icons', 'candles'],
+        public: true,
+    },
+
+    // ===== РАУНД 37 (вариант Б): НОВАЯ УЛИЦА — 4 новых двора =====
+
+    // Дом знахарки — свой дом для травницы (раньше «жила» у Марфы)
+    healer_house: {
+        id: 'healer_house',
+        name: t('Дом знахарки'),
+        npcId: 'healer',
+        npcName: t('Знахарка Февронья'),
+        npcSprite: 'npc_elder',
+        portrait: 'portrait_healer',
+        dialogueId: 'healer1',
+        description: t('Пахнет сушёными травами и воском. Пучки полыни и зверобоя под потолком, ступка, у печи — бабушка с внучкой перебирают коренья.'),
+        decor: ['bed', 'icon', 'herbs'],
+        secondaryNpcId: 'kid9',
+        secondaryNpcName: t('Ульяна, внучка знахарки'),
+        secondaryNpcSprite: 'npc_elder',
+        secondaryPortrait: 'portrait_girl',
+        secondaryDialogueId: 'kid9',
+    },
+
+    // Дом рыбака — свой дом для рыбака (был «у Авдея»)
+    fisher_house: {
+        id: 'fisher_house',
+        name: t('Дом рыбака'),
+        npcId: 'fisherman',
+        npcName: t('Рыбак Ерёма'),
+        npcSprite: 'npc_merchant',
+        portrait: 'portrait_fisherman',
+        dialogueId: 'fisherman1',
+        description: t('Сети сушатся под потолком, на лавке — плетёные верши и уды. У печи хозяйка потрошит улов.'),
+        decor: ['bed', 'table', 'nets'],
+        secondaryNpcId: 'fisher_wife',
+        secondaryNpcName: t('Домна, жена рыбака'),
+        secondaryNpcSprite: 'npc_elder',
+        secondaryPortrait: 'portrait_villager_f',
+        secondaryDialogueId: 'fisher_wife',
+    },
+
+    // Дом плотника — новый двор (Микула и Матрёна)
+    carpenter_house: {
+        id: 'carpenter_house',
+        name: t('Дом плотника'),
+        npcId: 'carpenter1',
+        npcName: t('Плотник Микула'),
+        npcSprite: 'npc_merchant',
+        portrait: 'portrait_peasant',
+        dialogueId: 'carpenter1',
+        description: t('Во дворе — брёвна, тесла и скобы. В избе пахнет свежей стружкой: хозяин тешет ложки, жена прядёт у печи.'),
+        decor: ['bed', 'table', 'tools'],
+        secondaryNpcId: 'carpenter_wife',
+        secondaryNpcName: t('Матрёна, жена плотника'),
+        secondaryNpcSprite: 'npc_elder',
+        secondaryPortrait: 'portrait_villager_f',
+        secondaryDialogueId: 'carpenter_wife',
+    },
+
+    // Дом ткачихи — вдова Пелагея с сыном-пастушком (Ивашка при овчарне)
+    weaver_house: {
+        id: 'weaver_house',
+        name: t('Дом ткачихи'),
+        npcId: 'weaver1',
+        npcName: t('Ткачиха Пелагея'),
+        npcSprite: 'npc_elder',
+        portrait: 'portrait_villager_f',
+        dialogueId: 'weaver1',
+        description: t('Полутьма, у окна — ткацкий стан, на нём — недотянутый холст. Клубки шерсти, прялка, пучки льна. Хозяйка работает, не поднимая глаз.'),
+        decor: ['bed', 'loom', 'yarn'],
     },
 };
 
 // Координаты зданий в деревне (col, row — верхний-левый угол двери)
 // Раунд 9: + Амбар (северо-восток). Раунд 26: часовня удалена — есть церковь.
 // Раунд 27 (п.6), раунд 28 (п.1): на свободном месте часовни — ДОМ ПАХАРЯ.
-// Двери и дорожки строятся автоматически в world.buildMap(),
-// проходимость проверяет validateMap() (BFS от спавна).
+// Раунд 37 (вариант Б): амбар → ДОМ ГОНЧАРА; вторая улица (ряды 15–17) —
+// дома знахарки, плотника, рыбака и ткачихи. Двери и дорожки строятся
+// автоматически в world.buildMap(), проходимость проверяет validateMap().
 export const BUILDINGS = [
     { interiorId: 'elder_house', col: 4, row: 4, w: 3, h: 3, label: t('Староста') },
     { interiorId: 'tavern', col: 10, row: 4, w: 3, h: 3, label: t('Постоялый двор') },
     { interiorId: 'blacksmith', col: 16, row: 4, w: 3, h: 3, label: t('Кузница') },
-    { interiorId: 'barn', col: 20, row: 4, w: 3, h: 3, label: t('Амбар') },
+    { interiorId: 'potter_house', col: 20, row: 4, w: 3, h: 3, label: t('Дом гончара') },
     { interiorId: 'villager_house_1', col: 4, row: 11, w: 3, h: 3, label: t('Дом Авдея') },
     { interiorId: 'villager_house_2', col: 10, row: 11, w: 3, h: 3, label: t('Дом Марфы') },
     { interiorId: 'beekeeper_house', col: 15, row: 11, w: 3, h: 3, label: t('Дом пахаря') },
     { interiorId: 'church', col: 20, row: 11, w: 3, h: 3, label: t('Церковь') },
+    // Раунд 37: новая улица (ряды 15–17, двери на второй улице)
+    { interiorId: 'healer_house', col: 3, row: 15, w: 3, h: 3, label: t('Дом знахарки') },
+    { interiorId: 'carpenter_house', col: 9, row: 15, w: 3, h: 3, label: t('Дом плотника') },
+    { interiorId: 'fisher_house', col: 15, row: 15, w: 3, h: 3, label: t('Дом рыбака') },
+    { interiorId: 'weaver_house', col: 20, row: 15, w: 3, h: 3, label: t('Дом ткачихи') },
 ];
 
 // Ворота на выходе из деревни (правый край карты)

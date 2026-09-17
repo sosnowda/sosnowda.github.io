@@ -30,6 +30,7 @@ import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
 import { getPresence, ALL_NPC_IDS, NPC_DIALOGUE, OUTDOOR_LINES, PLACE_NAMES } from '../data/npcPresence.js';
 import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
+import { attachNpcWander } from '../systems/NpcWander.js';
 import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
 
@@ -39,7 +40,10 @@ export class VillageScene extends Phaser.Scene {
     }
 
     create() {
-        const ts = 48;
+        // Раунд 37 (п.5 заявки): тайл 48 → 56 — дома и деревня КРУПНЕЕ; карта
+        // 26×21 не влезает на один экран — добавлен обзор «🗺 Вся деревня» (M)
+        // и честная камера-скролл за игроком.
+        const ts = 56;
         this.tileSize = ts;
         this.worldW = MAP_W * ts;
         this.worldH = MAP_H * ts;
@@ -141,11 +145,12 @@ export class VillageScene extends Phaser.Scene {
             }
         }
 
-        // ----- Анимация колодца (deco_well_0..3) -----
+        // ----- Анимация колодца (deco_well_0..3) —
+        // раунд 37 (п.11): темп снижен 260 → 520 мс, вода не «мигает», а плещется
         if (this.wellTiles.length) {
             let wellFrame = 0;
             this.time.addEvent({
-                delay: 260,
+                delay: 520,
                 loop: true,
                 callback: () => {
                     wellFrame = (wellFrame + 1) % 4;
@@ -171,7 +176,12 @@ export class VillageScene extends Phaser.Scene {
             villager_house_1: 'deco_house_0',
             villager_house_2: 'deco_house_2',
             beekeeper_house: 'deco_house_0',   // раунд 28: ДОМ ПАХАРЯ (огород и соха отличают)
-            barn: 'deco_barn',               // раунд 17: у амбара свой облик — широкие ворота и сеновал
+            // Раунд 37 (вариант Б): дома новой улицы + гончар на месте амбара
+            potter_house: 'deco_house_1',
+            healer_house: 'deco_house_3',
+            carpenter_house: 'deco_house_0',
+            fisher_house: 'deco_house_2',
+            weaver_house: 'deco_house_1',
         };
         this.doors = [];
         BUILDINGS.forEach(b => {
@@ -201,7 +211,8 @@ export class VillageScene extends Phaser.Scene {
                     .setDepth(bottomRow - 0.7);
                 this.add.image(cx, cy, sprKey)
                     .setDisplaySize(b.w * ts + 8, b.h * ts + 6)
-                    .setDepth(bottomRow - 0.5);            // Y-сортировка: игрок ниже дома — перед домом
+                    .setDepth(bottomRow - 0.55);          // Y-сортировка: игрок ниже дома — перед домом;
+                                                          // на строке двери (bottomRow-0.5) игрок тоже ПЕРЕД домом (п.15)
             } else {
                 // Fallback: старые тайлы + нарисованная дверь
                 this.add.rectangle(px, py + 4, ts * 0.44, ts * 0.68, 0x3a2417)
@@ -209,20 +220,14 @@ export class VillageScene extends Phaser.Scene {
                     .setDepth(bottomRow - 0.5);
             }
 
-            // Золотой кружок над дверью (глубина 20 — поверх спрайта дома)
+            // Золотой кружок над дверью (глубина 20 — поверх спрайта дома).
+            // Раунд 37 (п.11 «мигающие тайлы»): маркер больше НЕ пульсирует альфой —
+            // стоит ровно (мигание ниже по яркости, тайлы выглядят стабильными).
             const doorMarker = this.add.image(px, py - ts, 'particle_spark')
                 .setTint(0xc9a14a)
                 .setDisplaySize(20, 20)
+                .setAlpha(0.85)
                 .setDepth(20);
-            this.tweens.add({
-                targets: doorMarker,
-                alpha: { from: 0.7, to: 1 },
-                scale: { from: 0.9, to: 1.1 },
-                duration: 800,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut',
-            });
             this.doors.push({ x: doorX, y: doorY, interiorId: b.interiorId, label, marker: doorMarker });
 
             // ----- П.7: Уникальные детали зданий (без дублей со спрайтом) -----
@@ -363,27 +368,27 @@ export class VillageScene extends Phaser.Scene {
             ease: 'Sine.easeInOut',
         });
 
-        // ----- Игрок (п.9: уменьшен в 2 раза) -----
+        // ----- Игрок (раунд 37: единый масштаб с жителями, п.4/п.12) -----
         // П.1-2: Если игрок настроил внешность через генератор — используем
-        // композитную текстуру 'player_composite' как image (с раздельными tint-регионами).
-        // Иначе — обычный sprite с tint одежды.
+        // композитную текстуру 'player_composite' (LPC-слой, 9×4 кадра)
+        // С АНИМАЦИЯМИ ходьбы (п.22 заявки) — тем же композитом, что и NPC.
         this.player = this.registry.get('player');
         const ps = PLAYER_START;
         const useComposite = this.player && this.player.useComposite && this.textures.exists('player_composite');
         if (useComposite) {
-            // Используем image с композитной текстурой (статичный кадр, без анимации)
-            this.playerObj = this.physics.add.sprite(ps.col * ts + ts / 2, ps.row * ts + ts / 2, 'player_composite');
-            // Анимации нет — но добавим эффект дыхания через tween
+            this.playerTexKey = 'player_composite';
         } else {
-            // Обычный sprite с анимациями
-            this.playerObj = this.physics.add.sprite(ps.col * ts + ts / 2, ps.row * ts + ts / 2, this.player.sprite || 'player');
-            // П.4: Применяем tint одежды (если игрок настроил внешность)
-            if (this.player.appearance && this.player.appearance.jacket) {
-                this.playerObj.setTint(this.player.appearance.jacket.tint);
-            }
-            this.playerObj.play(`${this.player.sprite || 'player'}_idle_down`);
+            this.playerTexKey = (this.player && this.player.sprite) || 'player';
         }
-        this.playerObj.setScale(ts / 32 * 0.75);  // было 1.5, теперь 0.75 (в 2 раза меньше)
+        this.playerObj = this.physics.add.sprite(ps.col * ts + ts / 2, ps.row * ts + ts / 2, this.playerTexKey);
+        if (!useComposite && this.player.appearance && this.player.appearance.jacket) {
+            this.playerObj.setTint(this.player.appearance.jacket.tint);
+        }
+        // Анимации есть у обоих типов текстур (LPC-композит и legacy-листы):
+        // п.22 — игрок ходит с анимацией, как и жители
+        const startIdle = `${this.playerTexKey}_idle_down`;
+        if (this.anims.exists(startIdle)) this.playerObj.play(startIdle);
+        this.playerObj.setScale(ts / 32 * 0.75);  // единый «взрослый» масштаб (у NPC тот же)
         // ЧЕСТНЫЙ ХИТБОКС: кадр спрайта 64×64, сам персонаж занимает ~24×24 в центре.
         // Раньше тело было равно всему кадру (72×72 при текущем масштабе) — игрок
         // «упирался» в невидимые стены там, где визуально свободно проходил.
@@ -402,6 +407,8 @@ export class VillageScene extends Phaser.Scene {
         this.wasd = this.input.keyboard.addKeys('W,A,S,D');
         this.input.keyboard.on('keydown-E', () => this.tryInteract());
         this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
+        // Раунд 37 (п.5): обзор всей деревни
+        this.input.keyboard.on('keydown-M', () => this.toggleVillageOverview());
         this.busyDialog = false;
         this.lastDir = 'down';
         this.lastStepTime = 0;
@@ -416,10 +423,11 @@ export class VillageScene extends Phaser.Scene {
             createDialog(this, '❓ Помощь',
                 timeRatioInfoLine() + '\n\n' +
                 tk('village.help.body',
-                    'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
+                    'Управление: WASD/стрелки — движение, E/пробел — действие, M — обзор деревни, ESC — меню.\n\n' +
                     '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
+                    '🔒 Закрытые избы: хозяин ушёл — подскажут, где искать.\n' +
                     '📦 Сундуки и тайники — раз в игровой день.\n' +
-                    '🔥 Костёр — отдых, ✝ крест — молитва. 🎣 Рыбалка — на Реке (по карте).\n' +
+                    '✝ Крест — молитва. 🎣 Рыбалка — на Реке (по карте). 🐑 Овчарня — на востоке новой улицы.\n' +
                     '🐺 За воротами, в Тёмном лесу, водятся волки — там же грибы и ягоды.\n' +
                     '🚪 Выход за околицу (по карте) занимает ровно 1 игровой час.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
@@ -638,6 +646,31 @@ export class VillageScene extends Phaser.Scene {
             this.add.text(cx, topY - ts * 0.3, '🧶', {
                 fontSize: '14px',
             }).setOrigin(0.5).setDepth(9);
+        } else if (b.interiorId === 'potter_house') {
+            // Раунд 37: гончар — горшок (эмблема)
+            this.add.text(cx, topY - ts * 0.3, '🏺', {
+                fontSize: '14px',
+            }).setOrigin(0.5).setDepth(9);
+        } else if (b.interiorId === 'healer_house') {
+            // Раунд 37: знахарка — пучок трав (эмблема)
+            this.add.text(cx, topY - ts * 0.3, '🌿', {
+                fontSize: '14px',
+            }).setOrigin(0.5).setDepth(9);
+        } else if (b.interiorId === 'fisher_house') {
+            // Раунд 37: рыбак — уды (эмблема)
+            this.add.text(cx, topY - ts * 0.3, '🎣', {
+                fontSize: '14px',
+            }).setOrigin(0.5).setDepth(9);
+        } else if (b.interiorId === 'carpenter_house') {
+            // Раунд 37: плотник — топор (эмблема)
+            this.add.text(cx, topY - ts * 0.3, '🪓', {
+                fontSize: '14px',
+            }).setOrigin(0.5).setDepth(9);
+        } else if (b.interiorId === 'weaver_house') {
+            // Раунд 37: ткачиха — нити (эмблема)
+            this.add.text(cx, topY - ts * 0.3, '🧵', {
+                fontSize: '14px',
+            }).setOrigin(0.5).setDepth(9);
         }
     }
 
@@ -653,7 +686,7 @@ export class VillageScene extends Phaser.Scene {
             haystack: 'deco_haystack',
             firewood: 'deco_firewood',
             cart: 'deco_cart',
-            banya: 'deco_banya',   // §3.1 раунд 20
+            banya: 'deco_banya',   // §3.1 раунд 20 (раунд 37: баня с карты удалена — ветка не срабатывает)
             ovin: 'deco_ovin',     // §3.1 раунд 20
         };
         YARD_PROPS.forEach((p) => {
@@ -689,6 +722,58 @@ export class VillageScene extends Phaser.Scene {
                 });
             }
         });
+
+        // ----- Раунд 37 (вариант Б): ОВЧАРНЯ на восточном конце второй улицы -----
+        // Частокол 'H' уже стоит (world.buildMap); рисуем поверх него жерди,
+        // овец (мелкий рогатый скот — спрайт козы) и сено. Ивашка пасёт рядом.
+        this.drawSheepfold(ts);
+    }
+
+    /**
+     * Раунд 37: визуал овчарни — жерди частокола, 3 овцы, стог сена.
+     */
+    drawSheepfold(ts) {
+        if (!this.map || !this.map[19] || this.map[19][22] !== 'H') return; // нет загона — нет и овец
+        const penCols = [];
+        for (let x = 21; x <= 25; x++) {
+            if (this.map[19] && this.map[19][x] === 'H') penCols.push(x);
+        }
+        if (!penCols.length) return;
+        const rowY = 19 * ts + ts / 2;
+        // Жерди частокола поверх «стенных» тайлов (визуально — частокол, не изба)
+        penCols.forEach((col) => {
+            const px = col * ts + ts / 2;
+            if (this.textures.exists('tile_fence_h')) {
+                this.add.image(px, rowY, 'tile_fence_h')
+                    .setScale(ts / 32)
+                    .setDepth(19 + 0.35);
+            }
+        });
+        // Овцы — на подиуме загона, чуть дышат (лёгкий твин высоты)
+        const sheepTex = this.textures.exists('deco_goat') ? 'deco_goat'
+            : (this.textures.exists('deco_cow') ? 'deco_cow' : null);
+        if (sheepTex) {
+            const cols = [penCols[0], penCols[Math.floor(penCols.length / 2)], penCols[penCols.length - 1]];
+            cols.forEach((col, i) => {
+                const sx = col * ts + ts / 2 + (i % 2 ? 10 : -8);
+                const sy = rowY - 4;
+                const sheep = this.add.image(sx, sy, sheepTex)
+                    .setScale(0.85 + i * 0.08)
+                    .setFlipX(i % 2 === 0)
+                    .setDepth(19 + 0.5);
+                this.tweens.add({
+                    targets: sheep,
+                    y: sy - 1.5,
+                    duration: 1600 + i * 350, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                });
+            });
+        }
+        // Стог сена в углу загона
+        if (this.textures.exists('deco_haystack')) {
+            this.add.image(penCols[penCols.length - 1] * ts + ts / 2, rowY - 8, 'deco_haystack')
+                .setScale(0.7)
+                .setDepth(19 + 0.45);
+        }
     }
 
     /**
@@ -799,6 +884,23 @@ export class VillageScene extends Phaser.Scene {
         // Кнопки в статус-баре (п.10): справа вверху, в пределах бара (y=14)
         const btnY = 14;
         const btnW = 70, btnH = 20;
+
+        // Кнопка "🗺 Обзор" (раунд 37 п.5: вся деревня одним экраном)
+        if (width >= 900) {
+            const ovBtnX = width - 395;
+            const ovBtn = this.add.rectangle(ovBtnX, btnY, btnW, btnH, 0x3a5a3a, 0.95)
+                .setStrokeStyle(1, 0xC9A961)
+                .setInteractive({ useHandCursor: true })
+                .setScrollFactor(0)
+                .setDepth(101);
+            const ovText = this.add.text(ovBtnX, btnY, '🗺 ' + t('Обзор'), {
+                fontSize: '10px', color: '#E8DCC4',
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+            ovBtn.on('pointerup', () => { this.toggleVillageOverview(); });
+            ovBtn.on('pointerover', () => ovBtn.setFillStyle(0x4a6a4a, 1));
+            ovBtn.on('pointerout', () => ovBtn.setFillStyle(0x3a5a3a, 0.95));
+        }
 
         // Кнопка "Задания" (п.20)
         const questBtnX = width - 310;
@@ -959,10 +1061,10 @@ export class VillageScene extends Phaser.Scene {
                 dir = vx < 0 ? 'left' : 'right';
             }
             if (dir !== this.lastDir || !this.playerObj.anims.isPlaying) {
-                // П.1-2: Если используем композит — анимаций нет, только меняем lastDir
-                if (!this.player.useComposite) {
-                    this.playerObj.play(`${this.player.sprite || 'player'}_walk_${dir}`, true);
-                }
+                // П.22 (раунд 37): анимация ходьбы у обоих типов текстуры
+                // (LPC-композит 'player_composite_*' и legacy 'player_*')
+                const walkKey = `${this.playerTexKey}_walk_${dir}`;
+                if (this.anims.exists(walkKey)) this.playerObj.play(walkKey, true);
                 this.lastDir = dir;
             }
             const now = this.time.now;
@@ -975,11 +1077,9 @@ export class VillageScene extends Phaser.Scene {
                 tickTime(this.registry, 1);
             }
         } else {
-            // П.1-2: Если композит — не вызываем play/anims
-            if (!this.player.useComposite) {
-                this.playerObj.anims.pause();
-                this.playerObj.play(`${this.player.sprite || 'player'}_idle_${this.lastDir}`, true);
-            }
+            // П.22: стоя — idle-кадр в последнем направлении
+            const idleKey = `${this.playerTexKey}_idle_${this.lastDir}`;
+            if (this.anims.exists(idleKey)) this.playerObj.play(idleKey, true);
         }
         this.playerObj.setVelocity(v.x, v.y);
         // Псевдо-2.5D: обновляем глубину игрока по его Y-позиции каждый кадр
@@ -997,8 +1097,9 @@ export class VillageScene extends Phaser.Scene {
     rebuildStreetNpcs() {
         const ts = this.tileSize;
 
-        // --- Убрать старых (спрайты, подписи, твины) ---
+        // --- Убрать старых (спрайты, подписи, твины, поводки блуждания) ---
         this.streetNpcs.forEach(n => {
+            if (n.wander) n.wander.stop();
             if (n.spr) {
                 this.tweens.killTweensOf(n.spr);
                 n.spr.destroy();
@@ -1035,33 +1136,16 @@ export class VillageScene extends Phaser.Scene {
             if (!spot) return;
             const x = spot.x * ts;
             const y = spot.y * ts;
-            // Раунд 28 (п.2): LPC-композит жителя (уникальная внешность),
-            // дети — меньшего роста и БЕГАЮТ по деревне (п.1)
+            // Раунд 28 (п.2): LPC-композит жителя (уникальная внешность).
+            // Раунд 37 (п.4): ЕДИНЫЙ масштаб по возрасту — взрослый ровно
+            // как игрок, подросток 0.85, ребёнок 0.7 (больше нет гигантов 2.2×).
             const spriteKey = getNpcSpriteKey(this, this.registry, id);
             const kid = isChildNpc(npcData);
             const spr = this.add.sprite(x, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
-                .setScale((kid ? 1.5 : 2.2) * ((npcData && npcData.look && npcData.look.scale) || 1))
+                .setScale(this.npcScaleByAge(npcData))
                 .setDepth(y / ts + 0.3);
             const animKey = `${spr.texture.key}_idle_down`;
             if (this.anims.exists(animKey)) spr.play(animKey);
-            this.tweens.add({
-                targets: spr,
-                y: { from: y, to: y - 3 },
-                duration: 1500 + Math.random() * 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            });
-            // Раунд 28 (п.1): дети БЕГАЮТ — короткая пробежка туда-сюда
-            if (kid && this.anims.exists(`${spr.texture.key}_walk_right`)) {
-                const runRange = 1.6 * ts + Math.random() * ts;
-                const runDur = 1400 + Math.random() * 1200;
-                this.tweens.add({
-                    targets: spr,
-                    x: { from: x, to: Phaser.Math.Clamp(x + (Math.random() < 0.5 ? -runRange : runRange), 2 * ts, 22 * ts) },
-                    duration: runDur,
-                    yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-                    onYoyo: () => { spr.setFlipX(!spr.flipX); },
-                    onRepeat: () => { spr.setFlipX(!spr.flipX); },
-                });
-            }
             const label = this.add.text(x, y + 36, displayName, {
                 fontSize: '12px', color: RUS.text,
                 backgroundColor: '#000000aa', padding: { x: 5, y: 2 },
@@ -1075,7 +1159,20 @@ export class VillageScene extends Phaser.Scene {
             spr.on('pointerdown', (pointer) => {
                 if (pointer.leftButtonDown() && !this.busyDialog) this.talkToStreetNpc(id);
             });
-            this.streetNpcs.push({ id, spr, label, hint });
+            const entry = { id, spr, label, hint, wander: null };
+            // Раунд 37 (пп.13,15): осмысленное блуждание по проходимым тайлам
+            // с анимацией ходьбы (никаких «дёрганий» и пробежек сквозь дома)
+            entry.wander = attachNpcWander(this, {
+                spr,
+                anchorX: x, anchorY: y,
+                radius: kid ? 3 : 2,
+                map: this.map, ts,
+                label, hint,
+                idleMin: kid ? 600 : 1500,
+                idleMax: kid ? 2200 : 4500,
+                stepMs: kid ? 320 : 460,
+            });
+            this.streetNpcs.push(entry);
         });
 
         // --- Староста (п.10): днём ХОДИТ по деревне, а не сидит в доме ---
@@ -1089,7 +1186,7 @@ export class VillageScene extends Phaser.Scene {
             const maxX = 21 * ts;
             const startX = minX + Math.random() * (maxX - minX);
             const spr = this.add.sprite(startX, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
-                .setScale(2.2 * ((npcData && npcData.look && npcData.look.scale) || 1))
+                .setScale(this.npcScaleByAge(npcData))
                 .setDepth(y / ts + 0.3);
             const walkKey = `${spr.texture.key}_walk_right`;
             if (this.anims.exists(walkKey)) spr.play(walkKey);
@@ -1128,19 +1225,44 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
+     * Раунд 37 (п.4 заявки): ЕДИНЫЙ масштаб персонажей по возрасту.
+     * Взрослый — ровно как игрок (ts/32 × 0.75), подросток (13–17) — 0.85,
+     * ребёнок (≤12) — 0.7. Мелкий индивидуальный разброс look.scale сохранён
+     * только у взрослых (±7%) — рост людей всё же немного различается.
+     */
+    npcScaleByAge(npcData) {
+        const base = this.tileSize / 32 * 0.75;
+        const age = (npcData && npcData.age) || 30;
+        const lookVar = (npcData && npcData.look && npcData.look.scale) || 1;
+        if (age <= 12) return base * 0.7;
+        if (age <= 17) return base * 0.85;
+        return base * lookVar;
+    }
+
+    /**
      * Точка на улице для жителя (в тайлах). Возле своего двора/колодца/ворот.
+     * Раунд 37: координаты пересчитаны под карту 26×21 (вторая улица) и
+     * добавлены жители новых дворов (знахарка, плотник, гончар, ткачиха,
+     * жена рыбака, пастушок, дети).
      */
     streetSpotFor(id) {
         const SPOTS = {
-            peasant1: { x: 5.5, y: 14.4 },      // у дома Авдея
-            widow: { x: 11.4, y: 14.4 },        // у дома Марфы
-            beekeeper1: { x: 14.4, y: 14.4 },   // у дома пахаря
-            beekeeper_wife: { x: 9.2, y: 10.4 }, // у колодца
-            elder_wife: { x: 10.9, y: 10.4 },   // у колодца с другой стороны
+            peasant1: { x: 6.5, y: 13.4 },      // у дома Авдея
+            widow: { x: 12.5, y: 13.4 },        // у дома Марфы
+            beekeeper1: { x: 18.4, y: 13.4 },   // у дома пахаря
+            beekeeper_wife: { x: 8.4, y: 10.4 }, // у колодца
+            elder_wife: { x: 11.5, y: 9.5 },    // у колодца, со стороны главной улицы
             blacksmith: { x: 17.5, y: 8.2 },    // у кузницы
-            healer: { x: 19.2, y: 10.3 },       // у церкви
-            hunter: { x: 19.2, y: 15.4 },       // у южной околицы
-            fisherman: { x: 8.4, y: 13.4 },     // у бывшего пруда (юго-запад)
+            healer: { x: 4.4, y: 18.4 },        // у дома знахарки (новая улица)
+            hunter: { x: 19.2, y: 14.4 },       // у южного грунта
+            fisherman: { x: 16.4, y: 18.4 },    // у дома рыбака (новая улица)
+            carpenter1: { x: 10.4, y: 18.4 },   // у дома плотника
+            carpenter_wife: { x: 12.4, y: 14.4 }, // по воду
+            potter1: { x: 19.4, y: 7.4 },       // за домом гончара (сушит горшки)
+            potter_wife: { x: 19.4, y: 6.4 },   // у двора гончара
+            weaver1: { x: 19.4, y: 18.4 },      // у дома ткачихи
+            shepherd_boy: { x: 21.4, y: 19.4 }, // у овчарни
+            fisher_wife: { x: 14.4, y: 18.4 },  // у дома рыбака
             guard: { x: 22.4, y: 9.5 },         // у ворот
             tavernkeeper: { x: 11.4, y: 7.6 },  // у постоялого двора
             priest: null,                       // батюшка не гуляет — он в церкви
@@ -1149,6 +1271,9 @@ export class VillageScene extends Phaser.Scene {
             kid3: { x: 16.8, y: 10.1 }, kid4: { x: 7.6, y: 12.2 },
             kid5: { x: 18.4, y: 12.3 }, kid6: { x: 13.2, y: 12.1 },
             kid7: { x: 9.8, y: 9.6 },
+            // Раунд 37: новые дети
+            kid8: { x: 21.4, y: 7.4 },          // дочка гончара — у дома
+            kid9: { x: 6.4, y: 15.4 },          // внучка знахарки — у дома
         };
         return SPOTS[id] || { x: 7.5, y: 9.4 };
     }
@@ -1363,6 +1488,13 @@ export class VillageScene extends Phaser.Scene {
         if (this.busyDialog || !this.nearestInteractable) return;
         ActionLog.add(this.registry, `Игрок взаимодействует с: ${this.nearestInteractable.label}.`);
         if (this.nearestInteractable.type === 'door') {
+            // Раунд 37 (п.19 заявки): если в жилом доме никого нет — дверь ЗАКРЫТА,
+            // внутрь не пускаем (поп-ап). Постоялый двор и церковь открыты всегда.
+            const closed = this.getInteriorClosure(this.nearestInteractable.interiorId);
+            if (closed) {
+                this.showClosedHouseDialog(this.nearestInteractable.interiorId, closed);
+                return;
+            }
             // Пункт 8: интерьер открывается отдельным окном поверх деревни
             this.scene.pause();
             this.scene.launch('Interior', { interiorId: this.nearestInteractable.interiorId, from: 'Village' });
@@ -1387,6 +1519,12 @@ export class VillageScene extends Phaser.Scene {
     // П.16,23: Подойти к двери и войти (упрощённо — телепорт + вход)
     walkToAndEnter(interiorId, tx, ty) {
         const ts = this.tileSize;
+        // Раунд 37 (п.19): закрытый дом не пускает и при входе кликом
+        const closed = this.getInteriorClosure(interiorId);
+        if (closed) {
+            this.showClosedHouseDialog(interiorId, closed);
+            return;
+        }
         // Телепортируем игрока к двери (встанем перед ней)
         this.playerObj.setVelocity(0, 0);
         this.playerObj.x = tx * ts + ts / 2;
@@ -1395,6 +1533,72 @@ export class VillageScene extends Phaser.Scene {
         ActionLog.add(this.registry, `Игрок вошёл в здание.`);
         this.scene.pause();
         this.scene.launch('Interior', { interiorId: interiorId, from: 'Village' });
+    }
+
+    /**
+     * Раунд 37 (п.19): закрыт ли дом для входа.
+     * Возвращается { pres } (присутствие хозяина), если ВХОДИТЬ НЕЛЬЗЯ, иначе null.
+     * Открыты всегда: общественные здания (public: true — постоялый двор, церковь)
+     * и дома, где хозяин/хозяйка сейчас дома (или вторая фигура — жена).
+     * Ковка кузницы при уходе Данилы на постоялый двор (п.20) честно закрывается.
+     */
+    getInteriorClosure(interiorId) {
+        const interior = INTERIORS[interiorId];
+        if (!interior || !interior.npcId || interior.noNpc || interior.public) return null;
+        const pres = getPresence(this.registry, interior.npcId);
+        const ownerHere = pres.place === 'home' || pres.place === interiorId;
+        if (ownerHere) return null;
+        if (interior.secondaryNpcId) {
+            const secPres = getPresence(this.registry, interior.secondaryNpcId);
+            if (secPres.place === 'home') return null; // жена дома — дверь открыта
+        }
+        return { pres };
+    }
+
+    /**
+     * Раунд 37 (пп.19,20): поп-ап «Дом закрыт, никого нет» с подсказкой,
+     * где искать хозяина (деятельность · место).
+     */
+    showClosedHouseDialog(interiorId, closure) {
+        const interior = INTERIORS[interiorId];
+        const name = interior ? interior.name : '';
+        const pres = closure.pres;
+        const where = t(PLACE_NAMES[pres.place] || '') || pres.place;
+        const activity = (pres.activity || t('занят(а) своим делом'));
+        ActionLog.add(this.registry, tf('Дверь закрыта: {0}. Хозяин: {1} ({2})', name, activity, where));
+        this.busyDialog = true;
+        createDialog(this,
+            t('Дом закрыт'),
+            `${t('🔒 Дом закрыт, никого нет')}` +
+            `\n\n${name}\n` +
+            tf(t('Хозяин сейчас: {0} · {1}'), activity, where),
+            [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+            { singletonKey: `closed-${interiorId}` });
+    }
+
+    /**
+     * Раунд 37 (п.5): обзор ВСЕЙ деревни одним экраном (клавиша M или кнопка 🗺).
+     * Камера отъезжает так, чтобы карта 26×21 влезла целиком; повторное
+     * нажатие возвращает камеру к игроку.
+     */
+    toggleVillageOverview() {
+        const cam = this.cameras.main;
+        if (!this._overviewMode) {
+            const zoom = Math.min(this.scale.width / this.worldW, this.scale.height / this.worldH);
+            this._overviewMode = true;
+            cam.stopFollow();
+            cam.setZoom(zoom);
+            cam.centerOn(this.worldW / 2, this.worldH / 2);
+            if (this.prompt) this.prompt.setVisible(false);
+            this.showFloatingText(this.scale.width / 2, this.scale.height - 80,
+                t('Видно всю деревню. Нажми ещё раз, чтобы вернуть камеру к себе.'), '#c9a14a');
+        } else {
+            this._overviewMode = false;
+            cam.setZoom(1);
+            cam.startFollow(this.playerObj, true, 0.1, 0.1);
+            this.showFloatingText(this.scale.width / 2, this.scale.height - 80,
+                t('Камера снова следует за тобой.'), '#c9a14a');
+        }
     }
 
     // П.5: Поп-ап тултип при наведении курсора на здание
@@ -2093,6 +2297,9 @@ export class VillageScene extends Phaser.Scene {
      * свет с мерцанием (updateHUD), редкий дымок. Отдых — через tryInteract.
      */
     createCampfire(ts) {
+        // Раунд 37 (п.14 заявки): костёр у постоялого двора УДАЛЁН — тайлов 'F'
+        // на карте больше нет, метод оставлен на случай возврата костра.
+        if (!this.map || !this.map.some(row => row.includes('F'))) return;
         const col = 12, row = 7;
         const cx = col * ts + ts / 2;
         const cy = row * ts + ts / 2;

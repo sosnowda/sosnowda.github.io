@@ -1353,4 +1353,665 @@ export const DIALOGUES = {
             },
         },
     },
+
+    // ===== РАУНД 37 (вариант Б): ЖИТЕЛИ НОВОЙ УЛИЦЫ =====
+
+    // ПЛОТНИК МИКУЛА — lore о ремесле + задел на будущий крафт
+    carpenter1: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Плотник Микула',
+                text: 'Микула я, плотник. Изба, клеть, сенник — всё моими руками сложено. Топор да скоба — вот и всё богатство, да зато какое: без них и деревня не деревня. Гляди-ка, у тебя плечи крепкие — не надобен ли тебе честный труд?',
+                en: 'I am Mikula, the carpenter. House, storeroom, hay-barn — all built with these two hands. An axe and a saw are all the riches I own — yet what riches: without them a village is no village at all. You have broad shoulders, friend — might you be after honest work?',
+                action: (scene) => {
+                    DIALOGUES.carpenter1.nodes.a.choices = withAskThief(scene, 'carpenter1', [
+                        { text: t('Что строишь теперь?'), next: 'build' },
+                        { text: t('Про лес расскажи.'), next: 'forest_talk' },
+                        { text: t('Чем мастерство добыл?'), next: 'craft' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Удачи в работе.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            build: {
+                speaker: 'Плотник Микула',
+                text: 'Сани новые затеял к зиме: полозья дубовые вяжу, вяз под клин кладу — десять лет прослужат. Да кровельку у батюшки поправить надобно: Богу угождать надобно сперва делом, а после словом.',
+                en: 'I am building new sledges for winter: the runners are woven from oak wedges — they will serve ten years. And the priest\'s roof needs mending: you serve the Mother of God first with work, and only then with words.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            forest_talk: {
+                speaker: 'Плотник Микула',
+                text: 'Лес — он как брат, только молчаливый. Сосна — на стены, дуб — на пороги и сохи, осина — под дранку: она не гниёт. А без спросу лес рубить — грех: спроси у лесного дедушки, полено положи на пень. Так дед мой делал, так и я учу сыновей, если Бог даст.',
+                en: 'The forest is like a brother, only a silent one. Pine for walls, oak for thresholds and ploughs, aspen for roof-shingles — it never rots. But felling without asking is a sin: ask the forest grandfather\'s leave and lay a log on the stump. That is what my grandfather did, and what I shall teach my sons, God willing.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            craft: {
+                speaker: 'Плотник Микула',
+                text: 'Дед выучил — с семи лет щепу возить заставлял. «Плотник, — говорил, — не тот, кто гвоздь забить умеет, а тот, кто дерево услышит: где резать, где гнуть, где досадовать да подождать». Вот вся и наука: слушай дерево — не ошибёшься.',
+                en: 'My grandfather taught me — from the age of seven he made me carry shavings. "A carpenter," he said, "is not the one who can hammer a nail, but the one who listens to the wood: where to cut, where to bend, where to grumble and wait." That is the whole science: listen to the wood, and you will not err.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Плотник Микула',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'carpenter1', 'Плотник Микула');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Плотник Микула',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'carpenter1', 'Плотник Микула');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Плотник Микула',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // МАТРЁНА — жена плотника, короткое дерево
+    carpenter_wife: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Матрёна, жена плотника',
+                text: 'Муж весь день по дворам, а я пряду да варево варю. Дерево он слышит, а меня — не всегда. Уж что-что, а дым в трубе держать — это ко мне.',
+                en: 'My husband is out at other people\'s yards all day, while I spin and cook. He can hear the wood, but not always me. Yet keeping the hearth alive — that is my craft.',
+                action: (scene) => {
+                    DIALOGUES.carpenter_wife.nodes.a.choices = withAskThief(scene, 'carpenter_wife', [
+                        { text: t('Понятно, спасибо.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            ask_thief: {
+                speaker: 'Матрёна, жена плотника',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'carpenter_wife', 'Матрёна, жена плотника');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Матрёна, жена плотника',
+                text: '...',
+                choices: [
+                    { text: t('Понятно, спасибо.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // ГОНЧАР ИГНАТ — lore + ПОДЁННАЯ РАБОТА в мастерской (бывш. молотьба)
+    potter1: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Гончар Игнат',
+                text: 'Здравствуй, добрый человек! Я Игнат, гончар. Мои горшки — в каждой избе, а не то и в церкви: кутью да в каком горшке носить? Обжиг сегодня — загляни, как огонь да глина творят чудо.',
+                en: 'Good day, kind soul! I am Ignat, the potter. My pots sit in every house — and in the church too: after all, what would they carry the funeral wheat in? The kiln fires today — come and see what fire and clay can do together.',
+                action: (scene) => {
+                    DIALOGUES.potter1.nodes.a.choices = withAskThief(scene, 'potter1', [
+                        { text: t('Помочь в мастерской (1 час)'), next: 'work' },
+                        { text: t('Откуда глина берёшь?'), next: 'clay' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Спасибо, я пойду.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            work: {
+                speaker: 'Гончар Игнат',
+                text: '...',
+                action: (scene) => {
+                    const player = scene.registry.get('player');
+                    if ((player.HP || 0) <= 5) {
+                        scene._lastAskResult = { message: t('Игнат щурится: «Сначала — хлеб да отдых. Обессиленного работником не нанимают». (Нужно больше здоровья)') };
+                        return;
+                    }
+                    player.HP = Math.max(1, (player.HP || 1) - 3);
+                    const wage = 3 + Math.floor(Math.random() * 4); // 3..6 д. — как в амбаре раньше
+                    player.dengas = (player.dengas || 0) + wage;
+                    scene.registry.set('player', player);
+                    if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
+                    ActionLog.add(scene.registry, `Отработал час в гончарной мастерской: +${wage} д., усталость −3 HP.`);
+                    scene._lastAskResult = { message: `Час у круга и печи: носил дрова, мешал глину, ставил горшки на обжиг. Игнат доволен.\n\nЗаработано: +${wage} д. Усталость: −3 здоровья.` };
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            clay: {
+                speaker: 'Гончар Игнат',
+                text: 'Глина — с речки, с брода: там она жирная, синяя. Пешком хожу, с сумой да лопатой. Кто горшком кормится, тот по воде и ходит. А как глину набрал — месяц мну да вылёживаю: торопливый горшок в печи лопнет, как поспешное слово.',
+                en: 'The clay comes from the river ford — there it is rich and blue. I walk there with a sack and a spade. He who lives by the pot walks by the water. And once I gather the clay I knead and let it rest a month: a hasty pot cracks in the kiln, like a hasty word.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Гончар Игнат',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'potter1', 'Гончар Игнат');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Гончар Игнат',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'potter1', 'Гончар Игнат');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Гончар Игнат',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // АННА — жена гончара, короткое дерево
+    potter_wife: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Анна, жена гончара',
+                text: 'Пока Игнат по глину ходит, я при горшках да при дочке. Дунька уже чашку вылепила — не чаша, а загляденье! Приходите, когда обжиг: тепло у печи да разговоры в доме водятся.',
+                en: 'While Ignat goes for clay, I mind the pots and our daughter. Dun\'ka has already thrown her first cup — not a goblet, but a sight for sore eyes! Come at the firing: the kiln warms the hearth, and gossip warms the house.',
+                action: (scene) => {
+                    DIALOGUES.potter_wife.nodes.a.choices = withAskThief(scene, 'potter_wife', [
+                        { text: t('Спасибо.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            ask_thief: {
+                speaker: 'Анна, жена гончара',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'potter_wife', 'Анна, жена гончара');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Анна, жена гончара',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // ТКАЧИХА ПЕЛАГЕЯ — вдова, лор о стане и сыне
+    weaver1: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Ткачиха Пелагея',
+                text: 'Входи, не шуми — холст на стане, сейчас перекину нитку. Вдова я, Пелагея. Муж на погосте, сын при овцах, а стан — вот он, кормит. Холст, ряднина, по́лошка — чего надобно?',
+                en: 'Come in, but quietly — there is linen on the loom, I am about to change the thread. I am Pelageya, a widow. My husband lies in the churchyard, my son is with the sheep, and the loom — well, the loom feeds us. Linen, sackcloth, coarse weave — what do you need?',
+                action: (scene) => {
+                    DIALOGUES.weaver1.nodes.a.choices = withAskThief(scene, 'weaver1', [
+                        { text: t('Про сына расскажи.'), next: 'son' },
+                        { text: t('Тяжела ль работа ткачихи?'), next: 'loom_talk' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Мира твоему дому.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            son: {
+                speaker: 'Ткачиха Пелагея',
+                text: 'Ивашка? Отцовская выправка, материнская упрямость. Овцы его слушаются лучше, чем я. Растёт — не по дням, по часам. Овечью выручку прячет за частоколом — копит на собственный нож. Мужик в доме растёт, как ни крути.',
+                en: 'Ivashka? His father\'s bearing, his mother\'s stubbornness. The sheep obey him better than I do. He grows not by days but by hours. He hides the wool money behind the stockade — saving up for a knife of his own. A man of the house is growing, like it or not.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            loom_talk: {
+                speaker: 'Ткачиха Пелагея',
+                text: 'Тяжела ль? Нитка тонка, спина ноет, глаза слезятся к вечеру. Зато холст — он честный: что соткала, то и твое. Зимой при свече тку, летом при окне. Не божись, не зевай — и к Покрову будет тебе рубаха.',
+                en: 'Is it hard? The thread is fine, the back aches, the eyes water by evening. But linen is honest: what you wove is yours. In winter I weave by candle, in summer by the window. Do not swear, do not idle — and by the Feast of the Protection you shall have your shirt.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Ткачиха Пелагея',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'weaver1', 'Ткачиха Пелагея');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Ткачиха Пелагея',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'weaver1', 'Ткачиха Пелагея');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Ткачиха Пелагея',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // ИВАШКА — пастушок-подросток при овчарне
+    shepherd_boy: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'парень',
+                text: 'Ивашка я, при овцах. Мать на стане с утра до ночи, а я — за частоколом. Овец у нас семь да баран Рыжий — тот самый, что думает, будто он человек. А ты не местный? Иди сюда, овцы не кусаются. Почти не кусаются.',
+                en: 'I am Ivashka, I mind the sheep. My mother weaves from morning till night, and I am out here by the stockade. We have seven ewes and the ram Red — the one who thinks he is a person. You are not from here, are you? Come closer, the sheep do not bite. They almost never bite.',
+                action: (scene) => {
+                    DIALOGUES.shepherd_boy.nodes.a.choices = withAskThief(scene, 'shepherd_boy', [
+                        { text: t('Что за баран у тебя?'), next: 'ram' },
+                        { text: t('Про овчарню расскажи.'), next: 'fold' },
+                        { text: t('Береги себя, детка.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            ram: {
+                speaker: 'парень',
+                text: 'Рыжий? Ох, баран как баран, только злопамятный. Как помашешь рукой — он рогами в бок! Мать велела его на осень зарезать, а я его обучил с ноги корм брать. Теперь хоть зарежь — не дам.',
+                en: 'Red? A ram like any ram, only he holds a grudge. Wave your hand and he will butt you with his horns! Mother says to slaughter him in autumn, but I taught him to take feed from my palm. Now they may as well slaughter me first — I shall not give him up.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            fold: {
+                speaker: 'парень',
+                text: 'Частокол батя ещё поставил, до своей смерти. Овец держать — дело верное: шерсть — матери на стан, молоко да мясо — на постоялый двор, навоз — на грядки. Овца, она всё отдаёт, только корми да счесть не забывай!',
+                en: 'Father built the stockade before he died. Keeping sheep is a sure thing: wool for Mother\'s loom, milk and meat for the lodging-yard, manure for the garden beds. A sheep gives everything — you only have to feed her and never miscount!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'парень',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'shepherd_boy', 'парень');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'парень',
+                text: '...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // ДОМНА — жена рыбака, короткое дерево
+    fisher_wife: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Домна, жена рыбака',
+                text: 'Ерёма на реке с зарею, а я уху варю да сети чиню. Рыбий дом — тоже дом: пахнет, может, не розой, да сытно.',
+                en: 'Yeryoma is at the river from dawn, while I cook the fish stew and mend the nets. A fisherman\'s house is a house too: it may not smell of roses, but no one goes hungry.',
+                action: (scene) => {
+                    DIALOGUES.fisher_wife.nodes.a.choices = withAskThief(scene, 'fisher_wife', [
+                        { text: t('Спасибо.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            ask_thief: {
+                speaker: 'Домна, жена рыбака',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'fisher_wife', 'Домна, жена рыбака');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Домна, жена рыбака',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // РЫБАК ЕРЁМА — свой дом на новой улице, продаёт копчёную рыбу
+    fisherman1: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Рыбак Ерёма',
+                text: 'Ерёма я, рыбак. От зари до зари на броду стою — и вот весь мой сказ. Рыба нынче идёт: лещи да окуни. Дом мой — вон он, на новой улице; заходи — Домна ухи нальёт.',
+                en: 'I am Yeryoma, a fisherman. From dawn to dusk I stand at the ford — and that is my whole tale. The fish are running: bream and perch. My house is over there on the new street; come by — Domna will pour you some fish stew.',
+                action: (scene) => {
+                    DIALOGUES.fisherman1.nodes.a.choices = withAskThief(scene, 'fisherman', [
+                        { text: t('🐟 Купить копчёную рыбу (2 д.)'), next: 'fish' },
+                        { text: t('Где нынче клюёт?'), next: 'spot' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Спасибо, я пойду.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            fish: {
+                speaker: 'Рыбак Ерёма',
+                text: '...',
+                action: (scene) => {
+                    const player = scene.registry.get('player');
+                    const FISH_PRICE = 2;
+                    if ((player.dengas || 0) < FISH_PRICE) {
+                        scene._lastAskResult = { message: t('Ерёма разводит руками: «Без двух монет и хвост не отдаю. Рыба — она не трава, сам лови».') };
+                        return;
+                    }
+                    player.dengas -= FISH_PRICE;
+                    const heal = 2 + Math.floor(Math.random() * 2); // 2..3 HP — дешевле трапезы, чуть жирнее
+                    player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
+                    scene.registry.set('player', player);
+                    if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
+                    ActionLog.add(scene.registry, `Купил копчёной рыбы у Ерёмы: −2 д., +${heal} HP.`);
+                    scene._lastAskResult = { message: `Лещ копчёный, дымом пахнет — как в детстве. Ешь, не жалей.\n\n−2 д. · +${heal} здоровья.` };
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            spot: {
+                speaker: 'Рыбак Ерёма',
+                text: 'Клюёт у брода, где ива склонилась, да под глинистым яром. На червя — лещ, на мелкую рыбку — щука. А ночью рыбачи не советую: вода ночью — хозяйка, а не слуга.',
+                en: 'They bite at the ford under the leaning willow, and under the clay bluff. Worm for bream, a small live fish for pike. But I do not advise night fishing: at night the water is a mistress, not a servant.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Рыбак Ерёма',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'fisherman', 'Рыбак Ерёма');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Рыбак Ерёма',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'fisherman', 'Рыбак Ерёма');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Рыбак Ерёма',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // ЗНАХАРКА ФЕВРОНЬЯ — лечение за деньги (первая полноценная «лекарка»)
+    healer1: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Знахарка Февронья',
+                text: 'Заходи, заходи, не стой в дверях — сквозняк. Я Февронья, травами лечу от столетья века. Раны у тебя, вижу, свежие: так и знала, что дорогой идёшь. Полечу — как раз ноги не подводили?',
+                en: 'Come in, come in, do not linger in the doorway — there is a draft. I am Fevronia; I have healed with herbs since time out of mind. Your wounds are fresh, I can see: I knew you came from the road. Let me treat them — your legs still carry you, do they?',
+                action: (scene) => {
+                    DIALOGUES.healer1.nodes.a.choices = withAskThief(scene, 'healer', [
+                        { text: t('🌿 Полечить раны (3 д.)'), next: 'heal' },
+                        { text: t('Чего травами лечишь?'), next: 'herbs' },
+                        { text: t('Про внучку расскажи.'), next: 'granddaughter' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Слава Богу, здоров.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            heal: {
+                speaker: 'Знахарка Февронья',
+                text: '...',
+                action: (scene) => {
+                    const player = scene.registry.get('player');
+                    const HEAL_PRICE = 3;
+                    if ((player.dengas || 0) < HEAL_PRICE) {
+                        scene._lastAskResult = { message: t('Февронья качает головой: «Три деньги — не жадность, а плата за коренья: я их сама ищу, на росе, до петухов. Нет трёх — терпи».') };
+                        return;
+                    }
+                    player.dengas -= HEAL_PRICE;
+                    const heal = 3 + Math.floor(Math.random() * 3); // 3..5 HP — сильнее трапезы
+                    player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
+                    scene.registry.set('player', player);
+                    if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
+                    ActionLog.add(scene.registry, `Февронья полечила раны: −3 д., +${heal} HP.`);
+                    scene._lastAskResult = { message: `Приложила подорожник, напоила отваром — кровь остановить, боль унять. К утру затянется.\n\n−3 д. · +${heal} здоровья.` };
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            herbs: {
+                speaker: 'Знахарка Февронья',
+                text: 'Полынь — от живота, зверобой — от девяноста девяти хворей, подорожник — раны заживлять, мята — сердце успокоить. Собираю на Троицу, на росе, с наговором. А на Ивана Купалу — так это уже не трава, а сила.',
+                en: 'Wormwood for the belly, Saint-John\'s-wort for ninety-nine ailments, plantain to close wounds, mint to still the heart. I gather them at Trinity, on the dew, with a whispered charm. And at Midsummer — that is no longer a herb, that is raw power.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            granddaughter: {
+                speaker: 'Знахарка Февронья',
+                text: 'Ульяна? Вся в меня: травы отличает, как я — свои веники. Только бабку свою слушает, а мать-то у неё померла родами... Научу всему — и дурою никто её не назовёт. Женщина с травой в руках — самостоятельный человек, запомни.',
+                en: 'Ulyana? She takes after me: she can tell the herbs apart the way I tell my own brooms. She listens to her granny alone — her mother died in childbed... I shall teach her everything, and no one will dare call her a fool. A woman with herbs in her hands can stand on her own, remember that.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Знахарка Февронья',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'healer', 'Знахарка Февронья');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Знахарка Февронья',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'healer', 'Знахарка Февронья');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Знахарка Февронья',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо, батюшка... то есть, бабушка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // ДУНЬКА — дочка гончара (9 лет)
+    kid8: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'ребёнок',
+                text: 'Я Дунька! Я уже горшок вылепила — настоящий, с носиком! Батя сказал — на обжиг ставить, когда печь остынет. А у тебя мошна звенит? Это монетки? У меня тоже есть — батя дал за то, что дрова собрала!',
+                en: 'I am Dun\'ka! I have already thrown a real pot — with a spout and everything! Father said it goes to the kiln once it cools. Is that your purse jingling? Are those coins? I have some too — Father gave them to me for stacking the firewood!',
+                action: (scene) => {
+                    DIALOGUES.kid8.nodes.a.choices = withAskThief(scene, 'kid8', [
+                        { text: t('Во что играете?'), next: 'games' },
+                        { text: t('Покажешь горшок?'), next: 'pot' },
+                        { text: t('Береги себя, детка.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            games: {
+                speaker: 'ребёнок',
+                text: 'Мы в черепки играем! Которые с трещиной — они больше не горшки, так можно! Я в них крупу ношу, как настоящая хозяйка. А ещё на качелях качаемся у Карповки — до неба достаём!',
+                en: 'We play with cracked pots! The ones with a crack are not pots anymore, so we may! I carry grain in them, like a real housewife. And we swing on the swing by the stream — we touch the sky!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            pot: {
+                speaker: 'ребёнок',
+                text: 'Вот он! Видишь, ровненький? Мама говорит — как у батиного деда вышло. А если треснет — я не буду плакать! Ну... немножко буду. Батя говорит: глина — она живая, сама знает, каким горшком быть.',
+                en: 'Here it is! See how even it is? Mother says it turned out like Grandfather\'s. And if it cracks — I shall not cry! Well... maybe a little. Father says the clay is alive and knows itself what kind of pot to become.',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            ask_thief: {
+                speaker: 'ребёнок',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'kid8', t('мальчик'));
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'ребёнок',
+                text: '...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // УЛЬЯНА — внучка знахарки (11 лет)
+    kid9: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'ребёнок',
+                text: 'Тише, бабушка отдыхает! Я Ульяна, её внучка. Травы разбираю: эта — полынь, эта — зверобой, а эту трогать нельзя — она крапива! Бабушка говорит, я у неё в бабку, а это значит — самая умная!',
+                en: 'Hush, grandmother is resting! I am Ulyana, her granddaughter. I sort the herbs: this is wormwood, this is Saint-John\'s-wort, and this one you must not touch — it is a nettle! Granny says I take after her, which means I am the cleverest!',
+                action: (scene) => {
+                    DIALOGUES.kid9.nodes.a.choices = withAskThief(scene, 'kid9', [
+                        { text: t('Чему учишься?'), next: 'lessons' },
+                        { text: t('Слышишь, звонят?'), next: 'bells' },
+                        { text: t('Береги себя, детка.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            lessons: {
+                speaker: 'ребёнок',
+                text: 'Бабушка учит: рана кровоточит — подорожник, болит голова — мята, страшно ночью — то молитва, а не трава! Ещё я умею пиявок собирать. Мальчишки боятся, а я — нет. Прикольные, липкие!',
+                en: 'Granny teaches me: a bleeding wound — plantain, a headache — mint, fear at night — that is prayer, not an herb! I can also gather leeches. The boys are afraid, but I am not. They are funny and sticky!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            bells: {
+                speaker: 'ребёнок',
+                text: 'Ой, люблю, когда трезвон! Мы с бабушкой тогда в церковь идём — она к молитве, а я к подружкам. Батюшка говорит, у каждого колокола голос свой, как у людей. У большого — бас, у маленького — пищит, как я, когда огорчусь!',
+                en: 'Oh, I love the peal! Then Granny and I go to church — she to pray, and I to my friends. Father Savvaty says every bell has its own voice, like people. The big one booms, the small one squeaks — like me when I am upset!',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+            ask_thief: {
+                speaker: 'ребёнок',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'kid9', t('мальчик'));
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: '(продолжить)', next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'ребёнок',
+                text: '...',
+                choices: [
+                    { text: t('Береги себя, детка.'), end: true },
+                ],
+            },
+        },
+    },
 };
