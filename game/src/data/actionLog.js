@@ -67,7 +67,9 @@ export class ActionLog {
         let isVictory = false;
         let isEscaped = false;
         let isHeroDead = false;
+        let isRepVictory = false;
         if (finalOutcome === 'victory') isVictory = true;
+        else if (finalOutcome === 'victory_reputation') { isVictory = true; isRepVictory = true; }
         else if (finalOutcome === 'defeat_thief_escaped') isEscaped = true;
         else if (finalOutcome === 'defeat_hero_dead') isHeroDead = true;
         else {
@@ -81,7 +83,19 @@ export class ActionLog {
         let title = '';
         let comment = '';
 
-        if (isVictory) {
+        if (isVictory && isRepVictory) {
+            // Раунд 36: репутационная победа — оцениваем путь добрых дел
+            if (total <= 14 && failed === 0) {
+                stars = 5; title = 'Душа деревни';
+                comment = 'Ни одной ошибки, и весь приход любит тебя. Редкий дар!';
+            } else if (total <= 24) {
+                stars = 4; title = 'Свой человек';
+                comment = 'Тебя приняли в деревню как родного: добрые дела и честный труд дороже золота.';
+            } else {
+                stars = 3; title = 'Долгий путь к доверию';
+                comment = 'Любовь деревни снискивается годами — и ты её снискал.';
+            }
+        } else if (isVictory) {
             // Победа — оцениваем эффективность
             if (total <= 8 && failed === 0) {
                 stars = 5; title = 'Идеальный сыщик';

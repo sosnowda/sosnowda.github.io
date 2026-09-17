@@ -26,9 +26,9 @@ export const HISTORICAL_MALE_NAMES = [
 
 export const HISTORICAL_FEMALE_NAMES = [
     // Княжеские и боярские
-    'Предслава', 'Радмира', 'Забава', 'Любава', 'Неслава',
-    'Горислава', 'Вера', 'Надежда', 'Любовь', 'Снежана',
-    'Власта', 'Беляна', 'Зоряна', 'Милонега',
+    'Предслава', 'Рогнеда', 'Забава', 'Любава', 'Неслава',
+    'Горислава', 'Вера', 'Надежда', 'Любовь', 'Малуша',
+    'Годислава', 'Жизномира', 'Настасья', 'Милонега',
     // Простонародные
     'Марфа', 'Лукерья', 'Матрёна', 'Акулина', 'Василиса',
     'Фёкла', 'Прасковья', 'Ульяна', 'Евдокия', 'Анна',
@@ -237,7 +237,7 @@ export function initNpcNames(registry) {
         // Раунд 31 (п.2): пастухи — водят коров и лошадей на водопой
         // (утром и вечером: Выпас → Река/Озеро), днём на выпасе, ночью дома
         { id: 'shepherd1',    gender: 'male',   age: 34, professionId: 'shepherd',   sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_1', name: 'Сила' },
-        { id: 'shepherd2',    gender: 'female', age: 24, professionId: 'shepherd',   sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'villager_house_1', name: 'Зоряна' },
+        { id: 'shepherd2',    gender: 'female', age: 24, professionId: 'shepherd',   sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'villager_house_1', name: 'Настасья' },
     ];
 
     // Раунд 27: зерно для детерминированной системы присутствия (npcPresence.js)

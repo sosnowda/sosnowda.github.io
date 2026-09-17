@@ -849,6 +849,57 @@ const EN = {
     'И кто же победил?': 'And who won?',
     'Возьми конфетку.': 'Here, take a sweet.',
     'Чур, не выдумывай!': 'Don\'t make things up!',
+
+    // --- Раунд 36: выборы из взрослых деревьев диалогов (обёрнуты в t()) ---
+    'Я найду его!': 'I will find him!',
+    'Я берусь за поиски.': 'I will take up the search.',
+    'Подумаю.': 'Let me think.',
+    'Спасибо. Я берусь за поиски.': 'Thank you. I will take up the search.',
+    'Понятно.': 'Understood.',
+    'Понятно, спасибо.': 'Understood, thank you.',
+    'Слава Богу.': 'Glory to God.',
+    'Спасибо.': 'Thank you.',
+    'Я найду её, батюшка!': 'I will find it, father!',
+
+    // Раунд 36 (добор): строки, обёрнутые в t() в прошлых раундах, но
+    // отсутствовавшие в словаре (actions у victory_continue и трапезы)
+    'Герой остался в деревне — добрые дела теперь в его воле.':
+        'The hero stayed in the village — good deeds are now in his keeping.',
+    'Осталось действий': 'Actions left',
+
+    // --- Раунд 36: репутационная победа (отдельная ветка финала) ---
+    '🌿 ПОБЕДА! ТЕБЯ ПРИНЯЛИ КАК СВОЕГО': '🌿 VICTORY! TAKEN IN AS ONE OF THE VILLAGE',
+    'Староста собрал всю деревню: «Ты добрыми делами снискал нашу любовь. Отныне ты — не гость, а свой!» Жители чествуют тебя хлебом-солью.':
+        'The elder gathered the whole village: "You have won our love with good deeds. From now on you are not a guest, but one of our own!" The villagers honour you with bread and salt.',
+    'Тебя приняли в деревню как своего! Победа!': 'The village has taken you in as one of its own! Victory!',
+    'Деревня тебя полюбила, но зваться «своим» судьбой суждено после возврата иконы и продолжения похода.':
+        'The village has grown fond of you, but to be called "one of our own" is fated only after the icon is returned and the journey continues.',
+    'Деревня тебя полюбила!': 'The village has grown fond of you!',
+    'Душа деревни': 'Soul of the Village',
+    'Ни одной ошибки, и весь приход любит тебя. Редкий дар!':
+        'Not a single mistake, and the whole parish loves you. A rare gift!',
+    'Свой человек': 'One of Our Own',
+    'Тебя приняли в деревню как родного: добрые дела и честный труд дороже золота.':
+        'The village has taken you in as kin: good deeds and honest labour are worth more than gold.',
+    'Долгий путь к доверию': 'A Long Road to Trust',
+    'Любовь деревни снискивается годами — и ты её снискал.':
+        "A village's love is earned over years — and you have earned it.",
+
+    // --- Раунд 36: рыбалка на Реке (пруд в деревне удалён) ---
+    '🎣 Рыбалка': '🎣 Fishing',
+    '🎣 Лунка во льду': '🎣 Ice Fishing Hole',
+    'Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим. Ужин обеспечен.':
+        'You cut a hole in the river ice and wait long, warming your fingers... The float jerks — a burbot thrashes on the ice. Supper is secured.',
+    'Забросил удочку с берега под моросящим дождём... Рыба клюёт одна за другой — вёдра полные!':
+        'You cast your line from the bank in the drizzling rain... Fish bite one after another — the buckets are full!',
+    'Забросил удочку с песчаного брода... Через час в корзине пара ершей и лещ. Свежая рыба — это силы.':
+        'You cast your line from the sandy ford... An hour later there are a couple of ruffe and a bream in the basket. Fresh fish means strength.',
+    'Свежая рыба': 'Fresh fish',
+    'Взять улов': 'Take the catch',
+    'Порыбачил на реке — клёв плохой.': 'Went fishing at the river — the bite is poor.',
+    'Клюёт плохо: рыба сыта или уже видела твою наживку. Попробуй завтра.':
+        'The bite is poor: the fish are full or have already seen your bait. Try again tomorrow.',
+    'Смотать удочку': 'Reel in the line',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----
@@ -922,10 +973,10 @@ const EN_KEYS = {
     'village.help.body': '🏠 DVINSKAYA SLOBODA\n' +
         '\n' +
         '  WASD / arrows — movement\n' +
-        '  E — interact: doors, chests, campfire, fishing, the stone cross\n' +
+        '  E — interact: doors, chests, campfire, the stone cross\n' +
         '  Chests hold small loot — once a day each.\n' +
         '  The campfire restores Health and Will (1 hour).\n' +
-        '  Fishing is best in the rain.\n' +
+        '  Fishing — at the River on the map (best in the rain).\n' +
         '  At night windows glow and fireflies come out.\n' +
         '  F1 — this help. ESC — main menu.',
 };

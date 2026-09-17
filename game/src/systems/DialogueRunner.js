@@ -6,7 +6,7 @@ import { createDialog } from '../utils/ui.js';
 import { DIALOGUES } from '../data/dialogue.js';
 import { findNpc, getNpcDisplayName, meetNpc } from '../data/npcNames.js';
 import { pauseWorldClock, resumeWorldClock, chargeTalkTime, TALK_MINUTES } from './WorldClock.js';
-import { isEn } from './i18n.js';
+import { isEn, t } from './i18n.js';
 
 export class DialogueRunner {
     constructor(scene) {
@@ -108,7 +108,7 @@ export class DialogueRunner {
             this.scene,
             speakerName,
             displayText,
-            choices.length ? choices : [{ text: 'Закрыть', callback: () => this._finish() }],
+            choices.length ? choices : [{ text: t('Закрыть'), callback: () => this._finish() }],
             {
                 singleton: false,
                 portraitKey: portraitKey,
@@ -138,10 +138,12 @@ export class DialogueRunner {
 
     /**
      * Получить половую форму обращения к игроку.
+     * Раунд 36: через t() — иначе русский «путник/путница» просачивается
+     * в EN-текст узла (node.en содержит {address}).
      */
     _getPlayerAddress() {
         const gender = this._getPlayerGender();
-        return gender === 'female' ? 'путница' : 'путник';
+        return gender === 'female' ? t('путница') : t('путник');
     }
 
     _finish() {

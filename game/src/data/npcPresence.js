@@ -41,7 +41,7 @@ const NPC_ROLE = {
     beekeeper_wife: 'homemaker', // п.6: жена пахаря Фёкла
     elder_wife: 'homemaker',     // п.9: жена старосты
     shepherd1: 'shepherd',       // Раунд 31 (п.2): пастух — водит стадо на водопой
-    shepherd2: 'shepherd',       // Раунд 31 (п.2): пастушка Зоряна
+    shepherd2: 'shepherd',       // Раунд 31 (п.2): пастушка Настасья
     kid1: 'child', kid2: 'child', kid3: 'child', kid4: 'child',
     kid5: 'child', kid6: 'child', kid7: 'child',  // Раунд 28 (п.1): семеро детей
 };

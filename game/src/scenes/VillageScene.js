@@ -22,7 +22,7 @@ import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraY
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
-import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
+import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
 import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, dayKeyOf } from '../data/chests.js';
@@ -158,31 +158,8 @@ export class VillageScene extends Phaser.Scene {
             });
         }
 
-        // ----- Анимация воды -----
-        this.waterTiles = [];
-        for (let y = 0; y < MAP_H; y++) {
-            for (let x = 0; x < MAP_W; x++) {
-                if (this.map[y][x] === '~') {
-                    const px = x * ts + ts / 2;
-                    const py = y * ts + ts / 2;
-                    const oldImg = this.children.list.find(c => c.x === px && c.y === py && c.texture && c.texture.key.startsWith('tile_water'));
-                    if (oldImg) oldImg.destroy();
-                    const waterImg = this.add.image(px, py, 'tile_water_0').setScale(ts / 32);
-                    this.waterTiles.push({ img: waterImg, x, y });
-                }
-            }
-        }
-        this.waterFrame = 0;
-        this.waterTimer = this.time.addEvent({
-            delay: 300,
-            callback: () => {
-                this.waterFrame = (this.waterFrame + 1) % 3;
-                this.waterTiles.forEach(w => {
-                    w.img.setTexture(`tile_water_${this.waterFrame}`);
-                });
-            },
-            loop: true,
-        });
+        // ----- Анимация воды (раунд 36: пруд в деревне удалён — тайлы '~'
+        // больше не появляются на карте деревни, рыбалка переехала на Реку) -----
 
         // ----- Подсветка дверей и ворот -----
         // Спрайты домов: рисованные избы (deco_house_0..3) вместо плоских
@@ -349,10 +326,9 @@ export class VillageScene extends Phaser.Scene {
         this.scatterFlowers(ts);
         this.spawnChests(ts);
 
-        // ----- Раунд 12: костёр, лампада креста и декор пруда -----
+        // ----- Раунд 12: костёр и лампада креста (пруд удалён в раунде 36) -----
         this.createCampfire(ts);
         this.createCrossGlow(ts);
-        this.decoratePond(ts);
 
         // ----- Раунд 17: рига, стога, поленница, телега (§3 village-visual-upgrade) -----
         this.drawYardProps(ts);
@@ -443,7 +419,7 @@ export class VillageScene extends Phaser.Scene {
                     'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
                     '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
                     '📦 Сундуки и тайники — раз в игровой день.\n' +
-                    '🔥 Костёр — отдых, 🎣 причал — рыбалка, ✝ крест — молитва.\n' +
+                    '🔥 Костёр — отдых, ✝ крест — молитва. 🎣 Рыбалка — на Реке (по карте).\n' +
                     '🐺 За воротами, в Тёмном лесу, водятся волки — там же грибы и ягоды.\n' +
                     '🚪 Выход за околицу (по карте) занимает ровно 1 игровой час.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
@@ -720,11 +696,15 @@ export class VillageScene extends Phaser.Scene {
      * Калитка — проход в ограде перед дверью, через который игрок может войти.
      * Ограда и грядки теперь С ЧЕСТНЫМИ КОЛЛИЗИЯМИ (solid-тела), а тайлы,
      * занятые дорогой/дверью, не перекрываются декором.
+     *
+     * РАУНД 36 (заявка владельца «уменьшить придомовые участки»): участок ужат
+     * с двух рядов до ОДНОГО — ограда стоит вплотную к дому (грядки больше не
+     * занимают отдельный ряд перед фасадом). Грядки перенесены по бокам избы —
+     * освободившийся ряд идёт под будущие дворы (см. VILLAGE_EXPANSION_PROPOSAL).
      */
     addYardAndGarden(b, ts) {
         const doorX = b.col + Math.floor(b.w / 2);
-        const topRow = b.row + b.h;        // первая строка двора (грядки)
-        const fenceRow = topRow + 1;       // строка ограды с калиткой
+        const fenceRow = b.row + b.h;      // ограда ВПЛОТНУЮ к дому (участок в 1 ряд)
         const mapChar = (x, y) => (this.map[y] && this.map[y][x] !== undefined) ? this.map[y][x] : null;
         const isFree = (x, y) => mapChar(x, y) === '.';  // декор только на траве
 
@@ -734,22 +714,27 @@ export class VillageScene extends Phaser.Scene {
             solid.setVisible(false);
         };
 
-        // Грядки перед домом — по бокам от дорожки к двери (1 ряд)
-        for (let gx = 0; gx < b.w; gx++) {
-            const col = b.col + gx;
-            if (col === doorX) continue;             // дорожка к двери
-            if (!isFree(col, topRow)) continue;      // не перекрываем дорогу
+        // Грядки ПО БОКАМ дома (по две с каждой стороны у стены) —
+        // непроходимы, на дороге/двери/кресте не лежат (только чистая трава)
+        const sideSpots = [
+            [b.col - 1, b.row + b.h - 1],   // слева от избы (нижний ряд стены)
+            [b.col - 1, b.row + b.h - 2],   // слева, ряд выше
+            [b.col + b.w, b.row + b.h - 1], // справа от избы
+            [b.col + b.w, b.row + b.h - 2], // справа, ряд выше
+        ];
+        sideSpots.forEach(([col, row]) => {
+            if (!isFree(col, row)) return;
             const px = col * ts + ts / 2;
-            const py = topRow * ts + ts / 2;
+            const py = row * ts + ts / 2;
             if (this.textures.exists('tile_garden_0')) {
-                const v = (gx + topRow) % 3;
+                const v = (col + row) % 3;
                 this.add.image(px, py, `tile_garden_${v}`)
                     .setScale(ts / 32)
-                    .setDepth(topRow + 0.3);
+                    .setDepth(row + 0.3);
                 // Грядки непроходимы — не топчем посадки
                 addSolid(px, py);
             }
-        }
+        });
 
         // Ограда перед двором с КАЛИТКОЙ напротив двери
         for (let gx = 0; gx < b.w; gx++) {
@@ -914,16 +899,32 @@ export class VillageScene extends Phaser.Scene {
             return;
         }
         
-        // Пункт 13: Проверка выигрыша при репутации +100
+        // Пункт 13 / Раунд 36: репутационная победа при репутации +100 —
+        // ОТДЕЛЬНАЯ ветка финала. Флаг q.thiefDefeated больше НЕ трогаем
+        // (раньше погоня молча умирала и итоги врали «ВОР ПОВЕРЖЕН»);
+        // ставим q.reputationVictory и уводим в End с новым титулом.
+        // Победа засчитывается только при q.repVictoryArmed (см. dialogue.js
+        // victory_continue: «обучалка» пройдена + выбрано «Продолжить игру»).
         const victory = checkVictory(this.registry);
         if (victory.victory) {
             ActionLog.add(this.registry, `ПОБЕДА: ${victory.message}`);
             const q = this.registry.get('quest');
-            q.thiefDefeated = true; // используем как флаг победы для EndScene
-            q.currentObjective = 'Принят в деревню как свой! Победа!';
+            q.reputationVictory = true;
+            q.currentObjective = t('Тебя приняли в деревню как своего! Победа!');
             this.registry.set('quest', q);
             this.scene.start('End');
             return;
+        }
+        // Порог +100 взят ДО «обучалки»/выбора продолжения — один раз за игру
+        // подсказываем, что венец добрых дел ещё впереди (без перегруза HUD).
+        if (victory.thresholdReached) {
+            const q = this.registry.get('quest') || {};
+            if (!q.repThresholdNoted) {
+                q.repThresholdNoted = true;
+                this.registry.set('quest', q);
+                ActionLog.add(this.registry, t('Деревня тебя полюбила, но зваться «своим» судьбой суждено после возврата иконы и продолжения похода.'));
+                this.showFloatingText(this.playerObj.x, this.playerObj.y - 52, t('Деревня тебя полюбила!'), '#a8d46a');
+            }
         }
 
         if (this.busyDialog) {
@@ -1139,7 +1140,7 @@ export class VillageScene extends Phaser.Scene {
             blacksmith: { x: 17.5, y: 8.2 },    // у кузницы
             healer: { x: 19.2, y: 10.3 },       // у церкви
             hunter: { x: 19.2, y: 15.4 },       // у южной околицы
-            fisherman: { x: 8.4, y: 13.4 },     // у пруда
+            fisherman: { x: 8.4, y: 13.4 },     // у бывшего пруда (юго-запад)
             guard: { x: 22.4, y: 9.5 },         // у ворот
             tavernkeeper: { x: 11.4, y: 7.6 },  // у постоялого двора
             priest: null,                       // батюшка не гуляет — он в церкви
@@ -1227,20 +1228,13 @@ export class VillageScene extends Phaser.Scene {
                     }
                 }
 
-                // ----- Раунд 12: костёр, рыбалка у пруда, каменный крест -----
+                // ----- Раунд 12: костёр, каменный крест (рыбалка — на Реке) -----
                 const tile = (this.map[cy] && this.map[cy][cx] !== undefined) ? this.map[cy][cx] : null;
                 if (tile === 'F') {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < bestDist) {
                         bestDist = dist;
                         nearest = { type: 'campfire', label: t('Отдохнуть у костра (1 час)') };
-                    }
-                }
-                if (tile === '~' || tile === 'P') {
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        nearest = { type: 'fish', label: t('Рыбалка') };
                     }
                 }
                 if (tile === 'X') {
@@ -1357,13 +1351,7 @@ export class VillageScene extends Phaser.Scene {
             if (this.crossGlow) {
                 this.crossGlow.setAlpha(dark * 0.22);
             }
-            // Раунд 12: зимний пруд — лёд, кувшинки спрятаны, камыш блёклый
-            if (this.waterTiles) {
-                const winter = getSeason(timeState.month) === 'winter';
-                this.waterTiles.forEach(w => w.img.setTint(winter ? 0xb8d4e8 : 0xffffff));
-                if (this.lilypads) this.lilypads.forEach(p => p.setVisible(!winter));
-                if (this.reeds) this.reeds.forEach(r => r.setAlpha(winter ? 0.75 : 1));
-            }
+            // Раунд 36: зимний лёд/камыш убраны вместе с прудом
         }
         
         if (q.currentObjective) {
@@ -1391,8 +1379,6 @@ export class VillageScene extends Phaser.Scene {
             this.openChest(entry);
         } else if (this.nearestInteractable.type === 'campfire') {
             this.restAtCampfire();
-        } else if (this.nearestInteractable.type === 'fish') {
-            this.goFishing();
         } else if (this.nearestInteractable.type === 'cross') {
             this.prayAtCross();
         }
@@ -1879,7 +1865,7 @@ export class VillageScene extends Phaser.Scene {
             { tex: 'animal_chicken_walk', col: 20, row: 7,  scale: 0.8,  speed: 14, eatChance: 0.3 },
             { tex: 'animal_chicken_walk', col: 22, row: 7,  scale: 0.8,  speed: 14, eatChance: 0.3 },
             { tex: 'animal_chicken_walk', col: 21, row: 10, scale: 0.85, speed: 14, eatChance: 0.3 },
-            // Раунд 12: курица (9,14) переехала — на её месте теперь пруд
+            // Раунд 12: курица (9,14) переехала (с раунда 36 там открытое место)
             { tex: 'animal_chicken_walk', col: 12, row: 14, scale: 0.8,  speed: 14, eatChance: 0.3 },
             { tex: 'animal_cow_walk',     col: 8,  row: 12, scale: 1.35, speed: 8,  eatChance: 0.5 },
         ];
@@ -2099,7 +2085,7 @@ export class VillageScene extends Phaser.Scene {
     }
 
     // ================================================================
-    // РАУНД 12: костёр, каменный крест, пруд с причалом и рыбалка
+    // РАУНД 12: костёр и каменный крест (пруд/рыбалка удалены — раунд 36)
     // ================================================================
 
     /**
@@ -2158,55 +2144,6 @@ export class VillageScene extends Phaser.Scene {
             .setDepth(12 + 0.35);
     }
 
-    /**
-     * Декор пруда: камыш по берегам (с покачиванием) и кувшинки на воде.
-     * Камыш ищется автоматически: береговой тайл ('.'/'S') вплотную к воде;
-     * зимой камыш блёкнет, кувшинки прячутся (updateHUD).
-     */
-    decoratePond(ts) {
-        this.reeds = [];
-        this.lilypads = [];
-        const reedSpots = new Set();
-        for (let y = 1; y < MAP_H - 1; y++) {
-            for (let x = 1; x < MAP_W - 1; x++) {
-                if (this.map[y][x] !== '~') continue;
-                const px = x * ts + ts / 2;
-                const py = y * ts + ts / 2;
-                // Кувшинки: на части водных тайлов (не под причалом)
-                if ((x + y) % 2 === 0 || (x * 7 + y * 3) % 4 === 0) {
-                    this.lilypads.push(this.add.image(px - 8, py + 7, 'deco_lilypad')
-                        .setScale(1.4)
-                        .setDepth(y + 0.2));
-                }
-                // Камыш: соседний с водой берег, не на южной дороге (ряд 16)
-                [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dx, dy]) => {
-                    const bx = x + dx;
-                    const by = y + dy;
-                    const bt = (this.map[by] && this.map[by][bx] !== undefined) ? this.map[by][bx] : null;
-                    if (bt !== '.' && bt !== 'S') return;
-                    if (by >= MAP_H - 2) return;
-                    const key = `${bx},${by}`;
-                    if (reedSpots.has(key) || reedSpots.size >= 8) return;
-                    reedSpots.add(key);
-                    const reed = this.add.image(
-                        bx * ts + ts / 2 + dx * ts * 0.28,
-                        by * ts + ts / 2 + dy * ts * 0.28,
-                        'deco_reed'
-                    ).setScale(1.5).setDepth(by + 0.42);
-                    this.reeds.push(reed);
-                    this.tweens.add({
-                        targets: reed,
-                        angle: { from: -3, to: 3 },
-                        duration: 1500 + (bx * 137) % 600,
-                        yoyo: true,
-                        repeat: -1,
-                        ease: 'Sine.easeInOut',
-                    });
-                });
-            }
-        }
-    }
-
     /** Непроходим ли тайл (для блуждания живности). Вне карты — непроходим. */
     isSolidTile(col, row) {
         if (!this.map || !this.map[row] || this.map[row][col] === undefined) return true;
@@ -2253,61 +2190,10 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
-     * Раунд 12: рыбалка у пруда (§5.1 роадмапа) — E у воды или на причале.
-     * Первый улов за день: свежая рыба +3 ❤, уходит 1 час. Повторно —
-     * «не клюёт», уходит 15 минут. Зимой — лунка во льду.
+     * Раунд 36: рыбалка переехала из деревни на РЕКУ (локация карты,
+     * LocationScene.goFishing) — пруд с причалом удалён из деревни
+     * по заявке владельца («убрать тайлы воды из деревни»).
      */
-    goFishing() {
-        if (this.busyDialog) return;
-        const player = this.registry.get('player');
-        if (!player) return;
-        const q = this.registry.get('quest') || {};
-        const timeState = getTime(this.registry);
-        const today = dayKeyOf(timeState);
-        const winter = timeState ? getSeason(timeState.month) === 'winter' : false;
-        const caught = isOpenedToday(q, 'fish_daily', today);
-
-        this.busyDialog = true;
-        const close = () => { this.busyDialog = false; };
-        const title = winter ? '🎣 Лунка во льду' : '🎣 Рыбалка';
-
-        if (!caught) {
-            this.cameras.main.fadeOut(500, 0, 0, 0);
-            this.time.delayedCall(550, () => {
-                tickTime(this.registry, 60);
-                markOpened(q, 'fish_daily', today);
-                this.registry.set('quest', q);
-                // Раунд 14: в дождь рыба активнее — улов заметно богаче (+4 вместо +3)
-                const raining = this.weather && isRainy(this.weather);
-                const heal = raining ? 4 : 3;
-                player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
-                this.registry.set('player', player);
-                this.updateHUD();
-                this.audioManager.playSound('sfx_heal');
-                this.cameras.main.fadeIn(500, 0, 0, 0);
-                ActionLog.add(this.registry, winter
-                    ? `Порыбачил через лунку — налим к ужину (+${heal} ❤).`
-                    : (raining
-                        ? `Дождь — рыба идёт на крючок смело. Отличный улов (+${heal} ❤).`
-                        : `Наловил рыбы к обеду (+${heal} ❤).`));
-                createDialog(this, title,
-                    (winter
-                        ? 'Прорубаешь лунку и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим. Ужин обеспечен.'
-                        : raining
-                            ? 'Забросил удочку с причала под моросящим дождём... Рыба клюёт одна за другой — вёдра полные!'
-                            : 'Забросил удочку с причала... Через час в корзине пара ершей и лещ. Свежая рыба — это силы.')
-                    + `\n\nСвежая рыба: +${heal} ❤.`,
-                    [{ text: 'Взять улов', callback: close }]);
-            });
-        } else {
-            tickTime(this.registry, 15);
-            this.updateHUD();
-            ActionLog.add(this.registry, 'Порыбачил — клёв плохой.');
-            createDialog(this, title,
-                'Клюёт плохо: рыба сыта или уже видела твою наживку. Попробуй завтра.',
-                [{ text: 'Смотать удочку', callback: close }]);
-        }
-    }
 
     /**
      * Раунд 12: молитва у каменного креста — 1 час, +2..5 Воли, раз в день

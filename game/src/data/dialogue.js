@@ -36,6 +36,7 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Староста Мирослав',
                 text: 'Здравствуй, {address}. У нас беда! Ночью неизвестный вор забрался в церковь и украл чудотворную икону. Это наша главная святыня!',
+                en: 'Greetings, {address}. We are in trouble! In the night an unknown thief crept into the church and stole the wonderworking icon. It is our chief holy treasure!',
                 // Раунд 21: если икона у игрока — первым делом предлагаем её вернуть
                 action: (scene) => {
                     const q = scene.registry.get('quest') || {};
@@ -56,20 +57,22 @@ export const DIALOGUES = {
             b: {
                 speaker: 'Староста Мирослав',
                 text: 'Благодарю, {address}! Вор бежал из деревни, но куда именно — никто не знает. Спроси жителей, может, кто что видел. Или поищи следы за воротами. У тебя мало времени — вор может уйти далеко!',
+                en: 'Thank you, {address}! The thief fled the village, but where to — nobody knows. Ask the villagers; maybe someone saw something. Or look for tracks beyond the gate. You have little time — the thief may get far away!',
                 action: (scene) => {
                     const q = scene.registry.get('quest');
                     q.elderTalked = true;
                     q.currentObjective = 'Найди вора: спроси жителей или поищи следы за воротами';
                     ActionLog.add(scene.registry, 'Поговорил со старостой — получил задание найти вора.');
                 },
-                choices: [{ text: 'Я найду его!', end: true }],
+                choices: [{ text: t('Я найду его!'), end: true }],
             },
             c: {
                 speaker: 'Староста Мирослав',
                 text: 'Иконе более ста лет. Её написал монах-иконописец. Без неё деревня потеряла благословение. Вор был в тёмном плаще, среднего роста. Больше ничего не известно.',
+                en: 'The icon is more than a hundred years old. A monk-icon-painter wrote it. Without it the village loses God\'s blessing. The thief wore a dark cloak and was of middling height. Nothing else is known.',
                 choices: [
-                    { text: 'Я берусь за поиски.', next: 'b' },
-                    { text: 'Подумаю.', end: true },
+                    { text: t('Я берусь за поиски.'), next: 'b' },
+                    { text: t('Подумаю.'), end: true },
                 ],
             },
             // Просьба о задатке (п.10)
@@ -81,7 +84,7 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_advance_result' },
+                    { text: t('(продолжить)'), next: 'ask_advance_result' },
                 ],
             },
             ask_advance_result: {
@@ -94,8 +97,8 @@ export const DIALOGUES = {
                     }
                 },
                 choices: [
-                    { text: 'Спасибо. Я берусь за поиски.', next: 'b' },
-                    { text: 'Понятно.', end: true },
+                    { text: t('Спасибо. Я берусь за поиски.'), next: 'b' },
+                    { text: t('Понятно.'), end: true },
                 ],
             },
             // Раунд 21: возврат иконы старосте — награда и победа, игра продолжается
@@ -116,7 +119,20 @@ export const DIALOGUES = {
                 speaker: 'Староста Мирослав',
                 text: '...',
                 choices: [
-                    { text: t('🏆 Продолжить игру (поручения жителей)'), end: true },
+                    {
+                        text: t('🏆 Продолжить игру (поручения жителей)'),
+                        // Раунд 36: репутационная победа (+100) открывается ТОЛЬКО
+                        // после прохождения «обучалки» с поимкой вора и возвратом
+                        // иконы (mainQuestDone) и ТОЛЬКО выбором «Продолжить игру».
+                        action: (scene) => {
+                            const q = scene.registry.get('quest');
+                            if (q && q.mainQuestDone && !q.repVictoryArmed) {
+                                q.repVictoryArmed = true;
+                                ActionLog.add(scene.registry, t('Герой остался в деревне — добрые дела теперь в его воле.'));
+                            }
+                        },
+                        end: true,
+                    },
                     {
                         text: t('📜 Завершить поход и посмотреть итоги'),
                         action: (scene) => {
@@ -132,6 +148,7 @@ export const DIALOGUES = {
             d: {
                 speaker: 'Староста Мирослав',
                 text: 'Ты вернул нашу святыню! Вся деревня у тебя в долгу. Прими нашу искреннюю благодарность и это благословение. (Здоровье и воля восстановлены)',
+                en: 'You have returned our holy treasure! The whole village is in your debt. Accept our heartfelt thanks and this blessing. (Health and Will are restored)',
                 action: (scene) => {
                     const p = scene.registry.get('player');
                     p.HP = p.HPmax;
@@ -139,7 +156,7 @@ export const DIALOGUES = {
                     const q = scene.registry.get('quest');
                     q.currentObjective = 'Поход окончен. Икона возвращена!';
                 },
-                choices: [{ text: 'Слава Богу.', end: true }],
+                choices: [{ text: t('Слава Богу.'), end: true }],
             },
         },
     },
@@ -151,6 +168,7 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Тавернщик Фёдор',
                 text: 'Здравствуй, путник! Заходи, присаживайся. Хочешь поесть, попить или переночевать?',
+                en: 'Welcome, traveller! Come in and sit yourself down. Will you eat, drink, or lodge for the night?',
                 // Раунд 22: расспрос о воре — один раз за игру
                 // Раунд 30 (пп.10–12): заказ еды и покупка рациона на день дороги
                 action: (scene) => {
@@ -228,6 +246,7 @@ export const DIALOGUES = {
             b: {
                 speaker: 'Тавернщик Фёдор',
                 text: 'Слыхал, вор украл икону из церкви! Староста в отчаянии. А ещё говорят, что кто-то видел подозрительного человека в тёмном плаще у околицы. Но куда он побежал — никто толком не знает.',
+                en: 'Have you heard? A thief stole the icon from the church! The village elder is in despair. And they say someone saw a suspicious fellow in a dark cloak by the outskirts. But where he ran off to — nobody rightly knows.',
                 action: (scene) => {
                     DIALOGUES.tavernkeeper.nodes.b.choices = withAskThief(scene, 'tavernkeeper', [
                         { text: t('Спасибо за новости.'), end: true },
@@ -243,7 +262,7 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_money: {
@@ -254,14 +273,14 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_result: {
                 speaker: 'Тавернщик Фёдор',
                 text: '...',
                 choices: [
-                    { text: 'Понятно, спасибо.', end: true },
+                    { text: t('Понятно, спасибо.'), end: true },
                 ],
             },
         },
@@ -274,6 +293,7 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Кузнец Данила',
                 text: 'Здрав будь, воин! Моя кузница к твоим услугам. Нужно оружие или броня — открой меню «Купить оружие».',
+                en: 'Good health to you, warrior! My smithy is at your service. Need a weapon or armor? Open the "Buy weapons" menu.',
                 action: (scene) => {
                     DIALOGUES.blacksmith.nodes.a.choices = withAskThief(scene, 'blacksmith', [
                         { text: t('Попросить денег'), next: 'ask_money' },
@@ -290,7 +310,7 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_money: {
@@ -301,14 +321,14 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_result: {
                 speaker: 'Кузнец Данила',
                 text: '...',
                 choices: [
-                    { text: 'Понятно, спасибо.', end: true },
+                    { text: t('Понятно, спасибо.'), end: true },
                 ],
             },
         },
@@ -321,6 +341,7 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Мельник Авдей',
                 text: 'Здравствуй, путник. С утра до заката я на мельнице — жернова не ждут, зерно само не смелется. А тут ещё иконокража — никакого спасу от лихих людей!',
+                en: 'Good day, traveller. From sunrise to sunset I am at the mill — the millstones wait for no one, and grain will not grind itself. And now the icon stolen on top of it — there is no deliverance from wicked men!',
                 action: (scene) => {
                     DIALOGUES.peasant1.nodes.a.choices = withAskThief(scene, 'peasant1', [
                         { text: t('Попросить денег'), next: 'ask_money' },
@@ -334,6 +355,7 @@ export const DIALOGUES = {
             mill: {
                 speaker: 'Мельник Авдей',
                 text: 'Мельница у нас ветряная — на пригорке стоит, крылья ветер крутит. Неси зерно — смелет и на муку, и на крупу. А старая водяная давно сломалась — ручей обмелел, колесо убрали.',
+                en: 'Our mill is a windmill — it stands on the hill, the wind turns its sails. Bring your grain — it will grind it into flour or groats alike. The old watermill broke down long ago — the stream ran shallow, and the wheel was taken away.',
                 action: (scene) => {
                     DIALOGUES.peasant1.nodes.mill.choices = withAskThief(scene, 'peasant1', [
                         { text: t('Спасибо за рассказ.'), end: true },
@@ -344,6 +366,7 @@ export const DIALOGUES = {
             cow: {
                 speaker: 'Мельник Авдей',
                 text: 'Корова моя Машка ушла со двора и не вернулась. Ищу по окрестностям, но никак не найду. Может, в лес ушла?',
+                en: 'My cow Mashka strayed from the yard and never came back. I search all round about, but I cannot find her anywhere. Maybe she wandered into the forest?',
                 action: (scene) => {
                     DIALOGUES.peasant1.nodes.cow.choices = withAskThief(scene, 'peasant1', [
                         { text: t('Найдётся ваша корова.'), end: true },
@@ -359,7 +382,7 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_money: {
@@ -370,14 +393,14 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_result: {
                 speaker: 'Мельник Авдей',
                 text: '...',
                 choices: [
-                    { text: 'Спасибо.', end: true },
+                    { text: t('Спасибо.'), end: true },
                 ],
             },
         },
@@ -392,6 +415,7 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Пасечница Марфа',
                 text: 'Здравствуйте, путник. Пчёлы мои нынче добрые — взяток славный. А ещё травы собираю — у озера, на реке, где найду. Нужен мёд — это ко мне.',
+                en: 'Good day, traveller. My bees are kind this year — a fine haul of honey. I gather herbs too — by the lake, along the river, wherever I find them. If you need honey, I am the one to see.',
                 action: (scene) => {
                     DIALOGUES.widow.nodes.a.choices = withAskThief(scene, 'widow', [
                         { text: t('🍯 Купить мёд (8 д.)'), next: 'honey' },
@@ -449,6 +473,7 @@ export const DIALOGUES = {
             pray: {
                 speaker: 'Пасечница Марфа',
                 text: 'Спаси вас Господь. Пусть хранит вас Пресвятая Богородица.',
+                en: 'The Lord save you. May the Most Holy Mother of God keep watch over you.',
                 action: (scene) => {
                     DIALOGUES.widow.nodes.pray.choices = withAskThief(scene, 'widow', [
                         { text: t('Прощайте.'), end: true },
@@ -464,7 +489,7 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_money: {
@@ -475,14 +500,14 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_result: {
                 speaker: 'Пасечница Марфа',
                 text: '...',
                 choices: [
-                    { text: 'Спасибо.', end: true },
+                    { text: t('Спасибо.'), end: true },
                 ],
             },
         },
@@ -495,6 +520,7 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Пахарь Тарас',
                 text: 'Мир тебе, путник! Ты в доме, где семеро детей — шумно, как ярмарка в торговый день. Сам-то я с сохой вожусь с рассвета: поле само себя не вспашет.',
+                en: 'Peace be with you, traveller! You stand in a house of seven children — as loud as a fair on market day. As for me, I have wrestled the plough since dawn: a field will not plough itself.',
                 action: (scene) => {
                     DIALOGUES.beekeeper1.nodes.a.choices = withAskThief(scene, 'beekeeper1', [
                         { text: t('Расскажи о своей пашне.'), next: 'field' },
@@ -507,6 +533,7 @@ export const DIALOGUES = {
             field: {
                 speaker: 'Пахарь Тарас',
                 text: 'Земля кормит того, кто её любит. С утра бороню, после обеда — рожь сею. Дети мне в подмогу: кто на выпас скот гоняет, кто рыбу ловит, кто грибы в лесу ищет. А мёд к чаю — у Марфы спрашивай: её пасека постарше, и мёд у неё целебный — здоровье ставит на ноги.',
+                en: 'The earth feeds the one who loves it. In the morning I harrow, after the midday meal I sow the rye. The children are my helpers: one drives the cattle to the pasture, another fishes, another hunts mushrooms in the forest. And for honey with your tea, ask Marfa: her apiary is older, and her honey is a healer — it sets a man back on his feet.',
                 action: (scene) => {
                     DIALOGUES.beekeeper1.nodes.field.choices = withAskThief(scene, 'beekeeper1', [
                         { text: t('Спасибо за рассказ.'), end: true },
@@ -522,7 +549,7 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_money: {
@@ -533,14 +560,14 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_result: {
                 speaker: 'Пахарь Тарас',
                 text: '...',
                 choices: [
-                    { text: 'Спасибо.', end: true },
+                    { text: t('Спасибо.'), end: true },
                 ],
             },
         },
@@ -553,6 +580,7 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Фёкла',
                 text: 'Заходи, путник, только тихо — малых только уложила. Нас с Тарасом Господь семерыми детками благословил: крики в избе от зари до зари!',
+                en: 'Come in, traveller, but softly — I only just laid the little ones down. God has blessed Taras and me with seven children: there is shouting in the izba from dawn to dusk!',
                 action: (scene) => {
                     // Раунд 30: Фёкла — возможный свидетель о воре (один раз)
                     DIALOGUES.beekeeper_wife.nodes.a.choices = withAskThief(scene, 'beekeeper_wife', [
@@ -572,12 +600,13 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             family: {
                 speaker: 'Фёкла',
                 text: 'Живём впроголодь, да дружно: Тарас с поля рожь приносит, я — огород да скотину. Старшие за младшими смотрят, а сам прибыльный — на выпас гоняют да в лес за грибами. Хлеб с молоком на столе — уже не бедность.',
+                en: 'We live from hand to mouth, but all together: Taras brings rye from the field, and I tend the garden and the cattle. The elder ones mind the younger, and in the profitable season they drive the herd to pasture and pick mushrooms in the forest. Bread and milk on the table — that is no longer poverty.',
                 action: (scene) => {
                     DIALOGUES.beekeeper_wife.nodes.family.choices = [
                         { text: t('Доброго вам достатка.'), end: true },
@@ -593,14 +622,14 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_result: {
                 speaker: 'Фёкла',
                 text: '...',
                 choices: [
-                    { text: 'Спасибо.', end: true },
+                    { text: t('Спасибо.'), end: true },
                 ],
             },
         },
@@ -613,6 +642,7 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Любава',
                 text: 'Здравствуй, странник. Ты по делам к моему Мирославу? Он нынче по деревне ходит — дела смотрит, споры решает. А я в доме: печь, скотина, огород.',
+                en: 'Good day, wanderer. Have you come to my Miroslav on business? He is out walking the village today — minding affairs, settling quarrels. And I keep to the house: the stove, the cattle, the garden.',
                 action: (scene) => {
                     // Раунд 30: Любава — возможный свидетель о воре (один раз)
                     DIALOGUES.elder_wife.nodes.a.choices = withAskThief(scene, 'elder_wife', [
@@ -632,12 +662,13 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             husband: {
                 speaker: 'Любава',
                 text: 'Староста он — воля деревенская. То с церковным старостой говорит, то стражу учит, то у колодца судит, кто чей телегой дорогу забил. Вечером придёт — отдохнём с ним за ужином.',
+                en: 'He is the elder — the village\'s will. Now he speaks with the church warden, now he drills the watch, now he judges by the well who blocked the road with whose cart. He will come home in the evening, and we shall rest over supper together.',
                 action: (scene) => {
                     DIALOGUES.elder_wife.nodes.husband.choices = [
                         { text: t('Дай Бог вам здоровья.'), end: true },
@@ -653,14 +684,14 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_result: {
                 speaker: 'Любава',
                 text: '...',
                 choices: [
-                    { text: 'Спасибо.', end: true },
+                    { text: t('Спасибо.'), end: true },
                 ],
             },
         },
@@ -673,6 +704,7 @@ export const DIALOGUES = {
             a: {
                 speaker: 'Отец Савватий',
                 text: 'Мир тебе, чадо. Что привело тебя в дом Божий? Может, хочешь исповедаться или помолиться?',
+                en: 'Peace to you, my child. What brings you to the house of God? Would you confess, or pray?',
                 // Раунд 21: если икона у игрока — предлагаем вернуть святыню церкви
                 // Раунд 22: + благословение (п.11) и одноразовый расспрос (п.3)
                 // Раунд 30 (п.8): при ПЕРВОМ диалоге батюшка КРАСОЧНО рассказывает
@@ -698,9 +730,16 @@ export const DIALOGUES = {
                         q.priestToldTheftStory = true;
                         scene.registry.set('quest', q);
                         node.text = t('Ох, горе нам, чадо... Ночью случилось дело великое: вор прокрался в храм Божий и выкрал чудотворную икону Богородицы из самого киота! Я молился в алтаре, свечи ещё теплились — и слыхал только, как скрипнула дверца. А под утро глянул: киот пуст, лишь лампада коптит и пыль на полу лежит, где святыня стояла.\n\nВидел я в церкви темного человека краем глаза, а разобрать не успел — мелькнёт и нет. Одно скажу точно: человек был ПРИШЛЫЙ, не из наших селян — одеждой и повадкой странник, такой же пришлый человек в деревне, как и ты, чадо.\n\nСам я лица его не разглядел и куда побежал — не видал, Бог миловал. Но в деревне народ разный ходит, всякий на виду: кто у колодца зорит, кто на выпас глядит во все стороны. Может, кто-то из селян и видел вора — куда он бежал да где нынче прячется. ПОРАСПРОСИ ЛЮДЕЙ, чадо: спроси каждого о воре и о том, куда он мог податься. Господь путь укажет, а люди — подскажут.');
+                        // Раунд 36: EN-перевод истории уже в словаре i18n — узел a
+                        // динамический, поэтому node.en зеркалит локализованный text
+                        // (статичный en здесь перебил бы рассказ о краже при isEn()).
+                        node.en = node.text;
                         ActionLog.add(scene.registry, t('Первый разговор с батюшкой: он рассказал о краже иконы и посоветовал расспросить селян.'));
                     } else {
                         node.text = t('Мир тебе, чадо. Что привело тебя в дом Божий? Может, хочешь исповедаться или помолиться?');
+                        // Раунд 36: после рассказа о краже node.en держит длинную
+                        // историю — возвращаем en к приветствию.
+                        node.en = node.text;
                     }
                 },
                 choices: [],
@@ -748,7 +787,20 @@ export const DIALOGUES = {
                 speaker: 'Отец Савватий',
                 text: '...',
                 choices: [
-                    { text: t('🏆 Продолжить игру (поручения жителей)'), end: true },
+                    {
+                        text: t('🏆 Продолжить игру (поручения жителей)'),
+                        // Раунд 36: тот же «ключ» репутационной победы, что и
+                        // у старосты — без выбора «Продолжить игру» ветка
+                        // +100 репутации не открывается.
+                        action: (scene) => {
+                            const q = scene.registry.get('quest');
+                            if (q && q.mainQuestDone && !q.repVictoryArmed) {
+                                q.repVictoryArmed = true;
+                                ActionLog.add(scene.registry, t('Герой остался в деревне — добрые дела теперь в его воле.'));
+                            }
+                        },
+                        end: true,
+                    },
                     {
                         text: t('📜 Завершить поход и посмотреть итоги'),
                         action: (scene) => {
@@ -763,13 +815,14 @@ export const DIALOGUES = {
             about_icon: {
                 speaker: 'Отец Савватий',
                 text: 'Ох, горе нам, {address}! Ночью вор забрался в церковь и украл чудотворную икону Богородицы Одигитрии. Ей более ста лет, её написал монах-иконописец Печерского монастыря. Без неё деревня потеряла благословение Божье. Найди вора и верни святыню! Возьми задание у меня, если хочешь помочь.',
+                en: 'Oh, woe to us, {address}! In the night a thief broke into the church and stole the wonderworking icon of the Mother of God Hodegetria. It is more than a hundred years old; a monk-icon-painter of the Pechersky Monastery wrote it. Without it the village has lost God\'s blessing. Find the thief and bring back the holy treasure! Take the task from me, if you would help.',
                 action: (scene) => {
                     const q = scene.registry.get('quest');
                     q.elderTalked = true; // отмечаем, что игрок узнал о краже
                     q.currentObjective = 'Найди вора: спроси жителей или поищи следы за воротами';
                     ActionLog.add(scene.registry, 'Поговорил с батюшкой о краже иконы.');
                 },
-                choices: [{ text: 'Я найду её, батюшка!', end: true }],
+                choices: [{ text: t('Я найду её, батюшка!'), end: true }],
             },
             ask_thief: {
                 speaker: 'Отец Савватий',
@@ -779,7 +832,7 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             ask_money: {
@@ -790,24 +843,25 @@ export const DIALOGUES = {
                     scene._lastAskResult = r;
                 },
                 choices: [
-                    { text: '(продолжить)', next: 'ask_result' },
+                    { text: t('(продолжить)'), next: 'ask_result' },
                 ],
             },
             pray: {
                 speaker: 'Отец Савватий',
                 text: 'Помолимся вместе, чадо. Господи, помилуй и сохрани раба Твоего...',
+                en: 'Let us pray together, my child. O Lord, have mercy and keep Thy servant...',
                 action: (scene) => {
                     const p = scene.registry.get('player');
                     p.MP = Math.min(p.MPmax, p.MP + 2);
                     ActionLog.add(scene.registry, 'Помолился в церкви (+2 MP).');
                 },
-                choices: [{ text: 'Аминь.', end: true }],
+                choices: [{ text: t('Аминь.'), end: true }],
             },
             ask_result: {
                 speaker: 'Отец Савватий',
                 text: '...',
                 choices: [
-                    { text: 'Спасибо, батюшка.', end: true },
+                    { text: t('Спасибо, батюшка.'), end: true },
                 ],
             },
         },

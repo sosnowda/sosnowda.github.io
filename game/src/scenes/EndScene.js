@@ -6,6 +6,7 @@ import { getHuntState, checkGameEnd } from '../data/thief.js';
 import { createButton, bindRestartOnResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { getTime, formatDateTime } from '../systems/TimeSystem.js';
+import { t } from '../systems/i18n.js';
 
 export class EndScene extends Phaser.Scene {
     constructor() {
@@ -18,10 +19,12 @@ export class EndScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor(0x0a0604);
         this.audioManager = new AudioManager(this);
         const quest = this.registry.get('quest') || {};
+        // Раунд 36: репутационная победа — тоже победная музыка
+        const isWin = quest.thiefDefeated || quest.reputationVictory;
         // Раунд 24: финальная музыка по исходу (если фоновый прелоадер успел;
         // иначе — обычная менюшная)
-        const bgMusicKey = quest.thiefDefeated ? 'victory' : 'gameover';
-        const bgMusicAsset = quest.thiefDefeated ? 'music_victory' : 'music_game_over';
+        const bgMusicKey = isWin ? 'victory' : 'gameover';
+        const bgMusicAsset = isWin ? 'music_victory' : 'music_game_over';
         if (this.cache.audio.exists(bgMusicAsset)) {
             this.audioManager.loadMusic();
             this.audioManager.playSceneMusic(bgMusicKey);
@@ -30,7 +33,10 @@ export class EndScene extends Phaser.Scene {
         }
 
         const state = getHuntState(this.registry);
-        const finalOutcome = checkGameEnd(this.registry); // 'victory' | 'defeat_thief_escaped' | 'defeat_hero_dead' | null
+        // Раунд 36: репутационная победа — свой исход для оценки
+        const finalOutcome = quest.reputationVictory
+            ? 'victory_reputation'
+            : checkGameEnd(this.registry); // 'victory' | 'defeat_thief_escaped' | 'defeat_hero_dead' | null
         const log = ActionLog.get(this.registry);
         const rating = log ? log.getRating(finalOutcome) : { stars: 0, title: 'Неизвестно', comment: '', stats: {} };
 
@@ -38,7 +44,14 @@ export class EndScene extends Phaser.Scene {
         let endType = 'defeat';
         let endTitle = '';
         let endColor = '';
-        if (quest.thiefDefeated) {
+        if (quest.reputationVictory) {
+            // Раунд 36: ОТДЕЛЬНАЯ ветка — репутационная победа (доступна только
+            // после «обучалки» с поимкой вора и выбора «Продолжить игру»)
+            endType = 'victory';
+            endTitle = t('🌿 ПОБЕДА! ТЕБЯ ПРИНЯЛИ КАК СВОЕГО');
+            endColor = '#a8d46a';
+            this.audioManager.playLevelUp();
+        } else if (quest.thiefDefeated) {
             endType = 'victory';
             // Раунд 21: победа бывает двух степеней — святыня возвращена деревне
             // или вор повержен, но икона ещё у героя
@@ -79,14 +92,14 @@ export class EndScene extends Phaser.Scene {
         }).setOrigin(0.5, 0);
 
         // ----- Подзаголовок оценки -----
-        this.add.text(width / 2, panelY + 140, rating.title, {
+        this.add.text(width / 2, panelY + 140, t(rating.title), {
             fontSize: '24px', color: RUS.text, fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5, 0);
 
         // ----- Комментарий -----
-        this.add.text(width / 2, panelY + 175, rating.comment, {
+        this.add.text(width / 2, panelY + 175, t(rating.comment), {
             fontSize: '15px', color: RUS.textDim,
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 1,

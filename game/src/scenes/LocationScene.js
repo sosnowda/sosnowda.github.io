@@ -24,7 +24,9 @@ import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 // Раунд 31 (п.2): стадо и пастухи на водопое
 import { getHerdState } from '../data/herd.js';
-import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
+import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
+// Раунд 36: рыбалка переехала из деревни (пруд удалён) на Реку
+import { isOpenedToday, markOpened, dayKeyOf } from '../data/chests.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES } from '../data/npcPresence.js';
@@ -251,6 +253,19 @@ export class LocationScene extends Phaser.Scene {
             });
         }
 
+        // ----- Кнопка рыбалки на Реке (раунд 36: пруд в деревне удалён,
+        // рыба ловится на броду через реку — как в XV веке) -----
+        if (isRiver) {
+            const fishY = (chaseActive && !alreadySearched && !hasFootprints) ? height - 150 : height - 100;
+            createButton(this, width / 2, fishY, t('🎣 Рыбалка'), () => {
+                this.goFishing();
+            }, {
+                backgroundColor: 0x2a4a5a, hoverColor: 0x3a5a6a, textColor: RUS.text,
+                fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
+                cornerRadius: 8,
+            });
+        }
+
         // ----- Кнопка выхода (дорога обратно к развилке занимает время) -----
         createButton(this, width / 2, height - 50, exitLabel, () => {
             // Раунд 32 (п.5): любое перемещение по карте — РОВНО 1 игровой час
@@ -273,6 +288,54 @@ export class LocationScene extends Phaser.Scene {
             const trace = getChase(this.registry);
             const traceSide = trace && trace.traces && trace.traces[this.locationId] ? trace.traces[this.locationId].side : null;
             this.drawFootprints(footprints, traceSide, width, height);
+        }
+    }
+
+    /**
+     * Раунд 36: рыбалка на Реке (пруд в деревне удалён по заявке владельца).
+     * Первый улов за день: свежая рыба +3 ❤, уходит 1 час. Повторно —
+     * «не клюёт», уходит 15 минут. В дождь рыба активнее (+4), зимой —
+     * лунка во льду (механика переехала из VillageScene без изменений).
+     */
+    goFishing() {
+        const player = this.registry.get('player');
+        if (!player) return;
+        const q = this.registry.get('quest') || {};
+        const timeState = getTime(this.registry);
+        const today = dayKeyOf(timeState);
+        const winter = timeState ? getSeason(timeState.month) === 'winter' : false;
+        const caught = isOpenedToday(q, 'fish_daily', today);
+        const title = winter ? t('🎣 Лунка во льду') : t('🎣 Рыбалка');
+
+        if (!caught) {
+            tickTime(this.registry, 60);
+            markOpened(q, 'fish_daily', today);
+            this.registry.set('quest', q);
+            // Раунд 14: в дождь рыба активнее — улов заметно богаче (+4 вместо +3)
+            const weather = getWeather(this.registry);
+            const raining = weather && isRainy(weather);
+            const heal = raining ? 4 : 3;
+            player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
+            this.registry.set('player', player);
+            ActionLog.add(this.registry, winter
+                ? `Порыбачил через лунку — налим к ужину (+${heal} ❤).`
+                : (raining
+                    ? `Дождь — рыба идёт на крючок смело. Отличный улов (+${heal} ❤).`
+                    : `Наловил рыбы на реке к обеду (+${heal} ❤).`));
+            createDialog(this, title,
+                (winter
+                    ? t('Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим. Ужин обеспечен.')
+                    : raining
+                        ? t('Забросил удочку с берега под моросящим дождём... Рыба клюёт одна за другой — вёдра полные!')
+                        : t('Забросил удочку с песчаного брода... Через час в корзине пара ершей и лещ. Свежая рыба — это силы.'))
+                + `\n\n${t('Свежая рыба')}: +${heal} ❤.`,
+                [{ text: t('Взять улов'), callback: () => {} }]);
+        } else {
+            tickTime(this.registry, 15);
+            ActionLog.add(this.registry, t('Порыбачил на реке — клёв плохой.'));
+            createDialog(this, title,
+                t('Клюёт плохо: рыба сыта или уже видела твою наживку. Попробуй завтра.'),
+                [{ text: t('Смотать удочку'), callback: () => {} }]);
         }
     }
 

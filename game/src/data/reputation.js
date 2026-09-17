@@ -453,14 +453,27 @@ export function checkExpulsion(registry) {
 }
 
 // === ПРОВЕРКА ВЫИГРЫША (п.13) ===
+// Раунд 36: репутационная победа — ОТДЕЛЬНАЯ ветка финала (не «вор повержен»!)
+// и доступна ТОЛЬКО после прохождения «обучалки» (вор пойман, икона возвращена
+// → mainQuestDone) и ТОЛЬКО если игрок выбрал «🏆 Продолжить игру» в диалоге
+// старосты/батюшки (флаг q.repVictoryArmed ставит узел victory_continue).
+// Раньше rep ≥ +100 молча ставил q.thiefDefeated — погоня умирала, а итоги
+// показывали «ВОР ПОВЕРЖЕН» даже без иконы.
 
 export function checkVictory(registry) {
     const villageRep = getVillageRep(registry);
     if (villageRep >= WIN_THRESHOLD) {
+        const q = registry.get('quest') || {};
+        if (!q.repVictoryArmed) {
+            // Порог взят, но «обучалка» не пройдена / игрок не выбрал
+            // продолжение — победа ещё не засчитывается (одноразовая
+            // подсказка выдаётся в VillageScene.update).
+            return { victory: false, thresholdReached: true };
+        }
         return {
             victory: true,
-            message: `Староста собрал всю деревню: «Ты показал себя честным и добрым человеком. ` +
-                     `Отныне ты — один из нас!» Жители радостно приветствуют тебя.`,
+            reputation: true,
+            message: t('Староста собрал всю деревню: «Ты добрыми делами снискал нашу любовь. Отныне ты — не гость, а свой!» Жители чествуют тебя хлебом-солью.'),
         };
     }
     return { victory: false };
