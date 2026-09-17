@@ -51,7 +51,6 @@ const config = {
     },
 };
 
-console.log('[MARKER-R41] main.js guarded build');
 // Экспорт в window — для отладки и QA (agent-browser / console)
 
 // ============================================================
