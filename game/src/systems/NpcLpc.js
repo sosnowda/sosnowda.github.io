@@ -169,7 +169,9 @@ export function ensureNpcLpcTexture(scene, registry, npc) {
 
     const ok = composeCharacterTexture(scene, appearance, key);
     if (!ok) {
-        if (scene.textures.exists(key)) scene.textures.remove(key);
+        // Раунд 41 (QA): НЕ удаляем текстуру — compose уже обновил её на месте
+        // (частичным контентом); удаление могло бы «убить» спрайты, которые
+        // уже ссылаются на этот ключ с прошлой удачной сборки.
         return null;
     }
     // Анимации walk/idle в 4 стороны с префиксом = ключу текстуры

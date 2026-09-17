@@ -51,5 +51,56 @@ const config = {
     },
 };
 
+console.log('[MARKER-R41] main.js guarded build');
 // Экспорт в window — для отладки и QA (agent-browser / console)
+
+// ============================================================
+// Раунд 41 (QA-хардендинг): защита от «тихого замерзания» игры.
+//
+// Симптом (воспроизведён в QA дважды): игра продолжает рисовать и
+// принимать клики, но сцены больше не обновляются (твины стоят,
+// диалоги «мертвы», время не идёт). Причина: ЛЮБОЕ исключение внутри
+// SceneManager.update() (например, из Clock.update — таймер эффекта
+// печати, или из DisplayList.shutdown при stop-е сцены) оставляло
+// SceneManager.isProcessing = true НАВСЕГДА — Phaser сам не страхует
+// это поле, и каждый следующий кадр выходил из update() ранним return.
+//
+// Гард: даже если исключение случилось — сбрасываем isProcessing и
+// логируем, чтобы игровой цикл жил, а ошибка была видна в консоли.
+// ============================================================
+(function () {
+    const SM = Phaser.Scenes && Phaser.Scenes.SceneManager;
+    if (SM && SM.prototype && typeof SM.prototype.update === 'function') {
+        const origUpdate = SM.prototype.update;
+        SM.prototype.update = function (time, delta) {
+            try {
+                return origUpdate.call(this, time, delta);
+            } catch (e) {
+                this.isProcessing = false; // критично: не оставить цикл замороженным
+                console.error('[Летописи:гард] Исключение в SceneManager.update (цикл восстановлен):', e);
+            }
+        };
+    }
+
+    const DL = Phaser.GameObjects && Phaser.GameObjects.DisplayList;
+    if (DL && DL.prototype && typeof DL.prototype.shutdown === 'function') {
+        const origShutdown = DL.prototype.shutdown;
+        DL.prototype.shutdown = function () {
+            const list = this.list || [];
+            for (let i = list.length - 1; i >= 0; i--) {
+                const obj = list[i];
+                // QA: в списке могли остаться «дырки»/двойные записи —
+                // shutdown одной битой ссылки раньше обрывал stop сцены
+                if (obj && typeof obj.destroy === 'function') {
+                    try { obj.destroy(true); } catch (e) { /* объект уже убит */ }
+                }
+            }
+            list.length = 0;
+            if (this.events) {
+                this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+            }
+        };
+    }
+})();
+
 window.game = new Phaser.Game(config);

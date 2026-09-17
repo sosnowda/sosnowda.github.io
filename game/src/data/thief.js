@@ -54,6 +54,21 @@ import { consumeBlessing } from './questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
 import { createDialog } from '../utils/ui.js';
+import { getNpcShortName } from './npcNames.js';
+
+/**
+ * Раунд 41 (QA): говорящий в репликах о воре — ДИНАМИЧЕСКОЕ имя NPC
+ * (рандомные исторические имена раунда 34), а не жёсткое из дерева диалога
+ * («Тавернщик Фёдор» при тавернщике Миронеге/Ростиславе — лор-конфликт).
+ * Если NPC ещё не знаком/не найден — fallback на имя из дерева диалога.
+ */
+function talkerName(registry, npcId, fallbackName) {
+    try {
+        const dyn = getNpcShortName(registry, npcId);
+        if (dyn && dyn !== t('незнакомец')) return dyn;
+    } catch (e) { /* npcNames недоступен — используем статическое имя */ }
+    return fallbackName;
+}
 
 // Раунд 32 (п.2): длительность одного тика погони = 1 ИГРОВОЙ ЧАС.
 // Вор делает НЕ БОЛЕЕ ОДНОГО ШАГА за час: за тик он либо ждёт на локации,
@@ -773,6 +788,7 @@ export function searchLocation(registry, locationId) {
  * второй раз строчки диалога про вора у этого NPC не появляется.
  */
 export function askNPC(registry, npcId, npcName) {
+    const who = talkerName(registry, npcId, npcName); // раунд 41: динамическое имя
     const q = registry.get('quest');
     if (!q) {
         return { gotClue: false, message: '...', turnsLeft: 0, thiefEscaped: false };
@@ -783,7 +799,7 @@ export function askNPC(registry, npcId, npcName) {
     if (q.thiefAskedFrom.includes(npcId)) {
         return {
             gotClue: false, alreadyAsked: true,
-            message: `${npcName}: «${t('Я уже всё тебе рассказал. Больше не знаю ничего — спроси у других людей.')}»`,
+            message: `${who}: «${t('Я уже всё тебе рассказал. Больше не знаю ничего — спроси у других людей.')}»`,
             turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
         };
     }
@@ -800,7 +816,7 @@ export function askNPC(registry, npcId, npcName) {
             : t('Не видел я никакого вора. Спроси кого другого, путник.');
         return {
             gotClue: false,
-            message: `${npcName}: «${msg}»`,
+            message: `${who}: «${msg}»`,
             turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
         };
     }
@@ -833,9 +849,10 @@ export function askNPC(registry, npcId, npcName) {
                 ? tf(t('Видел я его, темного человека! Он бежит к «{0}» — поспеши, догонешь!'), loc.name)
                 : tf(t('Видел я его, темного человека! Он сейчас прячется у «{0}» — поспеши!'), loc.name))
             : t('Видел я вора, да куда он подался — не ведаю.');
-        q.cluesGathered.push({ npcId, npcName, clue: clueText, whereClue: true });
-        message = `${npcName}: «${clueText}»`;
-        ActionLog.add(registry, `Расспрос ${npcName} о воре — СВИДЕТЕЛЬ: ${clueText}.`);
+        // Раунд 41: в улике храним динамическое имя (панель «Улики от жителей»)
+        q.cluesGathered.push({ npcId, npcName: who, clue: clueText, whereClue: true });
+        message = `${who}: «${clueText}»`;
+        ActionLog.add(registry, `Расспрос ${who} о воре — СВИДЕТЕЛЬ: ${clueText}.`);
     } else {
         // Не все могли видеть вора — этот селянин ничего не знает
         const notSeen = [
@@ -843,8 +860,8 @@ export function askNPC(registry, npcId, npcName) {
             t('Вор? Здесь не пробегал. Я бы заметил — весь день на виду был.'),
             t('Темных людей не видал, батиушко упаси. Может, в другой стороне ищешь?'),
         ];
-        message = `${npcName}: «${notSeen[Math.floor(Math.random() * notSeen.length)]}»`;
-        ActionLog.add(registry, `Расспрос ${npcName} о воре — не свидетель, ничего не знает.`);
+        message = `${who}: «${notSeen[Math.floor(Math.random() * notSeen.length)]}»`;
+        ActionLog.add(registry, `Расспрос ${who} о воре — не свидетель, ничего не знает.`);
     }
 
     registry.set('quest', q);
@@ -856,6 +873,7 @@ export function askNPC(registry, npcId, npcName) {
  * Разговор занимает время (1 тик) — вор тоже двигается.
  */
 export function askMoneyForHelp(registry, npcId, npcName) {
+    const who = talkerName(registry, npcId, npcName); // раунд 41: динамическое имя
     const q = registry.get('quest');
     if (!q) return { success: false, amount: 0, message: '...', turnsLeft: 0, thiefEscaped: false };
 
@@ -863,7 +881,7 @@ export function askMoneyForHelp(registry, npcId, npcName) {
     if (q.moneyAskedFrom.includes(npcId)) {
         return {
             success: false, alreadyAsked: true,
-            message: `${npcName}: «${t('Я уже помог тебе, чем мог. Больше не дам.')}»`,
+            message: `${who}: «${t('Я уже помог тебе, чем мог. Больше не дам.')}»`,
             turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
         };
     }
@@ -888,19 +906,19 @@ export function askMoneyForHelp(registry, npcId, npcName) {
     if (res.result === 'critical') {
         amount = Math.round((15 + Math.floor(Math.random() * 15)) * npcGenerosity * 2);
         success = true;
-        message = `${npcName}: «${t('Возьми, путник, чем богат. Помоги тебе Господь!')}» (+${amount} д.)`;
-        ActionLog.add(registry, `Просил денег у ${npcName} — КРИТИЧЕСКИЙ успех, получено ${amount} д. (бросок ${res.roll}).`);
+        message = `${who}: «${t('Возьми, путник, чем богат. Помоги тебе Господь!')}» (+${amount} д.)`;
+        ActionLog.add(registry, `Просил денег у ${who} — КРИТИЧЕСКИЙ успех, получено ${amount} д. (бросок ${res.roll}).`);
     } else if (res.result === 'success') {
         amount = Math.round((5 + Math.floor(Math.random() * 15)) * npcGenerosity);
         success = true;
-        message = `${npcName}: «${t('Вот тебе немного денег на дорогу.')}» (+${amount} д.)`;
-        ActionLog.add(registry, `Просил денег у ${npcName} — успех, получено ${amount} д. (бросок ${res.roll}).`);
+        message = `${who}: «${t('Вот тебе немного денег на дорогу.')}» (+${amount} д.)`;
+        ActionLog.add(registry, `Просил денег у ${who} — успех, получено ${amount} д. (бросок ${res.roll}).`);
     } else if (res.result === 'fumble') {
-        message = `${npcName}: «${t('Попрошайка! Уходи, не позорься!')}» (${t('Больше не даст.')})`;
-        ActionLog.add(registry, `Просил денег у ${npcName} — FUMBLE, ничего не получено (бросок ${res.roll}).`);
+        message = `${who}: «${t('Попрошайка! Уходи, не позорься!')}» (${t('Больше не даст.')})`;
+        ActionLog.add(registry, `Просил денег у ${who} — FUMBLE, ничего не получено (бросок ${res.roll}).`);
     } else {
-        message = `${npcName}: «${t('Нет у меня лишних денег, сам перебиваюсь.')}»`;
-        ActionLog.add(registry, `Просил денег у ${npcName} — провал, ничего не получено (бросок ${res.roll}).`);
+        message = `${who}: «${t('Нет у меня лишних денег, сам перебиваюсь.')}»`;
+        ActionLog.add(registry, `Просил денег у ${who} — провал, ничего не получено (бросок ${res.roll}).`);
     }
 
     if (success) {

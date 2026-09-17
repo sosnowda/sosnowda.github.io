@@ -7,6 +7,76 @@ import { paletteLayerFiles } from '../systems/NpcLpc.js';
 import { isEn } from '../systems/i18n.js';  // раунд 37 (п.7): полоска загрузки по языку
 import { ensureFemaleChestTexture } from '../systems/CharacterAppearance.js'; // раунд 39 (п.4)
 
+// ============================================================
+// Раунд 41 (QA-хардендинг): защита от «тихого замерзания» игры.
+//
+// Симптом (воспроизведён в QA дважды за раунд): игра продолжает
+// рисовать и принимать клики, но сцены больше не обновляются — твины
+// стоят, диалоги «мертвы», время не идёт, бой не стартует.
+//
+// Причина: ЛЮБОЕ исключение внутри SceneManager.update() (например,
+// из Clock.update — таймер эффекта печати в ui.js, или из
+// DisplayList.shutdown при stop-е сцены с «дырявым» списком)
+// оставляло SceneManager.isProcessing = true НАВСЕГДА — Phaser не
+// страхует это поле, и каждый следующий кадр выходил из update()
+// ранним return. Канвас рисует последний кадр, а игровой цикл мёртв.
+//
+// Гард: исключение перехватывается, isProcessing сбрасывается, цикл
+// живёт, ошибка видна в консоли. Плюс shutdown списка сделан
+// устойчивым к «дыркам» (undefined-ссылкам в children.list).
+// Ставится в BootScene — единственный модуль, гарантированно
+// исполняемый до создания Phaser.Game (index.html импортирует сцены
+// напрямую, минуя src/main.js).
+// ============================================================
+(function () {
+    const SM = Phaser.Scenes && Phaser.Scenes.SceneManager;
+    if (SM && SM.prototype && typeof SM.prototype.update === 'function') {
+        const origUpdate = SM.prototype.update;
+        SM.prototype.update = function (time, delta) {
+            // QA: в this.scenes могли остаться «дыры» (undefined после неудачного
+            // stop/start) — родной цикл падал «reading 'sys' of undefined» КАЖДЫЙ
+            // кадр, обрывая обновление всех сцен после дыры. Уплотняем список.
+            try {
+                if (Array.isArray(this.scenes)) {
+                    let compact = false;
+                    for (let i = 0; i < this.scenes.length; i++) {
+                        if (!this.scenes[i]) { compact = true; break; }
+                    }
+                    if (compact) {
+                        this.scenes = this.scenes.filter(Boolean);
+                        console.warn('[Летописи:гард] SceneManager.scenes: удалены дыры');
+                    }
+                }
+            } catch (e) { /* не мешаем основному циклу */ }
+            try {
+                return origUpdate.call(this, time, delta);
+            } catch (e) {
+                this.isProcessing = false; // критично: не оставить цикл замороженным
+                console.error('[Летописи:гард] Исключение в SceneManager.update (цикл восстановлен):', e);
+            }
+        };
+    }
+
+    const DL = Phaser.GameObjects && Phaser.GameObjects.DisplayList;
+    if (DL && DL.prototype && typeof DL.prototype.shutdown === 'function') {
+        DL.prototype.shutdown = function () {
+            const list = this.list || [];
+            for (let i = list.length - 1; i >= 0; i--) {
+                const obj = list[i];
+                // QA: в списке могли остаться «дырки»/двойные записи —
+                // shutdown одной битой ссылки раньше обрывал stop сцены
+                if (obj && typeof obj.destroy === 'function') {
+                    try { obj.destroy(true); } catch (e) { /* объект уже убит */ }
+                }
+            }
+            list.length = 0;
+            if (this.events) {
+                this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+            }
+        };
+    }
+})();
+
 export class BootScene extends Phaser.Scene {
     constructor() {
         super('Boot');

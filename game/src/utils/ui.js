@@ -1013,6 +1013,13 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         typeTimer = scene.time.addEvent({
             delay: typingSpeed,
             callback: () => {
+                // Раунд 41 (QA-фикс ФАТАЛЬНОГО замерзания игры): таймер мог быть
+                // снят (skipTyping/closeDialog/повторный стартTyping) уже после
+                // того, как Phaser поставил его в очередь текущего кадра. Без
+                // guard'а callback падал «Cannot read properties of null
+                // (reading 'remove')» внутри Clock.update → SceneManager.update
+                // не сбрасывал isProcessing → игра молча замерзала навсегда.
+                if (!typeTimer) return;
                 if (typeIndex >= fullContent.length) {
                     typeTimer.remove();
                     typeTimer = null;
@@ -1314,6 +1321,8 @@ export function createStoryTextBox(scene, config = {}) {
         typeTimer = scene.time.addEvent({
             delay: typingSpeed,
             callback: () => {
+                // Раунд 41 (QA-фикс): guard снятого таймера — см. createDialog
+                if (!typeTimer) return;
                 if (typeIndex >= content.length) {
                     typeTimer.remove();
                     isTyping = false;

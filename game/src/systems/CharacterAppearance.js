@@ -73,15 +73,31 @@ export function composeCharacterTexture(scene, appearance, textureKey = 'player_
     const OUT_W = OUT_COLS * FRAME_SIZE;
     const OUT_H = OUT_ROWS * FRAME_SIZE;
 
-    // Создаём canvas напрямую через DOM (Phaser's make.canvas может не существовать)
-    let canvas;
+    // Раунд 41 (QA-фикс ФАТАЛЬНОЙ гонки с рендером): раньше текстура
+    // УДАЛЯЛАСЬ (textures.remove) и добавлялась заново. Между этими шагами
+    // спрайт, уже отрисовывающий этот ключ, попадал на удалённый frame →
+    // «reading 'sourceSize' of null» ВНУТРИ Game.step → rAF-цепочка Phaser
+    // умирала и игра молча замирала (кадры не идут, сцены не обновляются).
+    // Теперь ключ обновляется НА МЕСТЕ: существующий canvas очищается и
+    // перерисовывается, затем tex.refresh() — без remove/add.
+    let canvas = null;
+    let existingTex = null;
     if (scene.textures.exists(textureKey)) {
-        // Пересоздаём
-        scene.textures.remove(textureKey);
+        const tex = scene.textures.get(textureKey);
+        const src = tex.source && tex.source[0];
+        if (src && src.image && src.image.tagName === 'CANVAS' &&
+            src.image.width === OUT_W && src.image.height === OUT_H) {
+            existingTex = tex;
+            canvas = src.image;
+        } else {
+            scene.textures.remove(textureKey); // не canvas/другой размер — честная замена
+        }
     }
-    canvas = document.createElement('canvas');
-    canvas.width = OUT_W;
-    canvas.height = OUT_H;
+    if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.width = OUT_W;
+        canvas.height = OUT_H;
+    }
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, OUT_W, OUT_H);
@@ -148,8 +164,13 @@ export function composeCharacterTexture(scene, appearance, textureKey = 'player_
     }
 
     // Конвертируем canvas в Phaser-текстуру
-    // Phaser 3: добавляем canvas как текстуру через addCanvas
-    scene.textures.addCanvas(textureKey, canvas);
+    // Раунд 41: если текстура уже была — refresh НА МЕСТЕ (без remove/add,
+    // см. комментарий выше); иначе добавляем canvas как текстуру через addCanvas
+    if (existingTex) {
+        existingTex.refresh();
+    } else {
+        scene.textures.addCanvas(textureKey, canvas);
+    }
 
     // Создаём спрайт-фреймы для walk-анимации (нужно для Phaser-анимаций)
     // Phaser автоматически создаст фреймы из canvas-текстуры

@@ -119,8 +119,23 @@ function recolorImage(sourceImg, look, maxSide = 0) {
  * Пересоздать canvas-текстуру из изображения с покраской.
  */
 function addRecoloredTexture(scene, outKey, sourceImg, look, maxSide = 0) {
-    if (scene.textures.exists(outKey)) scene.textures.remove(outKey);
+    // Раунд 41 (QA-фикс): без remove/add — гонка с рендером убивала игровой
+    // цикл (спрайт отрисовывал ключ в момент удаления текстуры). Обновляем
+    // существующий canvas НА МЕСТЕ + refresh().
     const canvas = recolorImage(sourceImg, look, maxSide);
+    if (scene.textures.exists(outKey)) {
+        const tex = scene.textures.get(outKey);
+        const src = tex.source && tex.source[0];
+        if (src && src.image && src.image.tagName === 'CANVAS'
+            && src.image.width === canvas.width && src.image.height === canvas.height) {
+            const c = src.image.getContext('2d');
+            c.clearRect(0, 0, canvas.width, canvas.height);
+            c.drawImage(canvas, 0, 0);
+            tex.refresh();
+            return;
+        }
+        scene.textures.remove(outKey);
+    }
     scene.textures.addCanvas(outKey, canvas);
 }
 
