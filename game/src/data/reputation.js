@@ -25,7 +25,10 @@ import { ActionLog } from './actionLog.js';
 // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели кузнеца
 import { getNpcs, findNpc, spawnBlacksmithApprentice, BLACKSMITH_APPRENTICE_ID } from './npcNames.js';
 import { getTimeOfDay, getTime } from '../systems/TimeSystem.js';
-import { skillCheck } from '../systems/BRPEngine.js';
+import { skillCheck, opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
+// Раунд 47 (пп.3,4 заявки): параметры жителей — база npcStats.js;
+// сопротивление НПЦ «тем же параметром» в проверках диалогов
+import { getNpcSkillResistance } from './npcStats.js';
 
 const VILLAGE_REP_MIN = -100;
 const VILLAGE_REP_MAX = 100;
@@ -379,22 +382,27 @@ export function applyGiftBonus(registry, npcId, giftValue) {
 
 /**
  * П.11: Похвала NPC через навык Oratory.
+ * Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Красноречие игрока
+ * против ТАКОГО ЖЕ параметра НПЦ (Красноречие/Обаяние жителя) + сложность.
  */
 export function applyCompliment(registry, npcId, oratorySkill) {
-    const res = skillCheck(oratorySkill);
+    // Сопротивление: Красноречие жителя (если владеет) или его Обаяние
+    const npcResistance = getNpcSkillResistance(findNpc(registry, npcId), 'oratory');
+    const res = opposedSkillCheck(oratorySkill, npcResistance, 0);
+    const checkLine = formatOpposedCheck(res, 'Красноречие', 'Красноречие жителя');
     
     if (res.result === 'critical') {
         changeNpcRep(registry, npcId, 5, 'удачная похвала (крит)');
-        return { success: true, bonus: 5, message: '«Ох, спасибо на добром слове!»', roll: res.roll };
+        return { success: true, bonus: 5, message: '«Ох, спасибо на добром слове!»', roll: res.roll, checkLine };
     } else if (res.result === 'success') {
         changeNpcRep(registry, npcId, 2, 'удачная похвала');
-        return { success: true, bonus: 2, message: '«Благодарю за доброе слово.»', roll: res.roll };
+        return { success: true, bonus: 2, message: '«Благодарю за доброе слово.»', roll: res.roll, checkLine };
     } else if (res.result === 'fumble') {
         changeNpcRep(registry, npcId, -4, 'неудачная лесть (fumble)');
-        return { success: false, bonus: -4, message: '«Не льсти мне, не люблю я это!»', roll: res.roll };
+        return { success: false, bonus: -4, message: '«Не льсти мне, не люблю я это!»', roll: res.roll, checkLine };
     } else {
         changeNpcRep(registry, npcId, -1, 'неудачная лесть');
-        return { success: false, bonus: -1, message: '«Хватит пустые слова говорить.»', roll: res.roll };
+        return { success: false, bonus: -1, message: '«Хватит пустые слова говорить.»', roll: res.roll, checkLine };
     }
 }
 
@@ -455,15 +463,20 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
     // Чем больше угрожал — тем меньше эффект (NPC привыкает или злится)
     modifier -= rep.threatenedCount[npcId] * 3;
     
-    // Пересчёт с модификатором
-    const effectiveSkill = Math.max(1, intimidateSkill + modifier);
-    const effectiveRes = skillCheck(effectiveSkill);
+    // Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Запугивание игрока
+    // против ТАКОГО ЖЕ параметра НПЦ (Запугивание/Сила жителя).
+    // Прежние модификаторы (пол/навязчивость) становятся «сложностью»
+    // проверки: отрицательный modifier → труднее (сопротивление выше).
+    const npcIntimidate = getNpcSkillResistance(findNpc(registry, npcId), 'intimidate');
+    const effectiveRes = opposedSkillCheck(intimidateSkill, npcIntimidate, -modifier);
+    const checkLine = formatOpposedCheck(effectiveRes, 'Запугивание', 'Запугивание жителя');
     
     let result = {
         success: false,
         message: '',
         willAttack: false,
         roll: effectiveRes.roll,
+        checkLine,
         repChange: 0,
     };
     
@@ -960,6 +973,12 @@ export function canMarry(registry, npcId, player) {
         return { canMarry: false, reason: `Ты ещё несовершеннолетний(яя) — венчают только с ${AGE_OF_MAJORITY} лет` };
     }
 
+    // Раунд 47 (п.1 заявки): игрок уже женат — второго венчания не бывает
+    // (брак — это жизнь в деревне, а НЕ автоматическая победа).
+    if (player.married) {
+        return { canMarry: false, reason: `Ты уже венчан(а) с ${player.spouseNpcName || 'другим человеком'} — Церковь второго брака не благословит` };
+    }
+
     // Проверка личной репутации
     if (npcRep < MARRIAGE_NPC_REP) {
         return { canMarry: false, reason: `Недостаточно личной репутации (нужно +${MARRIAGE_NPC_REP}, у вас ${npcRep})` };
@@ -994,7 +1013,8 @@ export function canMarry(registry, npcId, player) {
  * Выполнить брак.
  * Снимает деньги, отмечает NPC и игрока как состоящих в браке.
  * Повышает деревенскую репутацию.
- * Возвращает true при успехе — это означает ВЫИГРЫШ.
+ * Раунд 47 (п.1 заявки): брак — это СОБЫТИЕ ЖИЗНИ, а не финал:
+ * игра продолжается после свадьбы (ни победного флага, ни EndScene).
  */
 export function marry(registry, npcId, player) {
     const check = canMarry(registry, npcId, player);
@@ -1007,6 +1027,7 @@ export function marry(registry, npcId, player) {
     player.dengas = (player.dengas || 0) - MARRIAGE_COST;
     player.married = true;
     player.spouseNpcId = npcId;
+    player.spouseNpcName = npc ? npc.name : '';
     registry.set('player', player);
     
     // Отмечаем NPC как состоящего в браке

@@ -44,7 +44,7 @@
 //   священнику и получает награду. После победы игра ПРОДОЛЖАЕТСЯ:
 //   староста и жители дают процедурно генерируемые задания.
 
-import { skillCheck } from '../systems/BRPEngine.js';
+import { skillCheck, opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
 import { ActionLog } from './actionLog.js';
 import { applyBeggingPenalty, changeVillageRep } from './reputation.js';
 import { getLocationById } from './mapLocations.js';
@@ -55,6 +55,10 @@ import { formatMoney } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
 import { createDialog } from '../utils/ui.js';
 import { getNpcShortName, findNpc } from './npcNames.js';
+// Раунд 47 (пп.2,4 заявки): смерть кузнеца не прячет наводку — знание
+// наследует ученик; сопротивление НПЦ в проверках — из базы жителей
+import { isNpcKilled } from './reputation.js';
+import { getNpcSkillResistance } from './npcStats.js';
 
 /**
  * Раунд 41 (QA): говорящий в репликах о воре — ДИНАМИЧЕСКОЕ имя NPC
@@ -780,6 +784,34 @@ export function searchLocation(registry, locationId) {
 }
 
 /**
+ * Раунд 47 (п.2 заявки): НАСЛЕДОВАНИЕ ЗНАНИЯ О ВОРЕ.
+ * «Наводка на вора не наследуется, а пропадает» — было: кузнец дал наводку,
+ * игрок его убил, ученик отказывался говорить («уже всё рассказал») — и
+ * знание мастера пропадало навсегда. Теперь: смерть кузнеца передаёт его
+ * ЗНАНИЕ живому ученику — мастер уже не расскажет, но ученик расскажет сам
+ * (мастер убирается из списка «уже расспрашивали», ученик становится
+ * полноправным носителем свидетельства).
+ * Вызывается перед показом опции «Спросить про вора» и перед askNPC.
+ *
+ * @returns {boolean} true — наследование выполнено (мастер убран из списка)
+ */
+export function inheritThiefKnowledge(registry) {
+    const q = registry.get('quest') || {};
+    if (!q.thiefAskedFrom || !q.thiefAskedFrom.includes('blacksmith')) return false;
+    // Ученик УЖЕ рассказывал своё — наследование состоялось раньше,
+    // второй раз оно не открывается
+    if (q.thiefAskedFrom.includes('apprentice')) return false;
+    if (!isNpcKilled(registry, 'blacksmith')) return false; // мастер жив — сам расскажет
+    // Ученик должен быть жив и стоять у горна
+    const app = findNpc(registry, 'apprentice');
+    if (!app || isNpcKilled(registry, 'apprentice')) return false;
+    q.thiefAskedFrom = q.thiefAskedFrom.filter(id => id !== 'blacksmith');
+    registry.set('quest', q);
+    ActionLog.add(registry, t('Знание кузнеца не пропало с ним: его ученик видел то же, что и мастер.'));
+    return true;
+}
+
+/**
  * Расспросить жителя о воре.
  * Раунд 31: час за разговор списывается при закрытии диалога (пп.11,12).
  * Раунд 22: КАЖДЫЙ селянин расспрашивается ТОЛЬКО ОДИН РАЗ — повторный
@@ -800,7 +832,23 @@ export function askNPC(registry, npcId, npcName) {
     // Раунд 46 (п.1 заявки): УЧЕНИК КУЗНЕЦА наследует знания мастера —
     // если кузнец был свидетелем вора, ученик «видел то же самое» (и
     // память у них общая: мастера уже спросили → ученик не повторяет).
-    const witnessId = (npcId === 'apprentice') ? 'blacksmith' : npcId;
+    const isApprentice = (npcId === 'apprentice');
+    const witnessId = isApprentice ? 'blacksmith' : npcId;
+
+    // Раунд 47 (п.2 заявки): наводка НАСЛЕДУЕТСЯ, а не пропадает.
+    // Если мастера уже расспрашивали, а теперь его нет в живых — его
+    // знание переходит к ученику: спрашиваем ученика как НОВОГО свидетеля.
+    if (isApprentice) {
+        inheritThiefKnowledge(registry);
+        // перечитываем quest после возможной правки thiefAskedFrom
+        const qFresh = registry.get('quest');
+        if (qFresh) Object.assign(q, qFresh);
+    }
+
+    // Раунд 47: «уже рассказывал» — по СОБСТВЕННОЙ записи рассказчика
+    // (мастер — 'blacksmith', ученик — 'apprentice'), а не по общему ключу:
+    // иначе ответ ученика снова открывал бы память убитого мастера.
+    const askedId = isApprentice ? 'apprentice' : npcId;
 
     // Раунд 44 (п.6 владельца): ДЕТИ не выдают наводок — вежливо отнекиваются,
     // попытка расспроса НЕ расходуется (в thiefAskedFrom не пишем).
@@ -813,16 +861,23 @@ export function askNPC(registry, npcId, npcName) {
         };
     }
 
-    // Раунд 22: повторный расспрос того же NPC невозможен (без траты времени)
+    // Раунд 22: повторный расспрос того же NPC невозможен (без траты времени).
+    // Раунд 47: запись — по СОБСТВЕННОМУ ключу рассказчика (askedId).
+    // Пока МАСТЕР ЖИВ и уже рассказывал — ученик «покрыт» его ответом
+    // (стоят рядом у горна, ведали одно); после смерти мастера знание
+    // наследуется и ученик отвечает по собственной записи.
     if (!q.thiefAskedFrom) q.thiefAskedFrom = [];
-    if (q.thiefAskedFrom.includes(witnessId)) {
+    const masterCoversApprentice = isApprentice
+        && !isNpcKilled(registry, 'blacksmith')
+        && q.thiefAskedFrom.includes('blacksmith');
+    if (q.thiefAskedFrom.includes(askedId) || masterCoversApprentice) {
         return {
             gotClue: false, alreadyAsked: true,
             message: `${who}: «${t('Я уже всё тебе рассказал. Больше не знаю ничего — спроси у других людей.')}»`,
             turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
         };
     }
-    q.thiefAskedFrom.push(witnessId);
+    q.thiefAskedFrom.push(askedId);
     registry.set('quest', q);
 
     // Раунд 31 (пп.11,12): час за разговор списывается при ЗАКРЫТИИ диалога
@@ -916,8 +971,13 @@ export function askMoneyForHelp(registry, npcId, npcName) {
     }[npcId] || 0.5;
 
     const player = registry.get('player');
+    // Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Убеждение игрока против
+    // ТАКОГО ЖЕ параметра НПЦ (Убеждение/Обаяние жителя) + сложность 10
+    // (просить денег — труднее, чем просто говорить).
     const persuadeSkill = consumeBlessing(registry, (player.skills && player.skills.persuade) || 20);
-    const res = skillCheck(persuadeSkill);
+    const npcPersuade = getNpcSkillResistance(findNpc(registry, npcId), 'persuade');
+    const res = opposedSkillCheck(persuadeSkill, npcPersuade, 10);
+    const checkLine = formatOpposedCheck(res, 'Убеждение', 'Упорство жителя');
 
     let success = false;
     let amount = 0;
@@ -927,18 +987,18 @@ export function askMoneyForHelp(registry, npcId, npcName) {
         amount = Math.round((15 + Math.floor(Math.random() * 15)) * npcGenerosity * 2);
         success = true;
         message = `${who}: «${t('Возьми, путник, чем богат. Помоги тебе Господь!')}» (+${amount} д.)`;
-        ActionLog.add(registry, `Просил денег у ${who} — КРИТИЧЕСКИЙ успех, получено ${amount} д. (бросок ${res.roll}).`);
+        ActionLog.add(registry, `Просил денег у ${who} — КРИТИЧЕСКИЙ успех, получено ${amount} д. (${checkLine}).`);
     } else if (res.result === 'success') {
         amount = Math.round((5 + Math.floor(Math.random() * 15)) * npcGenerosity);
         success = true;
         message = `${who}: «${t('Вот тебе немного денег на дорогу.')}» (+${amount} д.)`;
-        ActionLog.add(registry, `Просил денег у ${who} — успех, получено ${amount} д. (бросок ${res.roll}).`);
+        ActionLog.add(registry, `Просил денег у ${who} — успех, получено ${amount} д. (${checkLine}).`);
     } else if (res.result === 'fumble') {
         message = `${who}: «${t('Попрошайка! Уходи, не позорься!')}» (${t('Больше не даст.')})`;
-        ActionLog.add(registry, `Просил денег у ${who} — FUMBLE, ничего не получено (бросок ${res.roll}).`);
+        ActionLog.add(registry, `Просил денег у ${who} — FUMBLE, ничего не получено (${checkLine}).`);
     } else {
         message = `${who}: «${t('Нет у меня лишних денег, сам перебиваюсь.')}»`;
-        ActionLog.add(registry, `Просил денег у ${who} — провал, ничего не получено (бросок ${res.roll}).`);
+        ActionLog.add(registry, `Просил денег у ${who} — провал, ничего не получено (${checkLine}).`);
     }
 
     if (success) {
@@ -953,7 +1013,7 @@ export function askMoneyForHelp(registry, npcId, npcName) {
     }
 
     registry.set('quest', q);
-    return { success, amount, message, turnsLeft: chaseTicksLeft(registry), thiefEscaped: false };
+    return { success, amount, message, checkLine, turnsLeft: chaseTicksLeft(registry), thiefEscaped: false };
 }
 
 /** Задаток от старосты (легаси-обёртка). */
@@ -1074,22 +1134,26 @@ export function persuadeThief(registry) {
 
     const player = registry.get('player');
     // Раунд 22: нижний порог Убеждения + благословение (+10, одна проверка)
+    // Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Убеждение игрока против
+    // ТАКОГО ЖЕ параметра вора (болтливый наёмник: сопротивление 50) + сложность 10
+    // (на равных с вором; итог совпадает с прежней проверкой, но по общей формуле).
     const persuadeSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.persuade) || 20, MIN_PERSUADE));
-    const res = skillCheck(persuadeSkill);
+    const res = opposedSkillCheck(persuadeSkill, 50, 10);
+    const checkLine = formatOpposedCheck(res, 'Убеждение', 'Болтовня вора');
 
     if (res.result === 'critical' || res.result === 'success') {
         recoverStolenItem(registry, 'convinced', res);
         return {
             success: true,
             message: t('Вор, помявшись, опускает икону в траву: «Ладно! Пронеси тебя Бог, сыщик!» — и растворяется в чаще. Икона цела! Отнеси её старосте или батюшке.') +
-                ` (${t('бросок')} ${res.roll})`,
+                ` (${checkLine})`,
             thiefEscaped: false,
         };
     }
 
     // Провал убеждения — вор паникует и бежит
     const fled = thiefFleesNow(registry);
-    ActionLog.add(registry, `Убеждение не подействовало (бросок ${res.roll}, провал)${fled.escaped ? ' — вор скрылся!' : ' — вор пустился наутёк!'}`);
+    ActionLog.add(registry, `Убеждение не подействовало (${checkLine})${fled.escaped ? ' — вор скрылся!' : ' — вор пустился наутёк!'}`);
     return {
         success: false,
         message: fled.escaped
@@ -1111,8 +1175,11 @@ export function stunThief(registry) {
 
     const player = registry.get('player');
     // Раунд 22: нижний порог Драки + благословение (+10, одна проверка)
+    // Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Драка игрока против
+    // ТАКОГО ЖЕ параметра вора (Рукопашная вора = его навык атаки 50).
     const brawlSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.brawl) || 25, MIN_BRAWL));
-    const res = skillCheck(brawlSkill);
+    const res = opposedSkillCheck(brawlSkill, 50, 0);
+    const checkLine = formatOpposedCheck(res, 'Рукопашная', 'Рукопашная вора');
 
     if (res.result === 'critical' || res.result === 'success') {
         recoverStolenItem(registry, 'captured', res);
@@ -1122,13 +1189,13 @@ export function stunThief(registry) {
             message: (crit
                 ? t('Одним точным ударом в висок ты срубишь вора с ног и накрепко связываешь его. Икона в киоте невредима!')
                 : t('Ты догоняешь вора и оглушаешь его ударом в затылок. Вор связан — его ждёт суд старосты, а икона снова цела!'))
-                + ` (${t('бросок')} ${res.roll})`,
+                + ` (${checkLine})`,
             thiefEscaped: false,
         };
     }
 
     const fled = thiefFleesNow(registry);
-    ActionLog.add(registry, `Оглушить вора не вышло (бросок ${res.roll}, провал)${fled.escaped ? ' — вор скрылся!' : ' — вор пустился наутёк!'}`);
+    ActionLog.add(registry, `Оглушить вора не вышло (${checkLine})${fled.escaped ? ' — вор скрылся!' : ' — вор пустился наутёк!'}`);
     return {
         success: false,
         message: fled.escaped

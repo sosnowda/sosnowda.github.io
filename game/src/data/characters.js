@@ -86,51 +86,92 @@ export function spawnEnemy(key) {
 // жителей — свои боевые параметры по профессии: кузнец силён и тяжёл
 // (молот, кожаный фартук), а УЧЕНИК КУЗНЕЦА — моложе мастера и СЛАБЕЕ
 // его по характеристикам (HP 8 против 13, атака 30% против 45%).
+//
+// Раунд 47 (пп.3,5 заявки): характеристики жителей — ЕДИНЫЙ ИСТОЧНИК:
+// база данных npcStats.js (те же 8 характеристик BRP, что у героя).
+// Здесь остаются только боевые отличия: оружие, бонус урона, броня.
+// Навык атаки = навык владельца оружия из той же базы (Рукопашная
+// кузнеца 45 → его attackSkill 45 — сверено аудитом).
 // ============================================================
+import { createNpcCharacter, getNpcSkillResistance } from './npcStats.js';
+
 export const VILLAGER_COMBAT = {
     blacksmith: {
         name: 'Кузнец',
-        stats: { STR: 65, CON: 60, SIZ: 70, DEX: 45, INT: 50, POW: 50, CHA: 40, APP: 40 },
         weapon: { name: 'Кузнечный молот', dice: { min: 1, max: 8 }, bonus: 2 },
-        attackSkill: 45, dodge: 25, db: { min: 1, max: 4 },
+        weaponSkill: 'brawl',      // навык атаки = Рукопашная из базы жителя
+        fallbackAttack: 45,
+        fallbackDodge: 25,
+        db: { min: 1, max: 4 },
         armorId: 'leather',   // кожаный фартук
     },
     apprentice: {
         name: 'Ученик кузнеца',
-        // Слабее мастера во всём: HP = (45+40)/10 = 8 (у кузца 13)
-        stats: { STR: 40, CON: 45, SIZ: 40, DEX: 50, INT: 45, POW: 45, CHA: 45, APP: 50 },
         weapon: { name: 'Молоток', dice: { min: 1, max: 6 }, bonus: 0 },
-        attackSkill: 30, dodge: 30, db: { min: 0, max: 2 },
+        weaponSkill: 'brawl',
+        fallbackAttack: 30,
+        fallbackDodge: 30,
+        db: { min: 0, max: 2 },
         armorId: 'none',
     },
     elder: {
         name: 'Староста',
-        stats: { STR: 45, CON: 45, SIZ: 55, DEX: 40, INT: 55, POW: 60, CHA: 55, APP: 45 },
         weapon: { name: 'Посох', dice: { min: 1, max: 6 }, bonus: 0 },
-        attackSkill: 35, dodge: 20, db: { min: 0, max: 2 },
+        weaponSkill: 'brawl',
+        fallbackAttack: 35,
+        fallbackDodge: 20,
+        db: { min: 0, max: 2 },
+        armorId: 'none',
+    },
+    guard: {
+        name: 'Стражник',
+        weapon: { name: 'Копьё', dice: { min: 1, max: 8 }, bonus: 0 },
+        weaponSkill: 'spear',
+        fallbackAttack: 45,
+        fallbackDodge: 35,
+        db: { min: 0, max: 2 },
+        armorId: 'padded',    // стёганый тегиляй стражника
+    },
+    hunter: {
+        name: 'Охотник',
+        weapon: { name: 'Охотничий лук', dice: { min: 1, max: 6 }, bonus: 1 },
+        weaponSkill: 'bow',
+        fallbackAttack: 55,
+        fallbackDodge: 30,
+        db: { min: 0, max: 2 },
         armorId: 'none',
     },
     // Прочие жители — крепкий крестьянский уровень (слабее шаблонного разбойника)
     default: {
         name: 'Житель',
-        stats: { STR: 50, CON: 50, SIZ: 50, DEX: 50, INT: 50, POW: 50, CHA: 45, APP: 45 },
         weapon: { name: 'Кол', dice: { min: 1, max: 6 }, bonus: 0 },
-        attackSkill: 35, dodge: 25, db: { min: 0, max: 2 },
+        weaponSkill: 'brawl',
+        fallbackAttack: 35,
+        fallbackDodge: 25,
+        db: { min: 0, max: 2 },
         armorId: 'none',
     },
 };
 
 /**
- * Раунд 46 (п.1): боевая единица ЖИТЕЛЯ деревни — по его профессии.
- * Ученик кузнеца моложе и слабее кузнеца (см. VILLAGER_COMBAT).
+ * Раунд 46 (п.1) + раунд 47 (пп.3,5): боевая единица ЖИТЕЛЯ деревни.
+ * Характеристики и навык атаки — из базы параметров жителей (npcStats.js);
+ * оружие/броня — боевые отличия профессии (VILLAGER_COMBAT).
  */
 export function spawnVillagerEnemy(npc) {
     const tpl = VILLAGER_COMBAT[npc && npc.id] || VILLAGER_COMBAT.default;
     const displayName = (npc && npc.name) ? npc.name : tpl.name;
-    const c = createCharacter(displayName, tpl.stats);
+    // Характеристики — ТОЛЬКО из базы жителей (единый источник, п.5)
+    const c = createNpcCharacter(npc);
+    c.name = displayName;
     c.weapon = tpl.weapon;
-    c.attackSkill = tpl.attackSkill;
-    c.skills.dodge = tpl.dodge;
+    // Навык атаки = владение оружием из базы жителя (тот же параметр,
+    // что сравнивается в диалогах — п.4 заявки); fallback — для НПЦ
+    // без блока (случайные незнакомцы)
+    const skillValue = getNpcSkillResistance(npc, tpl.weaponSkill);
+    c.attackSkill = (npc && skillValue != null) ? skillValue : tpl.fallbackAttack;
+    const dodgeValue = getNpcSkillResistance(npc, 'dodge');
+    c.skills.dodge = (npc && dodgeValue != null) ? dodgeValue : tpl.fallbackDodge;
     c.DB = tpl.db;
     // В бою житель показывается своим базовым спрайтом (вид спереди/сбоку)
     c.spriteKey = (npc && npc.sprite) || 'npc_merchant';

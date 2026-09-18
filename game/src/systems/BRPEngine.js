@@ -2,6 +2,49 @@
 // Чистая логика без зависимостей от движка.
 // Все функции используют Math.random, поэтому пригодны и для тестов, и для игры.
 
+// ============================================================
+// Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка навыка в диалогах.
+// «При диалоге игрока с НПЦ, при проверках навыков, ВСЕГДА сравниваются
+//  параметры навыка игрока с ТАКИМ ЖЕ параметром НПЦ + сложность проверки».
+//
+// Формула: сопротивление НПЦ = навык НПЦ + сложность.
+// Эффективный навык игрока = навык игрока − (сопротивление − 50).
+//   • у «среднего» жителя (сопротивление 50) и сложности 0 — обычная проверка;
+//   • умелый житель (60) — штраф −10 к проверке игрока;
+//   • простак (30) — бонус +20.
+// ============================================================
+export const OPPOSED_STANDARD_RESISTANCE = 50; // «средний житель»
+
+export function opposedSkillCheck(playerSkill, npcResistance, difficulty = 0) {
+    const p = Math.max(1, Math.min(99, Math.round(playerSkill || 1)));
+    const d = Math.round(difficulty || 0);
+    const base = Math.max(0, Math.round(npcResistance || 0));      // сам параметр НПЦ
+    const resistance = Math.max(5, Math.min(95, base + d));        // параметр + сложность
+    const penalty = resistance - OPPOSED_STANDARD_RESISTANCE;
+    const effective = Math.max(1, Math.min(99, p - penalty));
+    const res = skillCheck(effective);
+    return {
+        ...res,
+        playerSkill: p,
+        npcBase: base,
+        npcResistance: resistance,
+        difficulty: d,
+        penalty,
+        effective,
+    };
+}
+
+// Короткая подпись проверки для диалогов/летописи:
+// «бросок 22: Убеждение 45 против (Упорство жителя 40 +10 сложности) — успех»
+export function formatOpposedCheck(res, playerSkillName, npcSkillName) {
+    if (!res || res.playerSkill == null) return '';
+    const sign = res.difficulty > 0 ? `+${res.difficulty}` : `${res.difficulty}`;
+    const diffPart = res.difficulty ? ` ${sign} сложности` : '';
+    return `бросок ${res.roll}: ${playerSkillName} ${res.playerSkill}` +
+        ` против (${npcSkillName} ${res.npcBase != null ? res.npcBase : res.npcResistance}${diffPart})` +
+        ` — ${res.result === 'critical' ? 'ОСОБЫЙ УСПЕХ' : res.result === 'success' ? 'успех' : res.result === 'fumble' ? 'провал (fumble)' : 'провал'}`;
+}
+
 // Бросок d100: 1..100
 export function d100() {
     return 1 + Math.floor(Math.random() * 100);

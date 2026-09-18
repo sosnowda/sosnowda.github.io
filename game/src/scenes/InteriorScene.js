@@ -28,6 +28,8 @@ import {
     getSmithNpcId, // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели мастера
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
+// Раунд 47 (п.3 заявки): у каждого жителя — параметры как у игрока (видны в доме)
+import { formatNpcStatsLine } from '../data/npcStats.js';
 // Раунд 39 (п.13): STASHES/тюки/сундуки/ларцы удалены из игры целиком
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
 import { attachChurchBells } from '../systems/ChurchBells.js';
@@ -249,6 +251,18 @@ export class InteriorScene extends Phaser.Scene {
                 fontSize: '16px', color: RUS.text,
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(20);
+            // Раунд 47 (п.3 заявки): ПАРАМЕТРЫ ЖИТЕЛЯ — как у игрока (упрощённые):
+            // характеристики BRP, здоровье и только используемые навыки.
+            const statsLine = formatNpcStatsLine(this.npcData);
+            if (statsLine) {
+                this.add.text(this.npcSprite.x, this.npcSprite.y + 104, statsLine, {
+                    fontSize: '10px', color: '#c9a14a', align: 'center',
+                    fontFamily: 'Georgia, serif', lineSpacing: 3,
+                    backgroundColor: '#000000aa', padding: { x: 6, y: 4 },
+                    stroke: '#000', strokeThickness: 1,
+                    wordWrap: { width: width * 0.52 },
+                }).setOrigin(0.5, 0).setDepth(20);
+            }
             // П.7: Подсказка «нажмите, чтобы поговорить»
             this.add.text(this.npcSprite.x, this.npcSprite.y - 80, t('💬 Нажми, чтобы поговорить'), {
                 fontSize: '11px', color: '#c9a14a',
@@ -454,7 +468,9 @@ export class InteriorScene extends Phaser.Scene {
             // НПЦ противоположного пола (возраст НПЦ ≥ 18).
             // Раунд 44 (п.7): и только НЕ состоящими в браке (замужних/женатых
             // сразу не показываем — ранее отказ выдавался уже в canMarry).
-            if (this.npcData && this.npcData.gender !== player.gender && (this.npcData.age || 0) >= getAgeOfMajority() && !this.npcData.married && npcRepValue >= 50 && villageRepValue >= 30) {
+            // Раунд 47 (п.1): и при НЕЖЕНАТОМ герое (брак — не победа, второй раз
+            // не венчают; кнопка у женатого игрока не показывается вовсе).
+            if (this.npcData && !player.married && this.npcData.gender !== player.gender && (this.npcData.age || 0) >= getAgeOfMajority() && !this.npcData.married && npcRepValue >= 50 && villageRepValue >= 30) {
                 buttons.push({ label: t('\u{1F48D} Свататься'), bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.proposeMarriage(interior) });
             }
             if (interior.id === 'tavern') {
@@ -605,7 +621,10 @@ export class InteriorScene extends Phaser.Scene {
     askMoneyFromNpc(interior) {
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
         const result = askMoneyForHelp(this.registry, interior.npcId, npcName);
-        createDialog(this, 'Просьба о деньгах', result.message, [
+        // Раунд 47 (п.4): показываем ВСТРЕЧУЮ проверку Убеждения:
+        // «бросок 22: Убеждение 45 против (Упорство жителя 35 + 10 сложности) — успех»
+        const text = result.checkLine ? `${result.message}\n(${result.checkLine})` : result.message;
+        createDialog(this, 'Просьба о деньгах', text, [
             { text: 'Понятно', callback: () => {} },
         ], {
             singleton: false,
@@ -824,7 +843,10 @@ export class InteriorScene extends Phaser.Scene {
         const oratorySkill = player.skills.oratory || 15;
         const result = applyCompliment(this.registry, interior.npcId, oratorySkill);
         
-        createDialog(this, 'Похвала', `${npcName}: ${result.message} (бросок ${result.roll}, ${result.bonus > 0 ? '+' : ''}${result.bonus} репутации)`, [
+        // Раунд 47 (п.4): в диалоге видна ВСТРЕЧАЯ проверка:
+        // «бросок 22: Красноречие 45 против (Красноречие жителя 40) — успех»
+        const checkNote = result.checkLine ? `\n(${result.checkLine})` : ` (бросок ${result.roll})`;
+        createDialog(this, 'Похвала', `${npcName}: ${result.message}${checkNote}\n${result.bonus > 0 ? '+' : ''}${result.bonus} репутации`, [
             { text: 'Понятно', callback: () => {} },
         ], {
             singleton: false,
@@ -841,6 +863,8 @@ export class InteriorScene extends Phaser.Scene {
         const playerGender = player.gender || 'male';
         
         const result = applyThreat(this.registry, interior.npcId, intimidateSkill, playerGender);
+        // Раунд 47 (п.4): в диалоге видна ВСТРЕЧАЯ проверка Запугивания
+        const checkNote = result.checkLine ? `\n(${result.checkLine})` : '';
         
         // П.8: При успехе — NPC может выдать деньги или предмет
         if (result.success) {
@@ -850,7 +874,7 @@ export class InteriorScene extends Phaser.Scene {
             this.registry.set('player', player);
             ActionLog.add(this.registry, `Угрозой вымогал ${loot} д. у ${npcName} (бросок ${result.roll}).`);
             createDialog(this, 'Угроза',
-                `${result.message}\n\nПолучено: ${loot} д.\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})`,
+                `${result.message}\n\nПолучено: ${loot} д.\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})${checkNote}`,
                 [{ text: 'Понятно', callback: () => {} }],
                 { singleton: false, portraitKey: this.npcPortraitKey,
                   typing: true, typingSpeed: 30 }
@@ -858,7 +882,7 @@ export class InteriorScene extends Phaser.Scene {
         } else if (result.willAttack) {
             // NPC нападает
             createDialog(this, 'Угроза — нападение!',
-                `${result.message}\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})`,
+                `${result.message}\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})${checkNote}`,
                 [{ text: 'Драться!', callback: () => {
                     // Раунд 40 (QA-фикс): переход в бой — на следующий кадр,
                     // вне стека обработчика клика (иначе зависание цикла Phaser)
@@ -870,7 +894,7 @@ export class InteriorScene extends Phaser.Scene {
             );
         } else {
             createDialog(this, 'Угроза',
-                `${result.message}\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})`,
+                `${result.message}\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})${checkNote}`,
                 [{ text: 'Понятно', callback: () => {} }],
                 { singleton: false, portraitKey: this.npcPortraitKey,
                   typing: true, typingSpeed: 30 }
@@ -941,27 +965,29 @@ export class InteriorScene extends Phaser.Scene {
                 callback: () => {
                     const result = marry(this.registry, interior.npcId, player);
                     if (result.success) {
-                        // Свадьба состоялась — ВЫИГРЫШ
+                        // Раунд 47 (п.1 заявки): свадьба — СОБЫТИЕ ЖИЗНИ, а не
+                        // ВЫИГРЫШ. Раньше здесь ставился q.thiefDefeated и игра
+                        // уходила в EndScene («ВОР ПОВЕРЖЕН» вместо свадьбы,
+                        // а Проигрыш перебивался победным флагом). Теперь игра
+                        // ПРОДОЛЖАЕТСЯ: герой просто женат/замужем в деревне.
                         const winMessage = `🎉 СВАДЬБА! 🎉\n\n` +
                             `По обычаям Руси, отец Савватий обвенчал вас в церкви. ` +
                             `Вся деревня гуляла три дня на свадебном пиру!\n\n` +
                             `${player.name} и ${result.npcName} теперь — муж и жена.\n` +
                             `${heroIsF ? 'Ты принята в деревню как своя!' : 'Ты принят в деревню как свой!'}\n\n` +
-                            `ИГРА УСПЕШНО ЗАВЕРШЕНА!`;
+                            `Жизнь в деревне продолжается!`;
                         
                         createDialog(this, '🎉 СВАДЬБА', winMessage, [
                             {
-                                text: '🎉 Финал',
+                                text: '🎉 Продолжить игру',
                                 callback: () => {
-                                    const q = this.registry.get('quest');
-                                    q.thiefDefeated = true; // флаг победы для EndScene
+                                    const q = this.registry.get('quest') || {};
+                                    // Никаких победных флагов — только семейный статус
                                     q.currentObjective = heroIsF
-                                        ? 'Вышла замуж и принята в деревню! Победа!'
-                                        : 'Женился и принят в деревню! Победа!';
+                                        ? `Ты замужем за ${result.npcName}. Живи и обустраивай жизнь в деревне!`
+                                        : `Ты женат на ${result.npcName}. Живи и обустраивай жизнь в деревне!`;
                                     this.registry.set('quest', q);
-                                    this.scene.stop();
-                                    this.scene.resume(this.from);
-                                    this.scene.getScene(this.from).scene.start('End');
+                                    // Остались в интерьере — игра идёт дальше
                                 },
                             },
                         ], {

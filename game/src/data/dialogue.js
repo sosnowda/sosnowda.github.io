@@ -8,7 +8,7 @@
 //   хлеб ржаной (каравай) — 1 деньга, вода (бурдюк) — 1 деньга;
 //   постоялый двор — 2 деньги с человека за ночь.
 
-import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, checkGameEnd, chaseTicksLeft } from './thief.js';
+import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, checkGameEnd, chaseTicksLeft, inheritThiefKnowledge } from './thief.js';
 import { ActionLog } from './actionLog.js';
 import { tickTime, getTime } from '../systems/TimeSystem.js';
 import { t, tf } from '../systems/i18n.js';
@@ -23,7 +23,15 @@ import { getViraCandidates, calculateVira, payViraToElder } from './reputation.j
  */
 function withAskThief(scene, npcId, others, position = 1) {
     const q = scene.registry.get('quest') || {};
-    const asked = (q.thiefAskedFrom || []).includes(npcId);
+    // Раунд 47 (п.2 заявки): наводка НЕ пропадает со смертью кузнеца —
+    // его знание наследует ученик (мастер убирается из «уже расспрашивали»,
+    // опция «Спросить про вора» снова появляется — уже от имени ученика).
+    if (npcId === 'blacksmith') inheritThiefKnowledge(scene.registry);
+    // Опция скрыта, если рассказывал сам мастер — ИЛИ уже ученик
+    // (его собственная запись 'apprentice', раунд 47)
+    const askedList = q.thiefAskedFrom || [];
+    const asked = askedList.includes(npcId)
+        || (npcId === 'blacksmith' && askedList.includes('apprentice'));
     const list = others.map(c => ({ ...c }));
     if (!asked) {
         list.splice(Math.min(position, list.length), 0, { text: t('Спросить про вора'), next: 'ask_thief' });
