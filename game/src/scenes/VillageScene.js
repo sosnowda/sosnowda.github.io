@@ -18,7 +18,7 @@ import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/TimeSystem.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
-import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear } from '../systems/RusTime.js';
+import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear, MONTH_NAMES, MONTH_NAMES_GEN } from '../systems/RusTime.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
@@ -517,7 +517,8 @@ export class VillageScene extends Phaser.Scene {
             fontSize: '11px', color: RUS.text,
             fontFamily: 'Arial, sans-serif',
             stroke: '#000', strokeThickness: 1,
-            wordWrap: { width: this.scale.width - 220 },
+            // ФИКС аудита: wordWrap здесь давал невидимый перенос под тёмный бар —
+            // строка теперь ужимается по ширине в updateHUD (см. maxStatusW)
         }).setScrollFactor(0).setDepth(101);
         // Раунд 29: клик по статус-бару открывает «Летопись» (полная датировка)
         this.statusText.setInteractive({ useHandCursor: true });
@@ -1505,7 +1506,45 @@ export class VillageScene extends Phaser.Scene {
         // Раунд 46 (п.9 заявки): репутация игрока в деревне — в статус-баре
         // деревни, с явной подписью (раньше была только безымянная звезда ⭐).
         statusLine += `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}`;
+
+        // ФИКС аудита UI (этот раунд): длинная строка статуса наезжала на кнопки
+        // меню «Обзор/Задания/Персонаж/Инвентарь» (правая зона ~430px) — хвост
+        // «⭐Деревня: 0» прятался под кнопкой. Теперь при нехватке ширины строка
+        // ужимается по уровням: без народного ориентира → короткая дата → совсем
+        // без часов; HP, деньги, счётчик действий и репутация деревни не скрываются.
         this.statusText.setText(statusLine);
+        const maxStatusW = this.scale.width - 450;
+        let statusTooLong = this.statusText.width > maxStatusW;
+        if (statusTooLong && timeState) {
+            const icon = this.weather ? ` ${this.weather.icon}` : '';
+            const rep = `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}`;
+            const act = ticksLeft > 0 ? `  ${tf(t('⏳{0}действ.'), ticksLeft)}` : '';
+            const candidates = [
+                // 1) без народного ориентира (« · заутреня отошла»)
+                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${formatDateRus(timeState)}${icon}` +
+                `  🕐${slavonicHourLine(timeState)}${act}${rep}`,
+                // 2) без дня недели и года от Р.Х.
+                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${timeState.day}-й ${MONTH_NAMES_GEN[timeState.month] || ''}, лето ${eraYear(timeState)}-е${icon}${act}${rep}`,
+                // 3) дата в одну строку без часов
+                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${timeState.day} ${MONTH_NAMES[timeState.month] || ''}, лето ${eraYear(timeState)}-е${icon}${act}${rep}`,
+            ];
+            let chosen = null;
+            for (const cand of candidates) {
+                this.statusText.setText(cand);
+                if (this.statusText.width <= maxStatusW) { chosen = cand; break; }
+            }
+            if (chosen) {
+                statusTooLong = false;
+            } else {
+                // Крайний случай очень узкого окна — полная строка мелким шрифтом
+                this.statusText.setText(statusLine);
+            }
+        }
+        if (statusTooLong) {
+            this.statusText.setStyle({ fontSize: '10px' });
+        } else if (this.statusText.style.fontSize !== '11px') {
+            this.statusText.setStyle({ fontSize: '11px' });
+        }
         
         // Обновляем overlay дня/ночи
         if (timeState) {

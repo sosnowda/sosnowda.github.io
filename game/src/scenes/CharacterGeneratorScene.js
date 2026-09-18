@@ -38,6 +38,65 @@ const catLabel = (cat) => t(CAT_LABELS[cat] || cat);
 
 const CAT_ORDER = ['body', 'eyes', 'beards', 'hair', 'legs', 'feet', 'torso'];
 
+// ФИКС аудита локализации (этот раунд): панель опций показывала сырые куски
+// английских ID ассетов («male white», «bright green») — против правила
+// «игровой текст только на русском». Ниже — полный словарь перевода по
+// всем категориям manifest.json.
+const RU_TONE = {
+    amber: 'янтарная', base: 'натуральная', black: 'тёмная', blue: 'синеватая',
+    bright_green: 'ярко-зелёная', bronze: 'бронзовая', brown: 'коричневая',
+    dark: 'смуглая', dark_green: 'тёмно-зелёная', green: 'зелёная',
+    lavender: 'сиреневая', light: 'светлая', olive: 'оливковая',
+    pale_green: 'бледно-зелёная', tan: 'загорелая', taupe: 'серо-бурая',
+    white: 'белая', zombie: 'мертвая', zombie_green: 'гнилая',
+    fur_black: 'шерсть чёрная', fur_brown: 'шерсть бурая', fur_copper: 'шерсть медная',
+    fur_gold: 'шерсть золотистая', fur_grey: 'шерсть серая', fur_tan: 'шерсть рыжая',
+    fur_white: 'шерсть белая',
+};
+const RU_EYES = {
+    blue: 'синие', brown: 'карие', gray: 'серые', green: 'зелёные',
+    orange: 'оранжевые', purple: 'фиолетовые', red: 'красные', yellow: 'жёлтые',
+};
+const RU_HAIR = {
+    bangslong: 'длинная с чёлкой', bangslong2: 'длинная с чёлкой II',
+    bunches: 'с хвостиками', long_messy: 'длинная растрёпанная',
+    long_messy2: 'длинная растрёпанная II', loose: 'распущенная',
+    messy1: 'растрёпанная', mop: 'шапкой', swoop: 'набок', wavy: 'волнистая',
+};
+const RU_HAIR_COLOR = {
+    black: 'чёрные', blonde: 'светлые', chestnut: 'каштановые',
+    dark_brown: 'тёмно-каштановые', white: 'седые',
+};
+const RU_BEARD = {
+    beard_5oclock_shadow: 'щетина', beard_basic: 'густая', beard_medium: 'средняя',
+    beard_trimmed: 'подстриженная', beard_winter: 'окладистая',
+    mustache_bigstache: 'пышные усы',
+};
+const RU_BEARD_COLOR = {
+    black: 'чёрная', blonde: 'светлая', chestnut: 'каштановая',
+    dark_brown: 'тёмно-каштановая', white: 'седая',
+};
+const RU_LEG_TYPE = {
+    cuffed: 'с отворотами', female: 'дамские', leggings: 'легинсы',
+    male: 'простые', pants: 'портки', shorts_shorts: 'шорты',
+    skirts_legion: 'юбка-легион', skirts_plain: 'простая юбка', teen: 'подростковые',
+};
+const RU_FOOT_TYPE = {
+    boots: 'сапоги', female: 'дамские туфли', hoofs: 'копыта',
+    male: 'лапти', shoes2: 'туфли', slippers: 'обмотки',
+};
+const RU_TORSO_TYPE = {
+    longsleeve_formal_striped: 'нарядная в полоску', longsleeve_formal: 'нарядная',
+    longsleeve_laced: 'шнурованная с рукавами', longsleeve_longsleeve: 'простая с рукавами',
+    shortsleeve_shortsleeve: 'с коротким рукавом', sleeveless_laced: 'шнурованная безрукавка',
+    vest: 'безрукавка', vest_open: 'расстёгнутая безрукавка',
+};
+const RU_CLOTH_COLOR = {
+    charcoal: 'тёмно-серые', forest: 'тёмно-зелёные', maroon: 'бордовые',
+    tan: 'бежевые', white: 'белые', black: 'чёрные', blue: 'синие',
+    brown: 'коричневые', gray: 'серые', green: 'зелёные', olive: 'оливковые',
+};
+
 export class CharacterGeneratorScene extends Phaser.Scene {
     constructor() {
         super('CharacterGenerator');
@@ -117,7 +176,9 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         // Рамка под превью
         this.add.rectangle(this.previewX, this.previewY, narrow ? 200 : 280, narrow ? 200 : 280, 0x1a140e, 0.9)
             .setStrokeStyle(2, RUS.border);
-        this.add.text(this.previewX, this.previewY - (narrow ? 105 : 145), t('Предпросмотр'), {
+        // ФИКС аудита UI: подпись «Предпросмотр» наезжала на верхнюю грань
+        // рамки — поднят выше рамки с зазором
+        this.add.text(this.previewX, this.previewY - (narrow ? 118 : 160), t('Предпросмотр'), {
             fontSize: '14px', color: RUS.textDim,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
@@ -362,12 +423,57 @@ export class CharacterGeneratorScene extends Phaser.Scene {
     }
 
     shortLabel(optName) {
-        // body_male_white → "white (male)"
-        // hair_long_blonde → "long blonde"
+        // ФИКС аудита локализации: русские подписи опций вместо кусков
+        // английских ID ассетов (body_male_white → «белая (муж.)»).
         const parts = optName.split('_');
-        if (parts.length >= 2) {
-            return parts.slice(-2).join(' ');
+        const colorRu = (arr, def) => (arr && arr[def]) || def;
+        if (this.activeCategory === 'body') {
+            // body_male_white / body_female_fur_gold
+            const sex = parts[0] === 'female' ? 'жен.' : 'муж.';
+            const toneKey = parts.slice(1).join('_');
+            return `${RU_TONE[toneKey] || toneKey} (${sex})`;
         }
+        if (this.activeCategory === 'eyes') {
+            // human_blue / human_adult_red
+            const color = parts[parts.length - 1];
+            const adult = parts.includes('adult') ? ' (взрослый взгляд)' : '';
+            return `${colorRu(RU_EYES, color)}${adult}`;
+        }
+        if (this.activeCategory === 'hair') {
+            // long_messy2_dark_brown: тип = всё кроме цвета, цвет = последний
+            const color = parts[parts.length - 1];
+            const type = parts.slice(0, -1).join('_');
+            return `${RU_HAIR[type] || type}, ${colorRu(RU_HAIR_COLOR, color)}`;
+        }
+        if (this.activeCategory === 'beards') {
+            const color = parts[parts.length - 1];
+            const type = parts.slice(0, -1).join('_');
+            return `${RU_BEARD[type] || type}, ${colorRu(RU_BEARD_COLOR, color)}`;
+        }
+        if (this.activeCategory === 'legs') {
+            // pants_maroon / skirts_legion_charcoal / shorts_shorts_white
+            const color = parts[parts.length - 1];
+            const type = parts.slice(0, -1).join('_');
+            return `${RU_LEG_TYPE[type] || type}, ${colorRu(RU_CLOTH_COLOR, color)}`;
+        }
+        if (this.activeCategory === 'feet') {
+            const color = parts[parts.length - 1];
+            const type = parts.slice(0, -1).join('_');
+            return `${RU_FOOT_TYPE[type] || type}, ${colorRu(RU_CLOTH_COLOR, color)}`;
+        }
+        if (this.activeCategory === 'torso') {
+            // longsleeve_formal_striped_white: тип = всё кроме цвета
+            const color = parts[parts.length - 1];
+            const type = parts.slice(0, -1).join('_');
+            const typeName = RU_TORSO_TYPE[type] || type;
+            const ruColor = RU_CLOTH_COLOR[color];
+            // Цвет согласуется с родом слова-типа: «нарядная в полоску, белая»
+            const femEnd = /а$|я$/.test(typeName);
+            const femColors = { 'тёмно-серые': 'тёмно-серая', 'тёмно-зелёные': 'тёмно-зелёная', 'бордовые': 'бордовая', 'бежевые': 'бежевая', 'белые': 'белая', 'чёрные': 'чёрная', 'синие': 'синяя', 'коричневые': 'коричневая', 'серые': 'серая', 'зелёные': 'зелёная', 'оливковые': 'оливковая' };
+            return `${typeName}, ${femEnd && femColors[ruColor] ? femColors[ruColor] : ruColor || color}`;
+        }
+        // запасной путь (как раньше)
+        if (parts.length >= 2) return parts.slice(-2).join(' ');
         return optName;
     }
 

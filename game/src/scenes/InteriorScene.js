@@ -141,15 +141,22 @@ export class InteriorScene extends Phaser.Scene {
             .setOrigin(0, 0).setDepth(-10);
 
         // ----- Заголовок интерьера -----
-        this.add.text(width / 2, 20, interior.name, {
-            fontSize: '24px', color: RUS.text, fontStyle: 'bold',
+        // ФИКС аудита UI (мобильный): длинные названия («Церковь Рождества
+        // Богородицы») при 24px не влезали в 390px и наезжали на компактную
+        // HUD-кнопку «📜» — перенос по ширине и сдвиг под кнопку на узком экране
+        const narrowInterior = width < 640;
+        this.add.text(width / 2, narrowInterior ? 36 : 20, interior.name, {
+            fontSize: narrowInterior ? '18px' : '24px', color: RUS.text, fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 3,
+            align: 'center',
+            wordWrap: { width: width - 60 },
         }).setOrigin(0.5, 0).setDepth(50);
 
         // ----- Описание интерьера -----
         // Раунд 9: перенос по ширине 42% — длинные описания не наезжают на окна
-        this.add.text(20, 60, interior.description, {
+        // ФИКС аудита UI (мобильный): описание сдвинуто под двухстрочный заголовок
+        this.add.text(20, narrowInterior ? 92 : 60, interior.description, {
             fontSize: '14px', color: RUS.textDim,
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 1,

@@ -943,7 +943,11 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         // (раунд 39: без наложений и выхода за панель при любых подписях)
         if (btnRows.length > 0) {
             const rowH = BTN_ROW_H;
-            const btnYBase = totalH / 2 - pad.bottom - 25 - (btnRows.length - 1) * rowH / 2;
+            // ФИКС аудита UI: центр первого ряда должен отступать от низа
+            // панели на (rows-1) ПОЛНЫХ высоты ряда, иначе при 3+ рядах
+            // последний ряд выезжает за нижний край пергамента
+            // (наблюдалось: диалог священника, 5 вариантов — 4 ряда).
+            const btnYBase = totalH / 2 - pad.bottom - 25 - (btnRows.length - 1) * rowH;
             btnRows.forEach((rowIdxs, r) => {
                 const y = btnYBase + r * rowH;
                 const rowW = rowIdxs.reduce((s, bi) => s + getBtnWidth(actionContainers[bi]), 0)

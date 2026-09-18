@@ -241,7 +241,11 @@ export class ForkScene extends Phaser.Scene {
 
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
             .setOrigin(0).setInteractive().setDepth(200);
-        const panelW = 700, panelH = 550;
+        // ФИКС аудита UI: панель карты была жёстко 700×550 — на узких/низких
+        // окнах вылезала за экран, легенда наезжала на кнопку «Закрыть».
+        // Теперь панель вписывается в окно (с полями), узлы масштабируются.
+        const panelW = Math.min(700, width - 20);
+        const panelH = Math.min(550, height - 20);
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x1a2a1a, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
@@ -284,10 +288,16 @@ export class ForkScene extends Phaser.Scene {
         ];
 
         const nodePos = {};
+        // ФИКС аудита UI: радиусы локаций заданы для панели 700×550 —
+        // при вписанной панели масштабируем смещения узлов по обеим осям,
+        // чтобы ни один узел не оказался за границей карты.
+        const kMapX = Math.min(1, panelW / 700);
+        const kMapY = Math.min(1, panelH / 550);
+        const mapScale = Math.min(kMapX, kMapY);
         positions.forEach(pos => {
             const rad = Phaser.Math.DegToRad(pos.angle);
-            const x = cx + Math.cos(rad) * pos.dist;
-            const y = cy + Math.sin(rad) * pos.dist;
+            const x = cx + Math.cos(rad) * pos.dist * mapScale;
+            const y = cy + Math.sin(rad) * pos.dist * mapScale;
             nodePos[pos.id] = { x, y };
             // Линия от деревни к локации (лесная цепочка: только ОПУШКА связана
             // с деревней — единственный вход в лес, п.23 раунда 39)
@@ -341,8 +351,10 @@ export class ForkScene extends Phaser.Scene {
                 tipX - Math.cos(ang + 0.5) * 9, tipY - Math.sin(ang + 0.5) * 9,
             );
         }
-        // Подпись цепочки в углу карты
-        this.add.text(width / 2, height / 2 + panelH / 2 - 66,
+        // Подпись цепочки леса — ПОД ЗАГОЛОВКОМ карты (фикс аудита UI: легенда
+        // в нижней части наезжала на узлы «Погост»/«Тракт» и кнопку «Закрыть»;
+        // под заголовком место свободно — узлы начинаются с середины панели)
+        this.add.text(width / 2, height / 2 - panelH / 2 + 44,
             t('🌲 Лес — единая локация цепочкой: вход через Опушку → Поляна → Густой лес; выход последовательно.'), {
             fontSize: '11px', color: '#9dbb86', fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 1,

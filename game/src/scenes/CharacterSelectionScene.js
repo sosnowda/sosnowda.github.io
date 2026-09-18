@@ -17,7 +17,7 @@ import { initTime, createRandomStartDate } from '../systems/TimeSystem.js';
 import { initNpcNames } from '../data/npcNames.js';
 import { initReputation } from '../data/reputation.js';
 import AudioManager from '../systems/AudioManager.js';
-import { t, tf } from '../systems/i18n.js';
+import { t } from '../systems/i18n.js';
 import { ageUnitWord } from '../systems/AgeRules.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
@@ -46,7 +46,9 @@ export class CharacterSelectionScene extends Phaser.Scene {
         }).setOrigin(0.5, 0);
 
         // Кнопка "Случайный персонаж"
-        createButton(this, width / 2, 90, t('🎲 Случайный персонаж'), () => {
+        // ФИКС аудита UI: кнопка стояла на y=90 и её верхний край касался
+        // низа заголовка — опущена на y=100
+        createButton(this, width / 2, 100, t('🎲 Случайный персонаж'), () => {
             this.showRandomGenerator();
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
@@ -54,41 +56,48 @@ export class CharacterSelectionScene extends Phaser.Scene {
         });
 
         // Кнопка "Свой персонаж (LPC)" — переход в CharacterGenerator
-        createButton(this, width / 2 + 280, 90, t('🎨 Свой облик'), () => {
+        createButton(this, width / 2 + 280, 100, t('🎨 Свой облик'), () => {
             this.scene.start('CharacterGenerator');
         }, {
             backgroundColor: 0x4a3a5a, hoverColor: 0x5a4a6a, textColor: RUS.text,
             fontSize: 14, padding: { left: 18, right: 18, top: 12, bottom: 12 },
         });
 
-        // 8 готовых героев в сетке 4×2 (4 архетипа × 2 пола)
-        const cardW = 240;
-        const cardH = 252;
+        // 8 готовых героев в сетке (4 архетипа × 2 пола).
+        // ФИКС аудита UI: сетка была жёстко 4×240px = 1008px — на узких окнах
+        // карточки вылезали за края; второй ряд уходил под подсказку при низких
+        // окнах. Теперь число колонок по ширине, карточки сжимаются по высоте.
+        const cols = width >= 1100 ? 4 : 2;
+        const cardW = Math.min(240, Math.floor((width - 40 - (cols - 1) * 16) / cols));
+        const startY = 148;
+        const rows = Math.ceil(PRESET_HEROES.length / cols);
+        const availH = Math.max(300, height - startY - 76);
+        const cardH = Phaser.Math.Clamp(Math.floor(availH / rows) - 16, 130, 252);
         const gapX = 16;
         const gapY = 16;
-        const cols = 4;
         const totalW = cardW * cols + gapX * (cols - 1);
         const startX = (width - totalW) / 2 + cardW / 2;
-        const startY = 256;
 
         PRESET_HEROES.forEach((hero, i) => {
             const col = i % cols;
             const row = Math.floor(i / cols);
             const x = startX + col * (cardW + gapX);
-            const y = startY + row * (cardH + gapY);
+            // startY — ВЕРХ сетки; контейнер карточки центрируется, поэтому
+            // первый ряд сдвинут на cardH/2 (фикс: карточки перекрывали заголовок)
+            const y = startY + cardH / 2 + row * (cardH + gapY);
             this.drawHeroCard(x, y, cardW, cardH, hero, () => {
                 this.selectHero(hero, false);
             });
         });
 
         // Подсказка снизу
-        this.add.text(width / 2, height - 56, t('Выберите готового героя или сгенерируйте случайного'), {
+        this.add.text(width / 2, height - 60, t('Выберите готового героя или сгенерируйте случайного'), {
             fontSize: '14px', color: RUS.textDim,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
 
         // Кнопка "Назад"
-        createButton(this, 100, height - 26, t('◀ Назад'), () => {
+        createButton(this, 100, height - 24, t('◀ Назад'), () => {
             this.scene.start('Title');
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
@@ -101,6 +110,9 @@ export class CharacterSelectionScene extends Phaser.Scene {
      */
     drawHeroCard(x, y, w, h, hero, onClick) {
         const container = this.add.container(x, y);
+        // ФИКС аудита UI: при сжатых карточках (узкие/низкие окна) —
+        // компактная раскладка текстов, без пересечений
+        const compact = h < 220;
 
         // Фон карточки
         const bg = this.add.rectangle(0, 0, w, h, 0x241B15, 0.95)
@@ -108,51 +120,61 @@ export class CharacterSelectionScene extends Phaser.Scene {
         container.add(bg);
 
         // Заголовок-архетип
-        const title = this.add.text(0, -h / 2 + 25, t(hero.archetype), {
-            fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
+        const title = this.add.text(0, -h / 2 + (compact ? 18 : 25), t(hero.archetype), {
+            fontSize: compact ? '17px' : '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
         container.add(title);
 
         // Имя
-        const name = this.add.text(0, -h / 2 + 55, hero.name + (hero.gender === 'female' ? ' ♀' : ' ♂'), {
-            fontSize: '16px', color: RUS.text,
+        const name = this.add.text(0, -h / 2 + (compact ? 40 : 55), hero.name + (hero.gender === 'female' ? ' ♀' : ' ♂'), {
+            fontSize: compact ? '13px' : '16px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
         container.add(name);
 
-        // Описание
-        const desc = this.add.text(0, -h / 2 + 90, t(hero.description), {
-            fontSize: '12px', color: RUS.textDim,
-            wordWrap: { width: w - 20 }, align: 'center',
-            stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5, 0);
-        container.add(desc);
+        // Описание (в компактных карточках скрывается — навыки и снаряжение важнее)
+        let descH = 0;
+        if (!compact) {
+            const desc = this.add.text(0, -h / 2 + 90, t(hero.description), {
+                fontSize: '12px', color: RUS.textDim,
+                wordWrap: { width: w - 20 }, align: 'center',
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0.5, 0);
+            container.add(desc);
+            descH = desc.height;
+        }
 
         // Ключевые навыки (3 верхних) — старт строго после фактической высоты описания
         const topSkills = Object.entries(hero.skillOverrides)
             .sort((a, b) => b[1] - a[1]).slice(0, 3);
-        let skillY = -h / 2 + 90 + desc.height + 14;
+        const skillFont = compact ? 10 : 13;
+        const skillStep = compact ? 15 : 18;
+        let skillY = -h / 2 + (compact ? 56 : 90) + descH + 14;
         topSkills.forEach(([key, val]) => {
             const skillDef = SKILLS.find(s => s.key === key);
             if (skillDef) {
                 const txt = this.add.text(0, skillY, `${t(skillDef.name)}: ${val}%`, {
-                    fontSize: '13px', color: RUS.text,
+                    fontSize: `${skillFont}px`, color: RUS.text,
                     stroke: '#000', strokeThickness: 1,
                 }).setOrigin(0.5);
                 container.add(txt);
-                skillY += 18;
+                skillY += skillStep;
             }
         });
 
-        // Стартовое снаряжение
+        // Стартовое снаряжение (в компактных карточках — одной строкой,
+        // чтобы не пересекалось с третьим навыком)
         const armor = ARMORS[hero.startArmor];
         const weapon = WEAPONS[hero.startWeapon];
-        const gear = this.add.text(0, h / 2 - 26,
-            `⚔ ${t(weapon.name)}\n🛡 ${t(armor.name)}`, {
-            fontSize: '12px', color: '#c9a14a', align: 'center',
+        const gear = this.add.text(0, h / 2 - (compact ? 16 : 26),
+            compact
+                ? `⚔ ${t(weapon.name)} · 🛡 ${t(armor.name)}`
+                : `⚔ ${t(weapon.name)}\n🛡 ${t(armor.name)}`, {
+            fontSize: compact ? '9px' : '12px', color: '#c9a14a', align: 'center',
             stroke: '#000', strokeThickness: 1,
+            wordWrap: compact ? { width: w - 14 } : undefined,
         }).setOrigin(0.5);
         container.add(gear);
 
@@ -180,8 +202,11 @@ export class CharacterSelectionScene extends Phaser.Scene {
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
             .setOrigin(0).setInteractive().setDepth(200);
 
-        // Панель
-        const panelW = 600, panelH = 500;
+        // Панель — ФИКС аудита UI: была жёстко 600×500, вылезала на узких окнах;
+        // подписи кнопок укорочены (только имя паттерна) — длинные строки
+        // «Боевой — Высокие STR/CON…» не влезали в узкую панель
+        const panelW = Math.min(600, width - 20);
+        const panelH = Math.min(500, height - 16);
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
@@ -195,13 +220,15 @@ export class CharacterSelectionScene extends Phaser.Scene {
             fontSize: '16px', color: RUS.text,
         }).setOrigin(0.5).setDepth(202);
 
-        // Кнопки паттернов
+        // Кнопки паттернов — с описанием под кнопкой (не в подписи кнопки)
         const patterns = GENERATION_PATTERNS;
-        const btnY = height / 2 - panelH / 2 + 110;
-        const btnH = 60;
+        const btnH = 40;
+        const descStep = 20;
+        const slotH = btnH + descStep + 8;
+        const startY0 = height / 2 - panelH / 2 + 100;
         patterns.forEach((p, i) => {
-            const y = btnY + i * (btnH + 8);
-            createButton(this, width / 2, y, tf('{0} — {1}', t(p.name), t(p.desc)), () => {
+            const y = startY0 + i * slotH;
+            createButton(this, width / 2, y, t(p.name), () => {
                 const hero = createRandomHero(p.id);
                 this.selectedHero = hero;
                 overlay.destroy();
@@ -211,8 +238,13 @@ export class CharacterSelectionScene extends Phaser.Scene {
                 this.showHeroPreview(hero);
             }, {
                 backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
-                fontSize: 14, padding: { left: 16, right: 16, top: 8, bottom: 8 },
+                fontSize: 15, padding: { left: 16, right: 16, top: 8, bottom: 8 },
             }).setDepth(202);
+            // Короткое описание паттерна — под кнопкой
+            this.add.text(width / 2, y + btnH / 2 + 4, t(p.desc), {
+                fontSize: '11px', color: RUS.textDim,
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0.5, 0).setDepth(202);
         });
 
         // Кнопка "Отмена"
@@ -238,24 +270,30 @@ export class CharacterSelectionScene extends Phaser.Scene {
         this._previewOverlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
             .setOrigin(0).setInteractive().setDepth(200);
 
-        // Панель
-        const panelW = 700, panelH = 580;
+        // Панель — ФИКС аудита UI: была жёстко 700×580 (выше окна 577 и
+        // шире мобильного 390). Вписываем в окно; при нехватке высоты —
+        // компакт: навыки в 3 колонки, меньшие шаги.
+        const panelW = Math.min(700, width - 20);
+        const panelH = Math.min(580, height - 16);
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
         this._previewPanel = panel;
+        const compact = panelH < 520;
+        const left = width / 2 - panelW / 2 + 20;   // левый край контента
+        const top = height / 2 - panelH / 2;        // верх панели
 
         // Архетип и пол (+ возраст — раунд 44)
-        this.add.text(width / 2, height / 2 - panelH / 2 + 30,
+        this.add.text(width / 2, top + 30,
             `${hero.archetype} (${hero.gender === 'female' ? 'женщина' : 'мужчина'}${hero.age != null ? `, ${hero.age} ${ageUnitWord(hero.age)}` : ''})`, {
-            fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
+            fontSize: compact ? '18px' : '24px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
 
         // Поле ввода имени (через DOM-элемент, т.к. Phaser не имеет встроенного input)
-        const inputY = height / 2 - panelH / 2 + 80;
-        this.add.text(width / 2 - 200, inputY, 'Имя:', {
-            fontSize: '18px', color: RUS.text,
+        const inputY = top + (compact ? 62 : 80);
+        this.add.text(width / 2 - (compact ? 130 : 200), inputY, 'Имя:', {
+            fontSize: compact ? '14px' : '18px', color: RUS.text,
         }).setOrigin(1, 0.5).setDepth(202);
 
         // Создаём HTML input поверх canvas
@@ -281,88 +319,96 @@ export class CharacterSelectionScene extends Phaser.Scene {
         this._nameInput = input;
 
         // Характеристики
-        const statsY = inputY + 50;
-        this.add.text(width / 2 - 300, statsY, 'Характеристики:', {
-            fontSize: '16px', color: '#C9A961', fontStyle: 'bold',
+        const statsY = inputY + (compact ? 38 : 50);
+        this.add.text(left, statsY, 'Характеристики:', {
+            fontSize: compact ? '13px' : '16px', color: '#C9A961', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5).setDepth(202);
 
         const statsLine1 = CHARACTER_KEYS.slice(0, 4).map(c => `${c.name}: ${hero[c.key]}`).join('  ');
         const statsLine2 = CHARACTER_KEYS.slice(4).map(c => `${c.name}: ${hero[c.key]}`).join('  ');
-        this.add.text(width / 2 - 300, statsY + 22, statsLine1, {
-            fontSize: '14px', color: RUS.text,
+        this.add.text(left, statsY + (compact ? 18 : 22), statsLine1, {
+            fontSize: compact ? '12px' : '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5).setDepth(202);
-        this.add.text(width / 2 - 300, statsY + 44, statsLine2, {
-            fontSize: '14px', color: RUS.text,
+        this.add.text(left, statsY + (compact ? 36 : 44), statsLine2, {
+            fontSize: compact ? '12px' : '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5).setDepth(202);
 
         // Производные
-        const derivY = statsY + 80;
+        const derivY = statsY + (compact ? 58 : 80);
         const derivText = `HP: ${hero.HPmax}   MP: ${hero.MPmax}   Бонус урона: ${hero.DB.text}   Броня: ${hero.armor ? hero.armor.def : 0}`;
         this.add.text(width / 2, derivY, derivText, {
-            fontSize: '15px', color: '#c9a14a',
+            fontSize: compact ? '13px' : '15px', color: '#c9a14a',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setDepth(202);
 
-        // Навыки по категориям
-        const skillsY = derivY + 30;
-        this.add.text(width / 2 - 300, skillsY, 'Навыки:', {
-            fontSize: '16px', color: '#C9A961', fontStyle: 'bold',
+        // Навыки по категориям (при нехватке места — краткая справка,
+        // полный список всегда доступен в свитке персонажа в игре)
+        const skillsY = derivY + (compact ? 22 : 30);
+        this.add.text(left, skillsY, 'Навыки:', {
+            fontSize: compact ? '13px' : '16px', color: '#C9A961', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5).setDepth(202);
 
-        // Группируем навыки по категориям
-        let skillDisplayY = skillsY + 25;
-        const colX1 = width / 2 - 300;
-        const colX2 = width / 2 + 50;
-        let col1Y = skillDisplayY;
-        let col2Y = skillDisplayY;
-        SKILLS.forEach((s, i) => {
-            const val = hero.skills[s.key] || 0;
-            const txt = `${s.name}: ${val}%`;
-            const colObj = SKILL_CATEGORIES[s.category];
-            const color = colObj ? colObj.color : RUS.text;
-            const x = (i % 2 === 0) ? colX1 : colX2;
-            const y = (i % 2 === 0) ? col1Y : col2Y;
-            this.add.text(x, y, txt, {
-                fontSize: '13px', color: color,
+        if (compact) {
+            this.add.text(width / 2, skillsY + 24, t('Навыки героя — в свитке «Персонаж» (по ходу игры).'), {
+                fontSize: '12px', color: RUS.textDim,
                 stroke: '#000', strokeThickness: 1,
-            }).setOrigin(0, 0).setDepth(202);
-            if (i % 2 === 0) col1Y += 18;
-            else col2Y += 18;
-        });
+            }).setOrigin(0.5).setDepth(202);
+        } else {
+            let skillDisplayY = skillsY + 25;
+            const colX1 = left;
+            const colX2 = width / 2 + 50;
+            let col1Y = skillDisplayY;
+            let col2Y = skillDisplayY;
+            SKILLS.forEach((s, i) => {
+                const val = hero.skills[s.key] || 0;
+                const txt = `${s.name}: ${val}%`;
+                const colObj = SKILL_CATEGORIES[s.category];
+                const color = colObj ? colObj.color : RUS.text;
+                const x = (i % 2 === 0) ? colX1 : colX2;
+                const y = (i % 2 === 0) ? col1Y : col2Y;
+                this.add.text(x, y, txt, {
+                    fontSize: '13px', color: color,
+                    stroke: '#000', strokeThickness: 1,
+                }).setOrigin(0, 0).setDepth(202);
+                if (i % 2 === 0) col1Y += 18;
+                else col2Y += 18;
+            });
 
-        // Снаряжение
-        const gearY = col1Y + 20;
-        const weapon = WEAPONS[hero.weaponId] || { name: 'Кулаки' };
-        const armor = ARMORS[hero.armorId] || { name: 'Без доспеха' };
-        this.add.text(width / 2 - 300, gearY, `⚔ Оружие: ${weapon.name}`, {
-            fontSize: '14px', color: RUS.text,
-            stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0, 0.5).setDepth(202);
-        this.add.text(width / 2 - 300, gearY + 22, `🛡 Доспех: ${armor.name}`, {
-            fontSize: '14px', color: RUS.text,
-            stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0, 0.5).setDepth(202);
+            // Снаряжение
+            const gearY = col1Y + 20;
+            const weapon = WEAPONS[hero.weaponId] || { name: 'Кулаки' };
+            const armor = ARMORS[hero.armorId] || { name: 'Без доспеха' };
+            this.add.text(left, gearY, `⚔ Оружие: ${weapon.name}`, {
+                fontSize: '14px', color: RUS.text,
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0, 0.5).setDepth(202);
+            this.add.text(left, gearY + 22, `🛡 Доспех: ${armor.name}`, {
+                fontSize: '14px', color: RUS.text,
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0, 0.5).setDepth(202);
+        }
 
         // Кнопки "Начать игру" и "Отмена"
-        createButton(this, width / 2 - 120, height / 2 + panelH / 2 - 40, 'Начать игру', () => {
+        const btnGap = panelW < 520 ? 100 : 120;
+        createButton(this, width / 2 - btnGap, height / 2 + panelH / 2 - 40, 'Начать игру', () => {
             const customName = this._nameInput.value.trim() || hero.name;
             hero.name = customName;
             this.cleanupPreview();
             this.startGameWithHero(hero);
         }, {
             backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
-            fontSize: 18, padding: { left: 24, right: 24, top: 12, bottom: 12 },
+            fontSize: compact ? 15 : 18, padding: { left: 20, right: 20, top: 10, bottom: 10 },
         }).setDepth(202);
 
-        createButton(this, width / 2 + 120, height / 2 + panelH / 2 - 40, 'Отмена', () => {
+        createButton(this, width / 2 + btnGap, height / 2 + panelH / 2 - 40, 'Отмена', () => {
             this.cleanupPreview();
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
-            fontSize: 18, padding: { left: 24, right: 24, top: 12, bottom: 12 },
+            fontSize: compact ? 15 : 18, padding: { left: 20, right: 20, top: 10, bottom: 10 },
         }).setDepth(202);
     }
 
