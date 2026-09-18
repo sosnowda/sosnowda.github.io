@@ -73,6 +73,11 @@ export const PROFESSIONS_BY_GENDER = {
         { id: 'guard',      name: 'стражник',   femaleName: null },
         { id: 'monk',       name: 'инок',       femaleName: null },
         { id: 'merchant',   name: 'торгарь',    femaleName: 'торгарка' },
+        // Раунд 51 (п.11 заявки): восточная слобода — лавки и ремёсла
+        { id: 'grocer',     name: 'снедник',    femaleName: 'снедница' },
+        { id: 'butcher',    name: 'мясник',     femaleName: 'мясница' },
+        { id: 'shoemaker',  name: 'сапожник',   femaleName: 'сапожница' },
+        { id: 'woodcutter', name: 'дровосек',   femaleName: null },
     ],
     female: [
         { id: 'peasant',    name: 'селянка',    maleName: 'селянин' },
@@ -85,6 +90,12 @@ export const PROFESSIONS_BY_GENDER = {
         { id: 'widow',      name: 'вдова',      maleName: null },
         { id: 'beekeeper',  name: 'пасечница',  maleName: 'пасечник' },  // раунд 27 (п.8)
         { id: 'homemaker',  name: 'хозяйка',    maleName: null },        // раунд 27 (пп.6,9)
+        // Раунд 51 (п.11 заявки): восточная слобода — женские ипостаси профессий
+        { id: 'grocer',     name: 'снедница',   maleName: 'снедник' },
+        { id: 'butcher',    name: 'мясница',    maleName: 'мясник' },
+        { id: 'peddler',    name: 'торгарка',   maleName: 'торгарь' },
+        { id: 'shoemaker',  name: 'сапожница',  maleName: 'сапожник' },
+        { id: 'woodcutter', name: 'дровосечка', maleName: 'дровосек' },
     ],
 };
 
@@ -252,6 +263,15 @@ export function initNpcNames(registry) {
         { id: 'shepherd_boy', gender: 'male',   age: 14, professionId: 'shepherd',   sprite: 'npc_merchant', portrait: 'portrait_boy',        interiorId: 'weaver_house', name: 'Ивашка' },
         { id: 'fisher_wife',  gender: 'female', age: 39, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'fisher_house', name: 'Домна', married: true },
         { id: 'kid9',         gender: 'female', age: 11, professionId: 'child',      sprite: 'npc_elder',    portrait: 'portrait_girl',       interiorId: 'healer_house', name: 'Ульяна' },
+        // Раунд 51 (п.11 заявки): ВОСТОЧНАЯ СЛОБОДА — торговцы рыночного ряда
+        // и жители двух новых деревянных домов. Имена закреплены (торговые
+        // лавки узнаваемы от игры к игре).
+        { id: 'grocer',       gender: 'female', age: 44, professionId: 'grocer',   sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'shop_food', name: 'Прасковья' },
+        { id: 'butcher',      gender: 'male',   age: 48, professionId: 'butcher',   sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'shop_meat', name: 'Потап' },
+        { id: 'peddler',      gender: 'male',   age: 37, professionId: 'merchant',   sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'shop_tools', name: 'Аверьян' },
+        { id: 'shoemaker',    gender: 'male',   age: 43, professionId: 'shoemaker',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'shoemaker_house', name: 'Нефёд', married: true }, // женат на Агафье
+        { id: 'shoemaker_wife', gender: 'female', age: 39, professionId: 'homemaker', sprite: 'npc_elder',   portrait: 'portrait_villager_f', interiorId: 'shoemaker_house', name: 'Агафья', married: true },
+        { id: 'woodcutter',   gender: 'male',   age: 31, professionId: 'woodcutter', sprite: 'npc_soldier',  portrait: 'portrait_peasant',    interiorId: 'woodcutter_house', name: 'Горазд' },
     ];
 
     // Раунд 27: зерно для детерминированной системы присутствия (npcPresence.js)

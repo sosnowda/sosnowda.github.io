@@ -56,6 +56,15 @@ const NPC_ROLE = {
     kid9: 'child',               // Ульяна, внучка знахарки
     // Раунд 46 (п.1): ученик кузнеца живёт расписанием мастера (кузница)
     apprentice: 'blacksmith',
+    // Раунд 51 (п.11 заявки): ВОСТОЧНАЯ СЛОБОДА — торговцы и новые жители.
+    // У КАЖДОЙ лавки СВОЯ профессия — днём хозяин НА МЕСТЕ (place = id лавки),
+    // иначе лавки пустовали бы (расписание 'merchant' гоняет по деревне).
+    grocer: 'grocer',            // снедница Прасковья — в лавке снеди
+    butcher: 'butcher',          // мясник Потап — в мясной лавке
+    peddler: 'peddler',          // торгарь Аверьян — в лавке ремесленника
+    shoemaker: 'shoemaker',      // сапожник Нефёд
+    shoemaker_wife: 'homemaker', // Агафья
+    woodcutter: 'woodcutter',    // дровосек Горазд
 };
 
 // Дети семьи пахаря (видимые НПЦ: гуляют по деревне, работают по-детски)
@@ -64,7 +73,9 @@ export const KIDS = ['kid1', 'kid2', 'kid3', 'kid4', 'kid5', 'kid6', 'kid7', 'ki
 
 // Кто НЕ ходит в таверну (п.11): батюшка при службе, тавернщик всегда там,
 // стражник на страже у ворот, пастухи при стаде, а ДЕТИ — им на постоялый двор нельзя.
-const NO_TAVERN = new Set(['priest', 'tavernkeeper', 'guard', 'child', 'shepherd']);
+// Раунд 51: лавочники (grocer/butcher/peddler) не отлучаются в таверну в
+// рабочие часы — иначе рынок полдня простаивал бы; shoemaker/woodcutter — тоже.
+const NO_TAVERN = new Set(['priest', 'tavernkeeper', 'guard', 'child', 'shepherd', 'grocer', 'butcher', 'peddler', 'shoemaker', 'woodcutter']);
 
 // Базовое расписание по роли: сегмент дня → место.
 // home = «свой интерьер» (у кузнеца это кузница, у тавернщика — двор).
@@ -91,6 +102,13 @@ const BASE_SCHEDULE = {
     carpenter:    { dawn: 'home',    morning: 'home',    noon: 'village', evening: 'home',    dusk: 'home',    night: 'home' }, // Микула днём чинит дворы
     potter:       { dawn: 'home',    morning: 'river',   noon: 'river',   evening: 'home',    dusk: 'home',    night: 'home' }, // Игнат за глиной ходит на Реку
     weaver:       { dawn: 'home',    morning: 'village', noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' }, // Пелагея при стане, отлучается по делу
+    // Раунд 51: восточная слобода. Место лавки = её interiorId — InteriorScene
+    // считает хозяина «на месте», лавка работает весь день.
+    grocer:      { dawn: 'home', morning: 'shop_food', noon: 'shop_food', evening: 'shop_food', dusk: 'home', night: 'home' },
+    butcher:     { dawn: 'home', morning: 'shop_meat', noon: 'shop_meat', evening: 'shop_meat', dusk: 'home', night: 'home' },
+    peddler:     { dawn: 'home', morning: 'shop_tools', noon: 'shop_tools', evening: 'shop_tools', dusk: 'home', night: 'home' },
+    shoemaker:   { dawn: 'home', morning: 'home', noon: 'village', evening: 'home', dusk: 'home', night: 'home' },
+    woodcutter:  { dawn: 'home', morning: 'forest', noon: 'forest', evening: 'home', dusk: 'home', night: 'home' },
 };
 
 // Раунд 31 (п.3): НОЧЬЮ на локациях КРОМЕ ДЕРЕВНИ НИКОГО НЕТ.
@@ -103,6 +121,26 @@ const NIGHT_FORBIDDEN_PLACES = new Set([
 
 // Активности по роли и месту (что видно в подсказках)
 const ACTIVITY = {
+    // Раунд 51: восточная слобода
+    grocer: {
+        shop_food: 'торгует снедью за прилавком', home: 'печёт караваи',
+        village: 'с поклоном торговалась с покупателями',
+    },
+    butcher: {
+        shop_meat: 'рубит тушу и торгует мясом', home: 'колет тушу к утру',
+        village: 'несёт окорок заказчику',
+    },
+    peddler: {
+        shop_tools: 'разложил товар на прилавке', home: 'пересчитывает товар',
+        village: 'приглашал в лавку прохожих',
+    },
+    shoemaker: {
+        home: 'шьёт сапоги у окна', village: 'носит заказы по деревне',
+    },
+    woodcutter: {
+        forest: 'рубит сухостой за околицей', home: 'колет дрова во дворе',
+        village: 'тащит вязанку дров',
+    },
     elder: {
         dawn: 'молится дома', morning: 'решает дела в горнице',
         noon: 'обходит деревню', evening: 'обходит деревню',
@@ -184,6 +222,9 @@ export const PLACE_NAMES = {
     mill: 'на мельнице', apiary: 'на пасеке', lake: 'у озера',
     river: 'на реке', forest: 'в лесу', field: 'в поле',
     gate: 'у ворот', church: 'в церкви', pasture: 'на выпасе',
+    // Раунд 51: восточная слобода
+    shop_food: 'в лавке снеди', shop_meat: 'в мясной лавке',
+    shop_tools: 'в лавке ремесленника',
 };
 
 // Короткие уличные реплики для NPC без полного дерева диалогов
@@ -215,6 +256,13 @@ export const OUTDOOR_LINES = {
     kid9: '«Бабушка лечит всю деревню, а меня учит травы разбирать. Эта — от живота, эта — от тоски!»',
     // Раунд 46 (п.1): ученик кузнеца — на улице (по расписанию мастера)
     apprentice: '«Мастер мой к Богу отошёл... Теперь я у горна. Снаряжение — в кузнице, как прежде.»',
+    // Раунд 51: торговцы рыночного ряда и жители слободы
+    grocer: '«Караваи горячие! Сыр да молоко — всякому найдётся угощение!»',
+    butcher: '«Тесак остр, туши свежи — подходи, выбирай окорок потучее!»',
+    peddler: '«Ножи, верёвки, обереги — всякая вещь в лавке к делу пришита!»',
+    shoemaker: '«Сапог, что глина сухая — не боится ни грязи, ни беды. Примерь!»',
+    shoemaker_wife: '«Нефёд до ночи колодки точит, а я ужин стережёт. Заходи, гостёк!»',
+    woodcutter: '«Лес рубить — не поле пахать: спина помнит каждое дерево. Топор точный — напарник честный.»',
 };
 
 // Диалоговое дерево по ID (полные диалоги; остальные — OUTDOOR_LINES)
@@ -245,6 +293,13 @@ export const NPC_DIALOGUE = {
     kid8: 'kid8', kid9: 'kid9',
     // Раунд 46 (п.1): ученик кузнеца — полное дерево после гибели мастера
     apprentice: 'apprentice',
+    // Раунд 51: восточная слобода
+    grocer: 'grocer',
+    butcher: 'butcher',
+    peddler: 'peddler',
+    shoemaker: 'shoemaker',
+    shoemaker_wife: 'shoemaker_wife',
+    woodcutter: 'woodcutter',
 };
 
 // ---- Детерминированный псевдорандом (FNV-1a → [0..1)) ----

@@ -173,6 +173,44 @@ export const NPC_STAT_BLOCKS = {
         skills: { persuade: 35, survival: 35, spot: 35, listen: 40 },
     },
 
+    // === РАУНД 51 (п.11 заявки): ВОСТОЧНАЯ СЛОБОДА — лавки и новые дома ===
+    // Снедница Прасковья: за прилавком всю жизнь — вес и цена на глаз.
+    grocer: {
+        name: 'Прасковья',
+        stats: S(35, 50, 50, 45, 60, 55, 60, 50),
+        skills: { persuade: 45, fast_talk: 40, spot: 40, listen: 40 },
+    },
+    // Мясник Потап: рука от тесака, спина от туш.
+    butcher: {
+        name: 'Потап',
+        stats: S(65, 60, 65, 40, 45, 50, 40, 40),
+        skills: { brawl: 50, intimidate: 40, spot: 30, listen: 30 },
+    },
+    // Торгарь Аверьян: знает цену всякой вещи, язык подвешен ловко.
+    peddler: {
+        name: 'Аверьян',
+        stats: S(45, 45, 50, 50, 60, 50, 60, 45),
+        skills: { persuade: 50, fast_talk: 45, brawl: 30, spot: 40, listen: 40 },
+    },
+    // Сапожник Нефёд: руки в шиле и дёгте, в драку не лезет.
+    shoemaker: {
+        name: 'Нефёд',
+        stats: S(45, 50, 45, 55, 55, 50, 45, 45),
+        skills: { brawl: 30, dodge: 30, spot: 40, listen: 40 },
+    },
+    // Агафья, жена сапожника: хозяйка при лавке.
+    shoemaker_wife: {
+        name: 'Агафья',
+        stats: S(40, 50, 45, 45, 50, 55, 50, 50),
+        skills: homemakerSkills(40),
+    },
+    // Дровосек Горазд: топор за поясом, слух лесника.
+    woodcutter: {
+        name: 'Горазд',
+        stats: S(70, 60, 60, 50, 45, 45, 35, 40),
+        skills: { brawl: 55, intimidate: 40, survival: 45, spot: 40, listen: 45 },
+    },
+
     // === ДЕТИ (п.6 заявки раунда 44: с 6 лет) — слабые, но верткие ===
     kid1: { stats: S(30, 35, 30, 55, 50, 50, 45, 50), skills: kidSkills(20) },
     kid2: { stats: S(25, 35, 30, 55, 50, 55, 45, 50), skills: kidSkills(18) },

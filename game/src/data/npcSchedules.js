@@ -25,6 +25,12 @@ export const PROFESSIONS = {
     FISHERMAN: 'fisherman',   // Рыбак
     MONK: 'monk',             // Монах
     HOMEMAKER: 'homemaker',   // Хозяйка дома (раунд 27: жёны старосты и пасечника)
+    // Раунд 51 (п.11 заявки): восточная слобода — лавки и ремёсла
+    GROCER: 'grocer',         // Снедница (Прасковья, лавка снеди)
+    BUTCHER: 'butcher',       // Мясник (Потап, мясная лавка)
+    PEDDLER: 'peddler',       // Торгарь (Аверьян, лавка ремесленника)
+    SHOEMAKER: 'shoemaker',   // Сапожник (Нефёд)
+    WOODCUTTER: 'woodcutter', // Дровосек (Горазд)
 };
 
 // Расписания по времени суток для каждой профессии
@@ -102,6 +108,49 @@ export const PROFESSION_SCHEDULES = {
         evening:   { activity: 'на постоялом дворе, пьёт медовуху', location: 'tavern', available: true },
         dusk:      { activity: 'на постоялом дворе', location: 'tavern', available: true },
         night:     { activity: 'спит на постоялом дворе', location: 'tavern', available: false },
+    },
+    // === РАУНД 51: ЛАВКИ ВОСТОЧНОЙ СЛОБОДЫ ===
+    // Днём хозяин В СВОЕЙ ЛАВКЕ (location = interiorId лавки — InteriorScene
+    // считает место «хозяин на месте», лавка работает).
+    [PROFESSIONS.GROCER]: {
+        dawn:      { activity: 'печёт караваи', location: 'home', available: false },
+        morning:   { activity: 'торгует снедью', location: 'shop_food', available: true },
+        noon:      { activity: 'торгует снедью', location: 'shop_food', available: true },
+        evening:   { activity: 'допродает остатки', location: 'shop_food', available: true },
+        dusk:      { activity: 'запирает лавку', location: 'home', available: true },
+        night:     { activity: 'спит', location: 'home', available: false },
+    },
+    [PROFESSIONS.BUTCHER]: {
+        dawn:      { activity: 'колет тушу', location: 'home', available: false },
+        morning:   { activity: 'торгует мясом', location: 'shop_meat', available: true },
+        noon:      { activity: 'торгует мясом', location: 'shop_meat', available: true },
+        evening:   { activity: 'коптит окорока', location: 'shop_meat', available: true },
+        dusk:      { activity: 'точит тесак', location: 'home', available: true },
+        night:     { activity: 'спит', location: 'home', available: false },
+    },
+    [PROFESSIONS.PEDDLER]: {
+        dawn:      { activity: 'пересчитывает товар', location: 'home', available: false },
+        morning:   { activity: 'торгует мелочью', location: 'shop_tools', available: true },
+        noon:      { activity: 'торгует мелочью', location: 'shop_tools', available: true },
+        evening:   { activity: 'допродаёт свечи', location: 'shop_tools', available: true },
+        dusk:      { activity: 'запирает лавку', location: 'home', available: true },
+        night:     { activity: 'спит', location: 'home', available: false },
+    },
+    [PROFESSIONS.SHOEMAKER]: {
+        dawn:      { activity: 'спит', location: 'home', available: false },
+        morning:   { activity: 'шьёт сапоги', location: 'home', available: true },
+        noon:      { activity: 'носит заказы по деревне', location: 'village', available: true },
+        evening:   { activity: 'шьёт сапоги', location: 'home', available: true },
+        dusk:      { activity: 'ужинает с семьёй', location: 'home', available: true },
+        night:     { activity: 'спит', location: 'home', available: false },
+    },
+    [PROFESSIONS.WOODCUTTER]: {
+        dawn:      { activity: 'точит топор', location: 'home', available: false },
+        morning:   { activity: 'рубит лес за околицей', location: 'forest', available: false },
+        noon:      { activity: 'рубит лес за околицей', location: 'forest', available: false },
+        evening:   { activity: 'возвращается с дровами', location: 'home', available: true },
+        dusk:      { activity: 'колет дрова во дворе', location: 'home', available: true },
+        night:     { activity: 'спит', location: 'home', available: false },
     },
     [PROFESSIONS.GUARD]: {
         dawn:      { activity: 'сменяется со стражи', location: 'gate', available: true },

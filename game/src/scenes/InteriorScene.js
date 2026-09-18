@@ -476,7 +476,13 @@ export class InteriorScene extends Phaser.Scene {
         if (hasNpc && ownerHere && !ownerKilled) {
             buttons.push({ label: t('\u{1F4AC} Поговорить'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.talkToNpc(interior) });
             buttons.push({ label: t('\u{1F4B0} Просить денег'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.askMoneyFromNpc(interior) });
-            buttons.push({ label: t('\u{1F4DC} Задание'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.offerQuest(interior) });
+            // Раунд 51: в ЛАВКАХ вместо «Задания» — кнопка «Торговать»
+            // (торговцы не выдают поручений — пул квестов не трогаем)
+            if (interior.market) {
+                buttons.push({ label: t('\u{1F6D2} Торговать'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showMarketShop(interior) });
+            } else {
+                buttons.push({ label: t('\u{1F4DC} Задание'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.offerQuest(interior) });
+            }
             buttons.push({ label: t('\u{1F381} Подарить'), bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.showGiftMenu(interior) });
             buttons.push({ label: t('\u{1F44D} Похвалить'), bg: 0x2a5a5a, hover: 0x3a6a6a, cb: () => this.complimentNpc(interior) });
             buttons.push({ label: t('\u{1F620} Угрожать'), bg: 0x5a1a1a, hover: 0x6a2a2a, cb: () => this.threatenNpc(interior) });
@@ -535,15 +541,43 @@ export class InteriorScene extends Phaser.Scene {
         // Раунд 12 ФИКС: в таверне теперь 10 кнопок — фиксированные 130px
         // давали 1372px и обрезали «Выйти» за краем экрана. Ширина подстраивается:
         // все кнопки гарантированно помещаются с полями 16px по бокам.
-        const btnW = Math.min(130, Math.floor((width - 32 - (buttons.length - 1) * btnGap) / buttons.length));
-        const totalW = buttons.length * btnW + (buttons.length - 1) * btnGap;
-        const startX = (width - totalW) / 2 + btnW / 2;
-        buttons.forEach((b, i) => {
-            const x = startX + i * (btnW + btnGap);
-            createButton(this, x, btnY, b.label, b.cb, {
+        // Раунд 51 ФИКС (после проверки в браузере, 390×844): ширина кнопки
+        // строится по ТЕКСТУ (createButton), поэтому на узких экранах кнопки
+        // были ШИРЕ шага сетки и налезали друг на друга. Теперь: создаём все
+        // кнопки, ИЗМЕРЯЕМ фактические ширины и раскладываем в 1..3 ряда так,
+        // чтобы каждый ряд помещался в экран; ряды центрируются вокруг btnY.
+        const created = buttons.map(b => ({
+            b,
+            c: createButton(this, width / 2, btnY, b.label, b.cb, {
                 backgroundColor: b.bg, hoverColor: b.hover, textColor: RUS.text,
                 fontSize: 12, padding: { left: 6, right: 6, top: 10, bottom: 10 },
                 cornerRadius: 6,
+            }),
+        }));
+        const availW = width - 32;
+        const gap = btnGap;
+        // Разбивка на ряды: жадно набираем ряд, пока влезает
+        const rows = [];
+        let row = [], rowW = 0;
+        created.forEach(({ b, c }) => {
+            const w = Math.max(c.width, 56) + gap;
+            if (row.length && rowW + w - gap > availW) {
+                rows.push(row); row = []; rowW = 0;
+            }
+            row.push({ b, c, w: Math.max(c.width, 56) });
+            rowW += w;
+        });
+        if (row.length) rows.push(row);
+        // Центрируем ряды вокруг btnY (шаг рядов 44px)
+        const rowH = 44;
+        rows.forEach((r, ri) => {
+            const y = btnY + (ri - (rows.length - 1) / 2) * rowH;
+            const total = r.reduce((s, it) => s + it.w, 0) + (r.length - 1) * gap;
+            let x = (width - total) / 2;
+            r.forEach(({ c, w }) => {
+                c.x = x + w / 2;
+                c.y = y;
+                x += w + gap;
             });
         });
 
@@ -1059,6 +1093,125 @@ export class InteriorScene extends Phaser.Scene {
     /**
      * Меню торговли в таверне — покупка еды и питья (п.14).
      */
+    /**
+     * Раунд 51 (п.11 заявки): ПАНЕЛЬ ТОРГОВЛИ НОВЫХ ЛАВОК (восточная слобода).
+     * Универсальный лавочный магазин по данным interior.market.items:
+     *   kind: 'heal' — еда/мелочь (эффекты HP/MP сразу),
+     *   kind: 'weapon' / 'armor' — снаряжение (equipWeapon/equipArmor).
+     * Уважает репутацию: скидка за добрую славу / наценка за дурную,
+     * отказ торговать при репутации ≤ −50 (как у кузнеца, п.7э Судебника).
+     */
+    showMarketShop(interior) {
+        const player = this.registry.get('player');
+        const market = interior.market;
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        const { width, height } = this.scale;
+
+        // Отказ от торговли при дурной славе (репутация ≤ −50)
+        if (willNpcRefuseTrade(this.registry, interior.npcId)) {
+            ActionLog.add(this.registry, `${npcName} отказался торговаться с героем дурной славы (репутация ≤ −50).`);
+            createDialog(this, interior.name,
+                tf(t('{0} загораживает прилавок рукой:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»'), npcName),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: this.npcPortraitKey });
+            return;
+        }
+
+        const priceMod = getPriceModifier(this.registry, interior.npcId);
+        const modNote = priceMod < 1 ? t(' (скидка за добрую славу)') : (priceMod > 1 ? t(' (наценка за дурную славу)') : '');
+
+        // Подложка
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
+            .setOrigin(0).setInteractive().setDepth(200);
+        const panelW = 560, panelH = 440;
+        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
+            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+
+        const closeMenu = () => {
+            overlay.destroy();
+            panel.destroy();
+            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+        };
+
+        this.add.text(width / 2, height / 2 - panelH / 2 + 30, market.title || interior.name, {
+            fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif',
+            stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(202);
+
+        this.add.text(width / 2, height / 2 - panelH / 2 + 62,
+            `${t('Денег:')} ${formatMoney(player.dengas || 0)}${modNote}`, {
+            fontSize: '15px', color: '#c9a14a',
+            stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setDepth(202);
+
+        // Список товаров
+        const startY = height / 2 - panelH / 2 + 105;
+        market.items.forEach((item, i) => {
+            const y = startY + i * 46;
+            const price = Math.max(1, Math.round(item.price * priceMod));
+            const canAfford = (player.dengas || 0) >= price;
+            let desc = `${item.name} — ${price} д.`;
+            if (item.kind === 'weapon') {
+                const w = WEAPONS[item.weaponId];
+                if (w) desc += ` (урон ${w.dice.min}-${w.dice.max}+${w.bonus || 0})`;
+            } else if (item.kind === 'armor') {
+                const a = ARMORS[item.armorId];
+                if (a) desc += ` (защита ${a.def})`;
+            } else if (item.note) {
+                desc += ` (${t(item.note)})`;
+            }
+            createButton(this, width / 2, y, desc, () => {
+                if (!canAfford) {
+                    createDialog(this, interior.name, t('Не хватает денег!'), [
+                        { text: t('Понятно'), callback: () => {} },
+                    ], { singleton: false, portraitKey: this.npcPortraitKey });
+                    return;
+                }
+                player.dengas -= price;
+                this.audioManager.playGoldSpend();
+                let logNote = t(item.note) || '';
+                if (item.kind === 'weapon') {
+                    equipWeapon(player, item.weaponId);
+                    if (!player.inventory) player.inventory = [];
+                    if (!player.inventory.find(it => it.id === item.weaponId)) {
+                        player.inventory.push({ id: item.weaponId, name: WEAPONS[item.weaponId].name, count: 1, type: 'weapon' });
+                    }
+                    logNote = t('снаряжение');
+                } else if (item.kind === 'armor') {
+                    equipArmor(player, item.armorId);
+                    if (!player.inventory) player.inventory = [];
+                    if (!player.inventory.find(it => it.id === item.armorId)) {
+                        player.inventory.push({ id: item.armorId, name: ARMORS[item.armorId].name, count: 1, type: 'armor' });
+                    }
+                    logNote = t('снаряжение');
+                } else {
+                    // Еда/мелочь: эффект сразу (HP/MP), «в узел» не кладётся
+                    if (item.heal) player.HP = Math.min(player.HPmax, player.HP + item.heal);
+                    if (item.mpHeal) player.MP = Math.min(player.MPmax || 0, (player.MP || 0) + item.mpHeal);
+                }
+                this.registry.set('player', player);
+                ActionLog.add(this.registry, `Купил «${t(item.name)}» в «${interior.name}» за ${price} д.${logNote ? ` (${logNote})` : ''}.`);
+                this.updateHUD();
+                // Пересобрать панель с обновлённым балансом
+                closeMenu();
+                this.showMarketShop(interior);
+            }, {
+                backgroundColor: canAfford ? 0x3a5a3a : 0x3a3a3a,
+                hoverColor: canAfford ? 0x4a6a4a : 0x4a4a4a,
+                textColor: canAfford ? RUS.text : '#888',
+                fontSize: 13,
+                padding: { left: 12, right: 12, top: 8, bottom: 8 },
+            }).setDepth(202);
+        });
+
+        // Кнопка закрытия
+        createButton(this, width / 2, height / 2 + panelH / 2 - 34, t('Закрыть'), closeMenu, {
+            backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
+            fontSize: 13, padding: { left: 24, right: 24, top: 7, bottom: 7 },
+        }).setDepth(202);
+    }
+
     showTavernShop() {
         const player = this.registry.get('player');
         // Список товаров с учётом репутации (п.13.2: скидки при высокой репутации).

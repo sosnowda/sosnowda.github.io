@@ -197,6 +197,13 @@ export class VillageScene extends Phaser.Scene {
             carpenter_house: 'house3d_carpenter',// изба плотника
             fisher_house: 'house3d_fisher',      // изба рыбака
             weaver_house: 'house3d_weaver',      // изба ткачихи
+            // Раунд 51 (п.11 заявки): ВОСТОЧНАЯ СЛОБОДА — палатки рыночного
+            // ряда и бревенчатые дома из пакета владельца (Rural_TileB/C).
+            shop_food: 'rural_shop_0',           // палатка с зелёным тентом — снедь
+            shop_meat: 'rural_shop_2',           // палатка в полоску — мясная
+            shop_tools: 'rural_shop_1',          // лавка со светлым тентом — ремесленник
+            shoemaker_house: 'rural_house_0',    // дом с резными воротами — сапожник
+            woodcutter_house: 'rural_house_1',   // бревенчатая изба — дровосек
         };
         this.doors = [];
         BUILDINGS.forEach(b => {
@@ -291,8 +298,9 @@ export class VillageScene extends Phaser.Scene {
 
         // ----- Дым из труб (атмосфера, §3 village-visual-upgrade) -----
         // Амбар без трубы — дымит только жильё и очаги.
+        // Раунд 51: ТОРГОВЫЕ ЛАВКИ (палатки) не дымят — труб у палаток нет.
         this.smokeBuildings = BUILDINGS
-            .filter(b => b.interiorId !== 'barn')
+            .filter(b => b.interiorId !== 'barn' && b.interiorId.indexOf('shop_') !== 0)
             .map(b => ({
                 x: b.col * ts + b.w * ts / 2 + ts * 0.42,   // трубы в спрайтах смещены вправо от центра
                 y: b.row * ts - ts * 0.12,
@@ -335,8 +343,11 @@ export class VillageScene extends Phaser.Scene {
         });
 
         // ----- Ограда для общественных зданий (староста, таверна, кузница, церковь) -----
+        // Раунд 51: восточная слобода (лавки, сапожник, дровосек) — БЕЗ оград:
+        // слободская застройка открыта, заборы мешали бы дорожкам к палаткам.
+        const FENCELESS = ['shop_food', 'shop_tools', 'shop_meat', 'shoemaker_house', 'woodcutter_house'];
         BUILDINGS.forEach(b => {
-            if (b.interiorId !== 'villager_house_1' && b.interiorId !== 'villager_house_2') {
+            if (b.interiorId !== 'villager_house_1' && b.interiorId !== 'villager_house_2' && FENCELESS.indexOf(b.interiorId) < 0) {
                 this.addPublicFence(b, ts);
             }
         });
@@ -695,6 +706,31 @@ export class VillageScene extends Phaser.Scene {
         } else if (b.interiorId === 'weaver_house') {
             // Раунд 37: ткачиха — нити (эмблема)
             this.add.text(cx, topY - ts * 0.3, '🧵', {
+                fontSize: '14px',
+            }).setOrigin(0.5).setDepth(9);
+        } else if (b.interiorId === 'shop_food') {
+            // Раунд 51: лавка снеди — каравай (эмблема)
+            this.add.text(cx, topY - ts * 0.35, '🥖', {
+                fontSize: '16px',
+            }).setOrigin(0.5).setDepth(9);
+        } else if (b.interiorId === 'shop_meat') {
+            // Раунд 51: мясная лавка — окорок (эмблема)
+            this.add.text(cx, topY - ts * 0.35, '🍖', {
+                fontSize: '16px',
+            }).setOrigin(0.5).setDepth(9);
+        } else if (b.interiorId === 'shop_tools') {
+            // Раунд 51: лавка ремесленника — весы/товар (эмблема)
+            this.add.text(cx, topY - ts * 0.35, '⚖️', {
+                fontSize: '16px',
+            }).setOrigin(0.5).setDepth(9);
+        } else if (b.interiorId === 'shoemaker_house') {
+            // Раунд 51: сапожник — сапог (эмблема)
+            this.add.text(cx, topY - ts * 0.3, '🥾', {
+                fontSize: '14px',
+            }).setOrigin(0.5).setDepth(9);
+        } else if (b.interiorId === 'woodcutter_house') {
+            // Раунд 51: дровосек — ель (эмблема; 🪓 уже у плотника)
+            this.add.text(cx, topY - ts * 0.3, '🌲', {
                 fontSize: '14px',
             }).setOrigin(0.5).setDepth(9);
         }

@@ -142,6 +142,25 @@ export const VILLAGER_COMBAT = {
         armorId: 'none',
     },
     // Прочие жители — крепкий крестьянский уровень (слабее шаблонного разбойника)
+    // Раунд 51: боевые профили восточной слободы
+    woodcutter: {
+        name: 'Дровосек',
+        weapon: { name: 'Топор дровосека', dice: { min: 1, max: 8 }, bonus: 1 },
+        weaponSkill: 'brawl',
+        fallbackAttack: 55,
+        fallbackDodge: 25,
+        db: { min: 1, max: 4 },
+        armorId: 'none',
+    },
+    butcher: {
+        name: 'Мясник',
+        weapon: { name: 'Тесак', dice: { min: 1, max: 6 }, bonus: 1 },
+        weaponSkill: 'brawl',
+        fallbackAttack: 50,
+        fallbackDodge: 20,
+        db: { min: 0, max: 3 },
+        armorId: 'leather',
+    },
     default: {
         name: 'Житель',
         weapon: { name: 'Кол', dice: { min: 1, max: 6 }, bonus: 0 },
@@ -204,6 +223,13 @@ const NPC_WORN_OVERRIDES = {
     hunter: 'Дорожный зипун',
     guard: 'Стёганый тегиляй',
     tavernkeeper: 'Волосный передник',
+    // Раунд 51: восточная слобода
+    grocer: 'Ситцевый платок, передник в муке',
+    butcher: 'Кожаный фартук в пятнах, тесак за поясом',
+    peddler: 'Многослойный зипун, связки мелочи на поясе',
+    shoemaker: 'Кожаный фартучек, шило за ушком',
+    shoemaker_wife: 'Сарафан с фартуком, ключи у пояса',
+    woodcutter: 'Плотный зипун с заплатами, топор за ремнём',
 };
 
 /**

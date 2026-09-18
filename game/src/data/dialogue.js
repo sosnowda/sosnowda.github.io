@@ -2141,4 +2141,403 @@ export const DIALOGUES = {
             },
         },
     },
+
+    // ===== РАУНД 51 (п.11 заявки): ВОСТОЧНАЯ СЛОБОДА =====
+    // Три лавки рыночного ряда и два новых деревянных дома.
+
+    // ПРАСКОВЬЯ — снедница (лавка снеди; торговля — кнопка «Торговать»)
+    grocer: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Снедница Прасковья',
+                text: 'Здравствуй, дорогой гость! Прасковья я, снедницу держу. Караваи с утра горячие, сыр — из-за Реки, молоко — от своих коровок. Каждому гостю — угощение да ласковое слово. Загляни в мои припасы — не уйдёшь с пустыми руками!',
+                en: 'Greetings, dear guest! I am Praskovya, I keep the victuals stall. Loaves are hot since morning, cheese comes from beyond the River, milk from my own cows. A treat and a kind word for every guest. Have a look at my goods — you will not leave empty-handed!',
+                action: (scene) => {
+                    DIALOGUES.grocer.nodes.a.choices = withAskThief(scene, 'grocer', [
+                        { text: t('Что нынче свежее?'), next: 'fresh' },
+                        { text: t('Откуда товар?'), next: 'goods' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('До свидания.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            fresh: {
+                speaker: 'Снедница Прасковья',
+                text: 'С утра — пироги с репой да с грибами, в полдень — творожники. Грибы сушёные — сама брала, сама сушила: на полатях, под крышей — ни червячка! А молоко — вот это молоко: ложка стоит, столбом!',
+                en: 'In the morning — pies with turnip and mushrooms, at noon — curd pasties. Dried mushrooms — I picked them myself, dried them myself: on the rafters, under the roof — not a single worm! And the milk — now that is milk: a spoon stands upright!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            goods: {
+                speaker: 'Снедница Прасковья',
+                text: 'Хлеб — из общинной печи, мукой снабжает староста. Сыр меняем с речными сёлами, грибы и ягоды — из нашего леса. Всё честно, без обману: снедь должна быть свежей, как утро!',
+                en: 'Bread is from the communal oven — the village elder supplies the flour. Cheese we barter with river villages, mushrooms and berries are from our own forest. All honest, no trickery: victuals must be as fresh as morning!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Снедница Прасковья',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'grocer', 'Снедница Прасковья');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Снедница Прасковья',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'grocer', 'Снедница Прасковья');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Снедница Прасковья',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо, хозяйка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // ПОТАП — мясник (мясная лавка)
+    butcher: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Мясник Потап',
+                text: 'Чего надобно? Потап я, мясник. Тесак острый, товар свежий. Колбаса — бери, окорок — копчёный, рыба вяленая — к пиву самому постоялому двору не снилось лучше. Смотри не тяни — к вечеру всё разберут!',
+                en: 'What do you need? I am Potap, the butcher. Sharp cleaver, fresh goods. Take the sausage, the smoked ham, the dried fish — even the tavern cellars never dreamt of better. Do not dawdle — by evening it is all sold!',
+                action: (scene) => {
+                    DIALOGUES.butcher.nodes.a.choices = withAskThief(scene, 'butcher', [
+                        { text: t('Откуда скот?'), next: 'cattle' },
+                        { text: t('Про лес расскажи.'), next: 'forest_talk' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('До свидания.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            cattle: {
+                speaker: 'Мясник Потап',
+                text: 'Скот беру у своих: у пастухов Силы и Настасьи — лучший на сёла вокруг. Коровку Мушку, что в камышах прячется, вжух — не трону: коровка добрая, молока много. А вот кабанчика дикого на прошлой неделе в силке взял — окорок вышел знатный!',
+                en: 'I take livestock from my own folk: shepherd Sila and Nastasya keep the finest around. Their cow Mushka that hides in the reeds — shoo, I touch her not: she is a good cow, gives much milk. But last week I took a wild boar in a snare — a fine ham it made!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            forest_talk: {
+                speaker: 'Мясник Потап',
+                text: 'Лес кормит, да и испытывает. Ходишь за зверем — ходи тихо, а тут на днях топор чей-то слышал в чащи — дровосек Горазд, сказывают, всё дальше рубит. Ну да лес — не я: срубишь с умом — не оскудеет.',
+                en: 'The forest feeds — and it tests you. When you hunt, walk quietly; and these days someone\'s axe is heard deep in the thicket — they say the woodcutter Gorazd fells farther and farther. Well, the forest is not me: cut with sense, and it will never run dry.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Мясник Потап',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'butcher', 'Мясник Потап');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Мясник Потап',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'butcher', 'Мясник Потап');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Мясник Потап',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // АВЕРЬЯН — торгарь (лавка ремесленника)
+    peddler: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Торгарь Аверьян',
+                text: 'Ага, гость! Аверьян я, торгарь. В лавке моей — всякая вещица к делу: нож, что бриту родня, верёвка — семь вёрст тянет, кремень — искру из-под дождя достанет. А обереги — от бабки-знахарки заговорённые. Бери — не прогадаешь!',
+                en: 'Ah, a guest! I am Averyan, the peddler. In my stall every trinket is good for something: a knife that is kin to a razor, a rope that stretches seven versts, a flint that strikes a spark even in rain. And the amulets are charmed by the healer granny. Take one — you will not regret it!',
+                action: (scene) => {
+                    DIALOGUES.peddler.nodes.a.choices = withAskThief(scene, 'peddler', [
+                        { text: t('Откуда товар?'), next: 'origin' },
+                        { text: t('Что в народе слыхал?'), next: 'news' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('До свидания.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            origin: {
+                speaker: 'Торгарь Аверьян',
+                text: 'По трактам хожу, с возами торгаши вожу — вот и присматриваю, что народу надобно. Ножи — у кузнеца выторговал, свечи — от церковного воска, обереги — знахарка Февронья плетёт да наговаривает. Всё по-честному, каждая вещь — с историей!',
+                en: 'I walk the roads, drive carts with merchants — and I watch what folk need. The knives I traded from the smith, the candles are from church wax, the amulets the healer Fevronia weaves and charms. All honestly made, every item with a story!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            news: {
+                speaker: 'Торгарь Аверьян',
+                text: 'Народ гуторит разное: где барыш, там и сплетня. Слыхал я, будто по ночам у околицы огонёк ходит — то ли путник заблудный, то ли худой человек лазит. Ты в ноги не кланяйся, а глаз держи востро!',
+                en: 'Folk talk all manner of things: where there is profit, there is gossip. I have heard that at night a small fire wanders by the village edge — be it a lost traveller or a wicked man creeping about. Do not bow too deep, but keep a sharp eye!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Торгарь Аверьян',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'peddler', 'Торгарь Аверьян');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Торгарь Аверьян',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'peddler', 'Торгарь Аверьян');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Торгарь Аверьян',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо, торгарь.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // НЕФЁД — сапожник (дом сапожника)
+    shoemaker: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Сапожник Нефёд',
+                text: 'Нефёд я, сапожник. Сапог на Руси — не обуза, а гордость: у доброго сапога голенище в обтяжку, подошва — что дубовая кора. Дай сюда ногу... э, да ты не в очередь — садись, погутарим, пока Агафья чаю ставит.',
+                en: 'I am Nefyod, the shoemaker. A boot in Rus is not a burden but a pride: a good boot fits the calf snugly, and its sole is like oak bark. Let me see your foot... ah, no queue today — sit down and let us talk while Agafya makes tea.',
+                action: (scene) => {
+                    DIALOGUES.shoemaker.nodes.a.choices = withAskThief(scene, 'shoemaker', [
+                        { text: t('Про ремесло расскажи.'), next: 'craft' },
+                        { text: t('Кто заказывает?'), next: 'clients' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('До свидания.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            craft: {
+                speaker: 'Сапожник Нефёд',
+                text: 'Ремесло — это глаз, да рука, да терпение. Кожу мочу, месю, тяну; шило веду под наклоном, нитку — конопляную, в дёгте. Сапог, сшитый с песней, — служит без починки. А сапог, сшитый со злобой, — трещит на первом же броду!',
+                en: 'The craft is an eye, a hand, and patience. I soak the leather, knead it, stretch it; guide the awl at an angle, use hemp thread in tar. A boot sewn with a song serves without repair. A boot sewn in anger — cracks at the first ford!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            clients: {
+                speaker: 'Сапожник Нефёд',
+                text: 'Кто заказывает? Староста — сапоги к празднику, стражник — сапоги «чтоб бегать за ворами», ткачиха Пелагея — башмачки сыну. А вот кузнец Данила не шьётся у меня — у него кожа на фартук идёт. Хоть сам в моём добре, хоть вся деревня!',
+                en: 'Who orders? The elder — boots for the feast, the guard — boots "for chasing thieves", the weaver Pelageya — little shoes for her son. And smith Danila does not order from me — his leather goes to aprons. Wear my goods yourself — or the whole village will!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Сапожник Нефёд',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'shoemaker', 'Сапожник Нефёд');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Сапожник Нефёд',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'shoemaker', 'Сапожник Нефёд');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Сапожник Нефёд',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо, мастер.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // АГАФЬЯ — жена сапожника
+    shoemaker_wife: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Агафья, жена сапожника',
+                text: 'Муж мой весь в кожаной стружке, а я в кухонной. Агафья я. Нефёд шьёт — а я, чтоб дом стоял: щи да каша — пища наша. Заходи, гостюю ты ко мне, я хоть расскажу, что в слободе делается.',
+                en: 'My husband is covered in leather shavings, and I in kitchen ones. I am Agafya. Nefyod sews — and I keep the house standing: shchi and kasha are our food. Come in, dear guest, and I will tell you what goes on in the settlement.',
+                action: (scene) => {
+                    DIALOGUES.shoemaker_wife.nodes.a.choices = withAskThief(scene, 'shoemaker_wife', [
+                        { text: t('Как живётся в слободе?'), next: 'settlement' },
+                        { text: t('Про соседей расскажи.'), next: 'neighbours' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('До свидания.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            settlement: {
+                speaker: 'Агафья, жена сапожника',
+                text: 'Слобода наша новая — но уже как своя. Утром Прасковья пирогами ветер гоняет — вся слобода к её лавке носами идёт. А по вечерам Горазд дрова колет — эхом по лесу отдаётся, будто кто дровосека вторит.',
+                en: 'Our settlement is new — but already feels like our own. In the morning Praskovya\'s pies chase the wind — the whole settlement walks to her stall by the nose. And in the evenings Gorazd splits firewood — it echoes through the forest, as if someone answers the woodcutter.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            neighbours: {
+                speaker: 'Агафья, жена сапожника',
+                text: 'Соседи — золотые. Потап хоть и грозный на вид, а кошке моей косточки отдаёт. Аверьян всё торгует да торгует — а как хворала я в зиму, так он мне мёду принёс без денег. Слободские — друг за друга!',
+                en: 'Our neighbours are golden. Potap looks fearsome, but he saves bones for my cat. Averyan trades and trades — yet when I was ill that winter, he brought me honey for no money. The settlement folk stand by each other!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Агафья, жена сапожника',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'shoemaker_wife', 'Агафья, жена сапожника');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Агафья, жена сапожника',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'shoemaker_wife', 'Агафья, жена сапожника');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Агафья, жена сапожника',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо, Агафьюшка.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // ГОРАЗД — дровосек (изба дровосека)
+    woodcutter: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Дровосек Горазд',
+                text: 'Горазд. Просто Горазд — прозвище за дело дали: всё горазд делать. Дрова — горазд, избу — горазд, волка топором — тоже горазд. Ты не пугайся: волков не трогаю, если они меня не трогают. Дров надобно? Всегда есть — поленница за плечом.',
+                en: 'Gorazd. Just Gorazd — they gave the nickname for the deed: I am "good at" everything. Firewood — good at it, a house — good at it, a wolf with an axe — also good at it. Do not fear: I touch no wolves unless they touch me. Need firewood? Always have some — the woodpile is over my shoulder.',
+                action: (scene) => {
+                    DIALOGUES.woodcutter.nodes.a.choices = withAskThief(scene, 'woodcutter', [
+                        { text: t('Про лес расскажи.'), next: 'forest_talk' },
+                        { text: t('Про метки на брёвнах.'), next: 'marks' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('До свидания.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            forest_talk: {
+                speaker: 'Дровосек Горазд',
+                text: 'Лес — он как дед: молчит, да всё видит. Рублю только сухостой да на вырубке — живое дерево зря не валю: лес кормит и меня, и охотника, и зверя. На опушке вчера волк выл — долго выл. Чует: нечисть в лесу не одна ходит...',
+                en: 'The forest is like a grandfather: silent, but it sees everything. I fell only deadwood and at clearings — I do not fell live trees in vain: the forest feeds me, the hunter, and the beast alike. Yesterday a wolf howled at the forest edge — howled long. It senses: not only the wicked walk the woods...',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            marks: {
+                speaker: 'Дровосек Горазд',
+                text: 'Метки? Это счёт. Каждое дерево — зарубка на бревне у печи. Зима нынешняя — сто сорок. Зимой топить надо, а летом из сухостоя — на новые избы. Гляди-ка: слобода наша растёт — Прасковья палатку ладит, сапожник дом ставит. Хорошо пойдёт!',
+                en: 'The marks? That is my tally. Every tree — a notch on the log by the stove. This winter — one hundred and forty. In winter one must heat, and in summer the deadwood goes to new houses. Look: our settlement grows — Praskovya sets up her stall, the shoemaker raises his house. Things will go well!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Дровосек Горазд',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'woodcutter', 'Дровосек Горазд');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Дровосек Горазд',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'woodcutter', 'Дровосек Горазд');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Дровосек Горазд',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо, Горазд.'), end: true },
+                ],
+            },
+        },
+    },
 };
