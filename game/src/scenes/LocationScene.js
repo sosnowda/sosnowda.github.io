@@ -201,8 +201,15 @@ export class LocationScene extends Phaser.Scene {
         // Раунд 28 QA-фикс: у спрайта героя не было depth — на локациях,
         // где фон рисуется graphics с depth 1 (поле/озеро), герой оказывался
         // ПОД заливкой и «исчезал». Ставим его поверх фона, но под NPC.
-        this.playerSprite = this.add.sprite(width * 0.2, height * 0.6, 'player', 0).setScale(2.5).setDepth(40);
-        this.playerSprite.play('player_idle_right');
+        // Раунд 50 (п.9): спрайт героя берётся из player.sprite (облики
+        // Medieval-Heroes I; композит LPC — прежний приоритет).
+        const regPlayer50 = this.registry.get('player') || {};
+        const useComposite50 = !!(regPlayer50.useComposite && this.textures.exists('player_composite'));
+        const locPlayerTex = useComposite50 ? 'player_composite'
+            : ((regPlayer50.sprite && this.textures.exists(regPlayer50.sprite)) ? regPlayer50.sprite : 'player');
+        this.playerSprite = this.add.sprite(width * 0.2, height * 0.6, locPlayerTex, 0).setScale(2.5).setDepth(40);
+        const locIdle = useComposite50 ? 'player_composite_idle_right' : `${locPlayerTex}_idle_right`;
+        this.playerSprite.play(this.anims.exists(locIdle) ? locIdle : 'player_idle_right');
         this.tweens.add({
             targets: this.playerSprite,
             y: { from: height * 0.6, to: height * 0.6 - 3 },

@@ -427,10 +427,15 @@ export class InteriorScene extends Phaser.Scene {
         this.addDecorations(interior);
 
         // ----- Overlay дня/ночи (п.5) -----
+        // Раунд 50: при тайловом фоне (int_bg) ночь мягче (×0.55) — очаги запечены
+        // в картинку и не могут «пробить» multiply-затемнение, как живой огонь.
         const timeState = getTime(this.registry);
         if (timeState) {
             const overlay = getDayNightOverlay(timeState);
-            this.add.rectangle(0, 0, width, height, overlay.color, overlay.alpha)
+            // Ночь мягче: зажимаем итоговую силу затемнения (максимум 0.38),
+            // иначе запечённый фон уходит в черноту под multiply-слоем.
+            const ovlAlpha = this._intBg ? Math.min(overlay.alpha * 0.55, 0.38) : overlay.alpha;
+            this.add.rectangle(0, 0, width, height, overlay.color, ovlAlpha)
                 .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY);
         }
 
@@ -1857,6 +1862,33 @@ export class InteriorScene extends Phaser.Scene {
         // Раунд 39: painted-ветка удалена — ВСЕ интерьеры тайловые (единая рисовка)
         const painted = false;
 
+        // === РАУНД 50 (пп.2,4 заявки): ТАЙЛОВЫЙ ФОН ИЗ ПАКЕТА MEDIEVAL - INTERIORS ===
+        // Стены, пол, окна и стационарная мебель запечены в картинку int_bg_<id>
+        // (собрана из листов Walls/Furniture/Church/Tavern/Profession). Если фон
+        // есть — процедурные пол/стены/окна и СТАТИЧЕСКИЙ декор не рисуются,
+        // остаются только живые элементы (огонь, киот, свет). Позиции мебели
+        // в фоне совпадают с прежними фракциями декора — точки взаимодействия не сместились.
+        const bgKey = 'int_bg_' + interior.id;
+        const hasBg = !painted && this.textures.exists(bgKey);
+        this._intBg = hasBg;
+        if (hasBg) {
+            this.add.image(0, 0, bgKey)
+                .setOrigin(0, 0).setDisplaySize(width, height).setDepth(-6);
+            // Тёплые пятна света над ЗАПЕЧЁННЫМИ очагами (ночь должна светиться).
+            // ВАЖНО: this._lightSources создаётся ниже (раунд 9) — страхуемся.
+            this._lightSources = this._lightSources || [];
+            if (interior.id === 'blacksmith') {
+                this._lightSources.push({ x: width * 0.86, y: height * 0.42, w: 300, h: 170, a: 0.6 });
+            } else if (interior.id === 'church') {
+                this._lightSources.push({ x: width * 0.5, y: height * 0.3, w: 320, h: 150, a: 0.4 });
+                this._lightSources.push({ x: width * 0.5, y: height * 0.62, w: 260, h: 130, a: 0.3 });
+            } else {
+                // очаг слева (дома, таверна) + мягкий светильня в центре горницы
+                this._lightSources.push({ x: 90, y: height * 0.48, w: 280, h: 160, a: 0.55 });
+                this._lightSources.push({ x: width * 0.56, y: height * 0.55, w: width * 0.72, h: height * 0.62, a: 0.22 });
+            }
+        }
+
         // === Раунд 9: инфраструктура света ===
         // Собираем источники света (печь, свечи, лампада, камин),
         // в конце рендерим тёплые пятна: днём — лёгкая база, ночью — ярко.
@@ -1875,7 +1907,9 @@ export class InteriorScene extends Phaser.Scene {
 
         // === ПОДЛОЖКА ПОЛА — коричневый прямоугольник на всю нижнюю часть ===
         // (в «живописных» интерьерах не нужна — фон уже нарисован)
-        if (!painted) {
+        // Раунд 50: при тайловом фоне (int_bg) НЕ рисуем — непрозрачные плаши
+        // на глубине -5 перекрыли бы собой фон на глубине -6.
+        if (!painted && !hasBg) {
             const floorGfx = this.add.graphics().setDepth(-5);
             floorGfx.fillStyle(0x3a2616, 1);  // тёмно-коричневый
             floorGfx.fillRect(0, 100, width, height - 100);
@@ -1884,8 +1918,8 @@ export class InteriorScene extends Phaser.Scene {
             floorGfx.fillRect(0, 0, width, 100);
         }
 
-        // === Тайлы пола (если загружены) — поверх подложки ===
-        if (!painted && this.textures.exists('int_floor_0')) {
+        // === Тайлы пола (если загружены) — поверх подложки (раунд 50: пропускается при тайловом фоне) ===
+        if (!painted && !hasBg && this.textures.exists('int_floor_0')) {
             for (let x = 0; x < width; x += ts) {
                 for (let y = 100; y < height; y += ts) {
                     // ФИКС «зелёной сетки» (была дробь 100/32 → int_floor_1.125 → __MISSING):
@@ -1898,8 +1932,8 @@ export class InteriorScene extends Phaser.Scene {
                 }
             }
         }
-        // === Тайлы стен (если загружены) ===
-        if (!painted && this.textures.exists('int_wall')) {
+        // === Тайлы стен (если загружены; раунд 50: пропускается при тайловом фоне) ===
+        if (!painted && !hasBg && this.textures.exists('int_wall')) {
             for (let x = 0; x < width; x += ts) {
                 for (let y = 0; y < 100; y += ts) {
                     this.add.image(x + ts / 2, y + ts / 2, 'int_wall')
@@ -1912,7 +1946,7 @@ export class InteriorScene extends Phaser.Scene {
         // Раунд 17: столбы света «дышат» и тускнеют в непогоду, в лучах
         // кружится золотая пыль, на подоконнике — цветочный горшок,
         // ночью из окна льётся слабый лунный столб.
-        if (!painted && this.textures.exists('int_window')) {
+        if (!painted && !hasBg && this.textures.exists('int_window')) {
             const winY = 50;
             const weather = getWeather(this.registry);
             const gloomy = !!(weather && (weather.id === 'rain' || weather.id === 'thunder' || weather.id === 'snow'));
@@ -1992,7 +2026,7 @@ export class InteriorScene extends Phaser.Scene {
             });
         }
 
-        if (interior.id === 'tavern' && !painted) {
+        if (interior.id === 'tavern' && !painted && !hasBg) {
             // Таверна: барная стойка, бочки, камин, столы, скамьи, сундук
             // (в «живописной» таверне весь декор уже в фоне — пиксельные стенд-ины убраны)
             if (this.textures.exists('int_deco_bar')) {
@@ -2028,7 +2062,7 @@ export class InteriorScene extends Phaser.Scene {
                 this.add.image(width * 0.5, height * 0.25, 'int_deco_shelf').setScale(1.2).setDepth(5);
             }
             // Раунд 39 (п.13): сундук у входа УДАЛЕН (все сундуки/тюки/ларцы — из игры)
-        } else if (interior.id === 'blacksmith' && !painted) {
+        } else if (interior.id === 'blacksmith' && !painted && !hasBg) {
             // Кузница: наковальня, горн, поленница, оружие, сундук
             // (в «живописной» кузнице весь декор уже в фоне)
             if (this.textures.exists('int_deco_anvil')) {
@@ -2052,7 +2086,7 @@ export class InteriorScene extends Phaser.Scene {
             }
             // Раунд 39 (п.13): сундук с готовой продукцией УДАЛЕН
             this.add.text(width * 0.2, 80, '⚔ 🔨 🛡', { fontSize: '32px' }).setOrigin(0.5).setDepth(10);
-        } else if (interior.id === 'elder_house') {
+        } else if (interior.id === 'elder_house' && !hasBg) {
             // Дом старосты: стол, свеча, икона, сундук с документами, лавка, ПЕЧЬ,
             // КРАСНЫЙ УГОЛ с лампадой (раунд 9)
             if (this.textures.exists('int_deco_fireplace')) {
@@ -2081,7 +2115,7 @@ export class InteriorScene extends Phaser.Scene {
                 this.add.image(width * 0.2, height * 0.7, 'int_deco_bench').setScale(1).setDepth(5);
             }
             // Раунд 39 (п.13): сундук с документами УДАЛЕН
-        } else if (interior.id === 'potter_house') {
+        } else if (interior.id === 'potter_house' && !hasBg) {
             // Раунд 37 (вариант Б): мастерская гончара — круг, горшки, дрова
             if (this.textures.exists('int_deco_barrel')) {
                 this.add.image(width * 0.2, height * 0.42, 'int_deco_barrel').setScale(1.2).setDepth(5);
@@ -2131,7 +2165,7 @@ export class InteriorScene extends Phaser.Scene {
             this.add.text(kx, ky + 62, 'слово Божие — в сердцах', {
                 fontSize: '10px', color: '#8a7248', fontFamily: 'Georgia, serif',
             }).setOrigin(0.5).setDepth(5);
-            if (!painted) {
+            if (!painted && !hasBg) {
                 // Тайловый вид: алтарь, иконостас, свечи, аналой, крест
                 // (в «живописной» церкви иконостас/алтарь/окна уже в фоне)
                 if (this.textures.exists('int_deco_table')) {
@@ -2159,7 +2193,7 @@ export class InteriorScene extends Phaser.Scene {
                 // (слева, чтобы не спорить с киотом в правом верхнем углу)
                 this.addRedCorner(64, height * 0.3, true);
             }
-        } else if (interior.id === 'villager_house_1') {
+        } else if (interior.id === 'villager_house_1' && !hasBg) {
             // Дом крестьянина Авдея: стол, лавка, кровать, поленница, стог сена, ПЕЧЬ,
             // КРАСНЫЙ УГОЛ (раунд 9)
             // Русская печь с живым огнём — сердце избы
@@ -2193,7 +2227,7 @@ export class InteriorScene extends Phaser.Scene {
             }
             // Красный угол вместо одинокой иконы (раунд 9)
             this.addRedCorner(width - 72, height * 0.32);
-        } else if (interior.id === 'villager_house_2') {
+        } else if (interior.id === 'villager_house_2' && !hasBg) {
             // Дом вдовы Марфы: кровать, прялка, икона, колыбель, полка с травами, ПЕЧЬ,
             // КРАСНЫЙ УГОЛ (раунд 9)
             // Печь — у неё греются и готовят

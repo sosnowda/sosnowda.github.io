@@ -133,6 +133,32 @@ export class BootScene extends Phaser.Scene {
             this.load.spritesheet(key, `assets/sprites/${key}.png`, { frameWidth: 64, frameHeight: 64 });
         });
 
+        // ----- РАУНД 50 (пп.7,9): ПЕРСОНАЖИ ИЗ ПАКОВ MEDIEVAL (Townfolk I / Heroes I) -----
+        // Конвертация 8×4 @128 → игровые 4×4 @64 (вниз/влево/вправо/вверх).
+        // enemy_thief_m/f — вор и воровка (пол выбирается случайно в начале игры);
+        // hero_* — готовые облики игрока (кастомизация LPC отключена, п.8).
+        const medievalSheets = {
+            enemy_thief_m: 'assets/sprites/enemy_thief_m.png',
+            enemy_thief_f: 'assets/sprites/enemy_thief_f.png',
+            hero_baenor: 'assets/sprites/hero_baenor.png',
+            hero_paul: 'assets/sprites/hero_paul.png',
+            hero_huntress: 'assets/sprites/hero_huntress.png',
+            hero_naia: 'assets/sprites/hero_naia.png',
+        };
+        Object.entries(medievalSheets).forEach(([key, url]) => {
+            this.load.spritesheet(key, url, { frameWidth: 64, frameHeight: 64 });
+        });
+
+        // ----- РАУНД 50 (пп.2,4): ТАЙЛОВЫЕ ИНТЕРЬЕРЫ (пакет Medieval - Interiors) -----
+        // Фоны 1280×720 собраны из листов Walls/Furniture/Church/Tavern/Profession;
+        // статический декор запечён в фон, анимированный огонь/киот рисуются сценой.
+        const interiorBgIds = ['tavern', 'blacksmith', 'elder_house', 'potter_house', 'church',
+            'villager_house_1', 'villager_house_2', 'healer_house', 'fisher_house',
+            'carpenter_house', 'weaver_house', 'beekeeper_house'];
+        interiorBgIds.forEach(id => {
+            this.load.image(`int_bg_${id}`, `assets/interiors/int_bg_${id}.jpg`);
+        });
+
         // ----- ПОРТРЕТЫ (раунд 24: живописные портреты из DarklandsReborn) -----
         // 1024×1024 webp, при показе сжимаются до 96×96, перекрашиваются под look NPC.
         // Раунд 34: thief — воровское лицо (капюшон/шрам/ухмылка), boy/girl — дети.
@@ -437,6 +463,9 @@ export class BootScene extends Phaser.Scene {
         this.createWalkAnimations('enemy_bandit');
         this.createWalkAnimations('enemy_thief');   // раунд 33: фигурка вора
         this.createWalkAnimations('enemy_wolf');
+        // Раунд 50: воры (м/ж) и герои Medieval — те же листы 4×4 @64px
+        ['enemy_thief_m', 'enemy_thief_f', 'hero_baenor', 'hero_paul', 'hero_huntress', 'hero_naia']
+            .forEach(key => this.createWalkAnimations(key));
 
         // ----- Анимации Fantasy Knight (для CombatScene) -----
         this.createKnightAnimations('knight');

@@ -472,6 +472,9 @@ export function initThiefHunt(registry) {
         hintLockFlee: false,   // раунд 32 (п.10): уйти ли принудительно по истечении
         npcLockHours: 0,       // раунд 35: заморозка наводки НПЦ (уход по истечении)
         traceLockHours: 0,     // раунд 35: заморозка прочитанного следа
+        // Раунд 50 (п.7 заявки): пол вора выбирается СЛУЧАЙНО в начале игры —
+        // от него зависят фигурка (Townfolk Skulker / Beggar) и слово «вор/воровка»
+        gender: Math.random() < 0.5 ? 'male' : 'female',
     };
     // Раунд 31 (п.1): в лес — строго последовательно: Опушка → Поляна → Чаща
     // (раунд 39: маршрут уже строится цепочкой — перестановка идемпотентна)
@@ -1046,8 +1049,11 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
     // Раунд 33 (владелец): у вора — УНИКАЛЬНАЯ фигурка (капюшон, серый плащ,
     // кинжал), а не общий «крестьянин», как у игрока. Рисуем ОДИН кадр листа
     // (раньше add.image показывал всю сетку 4×4), профиль ВЛЕВО — на игрока.
-    const texKey = scene.textures.exists('enemy_thief') ? 'enemy_thief'
-        : (scene.textures.exists('enemy_bandit') ? 'enemy_bandit' : 'knight_idle');
+    // Раунд 50 (п.7 заявки): фигурка зависит от СЛУЧАЙНОГО пола вора —
+    // мужской (Townfolk Skulker) или женский (Townfolk Beggar).
+    const texKey = scene.textures.exists(getThiefSpriteKey(registry)) ? getThiefSpriteKey(registry)
+        : (scene.textures.exists('enemy_thief') ? 'enemy_thief'
+            : (scene.textures.exists('enemy_bandit') ? 'enemy_bandit' : 'knight_idle'));
     // кадр 4 = строка 1 (профиль влево), колонка 0 (стойка)
     const thiefFrame = (texKey === 'knight_idle') ? 0 : 4;
     const sprite = scene.add.sprite(x, y, texKey, thiefFrame).setScale(2.6).setDepth(60);
@@ -1086,8 +1092,13 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
         ], { singleton: false, portraitKey: 'portrait_thief', typing: true, typingSpeed: 25 });
     };
 
-    createDialog(scene, t('😱 Встреча с вором!'),
-        t('Вор в тёмном плаще сжимает краденую икону. Он тебя заметил! Можно напасть, убедить отдать краденое (проверка Убеждения) или подкрасться и оглушить (проверка Драки).'),
+    const noun = thiefNoun(registry);
+    const female = getThiefGender(registry) === 'female';
+    const intro = female
+        ? 'Воровка в тёмном плаще сжимает краденую икону. Она тебя заметила!'
+        : 'Вор в тёмном плаще сжимает краденую икону. Он тебя заметил!';
+    createDialog(scene, tf(t('😱 Встреча с {0}!'), noun),
+        intro + t(' Можно напасть, убедить отдать краденое (проверка Убеждения) или подкрасться и оглушить (проверка Драки).'),
         [
             {
                 text: t('⚔ Напасть'),
@@ -1436,6 +1447,26 @@ export function getHuntState(registry) {
         turnsUsed: q.turnsUsed || 0,
         turnLimit: q.turnLimit || TURN_LIMIT,
     };
+}
+
+// ===== РАУНД 50 (п.7 заявки): ПОЛ ВОРА =====
+// Пол выбирается случайно в initThiefHunt и определяет фигурку
+// (Medieval-Townfolk: муж. Skulker / жен. Beggar) и слово «вор/воровка».
+
+/** Пол вора: 'male' | 'female' (старые сейвы — 'male'). */
+export function getThiefGender(registry) {
+    const q = registry.get('quest') || {};
+    return (q.chase && q.chase.gender) || 'male';
+}
+
+/** Спрайт-лист вора по полу (4×4 @64px, анимации в BootScene). */
+export function getThiefSpriteKey(registry) {
+    return getThiefGender(registry) === 'female' ? 'enemy_thief_f' : 'enemy_thief_m';
+}
+
+/** Слово для текстов: «вор» / «воровка». */
+export function thiefNoun(registry) {
+    return getThiefGender(registry) === 'female' ? 'воровка' : 'вор';
 }
 
 // ----- Легаси-заглушки (старый экспорт, чтобы ничего не сломалось) -----

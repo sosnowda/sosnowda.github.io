@@ -10,7 +10,7 @@ import { createButton, createDialog, createFloatingText, registerAnchoredUI, onS
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { ActionLog } from '../data/actionLog.js';
-import { loseHeroDead, recoverStolenItem, thiefFleesFromFight, saveThiefHp, restoreThiefHp } from '../data/thief.js';
+import { loseHeroDead, recoverStolenItem, thiefFleesFromFight, saveThiefHp, restoreThiefHp, getThiefSpriteKey } from '../data/thief.js';
 // Раунд 45 (пп.3,4): последствия убийства НПЦ и перемирье после побега
 import { applyNpcMurderConsequences, setNpcTruce } from '../data/reputation.js';
 // Раунд 46 (п.1): жители дерутся своими характеристиками
@@ -72,6 +72,13 @@ export class CombatScene extends Phaser.Scene {
             if (savedHp != null && savedHp < this.enemies[0].HP) {
                 this.enemies[0].HP = savedHp;
                 this.woundedThief = true;
+            }
+            // Раунд 50 (п.7): фигурка вора в бою — по СЛУЧАЙНОМУ полу (м/ж)
+            if (this.enemies[0].spriteKey === 'enemy_thief' && this.textures.exists(getThiefSpriteKey(this.registry))) {
+                this.enemies[0].spriteKey = getThiefSpriteKey(this.registry);
+                if (this.enemies[0].name === 'Вор-иконокрад' && getThiefSpriteKey(this.registry) === 'enemy_thief_f') {
+                    this.enemies[0].name = 'Воровка-иконокрадка';
+                }
             }
         }
         this.busy = false;

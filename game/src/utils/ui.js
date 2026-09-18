@@ -650,7 +650,13 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     const centerY = cam.centerY;
 
     // Подложка (блокер)
-    const blocker = scene.add.rectangle(0, 0, cam.width, cam.height, coverColor, coverAlpha)
+    // РАУНД 50 (п.1 заявки): нижняя панель действий должна нажиматься И ПРИ
+    // открытом диалоге — раньше полноэкранный блокиратор перехватывал клики.
+    // Теперь блокиратор не доходит до нижней полосы экрана (по умолчанию 118px —
+    // высота нижней панели с кнопками); опцией bottomFreePx можно отключить/изменить.
+    const bottomFreePx = Number.isFinite(opts.bottomFreePx) ? Math.max(0, opts.bottomFreePx) : 118;
+    const blockerH = Math.max(120, cam.height - bottomFreePx);
+    const blocker = scene.add.rectangle(0, 0, cam.width, blockerH, coverColor, coverAlpha)
         .setOrigin(0, 0)
         .setScrollFactor(0)
         .setDepth(coverDepth);

@@ -276,7 +276,10 @@ export class ForkScene extends Phaser.Scene {
         const positions = [
             { id: 'forest_edge', name: t('Вход: Опушка'), icon: '🌳', angle: -150, dist: 140 },
             { id: 'forest_glade', name: t('Центр: Лесная поляна'), icon: '🌿', angle: -125, dist: 205 },
-            { id: 'forest', name: t('Глубина: Густой лес'), icon: '🌲', angle: -103, dist: 222 },
+            // Раунд 50 (п.3 заявки): точка «Густой лес» смещена ниже и левее
+            // (угол −103°→−112°, 222→205) — раньше узел с подписью залезал
+            // ПОД верхнюю надпись-легенду описания локации на карте местности.
+            { id: 'forest', name: t('Глубина: Густой лес'), icon: '🌲', angle: -112, dist: 205 },
             { id: 'apiary', name: t('Пасека'), icon: '🐝', angle: -50, dist: 215 },
             { id: 'lake', name: t('Озеро'), icon: '🏞', angle: -20, dist: 250 },
             { id: 'pasture', name: t('Выпас'), icon: '🐄', angle: 8, dist: 170 },
