@@ -186,7 +186,8 @@ export class LocationScene extends Phaser.Scene {
         const player = this.registry.get('player');
         const q = this.registry.get('quest') || {};
         // Раунд 45 (п.1 заявки): параметр «меч» (⚔%) из верхнего виджета удалён
-        this.add.text(16, 12, `❤ ${player.HP}/${player.HPmax}   ${t('✦ Воля')} ${player.MP}/${player.MPmax}`, {
+        // Раунд 46 (п.8 заявки): из статус-бара удалён и параметр «✦ Воля» (MP)
+        this.add.text(16, 12, `❤ ${player.HP}/${player.HPmax}`, {
             fontSize: '14px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
         }).setDepth(100);
@@ -1556,6 +1557,80 @@ export class LocationScene extends Phaser.Scene {
                             this.add.image(g.x + 10, g.y + 14, fl).setScale(1.1).setDepth(3.5).setAlpha(0.95);
                         }
                     });
+                }
+            }
+
+            // ============================================================
+            // Раунд 46 (п.7 заявки): МОГИЛЫ УБИТЫХ ГЕРОЕМ ЖИТЕЛЕЙ.
+            // Убитый НПЦ исчезает из деревни, но на погосте появляется ЕГО
+            // могила — свежий холмик с крестом и цветами. Клик по могиле —
+            // поп-ап: КТО убил, ПО КАКОЙ ПРИЧИНЕ и грустная эпитафия.
+            // ============================================================
+            const qGraves = this.registry.get('quest') || {};
+            const killedNpcs = qGraves.npcKilled || {};
+            const graveEntries = Object.entries(killedNpcs);
+            if (graveEntries.length > 0) {
+                // Свежие могилы — нижним рядом под старыми (лево/право от дорожки)
+                this.pogostMurderGraves = [];
+                graveEntries.forEach(([npcId, info], gi) => {
+                    const col = Math.floor(gi / 2) % 3;
+                    const side = gi % 2; // 0 — слева, 1 — справа
+                    const gx = side === 0 ? 100 + col * 90 : width - 100 - col * 90;
+                    const gy = Math.min(chapelY + 300 + Math.floor(gi / 6) * 70, height - 95);
+                    if (hasGraveCollision(gx, gy, 46)) return; // не наезжаем на старые
+                    placedGraves.push({ x: gx, y: gy });
+
+                    const npc = findNpc(this.registry, npcId);
+                    const npcName = npc ? (npc.name || npcId) : npcId;
+                    const profName = npc && npc.profession ? npc.profession.name : '';
+                    const who = (info && info.by) || 'Герой';
+                    const day = (info && info.day) || 1;
+                    const epitaph = (info && info.epitaph) || t('Спи спокойно, добрая душа.');
+                    const reasonText = t('житель сам напал на героя — пал(а) в честной схватке');
+
+                    // Свежий холмик — ярче старых (мох ещё не прирос)
+                    const v = gi % 2;
+                    if (this.textures.exists(`deco_grave_${v}`)) {
+                        const grave = this.add.image(gx, gy, `deco_grave_${v}`)
+                            .setScale(1.8).setDepth(3).setTint(0xf2ead8);
+                        // Свежая земля — тёмный холмик у подножия
+                        const mound = this.add.ellipse(gx, gy + 16, 44, 14, 0x5a4632, 0.9).setDepth(3.2);
+                        // Цветы скорби (не зимой)
+                        if (!isWinter && this.textures.exists(`deco_flower_${gi % 3}`)) {
+                            this.add.image(gx - 12, gy + 14, `deco_flower_${gi % 3}`)
+                                .setScale(1.1).setDepth(3.5).setAlpha(0.95);
+                        }
+                        grave.setInteractive({ useHandCursor: true });
+                        this.pogostMurderGraves.push({ npcId, name: npcName, x: gx, y: gy });
+                        // Подпись — чьё это имя (читается с расстояния)
+                        this.add.text(gx, gy + 34, `† ${npcName}`, {
+                            fontSize: '10px', color: '#d8cfa8',
+                            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+                            backgroundColor: '#00000077', padding: { x: 4, y: 2 },
+                        }).setOrigin(0.5).setDepth(4);
+                        grave.on('pointerdown', (pointer) => {
+                            if (!pointer.leftButtonDown() || this.busyDialog) return;
+                            this.busyDialog = true;
+                            ActionLog.add(this.registry, `Посетил могилу ${npcName} на погосте.`);
+                            createDialog(this, t('⚰ Могила'),
+                                tf(t('Здесь покоится {0}{1}.\nУпокоен(а) на {2}-й день странствия.\n\nОт руки героя {3} — {4}.\n\n«{5}»'),
+                                    npcName,
+                                    profName ? t(' (') + t(profName) + t(')') : '',
+                                    day, who, reasonText, epitaph),
+                                [{ text: t('Помянуть (печально)'), callback: () => { this.busyDialog = false; } }],
+                                { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 20 });
+                        });
+                        void mound;
+                    }
+                });
+                if (graveEntries.length > 0 && this.pogostMurderGraves && this.pogostMurderGraves.length > 0) {
+                    // Тихая подсказка при входе на погост со свежими могилами
+                    this.add.text(width / 2, height - 130,
+                        tf(t('⚰ На погосте {0} свежих могил — тех, кого не досчиталась деревня. Кликни по холмику.'), this.pogostMurderGraves.length), {
+                        fontSize: '12px', color: '#c9b98a', align: 'center',
+                        fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+                        backgroundColor: '#00000088', padding: { x: 8, y: 4 },
+                    }).setOrigin(0.5).setDepth(20);
                 }
             }
 

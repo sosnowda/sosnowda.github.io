@@ -20,7 +20,8 @@ export class EndScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         const quest = this.registry.get('quest') || {};
         // Раунд 36: репутационная победа — тоже победная музыка
-        const isWin = quest.thiefDefeated || quest.reputationVictory;
+        // Раунд 46 (п.2): убийство старосты — Проигрыш, победная музыка исключена
+        const isWin = !quest.elderMurdered && (quest.thiefDefeated || quest.reputationVictory);
         // Раунд 24: финальная музыка по исходу (если фоновый прелоадер успел;
         // иначе — обычная менюшная)
         const bgMusicKey = isWin ? 'victory' : 'gameover';
@@ -34,9 +35,10 @@ export class EndScene extends Phaser.Scene {
 
         const state = getHuntState(this.registry);
         // Раунд 36: репутационная победа — свой исход для оценки
-        const finalOutcome = quest.reputationVictory
-            ? 'victory_reputation'
-            : checkGameEnd(this.registry); // 'victory' | 'defeat_thief_escaped' | 'defeat_hero_dead' | null
+        // Раунд 46 (п.2): убийство старосты — свой исход Проигрыша
+        const finalOutcome = quest.elderMurdered
+            ? 'defeat_elder_murdered'
+            : (quest.reputationVictory ? 'victory_reputation' : checkGameEnd(this.registry));
         const log = ActionLog.get(this.registry);
         const rating = log ? log.getRating(finalOutcome) : { stars: 0, title: 'Неизвестно', comment: '', stats: {} };
 
@@ -44,7 +46,13 @@ export class EndScene extends Phaser.Scene {
         let endType = 'defeat';
         let endTitle = '';
         let endColor = '';
-        if (quest.reputationVictory) {
+        if (quest.elderMurdered) {
+            // Раунд 46 (п.2): убийство старосты — НЕМЕДЛЕННЫЙ Проигрыш,
+            // перебивает любые победные флаги (свадьба/вор/репутация)
+            endType = 'defeat';
+            endTitle = t('⚖ УБИЙСТВО СТАРОСТЫ');
+            endColor = '#ff4040';
+        } else if (quest.reputationVictory) {
             // Раунд 36: ОТДЕЛЬНАЯ ветка — репутационная победа (доступна только
             // после «обучалки» с поимкой вора и выбора «Продолжить игру»)
             endType = 'victory';

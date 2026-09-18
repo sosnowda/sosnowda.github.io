@@ -69,12 +69,15 @@ export class ActionLog {
         let isHeroDead = false;
         let isRepVictory = false;
         let isExpelled = false;
+        let isElderMurdered = false;
         if (finalOutcome === 'victory') isVictory = true;
         else if (finalOutcome === 'victory_reputation') { isVictory = true; isRepVictory = true; }
         else if (finalOutcome === 'defeat_thief_escaped') isEscaped = true;
         else if (finalOutcome === 'defeat_hero_dead') isHeroDead = true;
         // Раунд 45 (п.2): изгнание за дурную славу — отдельный исход
         else if (finalOutcome === 'defeat_expelled') isExpelled = true;
+        // Раунд 46 (п.2): убийство старосты — немедленный Проигрыш
+        else if (finalOutcome === 'defeat_elder_murdered') { isExpelled = true; isElderMurdered = true; }
         else {
             // Fallback на лог
             isVictory = this.entries.some(e => e.action.includes('ПОБЕДА'));
@@ -117,6 +120,10 @@ export class ActionLog {
         } else if (isEscaped) {
             stars = 1; title = 'Вор ушёл';
             comment = 'Вор успел скрыться. Стоило действовать быстрее и собирать улики внимательнее.';
+        } else if (isExpelled && isElderMurdered) {
+            // Раунд 46 (п.2): кровь старосты — худший из исходов
+            stars = 0; title = 'Убийца судьи';
+            comment = 'Поднять руку на старосту — вне закона: летопись такого героя обрывается позором.';
         } else if (isExpelled) {
             // Раунд 45 (п.2): изгнание из деревни (репутация −100)
             stars = 0; title = 'Изгнан';

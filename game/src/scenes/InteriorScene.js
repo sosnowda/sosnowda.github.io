@@ -25,6 +25,7 @@ import {
     canMarry, marry, getMarriageCost, getMarriageNpcRepThreshold, getMarriageVillageRepThreshold, getAgeOfMajority,
     getVillageRep, changeVillageRep,
     isNpcKilled, canBuyMilitaryGear, MILITARY_GEAR_IDS,
+    getSmithNpcId, // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели мастера
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 // Раунд 39 (п.13): STASHES/тюки/сундуки/ларцы удалены из игры целиком
@@ -74,11 +75,45 @@ export class InteriorScene extends Phaser.Scene {
             this.audioManager.playSceneMusic('village'); // тихий фон деревни в домах
         }
 
-        const interior = INTERIORS[this.interiorId];
+        let interior = INTERIORS[this.interiorId];
         if (!interior) {
             console.error('Interior not found:', this.interiorId);
             this.scene.start(this.from);
             return;
+        }
+        // Раунд 46 (п.1 заявки): если кузнец убит героем — в кузнице стоит
+        // его УЧЕНИК (делает всё то же самое: торговля, разговор, наводки).
+        // Если убиты оба — кузница пустует («тишина»).
+        if (interior.id === 'blacksmith') {
+            const smithId = getSmithNpcId(this.registry);
+            if (smithId && smithId !== interior.npcId) {
+                const app = findNpc(this.registry, smithId);
+                interior = {
+                    ...interior,
+                    npcId: smithId,
+                    npcName: app ? app.name : t('Ученик кузнеца'),
+                    portrait: 'portrait_peasant',
+                    dialogueId: 'apprentice',
+                };
+            }
+        }
+        // Раунд 46 (п.6 заявки): если ХОЗЯИН убит, но его ВДОВА жива —
+        // вдова становится хозяйкой дома: с ней можно говорить, дарить
+        // подарки, хвалить и СВАТАТЬСЯ (полный набор кнопок вместо «тишины»).
+        if (interior.secondaryNpcId
+            && isNpcKilled(this.registry, interior.npcId)
+            && !isNpcKilled(this.registry, interior.secondaryNpcId)) {
+            const widow = findNpc(this.registry, interior.secondaryNpcId);
+            if (widow && widow.widowed) {
+                interior = {
+                    ...interior,
+                    npcId: interior.secondaryNpcId,
+                    npcName: widow.name,
+                    portrait: interior.secondaryPortrait || interior.portrait,
+                    dialogueId: interior.secondaryDialogueId || interior.dialogueId,
+                    secondaryNpcId: null, // вторая фигура больше не нужна — она теперь хозяин
+                };
+            }
         }
         this.interior = interior;
 
@@ -1384,13 +1419,21 @@ export class InteriorScene extends Phaser.Scene {
         const player = this.registry.get('player');
         const { width, height } = this.scale;
 
+        // Раунд 46 (п.1): торговлю ведёт кузнец, а после его гибели — УЧЕНИК.
+        const smithId = getSmithNpcId(this.registry) || 'blacksmith';
+        const smithNpcData = findNpc(this.registry, smithId);
+        const smithName = (smithId === 'blacksmith')
+            ? t('Кузнец Данила')
+            : (smithNpcData && smithNpcData.met ? smithNpcData.name : t('Ученик кузнеца'));
+        const smithPortrait = (this.interior && this.interior.portrait) || 'portrait_blacksmith';
+
         // 7э: отказ от торговли при дурной славе (репутация ≤ −50)
-        if (willNpcRefuseTrade(this.registry, 'blacksmith')) {
-            ActionLog.add(this.registry, 'Кузнец Данила отказался торговаться с героем дурной славы (репутация ≤ −50).');
+        if (willNpcRefuseTrade(this.registry, smithId)) {
+            ActionLog.add(this.registry, `${smithName} отказался торговаться с героем дурной славы (репутация ≤ −50).`);
             createDialog(this, t('Кузница'),
-                t('Кузнец Данила откладывает молот и крестит руки на груди:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»'),
+                tf(t('{0} откладывает молот и крестит руки на груди:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»'), smithName),
                 [{ text: t('Понятно'), callback: () => {} }],
-                { singleton: false, portraitKey: 'portrait_blacksmith' });
+                { singleton: false, portraitKey: smithPortrait });
             return;
         }
 
@@ -1407,7 +1450,8 @@ export class InteriorScene extends Phaser.Scene {
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
         };
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 30, 'Кузница Данилы', {
+        this.add.text(width / 2, height / 2 - panelH / 2 + 30,
+            smithId === 'blacksmith' ? 'Кузница Данилы' : tf(t('Кузница — {0}'), smithName), {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
@@ -1435,7 +1479,7 @@ export class InteriorScene extends Phaser.Scene {
 
         // Список товаров
         const startY = height / 2 - panelH / 2 + 150;
-        const priceMod = getPriceModifier(this.registry, 'blacksmith');
+        const priceMod = getPriceModifier(this.registry, smithId);
         const modNote = priceMod < 1 ? t(' (скидка за добрую славу)') : (priceMod > 1 ? t(' (наценка за дурную славу)') : '');
 
         if (tab === 'sell') {
@@ -1496,15 +1540,15 @@ export class InteriorScene extends Phaser.Scene {
                     : `${item.name} — ${price} д.${modNote} (защита ${item.def})${lockNote}`;
                 createButton(this, width / 2, y, desc, () => {
                     if (isMilitary && !gearCheck.ok) {
-                        createDialog(this, t('Кузница'), tf(t('Кузнец Данила качает головой: «{0}.»'), gearCheck.reason), [
+                        createDialog(this, t('Кузница'), tf(t('{0} качает головой: «{1}.»'), smithName, gearCheck.reason), [
                             { text: t('Понятно'), callback: () => {} },
-                        ], { singleton: false, portraitKey: 'portrait_blacksmith' });
+                        ], { singleton: false, portraitKey: smithPortrait });
                         return;
                     }
                     if (!canAfford) {
                         createDialog(this, t('Кузница'), t('Не хватает денег!'), [
                             { text: t('Понятно'), callback: () => {} },
-                        ], { singleton: false, portraitKey: 'portrait_blacksmith' });
+                        ], { singleton: false, portraitKey: smithPortrait });
                         return;
                     }
                     player.dengas -= price;
@@ -2227,6 +2271,7 @@ export class InteriorScene extends Phaser.Scene {
 
     updateHUD() {
         const p = this.player;
-        this.hud.setText(`❤ ${p.HP}/${p.HPmax}  ✦ Воля ${p.MP}/${p.MPmax}  💰 ${formatMoney(p.dengas || 0)}`);
+        // Раунд 46 (п.8 заявки): из статус-бара удалён «✦ Воля» (MP)
+        this.hud.setText(`❤ ${p.HP}/${p.HPmax}  💰 ${formatMoney(p.dengas || 0)}`);
     }
 }

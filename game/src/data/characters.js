@@ -79,3 +79,64 @@ export function spawnEnemy(key) {
     c.armor = ARMORS[c.armorId] || ARMORS.none;
     return c;
 }
+
+// ============================================================
+// Раунд 46 (п.1 заявки): ЖИТЕЛИ ДЕРУТСЯ СВОИМИ ХАРАКТЕРИСТИКАМИ.
+// Раньше любой житель в бою был «разбойником» из шаблона. Теперь у
+// жителей — свои боевые параметры по профессии: кузнец силён и тяжёл
+// (молот, кожаный фартук), а УЧЕНИК КУЗНЕЦА — моложе мастера и СЛАБЕЕ
+// его по характеристикам (HP 8 против 13, атака 30% против 45%).
+// ============================================================
+export const VILLAGER_COMBAT = {
+    blacksmith: {
+        name: 'Кузнец',
+        stats: { STR: 65, CON: 60, SIZ: 70, DEX: 45, INT: 50, POW: 50, CHA: 40, APP: 40 },
+        weapon: { name: 'Кузнечный молот', dice: { min: 1, max: 8 }, bonus: 2 },
+        attackSkill: 45, dodge: 25, db: { min: 1, max: 4 },
+        armorId: 'leather',   // кожаный фартук
+    },
+    apprentice: {
+        name: 'Ученик кузнеца',
+        // Слабее мастера во всём: HP = (45+40)/10 = 8 (у кузца 13)
+        stats: { STR: 40, CON: 45, SIZ: 40, DEX: 50, INT: 45, POW: 45, CHA: 45, APP: 50 },
+        weapon: { name: 'Молоток', dice: { min: 1, max: 6 }, bonus: 0 },
+        attackSkill: 30, dodge: 30, db: { min: 0, max: 2 },
+        armorId: 'none',
+    },
+    elder: {
+        name: 'Староста',
+        stats: { STR: 45, CON: 45, SIZ: 55, DEX: 40, INT: 55, POW: 60, CHA: 55, APP: 45 },
+        weapon: { name: 'Посох', dice: { min: 1, max: 6 }, bonus: 0 },
+        attackSkill: 35, dodge: 20, db: { min: 0, max: 2 },
+        armorId: 'none',
+    },
+    // Прочие жители — крепкий крестьянский уровень (слабее шаблонного разбойника)
+    default: {
+        name: 'Житель',
+        stats: { STR: 50, CON: 50, SIZ: 50, DEX: 50, INT: 50, POW: 50, CHA: 45, APP: 45 },
+        weapon: { name: 'Кол', dice: { min: 1, max: 6 }, bonus: 0 },
+        attackSkill: 35, dodge: 25, db: { min: 0, max: 2 },
+        armorId: 'none',
+    },
+};
+
+/**
+ * Раунд 46 (п.1): боевая единица ЖИТЕЛЯ деревни — по его профессии.
+ * Ученик кузнеца моложе и слабее кузнеца (см. VILLAGER_COMBAT).
+ */
+export function spawnVillagerEnemy(npc) {
+    const tpl = VILLAGER_COMBAT[npc && npc.id] || VILLAGER_COMBAT.default;
+    const displayName = (npc && npc.name) ? npc.name : tpl.name;
+    const c = createCharacter(displayName, tpl.stats);
+    c.weapon = tpl.weapon;
+    c.attackSkill = tpl.attackSkill;
+    c.skills.dodge = tpl.dodge;
+    c.DB = tpl.db;
+    // В бою житель показывается своим базовым спрайтом (вид спереди/сбоку)
+    c.spriteKey = (npc && npc.sprite) || 'npc_merchant';
+    c.color = 0x333333;
+    c.isThief = false;
+    c.armorId = tpl.armorId || 'none';
+    c.armor = ARMORS[c.armorId] || ARMORS.none;
+    return c;
+}

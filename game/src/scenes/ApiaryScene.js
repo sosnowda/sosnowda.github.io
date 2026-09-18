@@ -832,7 +832,8 @@ export class ApiaryScene extends Phaser.Scene {
         const villageRep = getVillageRep(this.registry);
         const moneyStr = formatMoney(p.dengas || 0);
 
-        let statusLine = `❤${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  💰${moneyStr}`;
+        // Раунд 46 (п.8 заявки): из статус-бара удалён «✦MP» (Воля — в свитке персонажа)
+        let statusLine = `❤${p.HP}/${p.HPmax}  💰${moneyStr}`;
         if (timeState) statusLine += `  📅${formatDateTime(timeState)}`;
         statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
         this.statusText.setText(statusLine);

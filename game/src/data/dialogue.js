@@ -13,7 +13,8 @@ import { ActionLog } from './actionLog.js';
 import { tickTime, getTime } from '../systems/TimeSystem.js';
 import { t, tf } from '../systems/i18n.js';
 // Раунд 45 (пп.5,6 заявки): староста мирит игрока с разозлёнными НПЦ за виру
-import { getHostileNpcs, calculateVira, payViraToElder } from './reputation.js';
+// Раунд 46 (п.4): со СТАРОСТОЙ всегда можно помириться (getViraCandidates)
+import { getViraCandidates, calculateVira, payViraToElder } from './reputation.js';
 
 /**
  * Раунд 22 (п.3): повторный расспрос того же NPC НЕВОЗМОЖЕН.
@@ -50,8 +51,10 @@ export const DIALOGUES = {
                     ];
                     const node = DIALOGUES.elder_quest.nodes.a;
                     // Раунд 45 (п.5 заявки): есть разозлённые НПЦ — староста
-                    // может их примирить с игроком за виру по Судебнику
-                    if (getHostileNpcs(scene.registry).length > 0) {
+                    // может их примирить с игроком за виру по Судебнику.
+                    // Раунд 46 (п.4): СО СТАРОСТОЙ помириться можно ВСЕГДА —
+                    // он берёт виру и за собственную обиду (getViraCandidates).
+                    if (getViraCandidates(scene.registry).length > 0) {
                         base.unshift({ text: t('🤝 Просить мира (вира по Судебнику)'), next: 'vira_hub' });
                     }
                     node.choices = (q.stolenItemRecovered && !q.mainQuestDone)
@@ -72,7 +75,9 @@ export const DIALOGUES = {
                 speaker: 'Староста Мирослав',
                 text: '...',
                 action: (scene) => {
-                    const hostiles = getHostileNpcs(scene.registry);
+                    // Раунд 46 (п.4): список кандидатов включает и САМОГО СТАРОСТУ,
+                    // если у него есть обида на героя (репутация < +30)
+                    const hostiles = getViraCandidates(scene.registry);
                     const node = DIALOGUES.elder_quest.nodes.vira_hub;
                     if (hostiles.length === 0) {
                         node.text = t('Староста разводит руками: «На тебя никто больше не в ярости — мирить некого. Спасибо Судебнику!»');
@@ -80,7 +85,11 @@ export const DIALOGUES = {
                         return;
                     }
                     node.text = t('Староста листает Судебник: «Обида смывается серебром. Вира за кровь свободного мужа — 40 гривен (80 д.), за женщину или отрока — полувирье (40 д.), да продажа мне за суд — 20 д. За разбой без всякой свады — всё вдвое. Плати — и обиженный тебя простит (репутация станет +30).»') +
-                        '\n\n' + hostiles.map(h => tf(t('• {0} — в ярости (репутация {1}), вира {2} д.'), h.name, h.rep, h.vira)).join('\n');
+                        '\n\n' + hostiles.map(h => tf(
+                            h.isElder
+                                ? t('• {0} — обида на тебя (репутация {1}), вира {2} д.')
+                                : t('• {0} — в ярости (репутация {1}), вира {2} д.'),
+                            h.name, h.rep, h.vira)).join('\n');
                     const choices = hostiles.slice(0, 6).map(h => ({
                         text: tf(t('🤝 Мириться с {0} ({1} д.)'), h.name, h.vira),
                         action: (sc) => { sc._viraNpcId = h.id; },
@@ -99,7 +108,7 @@ export const DIALOGUES = {
                     const r = payViraToElder(scene.registry, npcId);
                     scene._lastAskResult = { message: r.message };
                     const node = DIALOGUES.elder_quest.nodes.vira_pay;
-                    const hostiles = getHostileNpcs(scene.registry);
+                    const hostiles = getViraCandidates(scene.registry);
                     const choices = [];
                     if (hostiles.length > 0) {
                         choices.push({ text: t('🤝 Просить мира ещё'), next: 'vira_hub' });
@@ -383,6 +392,58 @@ export const DIALOGUES = {
             },
             ask_result: {
                 speaker: 'Кузнец Данила',
+                text: '...',
+                choices: [
+                    { text: t('Понятно, спасибо.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // === Раунд 46 (п.1 заявки): УЧЕНИК КУЗНЕЦА ===
+    // Встаёт к горну после гибели кузнеца. Делает всё то же самое, что и
+    // мастер (торговля в кузнице, наводки о воре — знания ученика), но он
+    // МОЛОЖЕ и СЛАБЕЕ (боевые параметры — VILLAGER_COMBAT.apprentice).
+    apprentice: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Ученик кузнеца',
+                text: 'Здрав будь, путник. Мастер мой... увы, покинул мир живых. Теперь у горна я: молот тяжёл, да руки крепнут. Нужно оружие или броня — открой меню «Купить оружие».',
+                en: 'Good health to you, traveller. My master... alas, has left the world of the living. Now the forge is mine: the hammer is heavy, but my arms grow strong. Need a weapon or armor? Open the "Buy weapons" menu.',
+                action: (scene) => {
+                    DIALOGUES.apprentice.nodes.a.choices = withAskThief(scene, 'blacksmith', [
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('Спасибо, я пойду.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            ask_thief: {
+                speaker: 'Ученик кузнеца',
+                text: '...',
+                action: (scene) => {
+                    // Ученик знает всё, что видел его мастер (наследник свидетеля)
+                    const r = askNPC(scene.registry, 'apprentice', 'Ученик кузнеца');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Ученик кузнеца',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'apprentice', 'Ученик кузнеца');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Ученик кузнеца',
                 text: '...',
                 choices: [
                     { text: t('Понятно, спасибо.'), end: true },

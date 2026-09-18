@@ -57,6 +57,8 @@ export const PROFESSIONS_BY_GENDER = {
     male: [
         { id: 'peasant',    name: 'селянин',    femaleName: 'селянка' },
         { id: 'blacksmith', name: 'кузнец',     femaleName: null },
+        // Раунд 46 (п.1 заявки): ученик кузнеца — встаёт к горну, если кузнец убит
+        { id: 'apprentice', name: 'ученик кузнеца', femaleName: null },
         { id: 'priest',     name: 'священник',  femaleName: null },
         { id: 'elder',      name: 'староста',   femaleName: null },
         { id: 'hunter',     name: 'охотник',    femaleName: null },
@@ -316,6 +318,46 @@ function rollNpcLook(baseSprite) {
 }
 
 /**
+ * Раунд 46 (п.1 заявки): УЧЕНИК КУЗНЕЦА.
+ * При убийстве кузнеца игроком его место у горна занимает ученик —
+ * он делает ТО ЖЕ САМОЕ, что и кузнец (торговля, разговоры, наводки),
+ * но он МОЛОЖЕ мастера (19 лет против 40) и СЛАБЕЕ по характеристикам
+ * (см. VILLAGER_COMBAT в characters.js).
+ * Добавляется в registry 'npcs' только после гибели кузнеца.
+ */
+export const BLACKSMITH_APPRENTICE_ID = 'apprentice';
+
+export function spawnBlacksmithApprentice(registry) {
+    const npcs = getNpcs(registry);
+    const existing = npcs.find(n => n.id === BLACKSMITH_APPRENTICE_ID);
+    if (existing) return existing;
+    const gender = 'male';
+    const age = 19; // моложе кузнеца Данилы (40 лет)
+    const name = getRandomMaleName();
+    const profession = PROFESSIONS_BY_GENDER.male.find(p => p.id === 'apprentice')
+        || { id: 'apprentice', name: 'ученик кузнеца' };
+    const cfg = {
+        id: BLACKSMITH_APPRENTICE_ID, gender, age,
+        professionId: 'apprentice',
+        sprite: 'npc_merchant', portrait: 'portrait_peasant',
+        interiorId: 'blacksmith',
+    };
+    const npc = {
+        ...cfg,
+        name,
+        ageGroup: getAgeGroup(age, gender),
+        profession,
+        strangerDescription: getStrangerDescription(age, gender, profession),
+        knownDescription: getKnownDescription(name, profession, gender),
+        look: rollNpcLook(cfg.sprite),
+        met: false,
+    };
+    npcs.push(npc);
+    registry.set('npcs', npcs);
+    return npc;
+}
+
+/**
  * Получить NPC из registry.
  */
 export function getNpcs(registry) {
@@ -349,7 +391,9 @@ export function meetNpc(registry, npcId) {
 export function getNpcDisplayName(registry, npcId) {
     const npc = findNpc(registry, npcId);
     if (!npc) return t('незнакомец');
-    return npc.met ? npc.knownDescription : npc.strangerDescription;
+    // Раунд 46 (п.5): вдовец/вдова — статус виден в имени после гибели супруга
+    const widowed = npc.widowed ? (npc.gender === 'female' ? ', вдова' : ', вдовец') : '';
+    return npc.met ? (npc.knownDescription + widowed) : npc.strangerDescription;
 }
 
 /**
@@ -359,7 +403,10 @@ export function getNpcShortName(registry, npcId) {
     const npc = findNpc(registry, npcId);
     if (!npc) return t('незнакомец');
     if (npc.met) {
-        return npc.name;
+        // Раунд 46 (п.5): у вдовы/вдовца статус виден и в коротком имени
+        return npc.widowed
+            ? `${npc.name} (${npc.gender === 'female' ? 'вдова' : 'вдовец'})`
+            : npc.name;
     }
     return npc.strangerDescription;
 }

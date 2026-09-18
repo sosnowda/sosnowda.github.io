@@ -22,7 +22,8 @@ import { t } from '../systems/i18n.js';
 // понижение — быстрое и лёгкое.
 
 import { ActionLog } from './actionLog.js';
-import { getNpcs } from './npcNames.js';
+// Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели кузнеца
+import { getNpcs, findNpc, spawnBlacksmithApprentice, BLACKSMITH_APPRENTICE_ID } from './npcNames.js';
 import { getTimeOfDay, getTime } from '../systems/TimeSystem.js';
 import { skillCheck } from '../systems/BRPEngine.js';
 
@@ -56,6 +57,18 @@ const MURDER_NPC_PENALTY = 50;
 const KIN_REP_SET = -100;           // родне — ровно до дна
 const REFUSE_TRADE_THRESHOLD = -50; // ниже этого — отказ торговать (п.1)
 const REFUSE_TALK_THRESHOLD = -30;  // ниже этого — отказ говорить (п.1)
+
+// Раунд 46 (п.7 заявки): грустные эпитафии для могил на погосте —
+// каждый убитый житель получает свою надпись (случайную на момент гибели).
+const GRAVE_EPITAPHS = [
+    'Спи, добрая душа. Земля тебе пухом, а небо — тихим светом.',
+    'Погас огонёк в окне, но не погасла память о тебе.',
+    'Помяни, Господи, душу усопшего во Царствии Своём.',
+    'Не гремит более его молот — тишина легла на двор его.',
+    'Трава над тобой взойдёт, и колокол отпоет твою душу.',
+    'Светлая душа покинула село — и село осиротело.',
+    'Не кручинься, путник: всяк приидет в час свой.',
+];
 
 // === ИНИЦИАЛИЗАЦИЯ ===
 
@@ -168,6 +181,14 @@ export function checkNpcWillingToTalk(registry, npcId, options = {}) {
     const hour = timeState ? timeState.hour : 12;
     const tod = getTimeOfDay(hour);
     
+    // Раунд 46 (п.3 заявки): СТАРОСТА ВСЕГДА РАЗГОВАРИВАЕТ с игроком —
+    // не зависимо от его личной репутации к герою (должностное лицо:
+    // судит, мирит за виру, принимает икону). Он и в ярости не нападает —
+    // долг выше гнева. Остальные пороги (ночь/занятость) его тоже не трогают.
+    if (npcId === 'elder') {
+        return { canTalk: true };
+    }
+
     // П.2: При крайней вражде (−80..−100) — лишь ШАНС нападения
     if (npcRep <= ATTACK_THRESHOLD) {
         // Раунд 45 (п.4 заявки): перемирье после побега игрока из боя —
@@ -566,6 +587,9 @@ export function applyNpcMurderConsequences(registry, victimNpcId) {
     const npcs = getNpcs(registry);
     const victim = npcs.find(n => n.id === victimNpcId);
     const victimName = victim ? (victim.name || victimNpcId) : victimNpcId;
+    // Раунд 46 (п.2 заявки): убийство СТАРОСТЫ — особый случай
+    const isElder = (victimNpcId === 'elder');
+    const player = registry.get('player');
 
     // 1) Все живые НПЦ −50 (прямая запись — без балансировочных множителей)
     npcs.forEach(n => {
@@ -573,8 +597,12 @@ export function applyNpcMurderConsequences(registry, victimNpcId) {
         rep.npcRep[n.id] = clamp((rep.npcRep[n.id] || 0) - MURDER_NPC_PENALTY, NPC_REP_MIN, NPC_REP_MAX);
     });
 
-    // 2) Деревня −50 (прямая запись)
-    rep.villageRep = clamp(rep.villageRep - MURDER_VILLAGE_PENALTY, VILLAGE_REP_MIN, VILLAGE_REP_MAX);
+    // 2) Деревня −50 (прямая запись).
+    //    Раунд 46 (п.2): за убийство старосты репутация падает сразу ДО −100 —
+    //    игра немедленно заканчивается Проигрышем (см. CombatScene/EndScene).
+    rep.villageRep = isElder
+        ? VILLAGE_REP_MIN
+        : clamp(rep.villageRep - MURDER_VILLAGE_PENALTY, VILLAGE_REP_MIN, VILLAGE_REP_MAX);
 
     // 3) Родня убитого — до дна (−100). Родня = все, кто живёт с убитым
     //    в одном доме (супруга married:true и дети professionId:'child');
@@ -593,18 +621,117 @@ export function applyNpcMurderConsequences(registry, victimNpcId) {
     rep.npcRep[victimNpcId] = NPC_REP_MIN;
     registry.set('reputation', rep);
 
-    // 4) Флаг смерти — сцены убирают убитого с улицы и из домов
+    // 3б) Раунд 46 (п.5 заявки): если у убитого была супруга/супруг —
+    //      второй получает статус ВДОВЦА/ВДОВЫ (и может потом вступить
+    //      в новый брак — п.6, canMarry пропускает не замужних).
+    let widowedName = null;
+    if (victim && victim.interiorId && (victim.married || victim.spousePlayerName)) {
+        const spouse = npcs.find(n => n.id !== victimNpcId
+            && n.interiorId === victim.interiorId
+            && n.married
+            && (n.age || 0) >= AGE_OF_MAJORITY
+            && (!n.profession || n.profession.id !== 'child'));
+        if (spouse) {
+            spouse.married = false;
+            spouse.widowed = true;
+            spouse.widowedOf = victimName;
+            widowedName = spouse.name || spouse.id;
+        }
+    }
+    // Если убитый был супругом самого ИГРОКА — игрок овдовел
+    let playerWidowed = false;
+    if (player && player.married && player.spouseNpcId === victimNpcId) {
+        player.married = false;
+        player.widowed = true;
+        registry.set('player', player);
+        playerWidowed = true;
+    }
+    if (widowedName) registry.set('npcs', npcs);
+
+    // 4) Флаг смерти + данные могилы (сцены убирают убитого с улицы и из домов).
+    //    Раунд 46 (п.7): на погосте появляется МОГИЛА убитого — с поп-апом:
+    //    кто убил, по какой причине и грустная эпитафия.
     const q = registry.get('quest') || {};
     if (!q.npcKilled) q.npcKilled = {};
-    q.npcKilled[victimNpcId] = true;
+    const ts = getTime(registry);
+    q.npcKilled[victimNpcId] = {
+        by: (player && player.name) || 'Герой',
+        reason: 'npc_attacked', // житель сам напал на героя и пал в честной схватке
+        day: ts ? ts.day : 1,
+        hour: ts ? ts.hour : 12,
+        epitaph: GRAVE_EPITAPHS[Math.floor(Math.random() * GRAVE_EPITAPHS.length)],
+    };
+    // Раунд 46 (п.2): флаг немедленного Проигрыша за убийство старосты
+    if (isElder) q.elderMurdered = true;
     registry.set('quest', q);
+
+    // 5) Раунд 46 (п.1 заявки): на место убитого КУЗНЕЦА встаёт УЧЕНИК —
+    //    делает всё то же самое (кузница, торговля, наводки), но моложе и слабее.
+    let apprenticeName = null;
+    if (victimNpcId === 'blacksmith') {
+        const app = spawnBlacksmithApprentice(registry);
+        if (app) apprenticeName = app.name;
+    }
 
     ActionLog.add(registry, `☠ Кровная вина: герой убил ${victimName}. Деревня и все жители −${MURDER_VILLAGE_PENALTY} репутации.`);
     if (kinNames.length > 0) {
         ActionLog.add(registry, `Родня убитого (${kinNames.join(', ')}) проклинает героя: их репутация до −100.`);
     }
+    if (widowedName) {
+        ActionLog.add(registry, `${widowedName} оплакивает ${victimName}: теперь он(а) ${victim && victim.gender === 'female' ? 'вдовец' : 'вдова'}.`);
+    }
+    if (playerWidowed) {
+        ActionLog.add(registry, `Ты овдовел(а): твой(я) супруг(а) ${victimName} мёртв(а).`);
+    }
+    if (apprenticeName) {
+        ActionLog.add(registry, `К горну встал ${apprenticeName}, ученик кузнеца: моложе мастера, но работа кузницы не встанет.`);
+    }
+    if (isElder) {
+        ActionLog.add(registry, 'ПОРАЖЕНИЕ: староста мёртв от твоей руки. Деревня проклинает убийцу — репутация до −100. Проигрыш.');
+    }
 
-    return { affected: npcs.length - 1, kinNames, victimName, villageRep: rep.villageRep };
+    return {
+        affected: npcs.length - 1, kinNames, victimName, villageRep: rep.villageRep,
+        widowedName, playerWidowed, apprenticeName,
+        elderMurdered: isElder,
+        graveInfo: q.npcKilled[victimNpcId],
+    };
+}
+
+/**
+ * Раунд 46 (п.1 заявки): кто сейчас трудится в кузнице.
+ *   'blacksmith'  — живой кузнец;
+ *   'apprentice'  — ученик (кузнец убит, ученик встал к горну);
+ *   null          — кузница пуста и мертва (убиты оба).
+ */
+export function getSmithNpcId(registry) {
+    if (!isNpcKilled(registry, 'blacksmith')) return 'blacksmith';
+    const app = findNpc(registry, BLACKSMITH_APPRENTICE_ID);
+    return (app && !isNpcKilled(registry, 'apprentice')) ? 'apprentice' : null;
+}
+
+/**
+ * П.5 заявки (раунд 45) + п.4 (раунд 46): полный список тех, с кем староста
+ * может примирить игрока за виру.
+ *   • все НПЦ в ярости (репутация ≤ −80), кроме убитых;
+ *   • Раунд 46 (п.4): СО СТАРОСТОЙ ВСЕГДА можно помириться — он берёт виру
+ *     и за собственную обиду, даже если ярости ещё нет (репутация < +30).
+ */
+export function getViraCandidates(registry) {
+    const list = getHostileNpcs(registry);
+    const elderRep = getNpcRep(registry, 'elder');
+    if (!isNpcKilled(registry, 'elder') && elderRep < 30 && !list.some(h => h.id === 'elder')) {
+        list.unshift({
+            id: 'elder',
+            name: t('сам староста'),
+            gender: 'male',
+            age: null,
+            rep: elderRep,
+            vira: calculateVira(registry, 'elder').total,
+            isElder: true,
+        });
+    }
+    return list;
 }
 
 /**
@@ -848,9 +975,16 @@ export function canMarry(registry, npcId, player) {
         return { canMarry: false, reason: `Недостаточно денег на свадебное торжество (нужно ${MARRIAGE_COST} д., у вас ${player.dengas || 0} д.)` };
     }
     
-    // Проверка, не состоит ли NPC в браке
+    // Проверка, не состоит ли NPC в браке.
+    // Раунд 46 (пп.5,6 заявки): ВДОВА/ВДОВЕЦ может вступить в новый брак —
+    // после гибели супруга canMarry выставляет married=false + widowed=true,
+    // поэтому проверка проходит честно. isNpcKilled добавлен для ясности:
+    // мёртвого не венчают.
     if (npc.married) {
         return { canMarry: false, reason: `${npc.name} уже состоит в браке` };
+    }
+    if (isNpcKilled(registry, npcId)) {
+        return { canMarry: false, reason: `${npc.name} покинул(а) мир живых — над ним(ей) уже отпели` };
     }
     
     return { canMarry: true };

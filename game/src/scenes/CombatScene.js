@@ -3,7 +3,7 @@
 import { RUS } from '../config/RusTheme.js';
 import { WEAPONS } from '../config/GameConfig.js';
 import { skillCheck, rollDamage, ROLL_RESULT, applyDamage } from '../systems/BRPEngine.js';
-import { spawnEnemy } from '../data/characters.js';
+import { spawnEnemy, spawnVillagerEnemy } from '../data/characters.js';
 import { createButton, createDialog, createFloatingText, registerAnchoredUI, onSceneResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
@@ -11,6 +11,8 @@ import { ActionLog } from '../data/actionLog.js';
 import { loseHeroDead, recoverStolenItem, thiefFleesFromFight, saveThiefHp, restoreThiefHp } from '../data/thief.js';
 // Раунд 45 (пп.3,4): последствия убийства НПЦ и перемирье после побега
 import { applyNpcMurderConsequences, setNpcTruce } from '../data/reputation.js';
+// Раунд 46 (п.1): жители дерутся своими характеристиками
+import { findNpc } from '../data/npcNames.js';
 import { getActiveQuests, checkQuestCompletion, consumeBlessing } from '../data/questGenerator.js';
 import { getTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals } from '../systems/Weather.js';
@@ -41,7 +43,16 @@ export class CombatScene extends Phaser.Scene {
         this.audioManager.playSceneMusic('combat');
 
         this.player = this.registry.get('player');
-        this.enemies = this.enemyKeys.map(k => spawnEnemy(k));
+        // Раунд 46 (п.1 заявки): ЖИТЕЛЬ дерётся СВОИМИ характеристиками —
+        // кузнец силён (молот, кожаный фартук), ученик моложе и слабее,
+        // староста стар и слаб. Вор/волк/разбойник — как раньше, из шаблонов.
+        const villagerId = (this.npcId && this.npcId.endsWith('_hostile'))
+            ? this.npcId.slice(0, -'_hostile'.length)
+            : null;
+        const villagerNpc = villagerId ? findNpc(this.registry, villagerId) : null;
+        this.enemies = villagerNpc
+            ? [spawnVillagerEnemy(villagerNpc)]
+            : this.enemyKeys.map(k => spawnEnemy(k));
         // Раунд 32 (п.11): вор НЕ лечится между боями — если прошлый бой был
         // прерван побегом игрока, у вора остаётся прежний запас HP
         const isThiefFightNow = this.enemyKeys.includes('thief') || this.npcId === 'thief';
@@ -719,6 +730,9 @@ export class CombatScene extends Phaser.Scene {
             // Убийство жителя — кровная вина: деревня и все НПЦ −50, родня −100
             murderInfo = applyNpcMurderConsequences(this.registry, murderVictimId);
         }
+        // Раунд 46 (п.2 заявки): убийство СТАРОСТЫ — репутация до −100 и
+        // немедленный Проигрыш (отдельный финал «⚖ Убийство старосты»)
+        const elderMurdered = !!(murderInfo && murderInfo.elderMurdered);
         if (isThiefFight) {
             // Вор повержен в бою — икона в инвентарь, погоня завершена
             recoverStolenItem(this.registry, 'killed', null);
@@ -755,6 +769,19 @@ export class CombatScene extends Phaser.Scene {
         emitter.explode(30);
         this.time.delayedCall(1500, () => {
             emitter.destroy();
+            // Раунд 46 (п.2): убийство старосты — немедленный Проигрыш
+            if (elderMurdered) {
+                createDialog(this, t('☠ Кровь старосты!'),
+                    tf(t('Ты убил {0} — старосту деревни! Старшина сходки указывает на тебя пальцем: «Убийца судьи — вне закона!» Деревня проклинает тебя: репутация упала до −100.\n\nЛетопись твоего похода окончена — ПРОИГРЫШ.'), murderInfo ? murderInfo.victimName : 'староста'),
+                    [{ text: t('Смириться с судьбой'), callback: () => {
+                        const q2 = this.registry.get('quest') || {};
+                        q2.elderMurdered = true;
+                        this.registry.set('quest', q2);
+                        this.scene.start('End');
+                    } }],
+                    { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
+                return;
+            }
             // Раунд 21: после победы над вором — НЕ конец игры, а возврат в деревню
             // (икону нужно вернуть старосте или священнику; игра продолжается)
             if (isThiefFight) {

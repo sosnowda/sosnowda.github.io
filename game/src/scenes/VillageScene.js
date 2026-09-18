@@ -1477,10 +1477,12 @@ export class VillageScene extends Phaser.Scene {
         // Раунд 21: отсчёт до побега вора в ДЕЙСТВИЯХ (тиках)
         const ticksLeft = chaseTicksLeft(this.registry);
         
-        // Единый статус-бар (п.10): HP | MP | Деньги | Дата | Действия | Репутация
+        // Единый статус-бар (п.10): HP | Деньги | Дата | Действия | Репутация
         // Раунд 45 (п.1 заявки): параметр «меч» (⚔%) из виджета УДАЛЁН —
         // владение мечом смотрится в свитке персонажа, а не в строке статуса.
-        let statusLine = `❤${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  💰${moneyStr}`;
+        // Раунд 46 (п.8 заявки): из верхнего виджета удалён и параметр «✦MP» —
+        // Воля смотрится в свитке персонажа; механики (молитва, медовуха) целы.
+        let statusLine = `❤${p.HP}/${p.HPmax}  💰${moneyStr}`;
         if (timeState) {
             // Раунд 29: дата «как на Руси» — день, народный месяц, лето от Сотворения мира
             statusLine += `  📅${formatDateRus(timeState)}`;
@@ -1500,7 +1502,9 @@ export class VillageScene extends Phaser.Scene {
         if (ticksLeft > 0) {
             statusLine += `  ${tf(t('⏳{0}действ.'), ticksLeft)}`;
         }
-        statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
+        // Раунд 46 (п.9 заявки): репутация игрока в деревне — в статус-баре
+        // деревни, с явной подписью (раньше была только безымянная звезда ⭐).
+        statusLine += `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}`;
         this.statusText.setText(statusLine);
         
         // Обновляем overlay дня/ночи

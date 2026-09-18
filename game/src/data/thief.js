@@ -797,6 +797,11 @@ export function askNPC(registry, npcId, npcName) {
         return { gotClue: false, message: '...', turnsLeft: 0, thiefEscaped: false };
     }
 
+    // Раунд 46 (п.1 заявки): УЧЕНИК КУЗНЕЦА наследует знания мастера —
+    // если кузнец был свидетелем вора, ученик «видел то же самое» (и
+    // память у них общая: мастера уже спросили → ученик не повторяет).
+    const witnessId = (npcId === 'apprentice') ? 'blacksmith' : npcId;
+
     // Раунд 44 (п.6 владельца): ДЕТИ не выдают наводок — вежливо отнекиваются,
     // попытка расспроса НЕ расходуется (в thiefAskedFrom не пишем).
     const childNpc = findNpc(registry, npcId);
@@ -810,14 +815,14 @@ export function askNPC(registry, npcId, npcName) {
 
     // Раунд 22: повторный расспрос того же NPC невозможен (без траты времени)
     if (!q.thiefAskedFrom) q.thiefAskedFrom = [];
-    if (q.thiefAskedFrom.includes(npcId)) {
+    if (q.thiefAskedFrom.includes(witnessId)) {
         return {
             gotClue: false, alreadyAsked: true,
             message: `${who}: «${t('Я уже всё тебе рассказал. Больше не знаю ничего — спроси у других людей.')}»`,
             turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
         };
     }
-    q.thiefAskedFrom.push(npcId);
+    q.thiefAskedFrom.push(witnessId);
     registry.set('quest', q);
 
     // Раунд 31 (пп.11,12): час за разговор списывается при ЗАКРЫТИИ диалога
@@ -839,8 +844,9 @@ export function askNPC(registry, npcId, npcName) {
     let gotClue = false;
     let message = '';
 
-    // Раунд 30: видел ли этот селянин вора — решено случайно на старте игры
-    const witness = isThiefWitness(registry, npcId);
+    // Раунд 30: видел ли этот селянин вора — решено случайно на старте игры.
+    // Раунд 46: ученик кузнеца наследует свидетательство мастера.
+    const witness = isThiefWitness(registry, witnessId);
 
     if (witness) {
         // Свидетель выдаёт ТЕКУЩЕЕ местоположение вора (п.9)
@@ -1331,6 +1337,8 @@ export function surrenderStolenItem(registry, npcId) {
 export function checkGameEnd(registry) {
     const q = registry.get('quest');
     if (!q) return null;
+    // Раунд 46 (п.2): убийство старосты — немедленный Проигрыш (высший приоритет)
+    if (q.elderMurdered) return 'defeat_elder_murdered';
     // Раунд 45 (п.2): изгнание из деревни — отдельный исход Проигрыша
     // (ставится только при репутации −100)
     if (q.expelledFromVillage) return 'defeat_expelled';
