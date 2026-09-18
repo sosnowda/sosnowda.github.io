@@ -3,46 +3,71 @@
 // Все функции используют Math.random, поэтому пригодны и для тестов, и для игры.
 
 // ============================================================
-// Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка навыка в диалогах.
-// «При диалоге игрока с НПЦ, при проверках навыков, ВСЕГДА сравниваются
-//  параметры навыка игрока с ТАКИМ ЖЕ параметром НПЦ + сложность проверки».
+// Раунд 48 (п.4 заявки): ВСТРЕЧНЫЕ проверки БЕЗ «СОПРОТИВЛЕНИЙ».
+// Владелец: «Удалить сопротивления, заменив проверками: НАВЫК ПРОТИВ НАВЫКА
+// и ХАРАКТЕРИСТИКИ ПРОТИВ ХАРАКТЕРИСТИК».
 //
-// Формула: сопротивление НПЦ = навык НПЦ + сложность.
-// Эффективный навык игрока = навык игрока − (сопротивление − 50).
-//   • у «среднего» жителя (сопротивление 50) и сложности 0 — обычная проверка;
-//   • умелый житель (60) — штраф −10 к проверке игрока;
-//   • простак (30) — бонус +20.
+// Как работает (честная встречная проверка BRP — бросают ОБЕ стороны):
+//  • игрок бросает d100 против СВОЕГО параметра (сложность уменьшает
+//    параметр игрока — отображается ОДИН раз, без дублей);
+//  • противник бросает d100 против СВОЕГО того же параметра
+//    (если НПЦ не владеет навыком — сравниваются характеристики);
+//  • победа: у игрока СТЕПЕНЬ успеха выше; при равных степенях —
+//    точность решает (меньший бросок); обе стороны мажут — провал.
+// Степени успеха: крит (1/20 навыка) > особый (1/5) > обычный успех > провал.
 // ============================================================
-export const OPPOSED_STANDARD_RESISTANCE = 50; // «средний житель»
 
-export function opposedSkillCheck(playerSkill, npcResistance, difficulty = 0) {
-    const p = Math.max(1, Math.min(99, Math.round(playerSkill || 1)));
+// Внутренняя «степень успеха» броска: 3 крит / 2 особый / 1 успех / 0 провал
+function successTier(res) {
+    if (!res || res.result === 'fail' || res.result === 'fumble') return 0;
+    if (res.result === 'critical') return 3;
+    return res.special ? 2 : 1;
+}
+
+export function opposedSkillCheck(playerValue, npcValue, difficulty = 0) {
     const d = Math.round(difficulty || 0);
-    const base = Math.max(0, Math.round(npcResistance || 0));      // сам параметр НПЦ
-    const resistance = Math.max(5, Math.min(95, base + d));        // параметр + сложность
-    const penalty = resistance - OPPOSED_STANDARD_RESISTANCE;
-    const effective = Math.max(1, Math.min(99, p - penalty));
-    const res = skillCheck(effective);
+    const pBase = Math.max(1, Math.min(99, Math.round(playerValue || 1)));
+    const nBase = Math.max(1, Math.min(99, Math.round(npcValue || 1)));
+    // Сложность снижает параметр ИГРОКА (показывается один раз в подписи)
+    const pEff = Math.max(1, Math.min(99, pBase - d));
+    const pRes = skillCheck(pEff);
+    const nRes = skillCheck(nBase);
+    const pT = successTier(pRes);
+    const nT = successTier(nRes);
+    // Победа: степень успеха выше; при равных — точнее бросок (меньше d100).
+    // Равные степени и равные броски — спор на стороне защитника (НПЦ).
+    const won = pT !== nT ? pT > nT : (pT > 0 && pRes.roll < nRes.roll);
+    const result = won
+        ? (pRes.critical ? 'critical' : 'success')
+        : (pRes.result === 'fumble' ? 'fumble' : 'fail');
     return {
-        ...res,
-        playerSkill: p,
-        npcBase: base,
-        npcResistance: resistance,
+        roll: pRes.roll,
+        npcRoll: nRes.roll,
+        result,
+        won,
+        special: won && pRes.special && !pRes.critical,
+        critical: won && pRes.critical,
+        playerSkill: pBase,
+        effective: pEff,
+        npcValue: nBase,
         difficulty: d,
-        penalty,
-        effective,
     };
 }
 
-// Короткая подпись проверки для диалогов/летописи:
-// «бросок 22: Убеждение 45 против (Упорство жителя 40 +10 сложности) — успех»
+// Короткая подпись проверки для диалогов/летописи (без сопротивлений,
+// сложность — один раз):
+// «бросок 22 при сложности +10: Убеждение 45 против Убеждения жителя 40 (бросок НПЦ 55) — успех»
 export function formatOpposedCheck(res, playerSkillName, npcSkillName) {
     if (!res || res.playerSkill == null) return '';
-    const sign = res.difficulty > 0 ? `+${res.difficulty}` : `${res.difficulty}`;
-    const diffPart = res.difficulty ? ` ${sign} сложности` : '';
-    return `бросок ${res.roll}: ${playerSkillName} ${res.playerSkill}` +
-        ` против (${npcSkillName} ${res.npcBase != null ? res.npcBase : res.npcResistance}${diffPart})` +
-        ` — ${res.result === 'critical' ? 'ОСОБЫЙ УСПЕХ' : res.result === 'success' ? 'успех' : res.result === 'fumble' ? 'провал (fumble)' : 'провал'}`;
+    const diffPart = res.difficulty
+        ? ` при сложности ${res.difficulty > 0 ? '+' : ''}${res.difficulty}`
+        : '';
+    const verdict = res.result === 'critical' ? 'ОСОБЫЙ УСПЕХ'
+        : res.result === 'success' ? 'успех'
+        : res.result === 'fumble' ? 'провал (fumble)' : 'провал';
+    return `бросок ${res.roll}${diffPart}: ${playerSkillName} ${res.playerSkill}` +
+        ` против ${npcSkillName} ${res.npcValue != null ? res.npcValue : '?'} (бросок НПЦ ${res.npcRoll != null ? res.npcRoll : '?'})` +
+        ` — ${verdict}`;
 }
 
 // Бросок d100: 1..100

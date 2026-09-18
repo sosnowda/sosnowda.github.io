@@ -2,8 +2,10 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { WEAPONS } from '../config/GameConfig.js';
-import { skillCheck, rollDamage, ROLL_RESULT, applyDamage } from '../systems/BRPEngine.js';
-import { spawnEnemy, spawnVillagerEnemy } from '../data/characters.js';
+import { skillCheck, rollDamage, ROLL_RESULT, applyDamage, opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
+import { spawnEnemy, spawnVillagerEnemy, VILLAGER_COMBAT } from '../data/characters.js';
+// Раунд 48 (пп.2,5 заявки): «Исследование» в бою и раскрытие мастерства оружия
+import { getNpcOpposition, formatNpcStatsLine, ruSkillName } from '../data/npcStats.js';
 import { createButton, createDialog, createFloatingText, registerAnchoredUI, onSceneResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
@@ -50,6 +52,15 @@ export class CombatScene extends Phaser.Scene {
             ? this.npcId.slice(0, -'_hostile'.length)
             : null;
         const villagerNpc = villagerId ? findNpc(this.registry, villagerId) : null;
+        // Раунд 48 (пп.2,5): для «Исследования» и раскрытия мастерства оружия
+        this.villagerNpc = villagerNpc;
+        this.villagerCombatTpl = villagerNpc ? (VILLAGER_COMBAT[villagerNpc.id] || VILLAGER_COMBAT.default) : null;
+        // П.5: после ПЕРВОГО удара противника герой узнаёт ТОЧНЫЙ параметр
+        // навыка применённого в бою оружия (и только его).
+        this.weaponSkillRevealed = false;
+        // П.2: параметры противника открываются только удачным «Исследованием»
+        this.intelRevealed = false;
+        this.intelText = null;
         this.enemies = villagerNpc
             ? [spawnVillagerEnemy(villagerNpc)]
             : this.enemyKeys.map(k => spawnEnemy(k));
@@ -188,7 +199,7 @@ export class CombatScene extends Phaser.Scene {
             this.busyDialog = true;
             createDialog(this, '❓ Информация по игре',
                 timeRatioInfoLine() + '\n\n' +
-                t('⚔ Бой пошаговый (BRP d100): атака, уклон, трава, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.'),
+                t('⚔ Бой пошаговый (BRP d100): атака, уклон, трава, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\n👁 Исследование: удачная проверка открывает параметры противника;\nпосле первого его удара видно мастерство применённого оружия.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
                 { singletonKey: 'combat-help' });
         });
@@ -242,6 +253,9 @@ export class CombatScene extends Phaser.Scene {
         acts.push(
             { label: t('Уклон'), cb: () => this.dodge(), bg: 0x4a6a4a, hover: 0x5a7a5a },
             { label: t('Трава'), cb: () => this.useHerb(), bg: 0x6a5a2a, hover: 0x7a6a3a },
+            // Раунд 48 (п.2 заявки): параметры НПЦ видны ТОЛЬКО через проверку
+            // «Исследование» в бою (и только при удачной проверке)
+            { label: t('👁 Исследование'), cb: () => this.examineEnemy(), bg: 0x4a5a6a, hover: 0x5a6a7a },
             { label: t('🏃 Бежать'), cb: () => this.flee(), bg: 0x2a2a5a, hover: 0x3a3a6a },
         );
         // Равномерная раскладка по центру (4 или 5 кнопок)
@@ -580,6 +594,69 @@ export class CombatScene extends Phaser.Scene {
         this.time.delayedCall(500, () => this.enemyTurn());
     }
 
+    /**
+     * Раунд 48 (п.2 заявки): ИССЛЕДОВАНИЕ противника в бою.
+     * Параметры НПЦ игроку больше не показываются просто так — единственный
+     * способ узнать их: удачная проверка навыка «Исследование».
+     * Проверка — по общему правилу раунда 48: НАВЫК ПРОТИВ НАВЫКА
+ * («Исследование» героя против Внимательности жителя; у чужаков —
+     * Интеллект). Удача: раскрываются параметры противника. Неудача: ход
+     * потрачен впустую, противник отвечает.
+     */
+    examineEnemy() {
+        if (this.intelRevealed) {
+            this.pushLog(t('Ты уже изучил этого противника.'));
+            return; // ход не тратится
+        }
+        const target = this.firstAlive();
+        if (!target) { this.endCombatVictory(); return; }
+        this.busy = true;
+        // Раунд 22: благословение батюшки усиливает ОДНУ проверку навыка
+        const skill = consumeBlessing(this.registry, (this.player.skills && this.player.skills.investigate) || 25);
+        // Сопротивление: Внимательность жителя (навык против навыка);
+        // у чужаков (вор/волк/разбойник) — от Интеллекта (характеристика).
+        const opp = this.villagerNpc
+            ? getNpcOpposition(this.villagerNpc, 'spot')
+            : { value: Math.max(10, Math.min(70, Math.round((target.INT || 40) / 5) * 5)), ruName: 'Интеллект', ruNameGen: 'Интеллекта' };
+        const res = opposedSkillCheck(skill, opp.value, 0);
+        const checkLine = formatOpposedCheck(res, 'Исследование', `${opp.ruNameGen || opp.ruName} противника`);
+        if (res.won) {
+            this.intelRevealed = true;
+            const intel = this.buildIntelLine(target);
+            this.pushLog(tf('👁 Ты изучил противника: {0}', intel));
+            this.pushLog(checkLine);
+            // Постоянная памятка в бою — под именем противника
+            if (this.intelText) { try { this.intelText.destroy(); } catch (e) { /* ок */ } }
+            const rec = this.enemySprites.find(x => x.combatant === target) || this.enemySprites[0];
+            if (rec) {
+                this.intelText = this.add.text(rec.sprite.x, rec.sprite.y + 108, intel, {
+                    fontSize: '9px', color: '#c9a14a', align: 'center',
+                    fontFamily: 'Georgia, serif', lineSpacing: 2,
+                    backgroundColor: '#000000aa', padding: { x: 5, y: 3 },
+                    stroke: '#000', strokeThickness: 1,
+                    wordWrap: { width: 220 },
+                }).setOrigin(0.5, 0).setDepth(20);
+            }
+            ActionLog.add(this.registry, `Изучил противника в бою (${intel}). ${checkLine}.`);
+            this.time.delayedCall(900, () => this.enemyTurn());
+        } else {
+            this.pushLog(tf('👁 Ты всматривался в противника, но ничего не понял ({0}).', checkLine));
+            ActionLog.add(this.registry, `Не сумел изучить противника в бою (${checkLine}).`);
+            this.time.delayedCall(900, () => this.enemyTurn());
+        }
+    }
+
+    /** Строка раскрытых параметров (житель — его база; чужак — боевые значения). */
+    buildIntelLine(target) {
+        if (this.villagerNpc) {
+            const line = formatNpcStatsLine(this.villagerNpc);
+            if (line) return line.replace(/\n/g, ' ');
+        }
+        const atk = target.attackSkill != null ? target.attackSkill : '?';
+        const dod = (target.skills && target.skills.dodge) || target.dodge || '?';
+        return `❤${target.HP}/${target.HPmax} СИЛ ${target.STR} ТЕЛ ${target.CON} РАЗ ${target.SIZ} ЛОВ ${target.DEX} — ${t(target.weapon.name)} ${atk}%, уклон ${dod}%`;
+    }
+
     useHerb() {
         const q = this.registry.get('quest');
         const p = this.player;
@@ -637,6 +714,16 @@ export class CombatScene extends Phaser.Scene {
                 if (this.player.HP <= 0) return;
                 const en = e.combatant;
                 const res = skillCheck(en.attackSkill);
+
+                // Раунд 48 (п.5 заявки): после ПЕРВОГО удара противника герой
+                // узнаёт ТОЧНЫЙ параметр навыка применённого в бою оружия —
+                // и только его (остальные параметры — только через «Исследование»).
+                if (!this.weaponSkillRevealed) {
+                    this.weaponSkillRevealed = true;
+                    const skillKey = this.villagerCombatTpl ? this.villagerCombatTpl.weaponSkill : null;
+                    const skillLabel = skillKey ? ruSkillName(skillKey) : t(en.weapon.name);
+                    this.pushLog(tf('⚔ Первый удар открыл мастерство противника: {0} — {1}.', skillLabel, en.attackSkill));
+                }
 
                 // Раунд 23 (п.5/п.3): свист оружия + анимация атаки врага,
                 // после выпада — возврат в стойку лицом к игроку

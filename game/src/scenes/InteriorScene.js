@@ -28,8 +28,9 @@ import {
     getSmithNpcId, // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели мастера
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
-// Раунд 47 (п.3 заявки): у каждого жителя — параметры как у игрока (видны в доме)
-import { formatNpcStatsLine } from '../data/npcStats.js';
+// Раунд 48 (пп.2,3 заявки): параметры НПЦ игроку НЕ показываются —
+// в информации о жителе видно только во что он одет и что держит в руках
+import { getNpcWornLine } from '../data/characters.js';
 // Раунд 39 (п.13): STASHES/тюки/сундуки/ларцы удалены из игры целиком
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
 import { attachChurchBells } from '../systems/ChurchBells.js';
@@ -251,11 +252,14 @@ export class InteriorScene extends Phaser.Scene {
                 fontSize: '16px', color: RUS.text,
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(20);
-            // Раунд 47 (п.3 заявки): ПАРАМЕТРЫ ЖИТЕЛЯ — как у игрока (упрощённые):
-            // характеристики BRP, здоровье и только используемые навыки.
-            const statsLine = formatNpcStatsLine(this.npcData);
-            if (statsLine) {
-                this.add.text(this.npcSprite.x, this.npcSprite.y + 104, statsLine, {
+            // Раунд 48 (пп.2,3 заявки): ПОЛНЫЕ ПАРАМЕТРЫ жителя больше НЕ
+            // показываются (раньше была строка «❤13 СИЛ 65… Навыки: …» —
+            // игрок не должен так просто знать параметры НПЦ). Видно только
+            // ВО ЧТО ОДЕТ житель и ЧТО ДЕРЖИТ В РУКАХ; параметры раскрываются
+            // только в бою удачной проверкой «Исследование» (CombatScene).
+            const wornLine = getNpcWornLine(this.npcData);
+            if (wornLine) {
+                this.add.text(this.npcSprite.x, this.npcSprite.y + 104, wornLine, {
                     fontSize: '10px', color: '#c9a14a', align: 'center',
                     fontFamily: 'Georgia, serif', lineSpacing: 3,
                     backgroundColor: '#000000aa', padding: { x: 6, y: 4 },

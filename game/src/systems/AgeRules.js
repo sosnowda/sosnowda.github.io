@@ -15,7 +15,14 @@
 //  - 40–49: СИЛ/КОН/ЛОВ −3..−4 за полдекады (SRD: 40-м −3, 50-м −6, 60-м −9…),
 //    опыт компенсирует: категории «Общение» и «Знания» +5 (в SRD растёт
 //    образовательный блок);
-//  - 50 (верхняя граница в игре): СИЛ/КОН/ЛОВ −5, опыт +10.
+//  - 50 и старше: СИЛ/КОН/ЛОВ −5 и далее −1 за полдекады (SRD: −5 к 50-м,
+//    −6 к 55-м, −7 к 60-м…), боевые −10% и далее −2% за полдекады, опыт +10% и далее.
+//
+// Раунд 48 (п.1 заявки): возрастные изменения применяются СРАЗУ после
+// генерации персонажа, после определения возраста — и у героя, и у НПЦ.
+// Жители живут до 70 лет (раунд 44), поэтому таблица расширена с 50 до 70:
+// раньше возрасты 51+ ошибочно попадали в строку «20–39» (без штрафов).
+// Игрок по-прежнему выбирает возраст 15..50 (AGE_MAX), НПЦ — до 70.
 //
 // Навыковые модификаторы: боевые навыки теряют процент от возраста
 // (недоученность у юнца, замедление руки у пожилого); уклонение у юнцов
@@ -25,7 +32,8 @@ import { damageBonus } from './BRPEngine.js';
 import { t } from './i18n.js';
 
 export const AGE_MIN = 15;
-export const AGE_MAX = 50;
+export const AGE_MAX = 50;      // верхняя граница возраста ИГРОКА (генератор)
+export const AGE_TABLE_MAX = 70; // верхняя граница таблицы старения (НПЦ до 70 лет)
 export const AGE_DEFAULT = 25; // в расцвете — старт без штрафов по умолчанию
 
 // Группы возраста для отображения (RU-названия согласованы со словарём i18n)
@@ -55,9 +63,31 @@ export const AGE_ROWS = [
         combatMod: -7, dodgeMod: 0, wisdomMod: +5,
     },
     {
-        min: 50, max: 50, group: 'пожилой', groupF: 'пожилая',
+        min: 50, max: 54, group: 'пожилой', groupF: 'пожилая',
         stats: { STR: -5, CON: -5, DEX: -5 },
         combatMod: -10, dodgeMod: 0, wisdomMod: +10,
+    },
+    // Раунд 48 (п.1): ранее возрасты 51..70 выпадали из таблицы (кламп к 50)
+    // и старшие жители ошибочно считались «в расцвете сил».
+    {
+        min: 55, max: 59, group: 'пожилой', groupF: 'пожилая',
+        stats: { STR: -6, CON: -6, DEX: -6 },
+        combatMod: -12, dodgeMod: 0, wisdomMod: +10,
+    },
+    {
+        min: 60, max: 64, group: 'старый', groupF: 'старая',
+        stats: { STR: -7, CON: -7, DEX: -7 },
+        combatMod: -15, dodgeMod: 0, wisdomMod: +15,
+    },
+    {
+        min: 65, max: 69, group: 'старый', groupF: 'старая',
+        stats: { STR: -8, CON: -8, DEX: -8 },
+        combatMod: -17, dodgeMod: 0, wisdomMod: +15,
+    },
+    {
+        min: 70, max: 99, group: 'старый', groupF: 'старая',
+        stats: { STR: -9, CON: -9, DEX: -9 },
+        combatMod: -20, dodgeMod: 0, wisdomMod: +20,
     },
 ];
 
@@ -68,11 +98,15 @@ const STAT_NAMES = {
 
 // Боевые и «умные» навыки игры (Character.js SKILLS)
 export const COMBAT_SKILLS = ['sword', 'bow', 'spear', 'brawl'];
-export const WISDOM_SKILLS = ['oratory', 'persuade', 'fast_talk', 'medicine', 'survival', 'spot', 'track', 'listen'];
+export const WISDOM_SKILLS = ['oratory', 'persuade', 'fast_talk', 'medicine', 'survival', 'spot', 'track', 'listen', 'investigate'];
 
-/** Строка таблицы по возрасту (диапазон перекрыт полностью). */
+/**
+ * Строка таблицы по возрасту (диапазон 15..70 перекрыт полностью).
+ * Раунд 48 (п.1): кламп по AGE_TABLE_MAX (70), а не по AGE_MAX (50) —
+ * иначе пожилые НПЦ (староста 58, знахарка 70) попадали в «20–39».
+ */
 export function getAgeRow(age) {
-    const a = Math.max(AGE_MIN, Math.min(AGE_MAX, Math.floor(Number(age) || AGE_DEFAULT)));
+    const a = Math.max(AGE_MIN, Math.min(AGE_TABLE_MAX, Math.floor(Number(age) || AGE_DEFAULT)));
     return AGE_ROWS.find(r => a >= r.min && a <= r.max) || AGE_ROWS[2];
 }
 
@@ -118,7 +152,7 @@ export function describeAgeEffects(age) {
  * применённых изменений (для ActionLog).
  */
 export function applyAgeModifiers(chr) {
-    const age = Math.max(AGE_MIN, Math.min(AGE_MAX, Math.floor(Number(chr.age) || AGE_DEFAULT)));
+    const age = Math.max(AGE_MIN, Math.min(AGE_TABLE_MAX, Math.floor(Number(chr.age) || AGE_DEFAULT)));
     chr.age = age;
     const row = getAgeRow(age);
     const applied = [];
@@ -144,6 +178,24 @@ export function applyAgeModifiers(chr) {
     chr.MOV = 10 + (chr.DEX >= 60 ? 1 : 0) - (chr.SIZ >= 70 ? 1 : 0);
 
     return applied;
+}
+
+/**
+ * Раунд 48 (п.1): применить возрастные изменения ХАРАКТЕРИСТИК к готовому
+ * набору статов (без персонажа) — «сразу после определения возраста».
+ * Используется базой жителей (npcStats.js): канонические параметры жителя =
+ * база + возрастная строка, одни и те же в показе, проверках и бою.
+ * Возвращает НОВЫЙ объект (исходник не мутирует), границы 3..99 (BRP).
+ */
+export function applyAgingToStats(baseStats, age) {
+    const row = getAgeRow(age);
+    const out = {};
+    Object.keys(baseStats || {}).forEach(k => {
+        const v = typeof baseStats[k] === 'number' ? baseStats[k] : 50;
+        const mod = row.stats[k] || 0;
+        out[k] = Math.max(3, Math.min(99, v + mod));
+    });
+    return out;
 }
 
 /**

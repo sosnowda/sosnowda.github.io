@@ -19,9 +19,19 @@
 // Аудит (п.5 заявки) проверяет: полноту характеристик, диапазоны,
 // соответствие формулам BRP, а также то, что VILLAGER_COMBAT берёт
 // параметры ОТСЮДА (единый источник правды — см. characters.js).
+//
+// Раунд 48 (пп.1,2 заявки):
+//  - возрастные изменения ХАРАКТЕРИСТИК применяются СРАЗУ после определения
+//    возраста (applyAgingToStats) — канонические параметры жителя = база +
+//    возрастная строка; эти же значения видны при успешном «Исследовании»
+//    в бою (formatNpcStatsLine) и используются в боевой единице;
+//  - ИГРОКУ параметры жителей больше не показываются (строка параметров
+//    в домах удалена — осталась только одежда/оружие, см. characters.js);
+//  - добавлено ИССЛЕДОВАНИЕ (проверка в бою, раскрывающая параметры).
 // ============================================================
 
 import { createCharacter, SKILLS } from '../systems/Character.js';
+import { applyAgingToStats, getAgeRow, COMBAT_SKILLS, WISDOM_SKILLS } from '../systems/AgeRules.js';
 
 // --- Характеристики: [СИЛ, ТЕЛ, РАЗ, ЛОВ, ИНТ, ВОЛ, ОБА, ВНШ] ---
 const S = (STR, CON, SIZ, DEX, INT, POW, CHA, APP) =>
@@ -175,9 +185,9 @@ export const NPC_STAT_BLOCKS = {
     kid9: { stats: S(25, 35, 25, 55, 50, 55, 45, 55), skills: kidSkills(15) },
 };
 
-// Ключи навыков по категориям — для сопротивления НПЦ «тем же параметром»
-// (п.4 заявки): если житель не владеет навыком, сопротивление считается
-// от ЕГО характеристик (замена того же параметра — честная упрощёнка).
+// Ключи навыков по категориям — для проверки «навык против навыка»
+// (п.4 заявки раунда 48): если житель не владеет навыком, проверка идёт
+// «характеристика против характеристики» (замена «сопротивлений»).
 const RESISTANCE_BY_SKILL = {
     // Боевые — от Ловкости (увернуться/сопротивляться физически)
     sword: 'DEX', bow: 'DEX', spear: 'DEX', brawl: 'STR', dodge: 'DEX',
@@ -185,7 +195,36 @@ const RESISTANCE_BY_SKILL = {
     oratory: 'CHA', persuade: 'CHA', fast_talk: 'CHA', intimidate: 'STR',
     // Знания и восприятие — от Интеллекта
     medicine: 'INT', survival: 'INT', ride: 'DEX', spot: 'INT', track: 'INT', listen: 'INT',
+    investigate: 'INT',
 };
+
+/** Возраст жителя (у случайных незнакомцев — расцвет сил). */
+function npcAgeOf(npc) {
+    const a = Number(npc && npc.age);
+    return Number.isFinite(a) && a > 0 ? a : 30;
+}
+
+/**
+ * Раунд 48 (п.1 заявки): КАНОНИЧЕСКИЕ параметры жителя — база данных
+ * СРАЗУ с возрастными изменениями характеристик (как у героя: модификаторы
+ * BRP применяются сразу после определения возраста, а не «к бою»).
+ */
+export function getNpcResolvedStats(npc) {
+    const block = NPC_STAT_BLOCKS[npc && npc.id] || null;
+    if (!block) return null;
+    return applyAgingToStats(block.stats, npcAgeOf(npc));
+}
+
+/**
+ * Возрастные проценты НАВЫКА жителя (боевые/уклонение/знания — как у героя).
+ */
+function ageSkillMod(skillKey, age) {
+    const row = getAgeRow(age);
+    if (skillKey === 'dodge') return row.dodgeMod;
+    if (COMBAT_SKILLS.includes(skillKey)) return row.combatMod;
+    if (WISDOM_SKILLS.includes(skillKey)) return row.wisdomMod;
+    return 0;
+}
 
 /** Блок жителя (или null — НПЦ вне базы, например случайный незнакомец). */
 export function getNpcStatBlock(npcId) {
@@ -193,23 +232,38 @@ export function getNpcStatBlock(npcId) {
 }
 
 /**
- * Значение навыка жителя (п.4 заявки: «такой же параметр НПЦ»).
- * Если житель не владеет навыком — сопротивление от характеристики:
- * боевые от Ловкости/Силы, общение от Обаяния, знания от Интеллекта.
- * Возвращает значение в процентах (10..70).
+ * Значение того же параметра жителя для встречной проверки (п.4):
+ * «навык против навыка», а если житель не владеет навыком —
+ * «характеристика против характеристики» (боевые от Ловкости/Силы,
+ * общение от Обаяния, знания от Интеллекта). Возраст уже запечён.
+ * Возвращает { value, ruName, isSkill }.
  */
-export function getNpcSkillResistance(npc, skillKey) {
-    if (!npc) return 50;
-    const block = NPC_STAT_BLOCKS[npc.id] || NPC_STAT_BLOCKS[npcIdOf(npc)];
+export function getNpcOpposition(npc, skillKey) {
+    if (!npc) return { value: 50, ruName: 'Упорство', ruNameGen: 'Упорства', isSkill: false };
+    const block = NPC_STAT_BLOCKS[npc.id] || null;
+    const age = npcAgeOf(npc);
     const direct = block && block.skills && block.skills[skillKey];
-    if (typeof direct === 'number') return Math.max(10, Math.min(70, direct));
-    // Навыка нет — сопротивляемся «тем же параметром» от характеристики
+    if (typeof direct === 'number') {
+        const ruName = ruSkillName(skillKey);
+        return {
+            value: Math.max(10, Math.min(70, direct + ageSkillMod(skillKey, age))),
+            ruName,
+            ruNameGen: ruGenitive(ruName),
+            isSkill: true,
+        };
+    }
+    // Навыка нет — проверка «характеристика против характеристики»
     const attrKey = RESISTANCE_BY_SKILL[skillKey] || 'INT';
-    const val = (block && block.stats ? block.stats[attrKey] : 50) || 50;
-    return Math.max(10, Math.min(70, Math.round(val / 5) * 5));
+    const stats = getNpcResolvedStats(npc) || {};
+    const val = stats[attrKey] || 50;
+    const ruName = RU_STAT_FULL[attrKey] || attrKey;
+    return { value: Math.max(10, Math.min(70, val)), ruName, ruNameGen: ruGenitive(ruName), isSkill: false };
 }
 
-function npcIdOf(npc) { return npc && npc.id; }
+/** Совместимость (раунд 47): то же, что getNpcOpposition().value. */
+export function getNpcSkillResistance(npc, skillKey) {
+    return getNpcOpposition(npc, skillKey).value;
+}
 
 /**
  * Боевая единица жителя из ЕГО базы параметров (п.3 заявки).
@@ -254,21 +308,52 @@ const STAT_SHORT = {
     INT: 'ИНТ', POW: 'ВОЛ', CHA: 'ОБА', APP: 'ВНШ',
 };
 const SKILL_RU = {
-    sword: 'Меч', bow: 'Лук', spear: 'Копьё', brawl: 'Рукопашная', dodge: 'Уклонение',
+    sword: 'Владение мечом', bow: 'Лук', spear: 'Копьё', brawl: 'Рукопашная', dodge: 'Уклонение',
     oratory: 'Красноречие', persuade: 'Убеждение', fast_talk: 'Болтовня', intimidate: 'Запугивание',
     medicine: 'Знахарство', survival: 'Выживание', ride: 'Верховая езда',
-    spot: 'Внимательность', track: 'Следопытство', listen: 'Слух',
+    spot: 'Внимательность', track: 'Следопытство', listen: 'Слух', investigate: 'Исследование',
+};
+const RU_STAT_FULL = {
+    STR: 'Сила', CON: 'Телосложение', SIZ: 'Размер', DEX: 'Ловкость',
+    INT: 'Интеллект', POW: 'Сила воли', CHA: 'Обаяние', APP: 'Внешность',
 };
 
+/** Русское название навыка (для бою: «Рукопашная — 40»). */
+export function ruSkillName(key) { return SKILL_RU[key] || key; }
+
+// Родительный падеж для подписей проверок: «против Обаяния жителя»,
+// «против Рукопашной вора» (без склонения подпись звучит безграмотно).
+const RU_GENITIVE = {
+    'Владение мечом': 'Владения мечом', 'Лук': 'Лука', 'Копьё': 'Копья',
+    'Рукопашная': 'Рукопашной', 'Уклонение': 'Уклонения',
+    'Красноречие': 'Красноречия', 'Убеждение': 'Убеждения', 'Болтовня': 'Болтовни',
+    'Запугивание': 'Запугивания', 'Знахарство': 'Знахарства', 'Выживание': 'Выживания',
+    'Верховая езда': 'Верховой езды', 'Внимательность': 'Внимательности',
+    'Следопытство': 'Следопытства', 'Слух': 'Слуха', 'Исследование': 'Исследования',
+    'Сила': 'Силы', 'Телосложение': 'Телосложения', 'Размер': 'Размера',
+    'Ловкость': 'Ловкости', 'Интеллект': 'Интеллекта', 'Сила воли': 'Силы воли',
+    'Обаяние': 'Обаяния', 'Внешность': 'Внешности', 'Упорство': 'Упорства',
+};
+export function ruGenitive(ruName) { return RU_GENITIVE[ruName] || ruName; }
+
+/**
+ * Строка параметров жителя — раскрывается ТОЛЬКО успешной проверкой
+ * «Исследование» в бою (раунд 48, пп.2,3: игрок больше НЕ видит параметры
+ * жителей просто так — в домах видна лишь одежда и оружие в руках).
+ * Параметры — канонические (база + возраст, п.1 заявки раунда 48).
+ * Пример: «СИЛ 62 · ТЕЛ 57 · … / Навыки: Рукопашная 40, …»
+ */
 export function formatNpcStatsLine(npc) {
     const block = (npc && NPC_STAT_BLOCKS[npc.id]) || null;
     if (!block) return '';
-    const stats = Object.keys(STAT_SHORT)
-        .map(k => `${STAT_SHORT[k]} ${block.stats[k]}`)
+    const stats = getNpcResolvedStats(npc);
+    const statsText = Object.keys(STAT_SHORT)
+        .map(k => `${STAT_SHORT[k]} ${stats[k]}`)
         .join(' · ');
+    const age = npcAgeOf(npc);
     const skills = Object.entries(block.skills)
-        .map(([k, v]) => `${SKILL_RU[k] || k} ${v}`)
+        .map(([k, v]) => `${SKILL_RU[k] || k} ${Math.max(1, Math.min(99, v + ageSkillMod(k, age)))}`)
         .join(', ');
-    const hp = Math.ceil((block.stats.CON + block.stats.SIZ) / 10);
-    return `❤${hp} ${stats}\nНавыки: ${skills}`;
+    const hp = Math.ceil((stats.CON + stats.SIZ) / 10);
+    return `❤${hp} ${statsText}\nНавыки: ${skills}`;
 }

@@ -59,6 +59,10 @@ export const SKILLS = [
     { key: 'spot', name: 'Внимательность', base: 25, attr: 'INT', factor: 1, category: 'perception' },
     { key: 'track', name: 'Следопытство', base: 10, attr: 'INT', factor: 1.5, category: 'perception' },
     { key: 'listen', name: 'Слух', base: 25, attr: 'CON', factor: 0.5, category: 'perception' },
+    // Раунд 48 (п.2 заявки): «Исследование» — только в бою успешная проверка
+    // этого навыка раскрывает параметры противника (параметры НПЦ игроку
+    // больше не показываются просто так).
+    { key: 'investigate', name: 'Исследование', base: 15, attr: 'INT', factor: 1, category: 'perception' },
 ];
 
 // === ДОСПЕХИ И ОРУЖИЕ (Chronicles of Ruthenia) ===

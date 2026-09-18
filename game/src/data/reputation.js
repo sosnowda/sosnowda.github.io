@@ -26,9 +26,9 @@ import { ActionLog } from './actionLog.js';
 import { getNpcs, findNpc, spawnBlacksmithApprentice, BLACKSMITH_APPRENTICE_ID } from './npcNames.js';
 import { getTimeOfDay, getTime } from '../systems/TimeSystem.js';
 import { skillCheck, opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
-// Раунд 47 (пп.3,4 заявки): параметры жителей — база npcStats.js;
-// сопротивление НПЦ «тем же параметром» в проверках диалогов
-import { getNpcSkillResistance } from './npcStats.js';
+// Раунд 48 (п.4 заявки): встречные проверки «навык против навыка» /
+// «характеристика против характеристики» — параметры из базы жителей
+import { getNpcOpposition } from './npcStats.js';
 
 const VILLAGE_REP_MIN = -100;
 const VILLAGE_REP_MAX = 100;
@@ -382,14 +382,14 @@ export function applyGiftBonus(registry, npcId, giftValue) {
 
 /**
  * П.11: Похвала NPC через навык Oratory.
- * Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Красноречие игрока
- * против ТАКОГО ЖЕ параметра НПЦ (Красноречие/Обаяние жителя) + сложность.
+ * Раунд 48 (п.4 заявки): проверки БЕЗ сопротивлений — «НАВЫК ПРОТИВ НАВЫКА»:
+ * Красноречие игрока против Красноречия жителя; если житель не владеет
+ * навыком — «ХАРАКТЕРИСТИКИ ПРОТИВ ХАРАКТЕРИСТИК» (Обаяние против Обаяния).
  */
 export function applyCompliment(registry, npcId, oratorySkill) {
-    // Сопротивление: Красноречие жителя (если владеет) или его Обаяние
-    const npcResistance = getNpcSkillResistance(findNpc(registry, npcId), 'oratory');
-    const res = opposedSkillCheck(oratorySkill, npcResistance, 0);
-    const checkLine = formatOpposedCheck(res, 'Красноречие', 'Красноречие жителя');
+    const opp = getNpcOpposition(findNpc(registry, npcId), 'oratory');
+    const res = opposedSkillCheck(oratorySkill, opp.value, 0);
+    const checkLine = formatOpposedCheck(res, 'Красноречие', `${opp.ruNameGen} жителя`);
     
     if (res.result === 'critical') {
         changeNpcRep(registry, npcId, 5, 'удачная похвала (крит)');
@@ -463,13 +463,13 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
     // Чем больше угрожал — тем меньше эффект (NPC привыкает или злится)
     modifier -= rep.threatenedCount[npcId] * 3;
     
-    // Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Запугивание игрока
-    // против ТАКОГО ЖЕ параметра НПЦ (Запугивание/Сила жителя).
-    // Прежние модификаторы (пол/навязчивость) становятся «сложностью»
-    // проверки: отрицательный modifier → труднее (сопротивление выше).
-    const npcIntimidate = getNpcSkillResistance(findNpc(registry, npcId), 'intimidate');
-    const effectiveRes = opposedSkillCheck(intimidateSkill, npcIntimidate, -modifier);
-    const checkLine = formatOpposedCheck(effectiveRes, 'Запугивание', 'Запугивание жителя');
+    // Раунд 48 (п.4 заявки): проверка «НАВЫК ПРОТИВ НАВЫКА» — Запугивание
+    // игрока против Запугивания жителя (без навыка — Сила против Силы).
+    // Прежние модификаторы (пол/навязчивость) остаются «сложностью»
+    // проверки: она снижает параметр игрока и показывается один раз.
+    const opp = getNpcOpposition(findNpc(registry, npcId), 'intimidate');
+    const effectiveRes = opposedSkillCheck(intimidateSkill, opp.value, -modifier);
+    const checkLine = formatOpposedCheck(effectiveRes, 'Запугивание', `${opp.ruNameGen} жителя`);
     
     let result = {
         success: false,

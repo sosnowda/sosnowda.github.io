@@ -56,9 +56,9 @@ import { t, tf } from '../systems/i18n.js';
 import { createDialog } from '../utils/ui.js';
 import { getNpcShortName, findNpc } from './npcNames.js';
 // Раунд 47 (пп.2,4 заявки): смерть кузнеца не прячет наводку — знание
-// наследует ученик; сопротивление НПЦ в проверках — из базы жителей
+// наследует ученик; встречные проверки — по параметрам из базы жителей
 import { isNpcKilled } from './reputation.js';
-import { getNpcSkillResistance } from './npcStats.js';
+import { getNpcOpposition } from './npcStats.js';
 
 /**
  * Раунд 41 (QA): говорящий в репликах о воре — ДИНАМИЧЕСКОЕ имя NPC
@@ -971,13 +971,13 @@ export function askMoneyForHelp(registry, npcId, npcName) {
     }[npcId] || 0.5;
 
     const player = registry.get('player');
-    // Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Убеждение игрока против
-    // ТАКОГО ЖЕ параметра НПЦ (Убеждение/Обаяние жителя) + сложность 10
-    // (просить денег — труднее, чем просто говорить).
+    // Раунд 48 (п.4 заявки): проверка «НАВЫК ПРОТИВ НАВЫКА» — Убеждение игрока
+    // против Убеждения жителя (без навыка — Обаяние против Обаяния) +
+    // сложность 10 (просить денег труднее, чем просто говорить).
     const persuadeSkill = consumeBlessing(registry, (player.skills && player.skills.persuade) || 20);
-    const npcPersuade = getNpcSkillResistance(findNpc(registry, npcId), 'persuade');
-    const res = opposedSkillCheck(persuadeSkill, npcPersuade, 10);
-    const checkLine = formatOpposedCheck(res, 'Убеждение', 'Упорство жителя');
+    const opp = getNpcOpposition(findNpc(registry, npcId), 'persuade');
+    const res = opposedSkillCheck(persuadeSkill, opp.value, 10);
+    const checkLine = formatOpposedCheck(res, 'Убеждение', `${opp.ruNameGen} жителя`);
 
     let success = false;
     let amount = 0;
@@ -1135,11 +1135,11 @@ export function persuadeThief(registry) {
     const player = registry.get('player');
     // Раунд 22: нижний порог Убеждения + благословение (+10, одна проверка)
     // Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Убеждение игрока против
-    // ТАКОГО ЖЕ параметра вора (болтливый наёмник: сопротивление 50) + сложность 10
-    // (на равных с вором; итог совпадает с прежней проверкой, но по общей формуле).
+    // ТАКОГО ЖЕ параметра вора (болтливый наёмник: 50) + сложность 10
+    // (на равных с вором; раунд 48: «навык против навыка», без сопротивлений).
     const persuadeSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.persuade) || 20, MIN_PERSUADE));
     const res = opposedSkillCheck(persuadeSkill, 50, 10);
-    const checkLine = formatOpposedCheck(res, 'Убеждение', 'Болтовня вора');
+    const checkLine = formatOpposedCheck(res, 'Убеждение', 'Болтовни вора');
 
     if (res.result === 'critical' || res.result === 'success') {
         recoverStolenItem(registry, 'convinced', res);
@@ -1179,7 +1179,7 @@ export function stunThief(registry) {
     // ТАКОГО ЖЕ параметра вора (Рукопашная вора = его навык атаки 50).
     const brawlSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.brawl) || 25, MIN_BRAWL));
     const res = opposedSkillCheck(brawlSkill, 50, 0);
-    const checkLine = formatOpposedCheck(res, 'Рукопашная', 'Рукопашная вора');
+    const checkLine = formatOpposedCheck(res, 'Рукопашная', 'Рукопашной вора');
 
     if (res.result === 'critical' || res.result === 'success') {
         recoverStolenItem(registry, 'captured', res);
