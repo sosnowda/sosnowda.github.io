@@ -143,15 +143,17 @@ export class ApiaryScene extends Phaser.Scene {
         const chaseActive = isChaseActive(this.registry);
         const alreadySearched = state.locationsSearched.includes('apiary');
 
+        // Раунд 42 (QA-фикс): счётчик действий рисуем ТОЛЬКО при активной погоне —
+        // после победы/поражения охота окончена, и красное «Действий: 0»
+        // над пасекой сбивало с толку (прогулка ≠ охота).
+        if (!chaseActive) return;
+
         // Счётчик действий — под сводкой о пчёлах (левый верхний угол)
         this.huntTurnsText = this.add.text(12, 72, tf(t('⏳ Действий: {0}'), state.turnsLeft), {
             fontSize: '13px', color: state.turnsLeft <= 3 ? '#ff4040' : '#ff8060',
             fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
             backgroundColor: '#000000aa', padding: { x: 6, y: 4 },
         }).setScrollFactor(0).setDepth(102);
-
-        // Погоня окончена — кнопки поиска больше нет
-        if (!chaseActive) return;
 
         if (alreadySearched) {
             this.add.text(width / 2, height - 170, t('Ты уже прочитал следы в этой местности.\nНовых здесь не найти.'), {

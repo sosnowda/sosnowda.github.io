@@ -2,6 +2,10 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { createButton, bindRestartOnResize } from '../utils/ui.js';
+// Раунд 42 (QA-фикс): t() использовался (строки «В руках»/«Надето»/«НАДЕТО»),
+// но i18n НЕ импортировался → вкладка «Инвентарь» падала с TypeError:
+// «Предметы»-сетка и кнопка «Назад» не рисовались, игрок застревал на экране.
+import { t } from '../systems/i18n.js';
 import {
     CHARACTER_KEYS, SKILLS, SKILL_CATEGORIES,
     ARMORS, WEAPONS,
