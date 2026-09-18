@@ -61,7 +61,8 @@ export const DIALOGUES = {
                 action: (scene) => {
                     const q = scene.registry.get('quest');
                     q.elderTalked = true;
-                    q.currentObjective = 'Найди вора: спроси жителей или поищи следы за воротами';
+                    // Раунд 43 (п.3): в баннере над деревней — только короткий статус.
+                    q.currentObjective = 'Найди вора.';
                     ActionLog.add(scene.registry, 'Поговорил со старостой — получил задание найти вора.');
                 },
                 choices: [{ text: t('Я найду его!'), end: true }],
@@ -154,7 +155,8 @@ export const DIALOGUES = {
                     p.HP = p.HPmax;
                     p.MP = p.MPmax;
                     const q = scene.registry.get('quest');
-                    q.currentObjective = 'Поход окончен. Икона возвращена!';
+                    // Раунд 43 (п.2): квест окончен — баннер цели гаснет.
+                    q.currentObjective = '';
                 },
                 choices: [{ text: t('Слава Богу.'), end: true }],
             },
@@ -819,7 +821,8 @@ export const DIALOGUES = {
                 action: (scene) => {
                     const q = scene.registry.get('quest');
                     q.elderTalked = true; // отмечаем, что игрок узнал о краже
-                    q.currentObjective = 'Найди вора: спроси жителей или поищи следы за воротами';
+                    // Раунд 43 (п.3): короткий статус в баннере.
+                    q.currentObjective = 'Найди вора.';
                     ActionLog.add(scene.registry, 'Поговорил с батюшкой о краже иконы.');
                 },
                 choices: [{ text: t('Я найду её, батюшка!'), end: true }],

@@ -16,6 +16,7 @@ import {
     randomAppearance, defaultAppearance,
 } from '../systems/CharacterAppearance.js';
 import { createCharacter } from '../systems/Character.js';
+import { AGE_MIN, AGE_MAX, AGE_DEFAULT, getAgeGroupName, describeAgeEffects, ageUnitWord } from '../systems/AgeRules.js';
 import { ActionLog } from '../data/actionLog.js';
 import { initThiefHunt } from '../data/thief.js';
 import { resetVillageName } from '../data/world.js';
@@ -55,6 +56,7 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         this.currentIndex = {}; // category -> index в options[]
         this.layersReady = false;
         this.previewSprite = null;
+        this.selectedAge = AGE_DEFAULT; // раунд 44: возраст героя 15..50 (выбор владельца)
 
         // Заголовок
         this.add.text(width / 2, 30, t('🎨 Создание персонажа (LPC)'), {
@@ -155,6 +157,45 @@ export class CharacterGeneratorScene extends Phaser.Scene {
             padding: { left: 14, right: 14, top: 6, bottom: 6 },
         });
 
+        // === Выбор возраста (раунд 44, пп.3–4): от 15 до 50 лет ===
+        // Обычный экран: в строке пола справа («Возраст: [−] 25 [+]»);
+        // узкий экран (< 620): компактный центр [−] 25 [+] под полом (без label).
+        const compactAge = width < 620;
+        const ageY = compactAge ? sexY + 42 : sexY;
+        const ageX = compactAge ? width / 2 - 40 : width / 2 + 140;
+        if (!compactAge) {
+            this.add.text(ageX, ageY, t('Возраст:'), {
+                fontSize: '16px', color: RUS.text,
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0, 0.5);
+        }
+        createButton(this, ageX + (compactAge ? 0 : 86), ageY, '−', () => {
+            this.selectedAge = Math.max(AGE_MIN, this.selectedAge - 1);
+            this.updateAgeUI();
+        }, {
+            backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
+            fontSize: 16, padding: { left: 10, right: 10, top: 4, bottom: 4 },
+        });
+        this.ageValueText = this.add.text(ageX + (compactAge ? 40 : 122), ageY, String(this.selectedAge), {
+            fontSize: '20px', color: '#c9a14a', fontStyle: 'bold',
+            stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5, 0.5);
+        createButton(this, ageX + (compactAge ? 80 : 158), ageY, '+', () => {
+            this.selectedAge = Math.min(AGE_MAX, this.selectedAge + 1);
+            this.updateAgeUI();
+        }, {
+            backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
+            fontSize: 16, padding: { left: 10, right: 10, top: 4, bottom: 4 },
+        });
+
+        // Строка группы возраста и активных модификаторов (под именем героя)
+        const nameY = this.previewY + (narrow ? 110 : 150);
+        this.ageEffectsText = this.add.text(width / 2, nameY + 34, '', {
+            fontSize: '12px', color: RUS.textDim,
+            stroke: '#000', strokeThickness: 1,
+            wordWrap: { width: narrow ? 320 : 460 },
+        }).setOrigin(0.5, 0.5);
+
         // === Кнопки выбора категорий (слева) ===
         this.catButtonsY = 160;
         this.categoryButtons = [];
@@ -227,6 +268,7 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         this.refreshCategoryButtons();
         this.drawOptionPanel();
         this.updatePreview();
+        this.updateAgeUI(); // раунд 44: строка возраста/эффектов с первого кадра
     }
 
     /**
@@ -377,13 +419,25 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         }
     }
 
+    /** Раунд 44: обновить возрастное значение и строку эффектов. */
+    updateAgeUI() {
+        if (!this.ageValueText) return;
+        this.ageValueText.setText(String(this.selectedAge));
+        const group = getAgeGroupName(this.selectedAge, this.sex);
+        const effects = describeAgeEffects(this.selectedAge);
+        const suffix = effects.length
+            ? `${group} · ${effects.join(', ')}`
+            : t('в расцвете сил — без штрафов');
+        this.ageEffectsText.setText(`${t('Возраст')} ${this.selectedAge} ${ageUnitWord(this.selectedAge)}: ${suffix}`);
+    }
+
     confirmCharacter() {
         // 1. Композим финальную текстуру под именем 'player_custom'
         composeCharacterTexture(this, this.appearance, 'player_custom');
         createCustomCharacterAnimations(this, 'player_custom', 'player_custom');
 
-        // 2. Создаём персонажа
-        const player = createCharacter(this.characterName || 'Путник');
+        // 2. Создаём персонажа (с выбранным возрастом 15..50 — раунд 44)
+        const player = createCharacter(this.characterName || 'Путник', { age: this.selectedAge });
         // Сохраняем внешку и sprite key
         player.appearance = { ...this.appearance, sex: this.sex };
         player.sprite = 'player_custom';

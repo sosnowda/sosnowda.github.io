@@ -15,6 +15,7 @@
 // - Навык "Выживание" (Survival) для следопытства
 
 import { rollCharacteristic, damageBonus } from './BRPEngine.js';
+import { AGE_DEFAULT, AGE_MIN, AGE_MAX, applyAgeModifiers, applyAgeSkillModifiers } from './AgeRules.js';
 
 // === ХАРАКТЕРИСТИКИ BRP ===
 export const CHARACTER_KEYS = [
@@ -140,6 +141,7 @@ export const PRESET_HEROES = [
         name: 'Гаврила',
         archetype: 'Следопыт',
         gender: 'male',
+        age: 30,
         sprite: 'player',
         description: 'Хорошие навыки разведки и чтения следов, средние боевые, слабое общение.',
         stats: { STR: 45, CON: 60, SIZ: 45, DEX: 70, INT: 70, POW: 55, CHA: 35, APP: 45 },
@@ -158,6 +160,7 @@ export const PRESET_HEROES = [
         name: 'Забава',
         archetype: 'Следопыт',
         gender: 'female',
+        age: 22,
         sprite: 'npc_merchant',
         description: 'Хорошие навыки разведки и чтения следов, средние боевые, слабое общение.',
         stats: { STR: 40, CON: 55, SIZ: 40, DEX: 75, INT: 70, POW: 55, CHA: 35, APP: 50 },
@@ -177,6 +180,7 @@ export const PRESET_HEROES = [
         name: 'Добрыня',
         archetype: 'Воин',
         gender: 'male',
+        age: 25,
         sprite: 'player',
         description: 'Слабые навыки розыска и общения, но отличные боевые навыки.',
         stats: { STR: 80, CON: 75, SIZ: 70, DEX: 55, INT: 40, POW: 50, CHA: 35, APP: 50 },
@@ -195,6 +199,7 @@ export const PRESET_HEROES = [
         name: 'Рогнеда',
         archetype: 'Воин',
         gender: 'female',
+        age: 24,
         sprite: 'npc_merchant',
         description: 'Слабые навыки розыска и общения, но отличные боевые навыки.',
         stats: { STR: 70, CON: 70, SIZ: 55, DEX: 65, INT: 45, POW: 50, CHA: 40, APP: 55 },
@@ -217,6 +222,7 @@ export const PRESET_HEROES = [
         name: 'Ярополк',
         archetype: 'Сыщик',
         gender: 'male',
+        age: 35,
         sprite: 'player',
         description: 'Хорошие навыки общения и поиска улик в разговорах, средние боевые.',
         stats: { STR: 45, CON: 55, SIZ: 50, DEX: 55, INT: 80, POW: 60, CHA: 70, APP: 55 },
@@ -235,6 +241,7 @@ export const PRESET_HEROES = [
         name: 'Предслава',
         archetype: 'Сыщик',
         gender: 'female',
+        age: 27,
         sprite: 'npc_merchant',
         description: 'Хорошие навыки общения и поиска улик в разговорах, средние боевые.',
         stats: { STR: 40, CON: 55, SIZ: 50, DEX: 60, INT: 80, POW: 60, CHA: 75, APP: 65 },
@@ -254,6 +261,7 @@ export const PRESET_HEROES = [
         name: 'Ратибор',
         archetype: 'Приключенец',
         gender: 'male',
+        age: 30,
         sprite: 'player',
         description: 'Все навыки среднего уровня — универсал.',
         stats: { STR: 55, CON: 55, SIZ: 50, DEX: 60, INT: 60, POW: 60, CHA: 60, APP: 55 },
@@ -272,6 +280,7 @@ export const PRESET_HEROES = [
         name: 'Милонега',
         archetype: 'Приключенец',
         gender: 'female',
+        age: 20,
         sprite: 'npc_merchant',
         description: 'Все навыки среднего уровня — универсал.',
         stats: { STR: 50, CON: 55, SIZ: 45, DEX: 62, INT: 60, POW: 60, CHA: 62, APP: 58 },
@@ -358,15 +367,24 @@ export function createCharacter(name, opts = {}) {
     chr.gender = opts.gender || (Math.random() < 0.5 ? 'male' : 'female');
     chr.archetype = opts.archetype || 'Случайный';
     chr.sprite = opts.sprite || 'player';
-    
-    // BRP производные
-    chr.HPmax = Math.ceil((chr.CON + chr.SIZ) / 10);
-    chr.HP = chr.HPmax;
-    chr.MPmax = Math.floor(chr.POW / 5);
-    chr.MP = chr.MPmax;
-    chr.DB = damageBonus(chr.STR, chr.SIZ); // {text, min, max}
-    chr.Build = chr.SIZ >= 65 ? 1 : (chr.SIZ <= 35 ? -1 : 0);
-    chr.MOV = 10 + (chr.DEX >= 60 ? 1 : 0) - (chr.SIZ >= 70 ? 1 : 0);
+
+    // Возраст (раунд 44): 15..50, выбирается в генераторе персонажа.
+    // Возрастные модификаторы BRP SRD применяются к характеристикам, затем
+    // пересчитываются производные (HP/MP/DB/Build/MOV) — внутри функции.
+    chr.age = (opts.age != null) ? opts.age : AGE_DEFAULT;
+    chr.ageApplied = applyAgeModifiers(chr);
+
+    // BRP производные (fallback для прямых вызовов без возраста):
+    // applyAgeModifiers уже выставил их; здесь только страховка.
+    if (chr.HPmax == null) {
+        chr.HPmax = Math.ceil((chr.CON + chr.SIZ) / 10);
+        chr.HP = chr.HPmax;
+        chr.MPmax = Math.floor(chr.POW / 5);
+        chr.MP = chr.MPmax;
+        chr.DB = damageBonus(chr.STR, chr.SIZ); // {text, min, max}
+        chr.Build = chr.SIZ >= 65 ? 1 : (chr.SIZ <= 35 ? -1 : 0);
+        chr.MOV = 10 + (chr.DEX >= 60 ? 1 : 0) - (chr.SIZ >= 70 ? 1 : 0);
+    }
     
     // Доспех и оружие
     chr.armorId = opts.armorId || 'none';
@@ -388,7 +406,10 @@ export function createCharacter(name, opts = {}) {
             chr.skills[s.key] = Math.max(1, Math.round(s.base + chr[s.attr] * s.factor + rnd));
         }
     });
-    
+
+    // Навыковые проценты возраста (боевые −, уклонение юнцам +, опыт зрелым +)
+    chr.ageSkillApplied = applyAgeSkillModifiers(chr);
+
     // Инвентарь
     chr.inventory = opts.inventory || [];
     
@@ -401,6 +422,7 @@ export function createPresetHero(presetId, customName) {
     if (!preset) return null;
     return createCharacter(customName || preset.name, {
         ...preset.stats,
+        age: preset.age, // все прегены — в расцвете (20–39): без возрастных штрафов
         archetype: preset.archetype,
         gender: preset.gender,
         sprite: preset.sprite,
@@ -436,6 +458,7 @@ export function createRandomHero(patternId, customName) {
     
     return createCharacter(name, {
         ...stats,
+        age: randInt(AGE_MIN, AGE_MAX), // случайный герой — честный рандом возраста 15..50
         archetype: pattern.name,
         gender,
         sprite: gender === 'male' ? 'player' : 'npc_merchant',

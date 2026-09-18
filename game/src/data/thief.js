@@ -54,7 +54,7 @@ import { consumeBlessing } from './questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
 import { createDialog } from '../utils/ui.js';
-import { getNpcShortName } from './npcNames.js';
+import { getNpcShortName, findNpc } from './npcNames.js';
 
 /**
  * Раунд 41 (QA): говорящий в репликах о воре — ДИНАМИЧЕСКОЕ имя NPC
@@ -268,11 +268,11 @@ export function washTracksByWeather(registry) {
 // Священник и староста в списке не участвуют: батюшка сам не видел вора
 // (он рассказывает о краже при первом диалоге), староста выдаёт задание.
 export const MIN_WITNESSES = 3;
+// Раунд 34 добавлял детей (kid1, kid2) — НО раунд 44 (п.6 владельца):
+// «дети не могут выдавать задания и наводки» — дети исключены из пула.
 const WITNESS_POOL = [
     'peasant1', 'widow', 'beekeeper1', 'beekeeper_wife', 'elder_wife',
     'blacksmith', 'tavernkeeper', 'hunter', 'fisherman',
-    // Раунд 34: и ДЕТИ — у колодца да на выпасе заметнее всех
-    'kid1', 'kid2',
 ];
 
 /** Список свидетелей (ленивая инициализация — для старых сейвов тоже работает). */
@@ -485,7 +485,9 @@ export function initThiefHunt(registry) {
     // и случайные свидетели о воре (не менее трёх селян)
     quest.footprintStates = {};
     ensureWitnesses(registry);
-    quest.currentObjective = t('Вор украл икону и бежал из деревни! Расспроси жителей или ищи следы — время уходит.');
+    // Раунд 43 (п.3 заявки): в строке цели над деревней — ТОЛЬКО короткий статус;
+    // полные описания и инструкции — в журнале «📋 Задания» и диалогах.
+    quest.currentObjective = t('Найди и поймай вора!');
     registry.set('quest', quest);
 
     // Хук мирового времени: TimeSystem.tickTime вызывает его на каждый тик,
@@ -653,7 +655,8 @@ export function escapeThief(registry) {
     const lastLoc = c.route[c.route.length - 1];
     if (lastLoc && !c.traces[lastLoc]) c.traces[lastLoc] = { wentTo: null, side: Math.random() < 0.5 ? 'before' : 'after', leftAt: worldMinutesOf(registry), life: randomTraceLifetime() };
     q.thiefEscaped = true;
-    q.currentObjective = t('Вор скрылся с иконой. Погоня провалена.');
+    // Раунд 43 (п.2 заявки): квест окончен — баннер цели над деревней гаснет.
+    q.currentObjective = '';
     ActionLog.add(registry, t('ПОРАЖЕНИЕ: вор покинул последнюю локацию и скрылся из вида. След ведёт за околицу.'));
     registry.set('quest', q);
 }
@@ -792,6 +795,17 @@ export function askNPC(registry, npcId, npcName) {
     const q = registry.get('quest');
     if (!q) {
         return { gotClue: false, message: '...', turnsLeft: 0, thiefEscaped: false };
+    }
+
+    // Раунд 44 (п.6 владельца): ДЕТИ не выдают наводок — вежливо отнекиваются,
+    // попытка расспроса НЕ расходуется (в thiefAskedFrom не пишем).
+    const childNpc = findNpc(registry, npcId);
+    if (childNpc && typeof childNpc.age === 'number' && childNpc.age < 18) {
+        return {
+            gotClue: false, child: true,
+            message: `${who}: «${t('Я маленький ещё, я не видал никакого вора. Дядька, не гоняй меня!')}»`,
+            turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
+        };
     }
 
     // Раунд 22: повторный расспрос того же NPC невозможен (без траты времени)
@@ -1295,7 +1309,9 @@ export function surrenderStolenItem(registry, npcId) {
     }
 
     q.mainQuestDone = true;
-    q.currentObjective = t('Икона возвращена! Деревня благодарна. Староста и жители дают поручения.');
+    // Раунд 43 (п.2 заявки): после сдачи иконы надпись о задании по поиску
+    // вора вверху над деревней ПРОПАДАЕТ (тексты поручений — в «📋 Задания»). 
+    q.currentObjective = '';
     ActionLog.add(registry, `${t('ПОБЕДА: чудотворная икона возвращена деревне!')} ${t('Награда')}: ${rewardText}.`);
     registry.set('player', player);
     registry.set('quest', q);
@@ -1363,7 +1379,8 @@ export function loseHeroDead(registry) {
     const q = registry.get('quest');
     if (!q) return;
     q.heroDead = true;
-    q.currentObjective = t('Герой пал в бою. Поход окончен.');
+    // Раунд 43 (п.2): квест окончен — баннер цели гаснет.
+    q.currentObjective = '';
     ActionLog.add(registry, t('ПОРАЖЕНИЕ: герой пал. Летопись обрывается на этой странице.'));
     registry.set('quest', q);
 }

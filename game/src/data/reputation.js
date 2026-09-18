@@ -33,6 +33,11 @@ const WIN_THRESHOLD = 100;          // +100 = выигрыш (п.13)
 const MARRIAGE_NPC_REP = 90;        // +90 личная репутация у NPC для брака (п.1)
 const MARRIAGE_VILLAGE_REP = 50;    // +50 деревенская репутация для брака (п.1)
 const MARRIAGE_COST = 200;          // 200 денег на свадебное торжество (п.1)
+// Раунд 43 (п.13 заявки): венчаются только совершеннолетние.
+// У НПЦ возраст известен всегда; у игрока поле age отсутствует
+// (все играбельные персонажи — взрослые), но проверка оставлена
+// на случай будущих юных пресетов.
+const AGE_OF_MAJORITY = 18;
 const EXPULSION_THRESHOLD = -80;    // ниже этого — изгнание (п.12)
 const ATTACK_THRESHOLD = -80;       // ниже этого — ШАНС нападения (п.2)
 const REFUSE_TRADE_THRESHOLD = -50; // ниже этого — отказ торговать (п.1)
@@ -267,6 +272,20 @@ export function applyQuestCompleteBonus(registry, npcId, questDifficulty) {
     changeNpcRep(registry, npcId, bonus, 'выполнено задание');
     changeVillageRep(registry, Math.round(bonus * 0.5), 'выполнено задание');
     return bonus;
+}
+
+/**
+ * Раунд 43: Штраф за ПРОСРОЧЕННОЕ поручение — ровно −3/−8/−15 (как обещает
+ * журнал заданий). Применяется НАПРЯМУЮ, без балансировочного множителя ×1.2,
+ * иначе фактический штраф (−4/−10/−18) расходился бы с обещанным.
+ */
+export function applyQuestFailurePenalty(registry, npcId, questDifficulty) {
+    const penalty = questDifficulty === 'hard' ? -15 : (questDifficulty === 'medium' ? -8 : -3);
+    const rep = getReputation(registry);
+    if (!rep.npcRep[npcId]) rep.npcRep[npcId] = 0;
+    rep.npcRep[npcId] = clamp(rep.npcRep[npcId] + penalty, NPC_REP_MIN, NPC_REP_MAX);
+    registry.set('reputation', rep);
+    return penalty;
 }
 
 /**
@@ -562,7 +581,19 @@ export function canMarry(registry, npcId, player) {
     if (npc.gender === player.gender) {
         return { canMarry: false, reason: 'Традиции не позволяют брак с человеком того же пола' };
     }
-    
+
+    // Раунд 43 (п.13 заявки): НПЦ должен быть совершеннолетним.
+    // Дети (kid1–kid9, 5–12 лет) и подросток Ивашка (14) браку не подлежат.
+    if ((npc.age || 0) < AGE_OF_MAJORITY) {
+        return { canMarry: false, reason: `${npc.name} ещё несовершеннолетний(няя) — венчают только с ${AGE_OF_MAJORITY} лет` };
+    }
+
+    // Раунд 43 (п.13): игрок тоже должен быть совершеннолетним
+    // (сейчас age у игрока нет = взрослый; проверка на будущее).
+    if (player.age != null && player.age < AGE_OF_MAJORITY) {
+        return { canMarry: false, reason: `Ты ещё несовершеннолетний(яя) — венчают только с ${AGE_OF_MAJORITY} лет` };
+    }
+
     // Проверка личной репутации
     if (npcRep < MARRIAGE_NPC_REP) {
         return { canMarry: false, reason: `Недостаточно личной репутации (нужно +${MARRIAGE_NPC_REP}, у вас ${npcRep})` };
@@ -614,8 +645,10 @@ export function marry(registry, npcId, player) {
     changeVillageRep(registry, 20, 'свадьба с жителем деревни');
     changeNpcRep(registry, npcId, 10, 'брак');
     
+    // Раунд 44: гендерно-согласованная формулировка летописи свадьбы
+    const marriedVerb = player.gender === 'female' ? 'вышла замуж за' : 'женился на';
     ActionLog.add(registry, 
-        `СВАДЬБА: ${player.name} женился на ${npc.name} (${npc.profession.name}). ` +
+        `СВАДЬБА: ${player.name} ${marriedVerb} ${npc.name} (${npc.profession.name}). ` +
         `Свадебное торжество обошлось в ${MARRIAGE_COST} д. ` +
         `Деревенская репутация выросла.`
     );
@@ -642,4 +675,11 @@ export function getMarriageNpcRepThreshold() {
  */
 export function getMarriageVillageRepThreshold() {
     return MARRIAGE_VILLAGE_REP;
+}
+
+/**
+ * Раунд 43 (п.13): возраст совершеннолетия для брака.
+ */
+export function getAgeOfMajority() {
+    return AGE_OF_MAJORITY;
 }

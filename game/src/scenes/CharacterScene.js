@@ -6,6 +6,7 @@ import { createButton, bindRestartOnResize } from '../utils/ui.js';
 // но i18n НЕ импортировался → вкладка «Инвентарь» падала с TypeError:
 // «Предметы»-сетка и кнопка «Назад» не рисовались, игрок застревал на экране.
 import { t } from '../systems/i18n.js';
+import { ageUnitWord } from '../systems/AgeRules.js';
 import {
     CHARACTER_KEYS, SKILLS, SKILL_CATEGORIES,
     ARMORS, WEAPONS,
@@ -36,8 +37,8 @@ export class CharacterScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5);
 
-        // Имя и архетип
-        this.add.text(width / 2, 65, `${p.name} — ${p.archetype} (${p.gender === 'female' ? '♀' : '♂'})`, {
+        // Имя и архетип (+ возраст — раунд 44)
+        this.add.text(width / 2, 65, `${p.name} — ${p.archetype} (${p.gender === 'female' ? '♀' : '♂'}${p.age != null ? `, ${p.age} ${ageUnitWord(p.age)}` : ''})`, {
             fontSize: '18px', color: RUS.textDim,
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);

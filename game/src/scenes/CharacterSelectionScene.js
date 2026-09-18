@@ -18,6 +18,7 @@ import { initNpcNames } from '../data/npcNames.js';
 import { initReputation } from '../data/reputation.js';
 import AudioManager from '../systems/AudioManager.js';
 import { t, tf } from '../systems/i18n.js';
+import { ageUnitWord } from '../systems/AgeRules.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
     constructor() {
@@ -243,9 +244,9 @@ export class CharacterSelectionScene extends Phaser.Scene {
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
         this._previewPanel = panel;
 
-        // Архетип и пол
+        // Архетип и пол (+ возраст — раунд 44)
         this.add.text(width / 2, height / 2 - panelH / 2 + 30,
-            `${hero.archetype} (${hero.gender === 'female' ? 'женщина' : 'мужчина'})`, {
+            `${hero.archetype} (${hero.gender === 'female' ? 'женщина' : 'мужчина'}${hero.age != null ? `, ${hero.age} ${ageUnitWord(hero.age)}` : ''})`, {
             fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,

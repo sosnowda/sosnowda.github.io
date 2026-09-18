@@ -8,6 +8,7 @@
 import { ActionLog } from './actionLog.js';
 import { ARMORS, WEAPONS } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
+import { applyQuestFailurePenalty } from './reputation.js';
 
 // ============================================================
 // БЛАГОСЛОВЕНИЕ (раунд 22, п.11)
@@ -62,6 +63,10 @@ export function tickQuestTime(registry, minutes) {
         if (quest.minutesDone > limitMinutes) {
             quest.failed = true;
             ActionLog.add(registry, tf(t('⌛ Поручение «{0}» просрочено! Срок вышел, а дело не сделано.'), quest.title));
+            // Раунд 43: журнал обещает штраф за провал — теперь он реально
+            // применяется к репутации заказчика (лёгкое −3, среднее −8, тяжёлое −15).
+            const failPenalty = applyQuestFailurePenalty(registry, quest.npcId, quest.difficulty);
+            ActionLog.add(registry, tf(t('Репутация у {0} упала на {1} за просроченное поручение.'), quest.npcName, Math.abs(failPenalty)));
         }
     });
     if (changed) registry.set('quest', q);
@@ -142,6 +147,120 @@ export const NPC_QUEST_POOLS = {
         rewardTypes: ['herb', 'food', 'blessing'],
         rewardScale: 0.7,
         description: 'вдова',
+    },
+    // ============================================================
+    // Раунд 43 (п.4 заявки): процедурные задания выдаёт КАЖДЫЙ взрослый
+    // житель деревни (раньше — только 6 НПЦ: староста, батюшка, тавернщик,
+    // кузнец, мельник и вдова). Пулы подобраны по роду занятий; дети
+    // (kid1–kid9, 5–12 лет) поручений не дают — по возрасту.
+    // ============================================================
+    hunter: {
+        // Охотник — лесные и боевые
+        quests: [QUEST_TYPES.WOLF, QUEST_TYPES.BANDIT, QUEST_TYPES.FIND_PERSON, QUEST_TYPES.ESCORT],
+        rewardTypes: ['food', 'money', 'herb'],
+        rewardScale: 1.0,
+        description: 'охотник',
+    },
+    guard: {
+        // Стражник — охрана и порядок
+        quests: [QUEST_TYPES.GUARD, QUEST_TYPES.BANDIT, QUEST_TYPES.DELIVER, QUEST_TYPES.FIND_PERSON],
+        rewardTypes: ['money', 'food'],
+        rewardScale: 1.0,
+        description: 'стражник',
+    },
+    fisherman: {
+        // Рыбак — река и мелкие дела
+        quests: [QUEST_TYPES.FETCH_FISH, QUEST_TYPES.DELIVER, QUEST_TYPES.FETCH],
+        rewardTypes: ['food', 'money'],
+        rewardScale: 0.8,
+        description: 'рыбак',
+    },
+    healer: {
+        // Знахарка Февронья — травы и духовное
+        quests: [QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.PRAYER, QUEST_TYPES.FIND_PERSON, QUEST_TYPES.MEDIATE],
+        rewardTypes: ['herb', 'blessing', 'money'],
+        rewardScale: 0.7,
+        description: 'знахарка',
+    },
+    beekeeper1: {
+        // Пахарь Тарас — двор и лес (в доме ещё и ульи пасечницы Марфы)
+        quests: [QUEST_TYPES.FETCH_WOOD, QUEST_TYPES.WOLF, QUEST_TYPES.DELIVER],
+        rewardTypes: ['food', 'money', 'drink'],
+        rewardScale: 0.8,
+        description: 'пахарь',
+    },
+    shepherd1: {
+        // Пастух Сила — стадо и околица
+        quests: [QUEST_TYPES.FIND_PERSON, QUEST_TYPES.ESCORT, QUEST_TYPES.FETCH_WOOD],
+        rewardTypes: ['food', 'money'],
+        rewardScale: 0.7,
+        description: 'пастух',
+    },
+    shepherd2: {
+        // Пастушка Настасья — мелкие дела
+        quests: [QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.DELIVER, QUEST_TYPES.MEDIATE],
+        rewardTypes: ['food', 'herb', 'money'],
+        rewardScale: 0.6,
+        description: 'пастушка',
+    },
+    carpenter1: {
+        // Плотник Микула — лес и подмога
+        quests: [QUEST_TYPES.FETCH_WOOD, QUEST_TYPES.DELIVER, QUEST_TYPES.GUARD],
+        rewardTypes: ['money', 'food'],
+        rewardScale: 1.0,
+        description: 'плотник',
+    },
+    potter1: {
+        // Гончар Игнат — дрова для горна и дела
+        quests: [QUEST_TYPES.FETCH_WOOD, QUEST_TYPES.DELIVER, QUEST_TYPES.MEDIATE],
+        rewardTypes: ['money', 'food'],
+        rewardScale: 0.9,
+        description: 'гончар',
+    },
+    weaver1: {
+        // Ткачиха Пелагея — хозяйственные дела
+        quests: [QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.DELIVER, QUEST_TYPES.FIND_PERSON],
+        rewardTypes: ['money', 'food', 'herb'],
+        rewardScale: 0.8,
+        description: 'ткачиха',
+    },
+    shepherd_boy: {
+        // Пастушок Ивашка (14) — посильные поручения подростка
+        quests: [QUEST_TYPES.FETCH, QUEST_TYPES.GATHER_HERBS],
+        rewardTypes: ['food', 'herb'],
+        rewardScale: 0.5,
+        description: 'пастушок',
+    },
+    elder_wife: {
+        // Хозяйки — домашние дела (по домам мужей)
+        quests: [QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.DELIVER, QUEST_TYPES.PRAYER, QUEST_TYPES.MEDIATE],
+        rewardTypes: ['food', 'herb', 'money'],
+        rewardScale: 0.7,
+        description: 'хозяйка',
+    },
+    beekeeper_wife: {
+        quests: [QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.FETCH, QUEST_TYPES.DELIVER],
+        rewardTypes: ['food', 'herb'],
+        rewardScale: 0.6,
+        description: 'хозяйка',
+    },
+    carpenter_wife: {
+        quests: [QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.FETCH, QUEST_TYPES.DELIVER],
+        rewardTypes: ['food', 'herb'],
+        rewardScale: 0.6,
+        description: 'хозяйка',
+    },
+    potter_wife: {
+        quests: [QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.DELIVER, QUEST_TYPES.FETCH],
+        rewardTypes: ['food', 'herb'],
+        rewardScale: 0.6,
+        description: 'хозяйка',
+    },
+    fisher_wife: {
+        quests: [QUEST_TYPES.FETCH_FISH, QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.DELIVER],
+        rewardTypes: ['food', 'herb'],
+        rewardScale: 0.6,
+        description: 'хозяйка',
     },
 };
 

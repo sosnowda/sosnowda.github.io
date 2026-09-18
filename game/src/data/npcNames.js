@@ -174,7 +174,7 @@ export function getKnownDescription(name, profession, gender) {
  */
 export function generateRandomNpc(npcId, spriteKey, portraitKey, interiorId) {
     const gender = Math.random() < 0.5 ? 'male' : 'female';
-    const age = 18 + Math.floor(Math.random() * 60); // 18..78
+    const age = 18 + Math.floor(Math.random() * 53); // 18..70 — раунд 44: диапазон НПЦ 6..70 (незнакомцы — только взрослые)
     const name = getRandomName(gender);
     const profession = getRandomProfession(gender);
     const strangerDesc = getStrangerDescription(age, gender, profession);
@@ -207,22 +207,22 @@ export function initNpcNames(registry) {
     // Раунд 27 (пп.6,7,8,9): Авдей — мельник, Марфа — пасечница,
     // новые жители: семья пасечника (Тарас + Фёкла) и жена старосты.
     const npcConfigs = [
-        { id: 'elder',        gender: 'male',   age: 58, professionId: 'elder',      sprite: 'npc_elder',    portrait: 'portrait_elder',      interiorId: 'elder_house' },
+        { id: 'elder',        gender: 'male',   age: 58, professionId: 'elder',      sprite: 'npc_elder',    portrait: 'portrait_elder',      interiorId: 'elder_house', married: true }, // женат на Любаве
         { id: 'priest',       gender: 'male',   age: 62, professionId: 'priest',     sprite: 'npc_elder',    portrait: 'portrait_priest',     interiorId: 'church' },
         { id: 'tavernkeeper', gender: 'male',   age: 45, professionId: 'tavernkeeper', sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'tavern' },
         { id: 'blacksmith',   gender: 'male',   age: 40, professionId: 'blacksmith', sprite: 'npc_soldier',  portrait: 'portrait_blacksmith', interiorId: 'blacksmith' },
         { id: 'peasant1',     gender: 'male',   age: 35, professionId: 'miller',     sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_1', name: 'Авдей' },
         { id: 'widow',        gender: 'female', age: 55, professionId: 'beekeeper',  sprite: 'npc_elder',    portrait: 'portrait_widow',      interiorId: 'villager_house_2', name: 'Марфа' },
         // Раунд 37: у знахарки и рыбака — СОБСТВЕННЫЕ дома (вариант Б: вторая улица)
-        { id: 'healer',       gender: 'female', age: 68, professionId: 'healer_f',   sprite: 'npc_elder',    portrait: 'portrait_healer',     interiorId: 'healer_house', name: 'Февронья' },
+        { id: 'healer',       gender: 'female', age: 70, professionId: 'healer_f',   sprite: 'npc_elder',    portrait: 'portrait_healer',     interiorId: 'healer_house', name: 'Февронья' },
         { id: 'hunter',       gender: 'male',   age: 32, professionId: 'hunter',     sprite: 'npc_soldier',  portrait: 'portrait_hunter',     interiorId: 'villager_house_1' },
         { id: 'guard',        gender: 'male',   age: 28, professionId: 'guard',      sprite: 'npc_soldier',  portrait: 'portrait_guard',      interiorId: 'villager_house_1' },
-        { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',  sprite: 'npc_merchant', portrait: 'portrait_fisherman',  interiorId: 'fisher_house', name: 'Ерёма' },
+        { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',  sprite: 'npc_merchant', portrait: 'portrait_fisherman',  interiorId: 'fisher_house', name: 'Ерёма', married: true }, // женат на Домне
         // Раунд 27 (п.6), уточнено раундом 28 (п.1): дом на месте часовни —
         // ДОМ ПАХАРЯ (не пасечника!): Тарас днём на ПОЛЕ, жена Фёкла,
         // семеро детей (видимые НПЦ — см. npcPresence.KIDS).
-        { id: 'beekeeper1',   gender: 'male',   age: 38, professionId: 'ploughman',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'beekeeper_house', name: 'Тарас' },
-        { id: 'beekeeper_wife', gender: 'female', age: 34, professionId: 'homemaker', sprite: 'npc_elder',  portrait: 'portrait_villager_f', interiorId: 'beekeeper_house', name: 'Фёкла' },
+        { id: 'beekeeper1',   gender: 'male',   age: 38, professionId: 'ploughman',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'beekeeper_house', name: 'Тарас', married: true }, // женат на Фёкле
+        { id: 'beekeeper_wife', gender: 'female', age: 34, professionId: 'homemaker', sprite: 'npc_elder',  portrait: 'portrait_villager_f', interiorId: 'beekeeper_house', name: 'Фёкла', married: true },
         // Раунд 28 (п.1): семеро детей пахаря — имена случайные на каждую игру.
         // Раунд 34: детские портреты (мальчик/девочка) вместо взрослой «селянки».
         { id: 'kid1', gender: 'male',   age: 12, professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_boy',  interiorId: 'beekeeper_house' },
@@ -231,29 +231,33 @@ export function initNpcNames(registry) {
         { id: 'kid4', gender: 'female', age: 8,  professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_girl', interiorId: 'beekeeper_house' },
         { id: 'kid5', gender: 'male',   age: 7,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_boy',  interiorId: 'beekeeper_house' },
         { id: 'kid6', gender: 'female', age: 6,  professionId: 'child', sprite: 'npc_elder',    portrait: 'portrait_girl', interiorId: 'beekeeper_house' },
-        { id: 'kid7', gender: 'male',   age: 5,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_boy',  interiorId: 'beekeeper_house' },
+        { id: 'kid7', gender: 'male',   age: 6,  professionId: 'child', sprite: 'npc_merchant', portrait: 'portrait_boy',  interiorId: 'beekeeper_house' },
         // Раунд 27 (п.9): жена старосты. Раунд 35: собственный портрет седой старухи
         // (был villager_f — молодой женщине, из-за чего «старуха» выглядела 20-летней)
-        { id: 'elder_wife',   gender: 'female', age: 54, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_elder_wife', interiorId: 'elder_house',     name: 'Любава' },
+        { id: 'elder_wife',   gender: 'female', age: 54, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_elder_wife', interiorId: 'elder_house',     name: 'Любава', married: true },
         // Раунд 31 (п.2): пастухи — водят коров и лошадей на водопой
         // (утром и вечером: Выпас → Река/Озеро), днём на выпасе, ночью дома
         { id: 'shepherd1',    gender: 'male',   age: 34, professionId: 'shepherd',   sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_1', name: 'Сила' },
         { id: 'shepherd2',    gender: 'female', age: 24, professionId: 'shepherd',   sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'villager_house_1', name: 'Настасья' },
         // Раунд 37 (вариант Б): жители новой улицы — плотник, гончар, ткачиха,
         // жена рыбака, пастушок-подросток и дети. Все — со своими домами и семьями.
-        { id: 'carpenter1',   gender: 'male',   age: 41, professionId: 'carpenter',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'carpenter_house', name: 'Микула' },
-        { id: 'carpenter_wife', gender: 'female', age: 38, professionId: 'homemaker', sprite: 'npc_elder',   portrait: 'portrait_villager_f', interiorId: 'carpenter_house', name: 'Матрёна' },
-        { id: 'potter1',      gender: 'male',   age: 36, professionId: 'potter',     sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'potter_house', name: 'Игнат' },
-        { id: 'potter_wife',  gender: 'female', age: 33, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'potter_house', name: 'Анна' },
+        { id: 'carpenter1',   gender: 'male',   age: 41, professionId: 'carpenter',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'carpenter_house', name: 'Микула', married: true }, // женат на Матрёне
+        { id: 'carpenter_wife', gender: 'female', age: 38, professionId: 'homemaker', sprite: 'npc_elder',   portrait: 'portrait_villager_f', interiorId: 'carpenter_house', name: 'Матрёна', married: true },
+        { id: 'potter1',      gender: 'male',   age: 36, professionId: 'potter',     sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'potter_house', name: 'Игнат', married: true }, // женат на Анне
+        { id: 'potter_wife',  gender: 'female', age: 33, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'potter_house', name: 'Анна', married: true },
         { id: 'kid8',         gender: 'female', age: 9,  professionId: 'child',      sprite: 'npc_elder',    portrait: 'portrait_girl',       interiorId: 'potter_house', name: 'Дунька' },
         { id: 'weaver1',      gender: 'female', age: 47, professionId: 'weaver',     sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'weaver_house', name: 'Пелагея' },
         { id: 'shepherd_boy', gender: 'male',   age: 14, professionId: 'shepherd',   sprite: 'npc_merchant', portrait: 'portrait_boy',        interiorId: 'weaver_house', name: 'Ивашка' },
-        { id: 'fisher_wife',  gender: 'female', age: 39, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'fisher_house', name: 'Домна' },
+        { id: 'fisher_wife',  gender: 'female', age: 39, professionId: 'homemaker',  sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'fisher_house', name: 'Домна', married: true },
         { id: 'kid9',         gender: 'female', age: 11, professionId: 'child',      sprite: 'npc_elder',    portrait: 'portrait_girl',       interiorId: 'healer_house', name: 'Ульяна' },
     ];
 
     // Раунд 27: зерно для детерминированной системы присутствия (npcPresence.js)
     registry.set('npcSeed', Math.floor(Math.random() * 1000000));
+
+    // Раунд 43 (п.11/13 заявки): жёны (Фёкла, Любава, Матрёна, Анна, Домна)
+    // состоят в браке — «Свататься» к ним нельзя (canMarry отвергнет:
+    // «уже состоит в браке»). Вдова Марфа — НЕ замужем (профессия «вдова»).
 
     const npcs = npcConfigs.map(cfg => {
         const name = cfg.name || getRandomName(cfg.gender);

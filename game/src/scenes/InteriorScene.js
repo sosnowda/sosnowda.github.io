@@ -22,7 +22,7 @@ import {
     applyGiftBonus, applyCompliment, applyTreatEveryoneBonus,
     applyQuestCompleteBonus, applyThreat, willNpcAttack, willNpcRefuseTrade,
     getPriceModifier, getRewardModifier,
-    canMarry, marry, getMarriageCost, getMarriageNpcRepThreshold, getMarriageVillageRepThreshold,
+    canMarry, marry, getMarriageCost, getMarriageNpcRepThreshold, getMarriageVillageRepThreshold, getAgeOfMajority,
     getVillageRep, changeVillageRep,
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
@@ -391,7 +391,11 @@ export class InteriorScene extends Phaser.Scene {
             buttons.push({ label: t('\u{1F381} Подарить'), bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.showGiftMenu(interior) });
             buttons.push({ label: t('\u{1F44D} Похвалить'), bg: 0x2a5a5a, hover: 0x3a6a6a, cb: () => this.complimentNpc(interior) });
             buttons.push({ label: t('\u{1F620} Угрожать'), bg: 0x5a1a1a, hover: 0x6a2a2a, cb: () => this.threatenNpc(interior) });
-            if (this.npcData && this.npcData.gender !== player.gender && npcRepValue >= 50 && villageRepValue >= 30) {
+            // Раунд 43 (п.13 заявки): «Свататься» — только с совершеннолетними
+            // НПЦ противоположного пола (возраст НПЦ ≥ 18).
+            // Раунд 44 (п.7): и только НЕ состоящими в браке (замужних/женатых
+            // сразу не показываем — ранее отказ выдавался уже в canMarry).
+            if (this.npcData && this.npcData.gender !== player.gender && (this.npcData.age || 0) >= getAgeOfMajority() && !this.npcData.married && npcRepValue >= 50 && villageRepValue >= 30) {
                 buttons.push({ label: t('\u{1F48D} Свататься'), bg: 0x5a2a5a, hover: 0x6a3a6a, cb: () => this.proposeMarriage(interior) });
             }
             if (interior.id === 'tavern') {
@@ -834,23 +838,30 @@ export class InteriorScene extends Phaser.Scene {
         
         // Проверка условий
         const check = canMarry(this.registry, interior.npcId, player);
+        // Раунд 44: гендерно-согласованные формулировки (героиня/герой, НПЦ-ж/м)
+        const heroIsF = player.gender === 'female';
+        const npcIsF = this.npcData && this.npcData.gender === 'female';
         
         if (!check.canMarry) {
             // NPC отказывает
             let message = '';
             if (npcRepValue < npcRepThreshold) {
-                message = `${npcName}: «Ты мне хоть и люб, но я тебя ещё не так хорошо знаю, ` +
+                message = `${npcName}: «Ты мне хоть и ${heroIsF ? 'люба' : 'люб'}, но я тебя ещё не так хорошо знаю, ` +
                     `чтобы семью создавать. Подожди ещё, наберись опыта в деревне.» ` +
                     `(Нужно личная репутация +${npcRepThreshold}, у вас ${npcRepValue})`;
             } else if (villageRepValue < villageRepThreshold) {
-                message = `${npcName}: «Я бы рад(а), да староста не благословит. ` +
-                    `Ты ещё не заслужил уважение всей деревни.» ` +
+                message = `${npcName}: «Я бы ${npcIsF ? 'рада' : 'рад'}, да староста не благословит. ` +
+                    `Ты ещё не ${heroIsF ? 'заслужила' : 'заслужил'} уважение всей деревни.» ` +
                     `(Нужно деревенская репутация +${villageRepThreshold}, у вас ${villageRepValue})`;
             } else if ((player.dengas || 0) < cost) {
                 message = `${npcName}: «Свадьба — дело не дешёвое! Нужно ${cost} д. ` +
                     `на свадебное торжество и подарки. А у тебя всего ${player.dengas || 0} д.»`;
+            } else if (this.npcData.married) {
+                // Раунд 44 (п.7): вежливый отказ чужого мужа/жены
+                message = `${npcName}: «Я ${npcIsF ? 'замужем' : 'женат'} — венчан(а) с другим человеком. ` +
+                    `Ищи себе пару среди свободных сердец.»`;
             } else {
-                message = `${npcName}: «Не могу я выйти за тебя. ${check.reason}.»`;
+                message = `${npcName}: «Не могу я ${npcIsF ? 'выйти за тебя' : 'жениться на тебе'}. ${check.reason}.»`;
             }
             
             createDialog(this, 'Сватовство', message, [
@@ -864,12 +875,12 @@ export class InteriorScene extends Phaser.Scene {
         }
         
         // Условия выполнены — предложение брака
-        const proposalText = `Ты решил свататься к ${npcName}.\n\n` +
+        const proposalText = `Ты ${heroIsF ? 'решила' : 'решил'} свататься: ${npcName}.\n\n` +
             `Условия для свадьбы:\n` +
             `✓ Личная репутация: ${npcRepValue} (нужно +${npcRepThreshold})\n` +
             `✓ Деревенская репутация: ${villageRepValue} (нужно +${villageRepThreshold})\n` +
             `✓ Свадебное торжество: ${cost} д. (у вас ${player.dengas || 0} д.)\n\n` +
-            `${npcName} согласен(на) принять твоё предложение! Свадьба состоится по обычаям Руси!`;
+            `${npcName} ${npcIsF ? 'согласна' : 'согласен'} принять твоё предложение! Свадьба состоится по обычаям Руси!`;
         
         createDialog(this, '💍 Сватовство', proposalText, [
             {
@@ -878,11 +889,11 @@ export class InteriorScene extends Phaser.Scene {
                     const result = marry(this.registry, interior.npcId, player);
                     if (result.success) {
                         // Свадьба состоялась — ВЫИГРЫШ
-                        const winMessage = `🎉 СВАДЬВА! 🎉\n\n` +
+                        const winMessage = `🎉 СВАДЬБА! 🎉\n\n` +
                             `По обычаям Руси, отец Савватий обвенчал вас в церкви. ` +
                             `Вся деревня гуляла три дня на свадебном пиру!\n\n` +
                             `${player.name} и ${result.npcName} теперь — муж и жена.\n` +
-                            `Ты принят в деревню как свой!\n\n` +
+                            `${heroIsF ? 'Ты принята в деревню как своя!' : 'Ты принят в деревню как свой!'}\n\n` +
                             `ИГРА УСПЕШНО ЗАВЕРШЕНА!`;
                         
                         createDialog(this, '🎉 СВАДЬБА', winMessage, [
@@ -891,7 +902,9 @@ export class InteriorScene extends Phaser.Scene {
                                 callback: () => {
                                     const q = this.registry.get('quest');
                                     q.thiefDefeated = true; // флаг победы для EndScene
-                                    q.currentObjective = 'Женился и принят в деревню! Победа!';
+                                    q.currentObjective = heroIsF
+                                        ? 'Вышла замуж и принята в деревню! Победа!'
+                                        : 'Женился и принят в деревню! Победа!';
                                     this.registry.set('quest', q);
                                     this.scene.stop();
                                     this.scene.resume(this.from);
@@ -909,7 +922,9 @@ export class InteriorScene extends Phaser.Scene {
             {
                 text: 'Подумать ещё',
                 callback: () => {
-                    ActionLog.add(this.registry, `Решил пока не жениться на ${npcName}.`);
+                    ActionLog.add(this.registry, heroIsF
+                        ? `Решила пока не выходить замуж за ${npcName}.`
+                        : `Решил пока не жениться на ${npcName}.`);
                 },
             },
         ], {

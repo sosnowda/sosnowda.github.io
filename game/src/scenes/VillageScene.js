@@ -1562,6 +1562,10 @@ export class VillageScene extends Phaser.Scene {
         
         if (q.currentObjective) {
             this.objectiveText.setText(`◆ ${q.currentObjective}`);
+        } else {
+            // Раунд 43 (п.2 заявки): квест окончен — надпись о задании НАД ДЕРЕВНЕЙ ПРОПАДАЕТ.
+            // Раньше текст оставался висеть навсегда (баг «вечного баннера»). 
+            this.objectiveText.setText('');
         }
     }
 
@@ -2044,7 +2048,10 @@ export class VillageScene extends Phaser.Scene {
 
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
             .setOrigin(0).setInteractive().setDepth(200);
-        const panelW = 750, panelH = 600;
+        // Раунд 43: панель журнала вписывается в экран (при 577px высоты
+        // прежние 600px обрезали заголовок и статус сверху).
+        const panelW = Math.min(750, width - 20);
+        const panelH = Math.min(600, height - 16);
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
@@ -2069,18 +2076,20 @@ export class VillageScene extends Phaser.Scene {
                 const status = quest.completed ? '✅ Выполнено' : (quest.failed ? '❌ Провалено' : '🔄 Выполняется');
                 const statusColor = quest.completed ? '#60ff60' : (quest.failed ? '#ff4040' : '#c9a14a');
                 
-                // П.22: Сроки в часах/днях
-                const timeLimitHours = quest.timeLimit ? quest.timeLimit * 4 : 0; // 1 ход = ~4 часа
-                const timeLimitDays = Math.ceil(timeLimitHours / 24);
-                const timeTaken = quest.acceptedTime || 'неизвестно';
-                const deadline = quest.deadline || `${timeLimitDays} дн. (${timeLimitHours} ч.)`;
+                // П.22: Срок — время на выполнение измеряется в ДЕЙСТВИЯХ
+                // (переход/бой/вход в дом ≈ 1 игровое действие ≈ 1 час).
+                // Раунд 43: убраны бредовые «×4 часа / дни» (журнал показывал
+                // «Срок: 3 дн. (108 ч.)» для поручения на 27 действий).
+                const deadline = `${quest.timeLimit || 10} действ. (≈${quest.timeLimit || 10} ч.)`;
 
                 // П.18: Штрафы за невыполнение
+                // Раунд 43: текст приведён в соответствие с реальным поведением
+                // (штраф применяется к репутации заказчика при просрочке).
                 const penaltyText = quest.difficulty === 'hard' 
-                    ? 'Штраф: −15 репутации, возможное изгнание' 
+                    ? 'Штраф за провал: −15 к репутации у заказчика' 
                     : (quest.difficulty === 'medium' 
-                        ? 'Штраф: −8 репутации' 
-                        : 'Штраф: нет или −3 репутации');
+                        ? 'Штраф за провал: −8 к репутации у заказчика' 
+                        : 'Штраф за провал: −3 к репутации у заказчика');
 
                 // П.21.7: Награды
                 const rewardsText = (quest.rewards || []).map(r => {
@@ -2091,8 +2100,11 @@ export class VillageScene extends Phaser.Scene {
                 }).join(', ');
 
                 const questInfo = [
-                    `${status}  |  ${quest.title}`,
+                    `${quest.title}`,
                     `Выдал: ${quest.npcName || 'неизвестно'}`,
+                    // Раунд 43 (п.3 заявки): ПОЛНОЕ описание задания — только здесь,
+                    // в журнале «📋 Задания» (в мире — только короткий статус).
+                    `Описание: ${quest.description || '—'}`,
                     `Срок: ${deadline}  |  Сложность: ${quest.difficulty}`,
                     `Цель: ${quest.objective}`,
                     `Награда: ${rewardsText || 'нет'}`,
@@ -2108,12 +2120,13 @@ export class VillageScene extends Phaser.Scene {
                     wordWrap: { width: panelW - 40 },
                 }).setOrigin(0, 0).setDepth(202);
 
-                // Цветная метка статуса
-                this.add.text(width / 2 - panelW / 2 + 20, y, status, {
+                // Цветная метка статуса — ОТДЕЛЬНОЙ строкой НАД заголовком
+                // (раунд 43: раньше статус рисовался дважды и наезжал на текст).
+                this.add.text(width / 2 - panelW / 2 + 20, y - 16, status, {
                     fontSize: '12px', color: statusColor, fontStyle: 'bold',
                 }).setOrigin(0, 0).setDepth(203);
 
-                y += 110;
+                y += 126;
                 if (y > height / 2 + panelH / 2 - 60) return; // не выходим за пределы
             });
         }

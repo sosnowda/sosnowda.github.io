@@ -513,8 +513,8 @@ const EN = {
     '⏳ Действий: {0}': '⏳ Actions left: {0}',
     '⏳{0}действ.': '⏳{0}act.',
     '{0} действий': '{0} actions',
-    'Вор украл икону и бежал из деревни! Расспроси жителей или ищи следы — время уходит.':
-        'The thief stole the icon and fled the village! Question the locals or look for tracks — time is running out.',
+    'Найди и поймай вора!': 'Find and catch the thief!',
+    'Найди вора.': 'Find the thief.',
     'Игра началась. Вор украл чудотворную икону и бежал из деревни в неизвестном направлении.':
         'The journey begins. The thief stole the miracle-working icon and fled the village in an unknown direction.',
     'Вор покинул «{0}» и двинулся дальше.': 'The thief left "{0}" and moved on.',
@@ -1185,6 +1185,23 @@ const EN_KEYS = {
         '  Fishing — at the River on the map (best in the rain).\n' +
         '  At night windows glow and fireflies come out.\n' +
         '  F1 — this help. ESC — main menu.',
+
+    // --- Раунд 44: возраст персонажа (15..50) и правила BRP SRD ---
+    'Возраст:': 'Age:',
+    'Возраст': 'Age',
+    'лет': 'y.o.',
+    'в расцвете сил — без штрафов': 'in one\'s prime — no penalties',
+    'отрок': 'young lad', 'отроковица': 'young lass',
+    'юнец': 'youth', 'девица': 'maiden',
+    'взрослый': 'adult', 'взрослая': 'adult woman',
+    'зрелый': 'mature', 'зрелая': 'mature woman',
+    'пожилой': 'elderly', 'пожилая': 'elderly woman',
+    'Сила': 'Strength', 'Телосложение': 'Constitution', 'Размер': 'Size', 'Ловкость': 'Dexterity',
+    'Боевые навыки': 'Combat skills',
+    'Уклонение': 'Dodge',
+    'Общение и Знания': 'Communication & Knowledge',
+    'Я маленький ещё, я не видал никакого вора. Дядька, не гоняй меня!':
+        'I\'m just a child, I saw no thief. Please don\'t chase me away, sir!',
 };
 
 // ----- Месяцы / дни недели (сентябрьский стиль индексации) -----
