@@ -966,6 +966,61 @@ const EN = {
         'The hero stayed in the village — good deeds are now in his keeping.',
     'Осталось действий': 'Actions left',
 
+    // --- Раунд 45: вира по Судебнику, убийство НПЦ, перемирье, кузница ---
+    '🤝 Просить мира (вира по Судебнику)':
+        '🤝 Ask for peace (wergild, by the Law Code)',
+    '🤝 Просить мира ещё': '🤝 Ask for peace with another',
+    'Пока не помирюсь.': 'I will not make peace yet.',
+    'Спасибо, староста.': 'Thank you, elder.',
+    '• {0} — в ярости (репутация {1}), вира {2} д.':
+        '• {0} — in fury (reputation {1}); wergild {2} d.',
+    '🤝 Мириться с {0} ({1} д.)': '🤝 Make peace with {0} ({1} d.)',
+    'Продать': 'Sell',
+    ' (скидка за добрую славу)': ' (good-repute discount)',
+    ' (наценка за дурную славу)': ' (ill-repute surcharge)',
+    ' 🔒 воинское': ' 🔒 warrior-grade',
+    ' 🔒': ' 🔒',
+    'Продать можно лишь то, что не надето на тебя (полцены):':
+        'Only what you are not wearing can be sold (half price):',
+    'В узле нечего продать — всё надето или пусто.':
+        'Nothing to sell — everything is worn or the bag is empty.',
+    '💰 {0} — {1} д. (полцены)': '💰 {0} — {1} d. (half price)',
+    'Кузнец Данила откладывает молот и крестит руки на груди:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»':
+        'Smith Danila lays down the hammer and folds his arms:\n"I will neither sell to you nor buy from you, man of ill repute. Begone!"',
+    'Кузнец Данила качает головой: «{0}.»':
+        'Smith Danila shakes his head: "{0}."',
+    'По уложению Судебника воинское снаряжение не продаётся несовершеннолетним (с 18 лет)':
+        'By the Law Code, warrior-grade gear is not sold to minors (from age 18)',
+    'По уложению Судебника воинское снаряжение не продаётся людям дурной славы (репутация деревни ниже 0)':
+        'By the Law Code, warrior-grade gear is not sold to those of ill repute (village reputation below 0)',
+    ' (воинское снаряжение, по уложению Судебника)':
+        ' (warrior-grade gear, by the Law Code)',
+    '🕯 Здесь стоит тишина...': '🕯 Silence fills this place...',
+    '{0} погиб(ла) от твоей руки.\nДом опустел, вещи прикрыты холстиной.\nДеревня шепчется о кровной вине.':
+        '{0} perished at your hand.\nThe house stands empty, the things draped in linen.\nThe village whispers of blood-guilt.',
+    'Староста может смыть эту вину вирой — если заплатишь.':
+        'The elder can wash away this guilt with wergild — if you pay.',
+    '☠ Кровная вина!': '☠ Blood-guilt!',
+    'Ты убил {0}. Вся деревня в ужасе: репутация в деревне и у всех жителей упала на 50!\n{1}\nТакие грехи смываются только вирой у старосты — если он согласится мирить.':
+        'You killed {0}. The whole village is horrified: village and every villager\'s reputation fell by 50!\n{1}\nOnly the wergild paid to the elder can wash away such a sin — if he agrees to make peace.',
+    'Родня убитого проклинает тебя: их репутация упала до −100.':
+        'The slain one\'s kin curse you: their reputation fell to −100.',
+    'Староста разводит руками: «На тебя никто больше не в ярости — мирить некого. Спасибо Судебнику!»':
+        'The elder spreads his hands: "Nobody rages at you anymore — no one to reconcile. Thank the Law Code!"',
+    'Староста листает Судебник: «Обида смывается серебром. Вира за кровь свободного мужа — 40 гривен (80 д.), за женщину или отрока — полувирье (40 д.), да продажа мне за суд — 20 д. За разбой без всякой свады — всё вдвое. Плати — и обиженный тебя простит (репутация станет +30).»':
+        'The elder leafs through the Law Code: "Grievance is washed away with silver. Wergild for a free man\'s blood — 40 grivnas (80 d.), for a woman or a youth — half-wergild (40 d.), plus 20 d. of the fine to me for the court. For lawless robbery — double. Pay, and the offended will forgive you (reputation becomes +30)."',
+    '{0} убит! Кровная вина пала на тебя...': '{0} is slain! Blood-guilt has fallen upon you...',
+    'Уходи! Я тебя ненавижу... но староста велел крови сегодня не проливать.':
+        'Away with you! I hate you... but the elder bade no blood be shed today.',
+    'Побег из боя с разгневанным жителем (бросок {0}, успех). Он не нападёт снова сразу — перемирье на 12 часов.':
+        'Escaped the fight with the enraged villager (roll {0}, success). He will not attack again at once — a truce for 12 hours.',
+    'Кузнец Данила отказался торговаться с героем дурной славы (репутация ≤ −50).':
+        'Smith Danila refused to trade with a hero of ill repute (reputation ≤ −50).',
+    '🚪 ИЗГНАН ИЗ ДЕРЕВНИ': '🚪 EXILED FROM THE VILLAGE',
+    'Изгнан': 'Exiled',
+    'Староста выгнал тебя на все четыре стороны: деревня не прощает крови и бесчестия.':
+        'The elder drove you beyond the gates: the village forgives neither blood nor dishonour.',
+
     // --- Раунд 36: репутационная победа (отдельная ветка финала) ---
     '🌿 ПОБЕДА! ТЕБЯ ПРИНЯЛИ КАК СВОЕГО': '🌿 VICTORY! TAKEN IN AS ONE OF THE VILLAGE',
     'Староста собрал всю деревню: «Ты добрыми делами снискал нашу любовь. Отныне ты — не гость, а свой!» Жители чествуют тебя хлебом-солью.':
@@ -1149,7 +1204,7 @@ const EN_KEYS = {
         '\n' +
         '⚠ DEFEAT:\n' +
         '  • The hero dies in combat\n' +
-        '  • Village reputation ≤ −80 → exile\n' +
+        '  • Village reputation −100 → exile (only at the very bottom!)\n' +
         '  • The icon thief escapes (turn limit)\n' +
         '\n' +
         '🏆 VICTORY:\n' +
@@ -1159,7 +1214,9 @@ const EN_KEYS = {
         '⭐ REPUTATION:\n' +
         '  Raise it: quests, gifts, praise, buying drinks for everyone.\n' +
         '  Lower it: begging, threats, night-time disturbance.\n' +
-        '  ≤ −30: NPC won\'t talk. ≤ −50: won\'t trade. ≤ −80: may attack.',
+        '  ≤ −30: NPC won\'t talk. ≤ −50: won\'t trade. ≤ −80: may attack.\n' +
+        '  Killed a villager? Village and all NPCs −50, the kin — down to −100.\n' +
+        '  The elder accepts wergild (vira): silver buys peace (+30 to enmity).',
     'forest.help.body': '🌲 DARK FOREST — A WALK\n' +
         '\n' +
         '  WASD / arrows — movement\n' +

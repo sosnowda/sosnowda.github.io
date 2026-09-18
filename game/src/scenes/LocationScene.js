@@ -185,7 +185,8 @@ export class LocationScene extends Phaser.Scene {
         // ----- HUD -----
         const player = this.registry.get('player');
         const q = this.registry.get('quest') || {};
-        this.add.text(16, 12, `❤ ${player.HP}/${player.HPmax}   ${t('✦ Воля')} ${player.MP}/${player.MPmax}   ${t('⚔ Меч')} ${player.skills.sword}%`, {
+        // Раунд 45 (п.1 заявки): параметр «меч» (⚔%) из верхнего виджета удалён
+        this.add.text(16, 12, `❤ ${player.HP}/${player.HPmax}   ${t('✦ Воля')} ${player.MP}/${player.MPmax}`, {
             fontSize: '14px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
         }).setDepth(100);

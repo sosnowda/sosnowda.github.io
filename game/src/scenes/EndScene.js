@@ -62,6 +62,12 @@ export class EndScene extends Phaser.Scene {
             endType = 'defeat';
             endTitle = '🏃 ВОР СБЕЖАЛ';
             endColor = '#ff6040';
+        } else if (quest.expelledFromVillage) {
+            // Раунд 45 (п.2): изгнание за дурную славу (репутация −100) —
+            // свой титул, не «Герой пал»
+            endType = 'defeat';
+            endTitle = t('🚪 ИЗГНАН ИЗ ДЕРЕВНИ');
+            endColor = '#ff4040';
         } else if (quest.heroDead) {
             endType = 'defeat';
             endTitle = '☠ ГЕРОЙ ПАЛ';

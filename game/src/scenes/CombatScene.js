@@ -9,6 +9,8 @@ import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { ActionLog } from '../data/actionLog.js';
 import { loseHeroDead, recoverStolenItem, thiefFleesFromFight, saveThiefHp, restoreThiefHp } from '../data/thief.js';
+// Раунд 45 (пп.3,4): последствия убийства НПЦ и перемирье после побега
+import { applyNpcMurderConsequences, setNpcTruce } from '../data/reputation.js';
 import { getActiveQuests, checkQuestCompletion, consumeBlessing } from '../data/questGenerator.js';
 import { getTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals } from '../systems/Weather.js';
@@ -247,6 +249,10 @@ export class CombatScene extends Phaser.Scene {
         const dodgeSkill = consumeBlessing(this.registry, this.player.skills.dodge || 25);
         const res = skillCheck(dodgeSkill);
         this.busy = true;
+        // Раунд 45 (п.4): бой с враждебным ЖИТЕЛЕМ (не вор, не разбойник с тракта)
+        const hostileVictimId = (!this.enemies.some(e => e.isThief) && this.npcId && this.npcId.endsWith('_hostile'))
+            ? this.npcId.slice(0, -'_hostile'.length)
+            : null;
 
         if (res.result === 'critical' || res.result === 'success') {
             this.pushLog(tf('Ты успешно бежал с поля боя (бросок {0})!', res.roll));
@@ -262,8 +268,14 @@ export class CombatScene extends Phaser.Scene {
                 const thiefEnemy = this.enemies.find(e => e.isThief);
                 if (thiefEnemy) saveThiefHp(this.registry, thiefEnemy.HP);
                 thiefFleesFromFight(this.registry, this.fromLocation);
+            } else if (hostileVictimId) {
+                // Раунд 45 (п.4): сбежать от НПЦ можно НЕ убивая его.
+                // После побега НПЦ НЕ нападает повторно сразу — перемирье 12 ч.
+                setNpcTruce(this.registry, hostileVictimId, 12);
+                ActionLog.add(this.registry, `Побег из боя с разгневанным жителем (бросок ${res.roll}, успех). Он не нападёт снова сразу — перемирье на 12 часов.`);
+            } else {
+                ActionLog.add(this.registry, `Побег из боя. Потеряно 2 действия (бросок ${res.roll}, успех).`);
             }
-            ActionLog.add(this.registry, `Побег из боя. Потеряно 2 действия (бросок ${res.roll}, успех).`);
             this.time.delayedCall(1000, () => {
                 // Раунд 32 (п.12): после побега от вора — всегда деревня (вход в локацию)
                 if (isThiefFight) {
@@ -698,6 +710,15 @@ export class CombatScene extends Phaser.Scene {
         const q = this.registry.get('quest');
         // Если это был вор — победа в ПОГОНЕ, но игра продолжается (раунд 21)
         const isThiefFight = this.enemies.some(e => e.isThief) || this.npcId === 'thief';
+        // Раунд 45 (п.3): убитый герой ЖИТЕЛЬ (бой из интерьера — npcId «xxx_hostile»)
+        const murderVictimId = (!isThiefFight && this.npcId && this.npcId.endsWith('_hostile'))
+            ? this.npcId.slice(0, -'_hostile'.length)
+            : null;
+        let murderInfo = null;
+        if (murderVictimId) {
+            // Убийство жителя — кровная вина: деревня и все НПЦ −50, родня −100
+            murderInfo = applyNpcMurderConsequences(this.registry, murderVictimId);
+        }
         if (isThiefFight) {
             // Вор повержен в бою — икона в инвентарь, погоня завершена
             recoverStolenItem(this.registry, 'killed', null);
@@ -708,14 +729,19 @@ export class CombatScene extends Phaser.Scene {
         if (!isThiefFight) {
             // Раунд 21: боевые процедурные поручения (волк/разбойники) завершаются
             this.completeCombatQuests();
-            q.currentObjective = 'Враг повержен';
+            // Раунд 45 (п.3): после убийства жителя баннер ведёт к вире
+            q.currentObjective = murderVictimId
+                ? 'Кровная вина на тебе. Староста может помирить за виру.'
+                : 'Враг повержен';
         } else {
             q.currentObjective = 'Икона у тебя! Верни её старосте или священнику.';
         }
         this.registry.set('quest', q);
         this.autosave();
         this.busy = true;
-        this.pushLog(isThiefFight ? t('Вор повержен! Икона у тебя!') : t('Враг повержен! Ты одержал победу.'));
+        this.pushLog(murderVictimId
+            ? tf('{0} убит! Кровная вина пала на тебя...', t(this.enemies[0].name))
+            : (isThiefFight ? t('Вор повержен! Икона у тебя!') : t('Враг повержен! Ты одержал победу.')));
         if (this.audioManager) this.audioManager.playLevelUp();
         // Эффект победы — золотые частицы
         const emitter = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
@@ -734,6 +760,15 @@ export class CombatScene extends Phaser.Scene {
             if (isThiefFight) {
                 createDialog(this, t('🏆 Вор повержен!'),
                     t('Ты обыскал тело поверженного вора и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.'),
+                    [{ text: t('В деревню!'), callback: () => this.scene.start('Village') }],
+                    { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
+            } else if (murderVictimId) {
+                // Раунд 45 (п.3): убийство жителя — честное предупреждение о цене крови
+                const kinText = murderInfo && murderInfo.kinNames.length > 0
+                    ? t('Родня убитого проклинает тебя: их репутация упала до −100.')
+                    : '';
+                createDialog(this, t('☠ Кровная вина!'),
+                    tf(t('Ты убил {0}. Вся деревня в ужасе: репутация в деревне и у всех жителей упала на 50!\n{1}\nТакие грехи смываются только вирой у старосты — если он согласится мирить.'), murderInfo ? murderInfo.victimName : '', kinText ? kinText + '\n' : ''),
                     [{ text: t('В деревню!'), callback: () => this.scene.start('Village') }],
                     { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
             } else if (this.fromScene === 'Forest') {

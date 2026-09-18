@@ -23,7 +23,7 @@ import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraY
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
-import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep } from '../data/reputation.js';
+import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep, isNpcKilled } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
 import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, dayKeyOf } from '../data/chests.js';
 import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
@@ -1076,6 +1076,9 @@ export class VillageScene extends Phaser.Scene {
             ActionLog.add(this.registry, `ПОРАЖЕНИЕ: ${expulsion.message}`);
             const q = this.registry.get('quest');
             q.heroDead = true;
+            // Раунд 45 (п.2): отдельный флаг изгнания — свой титул финала
+            // «🚪 ИЗГНАН ИЗ ДЕРЕВНИ» и своя оценка в итогах
+            q.expelledFromVillage = true;
             q.currentObjective = 'Изгнан из деревни за дурную славу.';
             this.registry.set('quest', q);
             this.scene.start('End');
@@ -1209,6 +1212,8 @@ export class VillageScene extends Phaser.Scene {
 
         allIds.forEach(id => {
             if (id === 'elder') return; // староста — ходячий, отдельно ниже
+            // Раунд 45 (п.3): убитый героем житель исчезает с улицы деревни
+            if (isNpcKilled(this.registry, id)) return;
             const pres = getPresence(this.registry, id);
             if (pres.place !== 'village') return;
             const npcData = findNpc(this.registry, id);
@@ -1472,8 +1477,10 @@ export class VillageScene extends Phaser.Scene {
         // Раунд 21: отсчёт до побега вора в ДЕЙСТВИЯХ (тиках)
         const ticksLeft = chaseTicksLeft(this.registry);
         
-        // Единый статус-бар (п.10): HP | MP | Меч | Деньги | Дата | Действия | Репутация
-        let statusLine = `❤${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  ⚔${p.skills.sword}%  💰${moneyStr}`;
+        // Единый статус-бар (п.10): HP | MP | Деньги | Дата | Действия | Репутация
+        // Раунд 45 (п.1 заявки): параметр «меч» (⚔%) из виджета УДАЛЁН —
+        // владение мечом смотрится в свитке персонажа, а не в строке статуса.
+        let statusLine = `❤${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  💰${moneyStr}`;
         if (timeState) {
             // Раунд 29: дата «как на Руси» — день, народный месяц, лето от Сотворения мира
             statusLine += `  📅${formatDateRus(timeState)}`;

@@ -12,6 +12,8 @@ import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, checkGam
 import { ActionLog } from './actionLog.js';
 import { tickTime, getTime } from '../systems/TimeSystem.js';
 import { t, tf } from '../systems/i18n.js';
+// Раунд 45 (пп.5,6 заявки): староста мирит игрока с разозлёнными НПЦ за виру
+import { getHostileNpcs, calculateVira, payViraToElder } from './reputation.js';
 
 /**
  * Раунд 22 (п.3): повторный расспрос того же NPC НЕВОЗМОЖЕН.
@@ -47,12 +49,65 @@ export const DIALOGUES = {
                         { text: t('Извини, я спешу.'), end: true },
                     ];
                     const node = DIALOGUES.elder_quest.nodes.a;
+                    // Раунд 45 (п.5 заявки): есть разозлённые НПЦ — староста
+                    // может их примирить с игроком за виру по Судебнику
+                    if (getHostileNpcs(scene.registry).length > 0) {
+                        base.unshift({ text: t('🤝 Просить мира (вира по Судебнику)'), next: 'vira_hub' });
+                    }
                     node.choices = (q.stolenItemRecovered && !q.mainQuestDone)
                         ? [{ text: t('🏺 Вернуть икону!'), next: 'return_icon' }, ...base]
                         : base;
                 },
                 choices: [],
                 choices_base: null,
+            },
+            // ================================================================
+            // Раунд 45 (пп.5,6 заявки): ВИРА ПО СУДЕБНИКУ — староста как
+            // судья-посредник смывает обиду серебром. Расчёт: вира за кровь
+            // свободного мужа 40 гривен / полувирье за женщину (по 2 д. за
+            // гривну) + «продажа» суду 20 д.; за разбой без свады — вдвое.
+            // После выплаты репутация НПЦ УЛУЧШАЕТСЯ ДО +30.
+            // ================================================================
+            vira_hub: {
+                speaker: 'Староста Мирослав',
+                text: '...',
+                action: (scene) => {
+                    const hostiles = getHostileNpcs(scene.registry);
+                    const node = DIALOGUES.elder_quest.nodes.vira_hub;
+                    if (hostiles.length === 0) {
+                        node.text = t('Староста разводит руками: «На тебя никто больше не в ярости — мирить некого. Спасибо Судебнику!»');
+                        node.choices = [{ text: t('Слава Богу.'), end: true }];
+                        return;
+                    }
+                    node.text = t('Староста листает Судебник: «Обида смывается серебром. Вира за кровь свободного мужа — 40 гривен (80 д.), за женщину или отрока — полувирье (40 д.), да продажа мне за суд — 20 д. За разбой без всякой свады — всё вдвое. Плати — и обиженный тебя простит (репутация станет +30).»') +
+                        '\n\n' + hostiles.map(h => tf(t('• {0} — в ярости (репутация {1}), вира {2} д.'), h.name, h.rep, h.vira)).join('\n');
+                    const choices = hostiles.slice(0, 6).map(h => ({
+                        text: tf(t('🤝 Мириться с {0} ({1} д.)'), h.name, h.vira),
+                        action: (sc) => { sc._viraNpcId = h.id; },
+                        next: 'vira_pay',
+                    }));
+                    choices.push({ text: t('Пока не помирюсь.'), end: true });
+                    node.choices = choices;
+                },
+                choices: [],
+            },
+            vira_pay: {
+                speaker: 'Староста Мирослав',
+                text: '...',
+                action: (scene) => {
+                    const npcId = scene._viraNpcId;
+                    const r = payViraToElder(scene.registry, npcId);
+                    scene._lastAskResult = { message: r.message };
+                    const node = DIALOGUES.elder_quest.nodes.vira_pay;
+                    const hostiles = getHostileNpcs(scene.registry);
+                    const choices = [];
+                    if (hostiles.length > 0) {
+                        choices.push({ text: t('🤝 Просить мира ещё'), next: 'vira_hub' });
+                    }
+                    choices.push({ text: t('Спасибо, староста.'), end: true });
+                    node.choices = choices;
+                },
+                choices: [],
             },
             b: {
                 speaker: 'Староста Мирослав',

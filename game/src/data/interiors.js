@@ -55,12 +55,13 @@ export const INTERIORS = {
         description: t('Жарко. Стук молота по наковальне. На стенах развешаны мечи и кольчуги.'),
         decor: ['anvil', 'forge', 'weapons'],
         services: ['buy_weapon', 'buy_armor'],
-        items: [
-            { id: 'sword_long', name: t('Длинный меч'), type: 'weapon', price: 30, dmg: { min: 1, max: 10 }, bonus: 2, skill: 'sword' },
-            { id: 'sword_steel', name: t('Стальной меч'), type: 'weapon', price: 60, dmg: { min: 1, max: 12 }, bonus: 3, skill: 'sword' },
-            { id: 'armor_leather', name: t('Кожаная броня'), type: 'armor', price: 25, def: 1 },
-            { id: 'armor_chain', name: t('Кольчуга'), type: 'armor', price: 80, def: 2 },
-        ],
+        // Раунд 45 (п.6 заявки — АУДИТ ОРУЖИЯ/БРОНИ): прежний массив items
+        // (sword_long 30 д. 1d10+2, sword_steel 60 д. 1d12+3, armor_leather
+        // def 1, armor_chain def 2) был МЁРТВЫМИ ДАННЫМИ — ни одна сцена его
+        // не читала, а его цены/статы расходились с боевой системой
+        // (Character.js WEAPONS/ARMORS: «Меч» 30 д. 1d8+1, «Стальной меч»
+        // 100 д. 1d10+3, кольчуга def 4). Удалён: кузница торгует ТОЛЬКО
+        // по реестру Character.js (см. InteriorScene.showBlacksmithShop).
     },
 
     villager_house_1: {

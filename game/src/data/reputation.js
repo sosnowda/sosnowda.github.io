@@ -14,14 +14,16 @@ import { t } from '../systems/i18n.js';
 //   -1..-29    — нелюбимый
 //   -30..-49   — NPC отказывается говорить
 //   -50..-79   — NPC отказывается торговать
-//   -80..-100  — враг (NPC имеет ШАНС напасть, староста выгоняет из деревни)
+//   -80..-99   — враг (NPC имеет ШАНС напасть; мирится только за виру)
+//   -100       — КРОВНАЯ ВРАЖДА: изгнание из деревни (раунд 45, п.2 заявки:
+//                Проигрыш по репутации — ТОЛЬКО на самом дне, −100)
 //
 // Балансировка (п.12): повышение репутации — сложное и медленное,
 // понижение — быстрое и лёгкое.
 
 import { ActionLog } from './actionLog.js';
 import { getNpcs } from './npcNames.js';
-import { getTimeOfDay } from '../systems/TimeSystem.js';
+import { getTimeOfDay, getTime } from '../systems/TimeSystem.js';
 import { skillCheck } from '../systems/BRPEngine.js';
 
 const VILLAGE_REP_MIN = -100;
@@ -38,8 +40,20 @@ const MARRIAGE_COST = 200;          // 200 денег на свадебное т
 // (все играбельные персонажи — взрослые), но проверка оставлена
 // на случай будущих юных пресетов.
 const AGE_OF_MAJORITY = 18;
-const EXPULSION_THRESHOLD = -80;    // ниже этого — изгнание (п.12)
+// Раунд 45 (п.2 заявки): изгнание с Проигрышем — ТОЛЬКО при репутации −100.
+// Раньше порог был −80: игрока выгоняли, хотя у НПЦ-врагов ещё был шанс
+// не напасть. Теперь весь диапазон −80..−99 — «вражда» (шанс нападения,
+// примирение за виру у старосты), а сходка старосты изгоняет лишь на дне.
+const EXPULSION_THRESHOLD = -100;   // изгнание — ровно на дне (п.2 раунда 45)
 const ATTACK_THRESHOLD = -80;       // ниже этого — ШАНС нападения (п.2)
+
+// Раунд 45 (п.3 заявки): последствия УБИЙСТВА НПЦ игроком.
+// Деревня и все жители −50 (прямая запись, без множителей), а родня
+// убитого (супруга/дети в том же доме) проклинает героя — репутация
+// падает ДО −100.
+const MURDER_VILLAGE_PENALTY = 50;
+const MURDER_NPC_PENALTY = 50;
+const KIN_REP_SET = -100;           // родне — ровно до дна
 const REFUSE_TRADE_THRESHOLD = -50; // ниже этого — отказ торговать (п.1)
 const REFUSE_TALK_THRESHOLD = -30;  // ниже этого — отказ говорить (п.1)
 
@@ -51,6 +65,9 @@ export function initReputation(registry) {
         npcRep: {},
         beggingCount: {},
         threatenedCount: {}, // сколько раз угрожал каждому NPC
+        // Раунд 45 (п.4): перемирье после побега из боя — абсолютные минуты,
+        // до которых НПЦ НЕ нападает повторно (сразу после побега).
+        npcTruceUntil: {},
     };
     const npcs = getNpcs(registry);
     npcs.forEach(npc => {
@@ -63,7 +80,13 @@ export function initReputation(registry) {
 }
 
 export function getReputation(registry) {
-    return registry.get('reputation') || initReputation(registry);
+    const rep = registry.get('reputation');
+    if (rep) {
+        // Старые сохранения без npcTruceUntil — досоздаём defensively
+        if (!rep.npcTruceUntil) rep.npcTruceUntil = {};
+        return rep;
+    }
+    return initReputation(registry);
 }
 
 // === ПОЛУЧЕНИЕ ЗНАЧЕНИЙ ===
@@ -147,6 +170,16 @@ export function checkNpcWillingToTalk(registry, npcId, options = {}) {
     
     // П.2: При крайней вражде (−80..−100) — лишь ШАНС нападения
     if (npcRep <= ATTACK_THRESHOLD) {
+        // Раунд 45 (п.4 заявки): перемирье после побега игрока из боя —
+        // НПЦ НЕ нападает повторно сразу, пока перемирье не истекло.
+        if (isNpcTruceActive(registry, npcId)) {
+            return {
+                canTalk: false,
+                reason: 'enemy',
+                willAttack: false,
+                message: '«Уходи! Я тебя ненавижу... но староста велел крови сегодня не проливать.»',
+            };
+        }
         // Шанс нападения зависит от того, насколько низка репутация
         // −80: 10%, −90: 30%, −100: 50%
         const attackChance = Math.max(10, (Math.abs(npcRep) - 70) * 5);
@@ -477,6 +510,212 @@ export function checkExpulsion(registry) {
         };
     }
     return { expelled: false };
+}
+
+// ============================================================
+// РАУНД 45: перемирье, убийство НПЦ, вира по Судебнику,
+// сословные рамки на воинское снаряжение.
+// ============================================================
+
+// П.4 заявки: после побега игрока из боя НПЦ не нападает повторно сразу.
+// Перемирье держится 12 игровых часов.
+const NPC_TRUCE_HOURS = 12;
+
+function absoluteMinutes(registry) {
+    const ts = getTime(registry);
+    if (!ts) return 0;
+    return ts.day * 1440 + ts.hour * 60 + (ts.minute || 0);
+}
+
+/**
+ * П.4: выставить НПЦ перемирье — он НЕ нападает на игрока
+ * в течение указанных часов (после успешного побега из боя).
+ */
+export function setNpcTruce(registry, npcId, hours = NPC_TRUCE_HOURS) {
+    const rep = getReputation(registry);
+    rep.npcTruceUntil[npcId] = absoluteMinutes(registry) + hours * 60;
+    registry.set('reputation', rep);
+    return rep.npcTruceUntil[npcId];
+}
+
+export function isNpcTruceActive(registry, npcId) {
+    const rep = getReputation(registry);
+    const until = rep.npcTruceUntil && rep.npcTruceUntil[npcId];
+    return typeof until === 'number' && until > absoluteMinutes(registry);
+}
+
+/**
+ * Раунд 45: убит ли НПЦ героем (флаг ставится в applyNpcMurderConsequences).
+ */
+export function isNpcKilled(registry, npcId) {
+    const q = registry.get('quest') || {};
+    return !!(q.npcKilled && q.npcKilled[npcId]);
+}
+
+/**
+ * П.3 заявки: последствия УБИЙСТВА НПЦ героем.
+ *   • репутация в деревне −50 (прямая запись, честно как сказано);
+ *   • репутация у ВСЕХ НПЦ −50 (прямая запись);
+ *   • у родни убитого (супруга и дети из того же дома) — репутация
+ *     к игроку падает ДО −100 (кровная вражда);
+ *   • сам убитый помечается q.npcKilled (больше не разговаривает,
+ *     с улицы деревни и из домов его убирает сцена).
+ */
+export function applyNpcMurderConsequences(registry, victimNpcId) {
+    const rep = getReputation(registry);
+    const npcs = getNpcs(registry);
+    const victim = npcs.find(n => n.id === victimNpcId);
+    const victimName = victim ? (victim.name || victimNpcId) : victimNpcId;
+
+    // 1) Все живые НПЦ −50 (прямая запись — без балансировочных множителей)
+    npcs.forEach(n => {
+        if (n.id === victimNpcId) return;
+        rep.npcRep[n.id] = clamp((rep.npcRep[n.id] || 0) - MURDER_NPC_PENALTY, NPC_REP_MIN, NPC_REP_MAX);
+    });
+
+    // 2) Деревня −50 (прямая запись)
+    rep.villageRep = clamp(rep.villageRep - MURDER_VILLAGE_PENALTY, VILLAGE_REP_MIN, VILLAGE_REP_MAX);
+
+    // 3) Родня убитого — до дна (−100). Родня = все, кто живёт с убитым
+    //    в одном доме (супруга married:true и дети professionId:'child');
+    //    если убит ребёнок — до дна падают его родители.
+    const kinNames = [];
+    if (victim && victim.interiorId) {
+        npcs.forEach(n => {
+            if (n.id === victimNpcId) return;
+            if (n.interiorId === victim.interiorId) {
+                rep.npcRep[n.id] = KIN_REP_SET;
+                kinNames.push(n.name || n.id);
+            }
+        });
+    }
+    // Сам убитый — тоже до дна (ему уже не важно, но пусть система честна)
+    rep.npcRep[victimNpcId] = NPC_REP_MIN;
+    registry.set('reputation', rep);
+
+    // 4) Флаг смерти — сцены убирают убитого с улицы и из домов
+    const q = registry.get('quest') || {};
+    if (!q.npcKilled) q.npcKilled = {};
+    q.npcKilled[victimNpcId] = true;
+    registry.set('quest', q);
+
+    ActionLog.add(registry, `☠ Кровная вина: герой убил ${victimName}. Деревня и все жители −${MURDER_VILLAGE_PENALTY} репутации.`);
+    if (kinNames.length > 0) {
+        ActionLog.add(registry, `Родня убитого (${kinNames.join(', ')}) проклинает героя: их репутация до −100.`);
+    }
+
+    return { affected: npcs.length - 1, kinNames, victimName, villageRep: rep.villageRep };
+}
+
+/**
+ * П.5 заявки: список НПЦ, враждебных игроку (репутация ≤ −80),
+ * с расчётом виры по каждому. Убитые примирению не подлежат.
+ */
+export function getHostileNpcs(registry) {
+    const rep = getReputation(registry);
+    return getNpcs(registry)
+        .filter(n => (rep.npcRep[n.id] || 0) <= ATTACK_THRESHOLD && !isNpcKilled(registry, n.id))
+        .map(n => ({
+            id: n.id,
+            name: n.name || n.id,
+            gender: n.gender,
+            age: n.age,
+            rep: rep.npcRep[n.id] || 0,
+            vira: calculateVira(registry, n.id).total,
+        }));
+}
+
+/**
+ * П.5 заявки: РАСЧЁТ ВИРЫ ПО СУДЕБНИКУ (Русская Правда + Судебник 1497).
+ *
+ *   • Вира за «обиду кровью» свободному мужу — 40 гривен;
+ *     за свободную женщину или отрока (до 18) — полувирье, 20 гривен
+ *     (Пространная редакция Русской Правды, ст. ст. 1, 25).
+ *   • Продажа — судебный штраф старосте-судье за самовольную ссору —
+ *     10 гривен (Судебник 1497, ст. о «продаже» за обиду).
+ *   • «Судебная гривна» деревни — 2 деньги: вира = 80 д. (муж.) / 40 д. (жен./отрок).
+ *   • Разбой «без всякие свады» (репутация −100, крайняя вражда) —
+ *     двойная вира, как за разбойное дело (ст. о разбое).
+ *
+ * Итог: муж 100 д. (или 200 д. при −100), женщина/отрок 60 д. (или 120 д.).
+ */
+export function calculateVira(registry, npcId) {
+    const rep = getReputation(registry);
+    const npc = getNpcs(registry).find(n => n.id === npcId);
+    const npcRep = (rep.npcRep[npcId] || 0);
+    // Полувирье — за женщину ИЛИ за отрока/отроковицу (до 18 лет)
+    const halfWergild = !!npc && (npc.gender === 'female' || (npc.age != null && npc.age < 18));
+    const wergild = halfWergild ? 40 : 80; // вира / полувирье (в судебных гривнах × 2 д.)
+    const sale = 20;                    // «продажа» старосте за суд
+    const doubleWergild = npcRep <= -100; // разбой без всякой свады
+    const total = (wergild + sale) * (doubleWergild ? 2 : 1);
+    return {
+        wergild, sale, doubleWergild, total,
+        breakdown: doubleWergild
+            ? `вира ${wergild} д. + продажа ${sale} д., за разбой без свады — вдвое`
+            : `вира ${wergild} д. + продажа ${sale} д.`,
+    };
+}
+
+/**
+ * П.5+6 заявки: примирение у старосты за виру.
+ * Деньги уходят старосте, репутация разозлённого НПЦ к игроку
+ * УЛУЧШАЕТСЯ ДО +30 пунктов (прямая запись), перемирье снимается.
+ */
+export function payViraToElder(registry, npcId) {
+    const player = registry.get('player');
+    const npc = getNpcs(registry).find(n => n.id === npcId);
+    const npcName = npc ? (npc.name || npcId) : npcId;
+    if (isNpcKilled(registry, npcId)) {
+        return { success: false, message: `Староста крестится: «${npcName} — мёртв(а). Судебник мёртвых не судит. Кровная вина на тебе до конца дней.»` };
+    }
+    const vira = calculateVira(registry, npcId);
+    if (!player) return { success: false, message: 'Ошибка: игрок не найден.' };
+    if ((player.dengas || 0) < vira.total) {
+        return {
+            success: false,
+            message: `Староста листает Судебник: «Вира за твою обиду — ${vira.total} д. (${vira.breakdown}). А в мошне у тебя лишь ${player.dengas || 0} д. Не будет мира — будет суд.»`,
+            vira,
+        };
+    }
+    player.dengas -= vira.total;
+    registry.set('player', player);
+
+    const rep = getReputation(registry);
+    // П.6: репутация УЛУЧШАЕТСЯ ДО 30 пунктов (прямая запись, ровно +30)
+    rep.npcRep[npcId] = 30;
+    rep.npcTruceUntil[npcId] = 0; // перемирье больше не нужно — вражда снята
+    registry.set('reputation', rep);
+    ActionLog.add(registry, `🤝 Примирение у старосты: выплачена вира ${vira.total} д. за ${npcName} (${vira.breakdown}). Репутация ${npcName} теперь +30.`);
+
+    return {
+        success: true,
+        vira,
+        message: `Староста принимает виру — ${vira.total} д. (${vira.breakdown}) — и жмёт руку ${npcName}: «Обида смыта серебром, по Судебнику быть миру!»\n\nРепутация ${npcName} к тебе теперь +30.`,
+    };
+}
+
+// === СОСЛОВНЫЕ РАМКИ НА СНАРЯЖЕНИЕ (п.7э заявки, раунд 45) ===
+// По уложениям Судебника о вооружении вольных людей:
+//   • «посошное» снаряжение (охотничье и самооборонное) — вольно всякому
+//     совершеннолетнему свободному человеку;
+//   • «воинское» снаряжение (сабля, стальной меч, кольчуга, зерцальный
+//     доспех) — кузнец продаёт ТОЛЬКО совершеннолетним (18+) с доброй
+//     славой: деревенская репутация не ниже 0. Молодняку и людям дурной
+//     славы воинская снаряга не продаётся.
+export const MILITARY_GEAR_IDS = new Set(['sabre', 'steel_sword', 'chain', 'plate']);
+
+export function canBuyMilitaryGear(registry, player) {
+    const age = player && player.age;
+    const adult = (age == null) || age >= AGE_OF_MAJORITY;
+    const trusted = getVillageRep(registry) >= 0;
+    if (!adult) {
+        return { ok: false, reason: `По уложению Судебника воинское снаряжение не продаётся несовершеннолетним (с ${AGE_OF_MAJORITY} лет)` };
+    }
+    if (!trusted) {
+        return { ok: false, reason: 'По уложению Судебника воинское снаряжение не продаётся людям дурной славы (репутация деревни ниже 0)' };
+    }
+    return { ok: true };
 }
 
 // === ПРОВЕРКА ВЫИГРЫША (п.13) ===

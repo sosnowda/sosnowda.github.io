@@ -24,6 +24,7 @@ import {
     getPriceModifier, getRewardModifier,
     canMarry, marry, getMarriageCost, getMarriageNpcRepThreshold, getMarriageVillageRepThreshold, getAgeOfMajority,
     getVillageRep, changeVillageRep,
+    isNpcKilled, canBuyMilitaryGear, MILITARY_GEAR_IDS,
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 // Раунд 39 (п.13): STASHES/тюки/сундуки/ларцы удалены из игры целиком
@@ -135,10 +136,31 @@ export class InteriorScene extends Phaser.Scene {
             : { place: 'home', activity: '' };
         const ownerHere = hasNpc &&
             (this.ownerPresence.place === 'home' || this.ownerPresence.place === this.interiorId);
+        // Раунд 45 (п.3 заявки): убитый героем хозяин больше не живёт в доме —
+        // стоит тишина, никаких разговоров и кнопок
+        const ownerKilled = hasNpc && isNpcKilled(this.registry, interior.npcId);
         // Портрет для диалогов интерьера (с учётом варианта внешности NPC);
         // для интерьеров без NPC — базовый портрет интерьера
         this.npcPortraitKey = (this.npcData && this.npcData.portrait) || interior.portrait;
-        if (hasNpc && ownerHere) {
+        if (hasNpc && ownerKilled) {
+            // ----- Раунд 45 (п.3): ДОМ, ГДЕ УБИТ ХОЗЯИН —
+            // пустота вместо фигуры, скорбная записка вместо разговоров -----
+            const deadName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+            this.add.sprite(width * 0.65, height * 0.55, 'npc_elder').setAlpha(0.0).setDepth(5); // держим раскладку
+            this.add.text(width * 0.65, height * 0.40, t('🕯 Здесь стоит тишина...'), {
+                fontSize: '18px', color: RUS.textDim,
+                fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(20);
+            this.add.text(width * 0.65, height * 0.52, tf(t('{0} погиб(ла) от твоей руки.\nДом опустел, вещи прикрыты холстиной.\nДеревня шепчется о кровной вине.'), deadName), {
+                fontSize: '15px', color: RUS.text, align: 'center',
+                backgroundColor: '#000000aa', padding: { x: 10, y: 8 },
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(20);
+            this.add.text(width * 0.65, height * 0.66, t('Староста может смыть эту вину вирой — если заплатишь.'), {
+                fontSize: '12px', color: '#c9a14a',
+                backgroundColor: '#00000088', padding: { x: 6, y: 3 },
+            }).setOrigin(0.5).setDepth(20);
+        } else if (hasNpc && ownerHere) {
             let npcSpriteKey = (this.npcData && this.npcData.sprite) || interior.npcSprite;
             // П.6: Проверяем существование текстуры
             let finalSpriteKey = this.textures.exists(npcSpriteKey) ? npcSpriteKey : 'npc_elder';
@@ -220,7 +242,8 @@ export class InteriorScene extends Phaser.Scene {
         }
 
         // ----- Раунд 27 (пп.6,9): ВТОРАЯ ФИГУРА — ЖЕНА (староста/пасечник) -----
-        if (interior.secondaryNpcId) {
+        // Раунд 45 (п.3): убитые вторые фигуры (жёны/родня) из дома убираются
+        if (interior.secondaryNpcId && !isNpcKilled(this.registry, interior.secondaryNpcId)) {
             const secPresence = getPresence(this.registry, interior.secondaryNpcId);
             if (secPresence.place === 'home') {
                 const secData = findNpc(this.registry, interior.secondaryNpcId);
@@ -384,7 +407,8 @@ export class InteriorScene extends Phaser.Scene {
         const buttons = [];
         // Раунд 27: диалоговые кнопки — только если хозяин на месте
         // (иначе в доме тихо, работает только «Выйти»)
-        if (hasNpc && ownerHere) {
+        // Раунд 45 (п.3): в доме убитого героя кнопок диалога нет вовсе
+        if (hasNpc && ownerHere && !ownerKilled) {
             buttons.push({ label: t('\u{1F4AC} Поговорить'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.talkToNpc(interior) });
             buttons.push({ label: t('\u{1F4B0} Просить денег'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.askMoneyFromNpc(interior) });
             buttons.push({ label: t('\u{1F4DC} Задание'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.offerQuest(interior) });
@@ -698,16 +722,10 @@ export class InteriorScene extends Phaser.Scene {
         y += 35;
 
         // Подарить любой предмет из инвентаря (п.6: ценность = цена × 0.5)
-        const WEAPONS = {
-            club: { name: 'Дубина', price: 2 }, knife: { name: 'Нож', price: 3 },
-            spear: { name: 'Копьё', price: 8 }, sword: { name: 'Меч', price: 30 },
-            axe: { name: 'Боевой топор', price: 25 }, bow: { name: 'Лук', price: 20 },
-            sabre: { name: 'Сабля', price: 60 }, steel_sword: { name: 'Стальной меч', price: 100 },
-        };
-        const ARMORS = {
-            padded: { name: 'Тегиляй', price: 10 }, leather: { name: 'Кожаная броня', price: 25 },
-            chain: { name: 'Кольчуга', price: 80 }, plate: { name: 'Зерцальный доспех', price: 200 },
-        };
+        // Раунд 45 (п.6 заявки — аудит): раньше здесь дублировалась своя
+        // таблица цен — единый источник правды теперь импорт из Character.js
+        // (WEAPONS/ARMORS), чтобы цены подарков никогда не расходились с
+        // кузницей и боевой системой.
 
         if (player.inventory && player.inventory.length > 0) {
             this.add.text(width / 2, y, 'Предметы из инвентаря:', {
@@ -1354,10 +1372,27 @@ export class InteriorScene extends Phaser.Scene {
 
     /**
      * Меню торговли у кузнеца — покупка оружия и доспехов (п.15).
+     * Раунд 45 (пп.6,7э заявки): аудит и уложения Судебника —
+     *  • при репутации ≤ −50 кузнец отказывается торговать вовсе;
+     *  • цены покупок — с репутационной скидкой/наценкой (getPriceModifier);
+     *  • «воинское» снаряжение (сабля, стальной меч, кольчуга, зерцальный
+     *    доспех) — только совершеннолетним с доброй славой;
+     *  • вкладка «Продать» — продажа снаряжения за полцены (урок о
+     *    честной торговле: перекупка не приносит прибыли).
      */
     showBlacksmithShop(tab = 'weapon') {
         const player = this.registry.get('player');
         const { width, height } = this.scale;
+
+        // 7э: отказ от торговли при дурной славе (репутация ≤ −50)
+        if (willNpcRefuseTrade(this.registry, 'blacksmith')) {
+            ActionLog.add(this.registry, 'Кузнец Данила отказался торговаться с героем дурной славы (репутация ≤ −50).');
+            createDialog(this, t('Кузница'),
+                t('Кузнец Данила откладывает молот и крестит руки на груди:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»'),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: 'portrait_blacksmith' });
+            return;
+        }
 
         // Подложка
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
@@ -1365,6 +1400,12 @@ export class InteriorScene extends Phaser.Scene {
         const panelW = 600, panelH = 480;
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
+
+        const closeMenu = () => {
+            overlay.destroy();
+            panel.destroy();
+            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+        };
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 30, 'Кузница Данилы', {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
@@ -1379,85 +1420,125 @@ export class InteriorScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(202);
 
         // Переключатель вкладок
-        createButton(this, width / 2 - 100, height / 2 - panelH / 2 + 100, t('Оружие'), () => {
-            overlay.destroy();
-            panel.destroy();
-            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
-            this.showBlacksmithShop('weapon');
+        const mkTab = (x, label, key) => createButton(this, x, height / 2 - panelH / 2 + 100, t(label), () => {
+            closeMenu();
+            this.showBlacksmithShop(key);
         }, {
-            backgroundColor: tab === 'weapon' ? RUS.accent : 0x4a3520,
-            hoverColor: tab === 'weapon' ? RUS.accentLight : 0x5a4530,
+            backgroundColor: tab === key ? RUS.accent : 0x4a3520,
+            hoverColor: tab === key ? RUS.accentLight : 0x5a4530,
             textColor: RUS.text, fontSize: 14,
-            padding: { left: 16, right: 16, top: 6, bottom: 6 },
+            padding: { left: 14, right: 14, top: 6, bottom: 6 },
         }).setDepth(202);
-
-        createButton(this, width / 2 + 100, height / 2 - panelH / 2 + 100, t('Доспехи'), () => {
-            overlay.destroy();
-            panel.destroy();
-            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
-            this.showBlacksmithShop('armor');
-        }, {
-            backgroundColor: tab === 'armor' ? RUS.accent : 0x4a3520,
-            hoverColor: tab === 'armor' ? RUS.accentLight : 0x5a4530,
-            textColor: RUS.text, fontSize: 14,
-            padding: { left: 16, right: 16, top: 6, bottom: 6 },
-        }).setDepth(202);
+        mkTab(width / 2 - 150, 'Оружие', 'weapon');
+        mkTab(width / 2, 'Доспехи', 'armor');
+        mkTab(width / 2 + 150, 'Продать', 'sell');
 
         // Список товаров
         const startY = height / 2 - panelH / 2 + 150;
-        const items = tab === 'weapon'
-            ? Object.values(WEAPONS).filter(w => w.id !== 'fists')
-            : Object.values(ARMORS).filter(a => a.id !== 'none');
+        const priceMod = getPriceModifier(this.registry, 'blacksmith');
+        const modNote = priceMod < 1 ? t(' (скидка за добрую славу)') : (priceMod > 1 ? t(' (наценка за дурную славу)') : '');
 
-        items.forEach((item, i) => {
-            const y = startY + i * 42;
-            const price = item.price || 0;
-            const canAfford = (player.dengas || 0) >= price;
-            const desc = tab === 'weapon'
-                ? `${item.name} — ${price} д. (урон ${item.dice.min}-${item.dice.max}+${item.bonus || 0})`
-                : `${item.name} — ${price} д. (защита ${item.def})`;
-            createButton(this, width / 2, y, desc, () => {
-                if (!canAfford) {
-                    createDialog(this, 'Кузница', 'Не хватает денег!', [
-                        { text: 'Понятно', callback: () => {} },
-                    ], { singleton: false, portraitKey: 'portrait_blacksmith' });
-                    return;
-                }
-                player.dengas -= price;
-                this.audioManager.playGoldSpend(); // раунд 24: расплата монетами
-                if (tab === 'weapon') {
-                    equipWeapon(player, item.id);
-                    if (!player.inventory) player.inventory = [];
-                    if (!player.inventory.find(it => it.id === item.id)) {
-                        player.inventory.push({ id: item.id, name: item.name, count: 1, type: 'weapon' });
+        if (tab === 'sell') {
+            // ===== ВКЛАДКА «ПРОДАТЬ» (раунд 45, п.7э) =====
+            // Урок Судебника о честной торговле: кузнец берёт снаряжение
+            // за полцены — перекупкой герою не нажиться.
+            const sellables = (player.inventory || []).filter(it =>
+                it && (it.type === 'weapon' || it.type === 'armor') && (it.count || 0) > 0
+                && it.id !== player.weaponId && it.id !== player.armorId);
+            this.add.text(width / 2, startY - 20, t('Продать можно лишь то, что не надето на тебя (полцены):'), {
+                fontSize: '12px', color: RUS.textDim,
+            }).setOrigin(0.5).setDepth(202);
+            if (sellables.length === 0) {
+                this.add.text(width / 2, startY + 40, t('В узле нечего продать — всё надето или пусто.'), {
+                    fontSize: '14px', color: RUS.textDim,
+                }).setOrigin(0.5).setDepth(202);
+            }
+            sellables.forEach((item, i) => {
+                const y = startY + 20 + i * 42;
+                const base = (WEAPONS[item.id] && WEAPONS[item.id].price)
+                    || (ARMORS[item.id] && ARMORS[item.id].price) || 10;
+                const sellPrice = Math.max(1, Math.floor(base / 2));
+                const label = `💰 ${item.name} — ${sellPrice} д. (полцены)`;
+                createButton(this, width / 2, y, label, () => {
+                    item.count -= 1;
+                    if (item.count <= 0) {
+                        player.inventory = player.inventory.filter(x => x !== item);
                     }
-                } else {
-                    equipArmor(player, item.id);
-                    if (!player.inventory) player.inventory = [];
-                    if (!player.inventory.find(it => it.id === item.id)) {
-                        player.inventory.push({ id: item.id, name: item.name, count: 1, type: 'armor' });
+                    player.dengas = (player.dengas || 0) + sellPrice;
+                    this.registry.set('player', player);
+                    if (this.audioManager) this.audioManager.playGoldReceive();
+                    ActionLog.add(this.registry, `Продал «${item.name}» кузнецу за ${sellPrice} д. (полцены, урок Судебника о честной торговле).`);
+                    this.updateHUD();
+                    closeMenu();
+                    this.showBlacksmithShop('sell');
+                }, {
+                    backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a,
+                    textColor: RUS.text, fontSize: 13,
+                    padding: { left: 14, right: 14, top: 7, bottom: 7 },
+                }).setDepth(202);
+            });
+        } else {
+            const items = tab === 'weapon'
+                ? Object.values(WEAPONS).filter(w => w.id !== 'fists')
+                : Object.values(ARMORS).filter(a => a.id !== 'none');
+
+            items.forEach((item, i) => {
+                const y = startY + i * 42;
+                const price = Math.max(1, Math.round((item.price || 0) * priceMod));
+                const canAfford = (player.dengas || 0) >= price;
+                // 7э: сословные рамки — «воинское» снаряжение не всякому
+                const isMilitary = MILITARY_GEAR_IDS.has(item.id);
+                const gearCheck = isMilitary ? canBuyMilitaryGear(this.registry, player) : { ok: true };
+                const allowed = canAfford && gearCheck.ok;
+                const lockNote = isMilitary ? (gearCheck.ok ? t(' 🔒 воинское') : t(' 🔒')) : '';
+                const desc = tab === 'weapon'
+                    ? `${item.name} — ${price} д.${modNote} (урон ${item.dice.min}-${item.dice.max}+${item.bonus || 0})${lockNote}`
+                    : `${item.name} — ${price} д.${modNote} (защита ${item.def})${lockNote}`;
+                createButton(this, width / 2, y, desc, () => {
+                    if (isMilitary && !gearCheck.ok) {
+                        createDialog(this, t('Кузница'), tf(t('Кузнец Данила качает головой: «{0}.»'), gearCheck.reason), [
+                            { text: t('Понятно'), callback: () => {} },
+                        ], { singleton: false, portraitKey: 'portrait_blacksmith' });
+                        return;
                     }
-                }
-                this.registry.set('player', player);
-                ActionLog.add(this.registry, `Купил «${item.name}» у кузнеца за ${price} д.`);
-                this.updateHUD();
-                overlay.destroy();
-                panel.destroy();
-                this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
-                this.showBlacksmithShop(tab);
-            }, {
-                backgroundColor: canAfford ? 0x3a5a3a : 0x3a3a3a,
-                hoverColor: canAfford ? 0x4a6a4a : 0x4a4a4a,
-                textColor: canAfford ? RUS.text : '#888',
-                fontSize: 13, padding: { left: 14, right: 14, top: 7, bottom: 7 },
-            }).setDepth(202);
-        });
+                    if (!canAfford) {
+                        createDialog(this, t('Кузница'), t('Не хватает денег!'), [
+                            { text: t('Понятно'), callback: () => {} },
+                        ], { singleton: false, portraitKey: 'portrait_blacksmith' });
+                        return;
+                    }
+                    player.dengas -= price;
+                    this.audioManager.playGoldSpend(); // раунд 24: расплата монетами
+                    if (tab === 'weapon') {
+                        equipWeapon(player, item.id);
+                        if (!player.inventory) player.inventory = [];
+                        if (!player.inventory.find(it => it.id === item.id)) {
+                            player.inventory.push({ id: item.id, name: item.name, count: 1, type: 'weapon' });
+                        }
+                    } else {
+                        equipArmor(player, item.id);
+                        if (!player.inventory) player.inventory = [];
+                        if (!player.inventory.find(it => it.id === item.id)) {
+                            player.inventory.push({ id: item.id, name: item.name, count: 1, type: 'armor' });
+                        }
+                    }
+                    this.registry.set('player', player);
+                    ActionLog.add(this.registry, `Купил «${item.name}» у кузнеца за ${price} д.${isMilitary ? t(' (воинское снаряжение, по уложению Судебника)') : ''}`);
+                    this.updateHUD();
+                    closeMenu();
+                    this.showBlacksmithShop(tab);
+                }, {
+                    backgroundColor: allowed ? 0x3a5a3a : 0x3a3a3a,
+                    hoverColor: allowed ? 0x4a6a4a : 0x4a4a4a,
+                    textColor: allowed ? RUS.text : '#888',
+                    fontSize: 13, padding: { left: 14, right: 14, top: 7, bottom: 7 },
+                }).setDepth(202);
+            });
+        }
 
         // Кнопка закрытия
         createButton(this, width / 2, height / 2 + panelH / 2 - 30, 'Закрыть', () => {
-            overlay.destroy();
-            panel.destroy();
-            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+            closeMenu();
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
             fontSize: 16, padding: { left: 20, right: 20, top: 10, bottom: 10 },

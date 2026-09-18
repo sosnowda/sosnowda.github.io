@@ -68,15 +68,19 @@ export class ActionLog {
         let isEscaped = false;
         let isHeroDead = false;
         let isRepVictory = false;
+        let isExpelled = false;
         if (finalOutcome === 'victory') isVictory = true;
         else if (finalOutcome === 'victory_reputation') { isVictory = true; isRepVictory = true; }
         else if (finalOutcome === 'defeat_thief_escaped') isEscaped = true;
         else if (finalOutcome === 'defeat_hero_dead') isHeroDead = true;
+        // Раунд 45 (п.2): изгнание за дурную славу — отдельный исход
+        else if (finalOutcome === 'defeat_expelled') isExpelled = true;
         else {
             // Fallback на лог
             isVictory = this.entries.some(e => e.action.includes('ПОБЕДА'));
             isEscaped = this.entries.some(e => e.action.includes('сбежал'));
             isHeroDead = this.entries.some(e => e.action.includes('пал в бою'));
+            isExpelled = this.entries.some(e => e.action.includes('изгнан'));
         }
 
         let stars = 0;
@@ -113,6 +117,10 @@ export class ActionLog {
         } else if (isEscaped) {
             stars = 1; title = 'Вор ушёл';
             comment = 'Вор успел скрыться. Стоило действовать быстрее и собирать улики внимательнее.';
+        } else if (isExpelled) {
+            // Раунд 45 (п.2): изгнание из деревни (репутация −100)
+            stars = 0; title = 'Изгнан';
+            comment = 'Староста выгнал тебя на все четыре стороны: деревня не прощает крови и бесчестия.';
         } else if (isHeroDead) {
             stars = 0; title = 'Путник пал';
             comment = 'Герой погиб в бою. Тренируйте воинское мастерство.';
