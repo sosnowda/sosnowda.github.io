@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>404 — Свиток утерян | Летописи Руси XV века</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at center, #2a2018 0%, #1a1410 55%, #100c08 100%);
+            color: #e8dcc0;
+            font-family: Georgia, 'PT Serif', serif;
+            text-align: center;
+            padding: 24px;
+        }
+        .scroll {
+            max-width: 560px;
+            border: 1px solid rgba(201, 169, 97, 0.4);
+            border-radius: 16px;
+            padding: 3rem 2.5rem;
+            background: linear-gradient(160deg, rgba(201, 169, 97, 0.07), rgba(0, 0, 0, 0.2));
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+        }
+        .code {
+            font-size: clamp(4.5rem, 14vw, 7rem);
+            font-weight: bold;
+            color: #c9a961;
+            line-height: 1;
+            letter-spacing: 0.05em;
+            text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+        }
+        h1 {
+            font-size: 1.4rem;
+            color: #e8dcc0;
+            margin: 1rem 0 0.6rem;
+        }
+        p {
+            color: #b8a888;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 1.8rem;
+        }
+        .actions {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        a.btn {
+            display: inline-block;
+            padding: 0.7rem 1.6rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.95rem;
+            border: 1px solid rgba(201, 169, 97, 0.5);
+            color: #e8dcc0;
+            transition: background 0.25s ease, transform 0.25s ease;
+        }
+        a.btn:hover { background: rgba(201, 169, 97, 0.12); transform: translateY(-2px); }
+        a.btn.primary { background: #8b2c1a; border-color: #b53925; color: #f0e6cc; }
+        a.btn.primary:hover { background: #b53925; }
+        @media (prefers-reduced-motion: reduce) { a.btn { transition: none; } }
+    </style>
+</head>
+<body>
+    <main class="scroll">
+        <div class="code">404</div>
+        <h1>Свиток утерян</h1>
+        <p>Страница, которую вы ищете, исчезла из летописей — возможно, её унесло ветрами Орды или она так и не была написана летописцем.</p>
+        <div class="actions">
+            <a class="btn primary" href="/">← На главную</a>
+            <a class="btn" href="/game/">Play the demo ⚔️</a>
+        </div>
+    </main>
+</body>
+</html>
