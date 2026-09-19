@@ -793,9 +793,15 @@ export class LocationScene extends Phaser.Scene {
             ], { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
             return;
         }
+        // Раунд 60 (QA-фикс): заголовок ЧЕСТНО различает первую неудачу
+        // (след остался — можно присмотреться ещё раз) и вторую (затёрт).
+        // Раньше обе показывались как «След затёрт» — игрок думал, что
+        // вторая попытка недоступна (раунд 59, п.1).
         const title = res.found
             ? t('✨ След прочитан!')
-            : (res.alreadyChecked ? t('🔍 След') : t('🔍 След затёрт'));
+            : res.retryLeft
+                ? t('🔍 След не поддался')
+                : (res.alreadyChecked ? t('🔍 След') : t('🔍 След затёрт'));
         createDialog(this, title, res.message, [
             {
                 text: t('Продолжить'),

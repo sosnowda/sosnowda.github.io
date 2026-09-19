@@ -173,6 +173,13 @@ export class DialogueRunner {
             chargeTalkTime(this.scene.registry, TALK_MINUTES, null);
             resumeWorldClock(this.scene.registry);
         }
+        // Раунд 60 (QA-фикс): награды, выданные ДЕЙСТВИЯМИ узлов диалога
+        // (возврат иконы: +деньги/лечение), не обновляли HUD — «💰» висел
+        // со старым значением до смены сцены. Дёргаем updateHUD сцены,
+        // если он есть (Village/Interior/Location/Apiary).
+        if (this.scene && typeof this.scene.updateHUD === 'function') {
+            try { this.scene.updateHUD(); } catch (e) { /* некритично */ }
+        }
         if (this._onDone) {
             const cb = this._onDone;
             this._onDone = null;

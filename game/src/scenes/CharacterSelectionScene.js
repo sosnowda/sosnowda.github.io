@@ -19,6 +19,9 @@ import { initReputation } from '../data/reputation.js';
 import AudioManager from '../systems/AudioManager.js';
 import { t } from '../systems/i18n.js';
 import { ageUnitWord } from '../systems/AgeRules.js';
+// Раунд 60 (пп.1,4): облик героя — готовый прессет «Пауль»/«Баэнора»
+// ПО ПОЛУ, собирается здесь же (меню «Облик героя» удалено)
+import { getHeroPreset, composePlayerTexture } from '../systems/NpcLpc.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
     constructor() {
@@ -483,7 +486,17 @@ export class CharacterSelectionScene extends Phaser.Scene {
             // AD-месяц = (month+8)%12+1; для января–августа (индексы 4..11) AD-год = start+1.
             `Дата: ${startDate.day}.${((startDate.month + 8) % 12) + 1}.${startDate.yearFromChrist + (startDate.month >= 4 ? 1 : 0)} от Р.Х.`
         );
-        // П.11: После выбора героя — переход в генератор внешности, а не сразу в деревню.
-        this.scene.start('CharacterAppearance');
+        // П.11 (раунд 60): меню «Облик героя» УДАЛЕНО — прессет («Пауль» ♂ /
+        // «Баэнора» ♀) применяется автоматически по полу прямо здесь,
+        // после чего герой выходит в деревню.
+        const preset = getHeroPreset(hero.gender, hero.age);
+        const composed = composePlayerTexture(this, preset.appearance, 'player_composite');
+        hero.useComposite = composed;
+        hero.lpcAppearance = preset.appearance;
+        hero.presetName = preset.name;
+        if (composed) hero.sprite = 'player_composite';
+        ActionLog.add(this.registry,
+            `Облик героя: прессет «${preset.name}» выбран автоматически по полу (раунд 60).`);
+        this.scene.start('Village');
     }
 }

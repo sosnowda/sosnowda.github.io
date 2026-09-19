@@ -150,7 +150,7 @@ export const NIGHT_SPOT_PENALTY = 15;
 // Раунд 59 (п.1 приказа владельца): ПОИСК СЛЕДОВ — ДВЕ ПОПЫТКИ.
 // Первая неудача больше НЕ «сжигает» локацию/след: можно присмотреться
 // вторично, но шансы ниже — штраф к Внимательности.
-export const TRACK_RETRY_PENALTY = 15;
+export const TRACK_RETRY_PENALTY = 10;
 // Раунд 31 (п.10): обследование следов занимает ровно 1 час
 export const FOOTPRINT_EXAMINE_MINUTES = 60;
 
@@ -471,7 +471,7 @@ export function examineFootprint(registry, locationId, fpId) {
     registry.set('quest', q);
     ActionLog.add(registry, tf(t('Обследовал след в «{0}» — провал (бросок {1}{2}), след заветрился, но не пропал.'), t(loc.name), res.roll, nightPenalty ? t(', ночь') : ''));
     return {
-        resolved: true, found: false,
+        resolved: true, found: false, retryLeft: true,
         message: t('Ты пригляделся к следу, но неосторожно наступил — отпечаток заветрился. Можно попытаться прочесть его ещё раз (это займёт час), но шансы уже ниже.') + nightNote,
         turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
     };

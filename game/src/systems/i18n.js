@@ -912,6 +912,7 @@ const EN = {
     '✨ След прочитан!': '✨ Print read!',
     '🔍 След': '🔍 Print',
     '🔍 След затёрт': '🔍 Print smeared away',
+    '🔍 След не поддался': '🔍 The print resisted',
 
     // --- Раунд 34: возрастные группы и обращения (дети и не только) ---
     'младенец': 'babe in arms',
@@ -1319,11 +1320,14 @@ const EN = {
     'Цвета одежды, волос и глаз выбираются случайным образом\nпри каждом старте игры (раунд 59). Кнопка «Другой облик» — переброс.':
         'Clothes, hair and eye colors are chosen at random\nwith every game start (round 59). The "Another look" button rerolls them.',
     'Единый шаблон жителя, случайная расцветка': 'One villager template, random coloring',
-    '🎲 Другой облик': '🎲 Another look',
-    'Облик героя (случайные цвета на каждый старт игры):': 'Hero\'s look (random colors on every game start):',
-    'Цвета одежды, волос и глаз выбираются случайно': 'Clothes, hair and eye colors are random',
-    'Имя, класс, возраст, пол — облик собран единым шаблоном со случайными цветами (раунд 59).':
-        'Name, class, age, gender — the look is assembled from one template with random colors (round 59).',
+    // Раунд 60 (пп.1,4): готовые прессеты «Пауль»/«Баэнора» вместо случайных цветов
+    'Облик героя (автоматически по полу):': 'Hero\'s look (automatic by gender):',
+    '«Пауль» — модель для мужских персонажей': '"Paul" — the model for male characters',
+    '«Баэнора» — модель для женских персонажей': '"Baenora" — the model for female characters',
+    'Имя, класс, возраст, пол — облик выбирается автоматически по полу: «Пауль» ♂ / «Баэнора» ♀.':
+        'Name, class, age, gender — the look is picked automatically by gender: "Paul" ♂ / "Baenora" ♀.',
+    'Пауль': 'Paul',
+    'Баэнора': 'Baenora',
     '🎨 Создание персонажа': '🎨 Character Creation',
     'Имя:': 'Name:',
     'Класс:': 'Class:',
@@ -1822,7 +1826,7 @@ const EN_KEYS = {
         '  Talking to an NPC costs 10 minutes; entering a house costs 10 minutes; examining a footprint costs 1 hour.\n' +
         '  While a conversation is open, the real-time countdown is PAUSED.\n' +
         '  🔍 Track searching allows TWO ATTEMPTS: after the first failure you may\n' +
-        '  look again, but the second attempt has lower chances (−15 to Spotting).\n' +
+        '  look again, but the second attempt has lower chances (−10 to Spotting).\n' +
         '  The thief moves AT MOST ONE STEP per game hour.\n' +
         '  🏃 If you fled the fight with the thief and left his location, he moves\n' +
         '  to another location EXACTLY 1 HOUR later, leaving fresh tracks.\n' +

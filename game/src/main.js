@@ -5,7 +5,8 @@ import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { CharacterSelectionScene } from './scenes/CharacterSelectionScene.js';
 import { CharacterGeneratorScene } from './scenes/CharacterGeneratorScene.js';
-import { CharacterAppearanceScene } from './scenes/CharacterAppearanceScene.js';
+// Раунд 60: CharacterAppearanceScene удалена — облик героя это готовый
+// прессет «Пауль»/«Баэнора», применяемый автоматически по полу
 import { VillageScene } from './scenes/VillageScene.js';
 import { InteriorScene } from './scenes/InteriorScene.js';
 import { ForkScene } from './scenes/ForkScene.js';
@@ -35,7 +36,6 @@ const config = {
         TitleScene,
         CharacterSelectionScene,
         CharacterGeneratorScene,
-        CharacterAppearanceScene,
         VillageScene,
         InteriorScene,
         ForkScene,

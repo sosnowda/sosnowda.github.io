@@ -6,6 +6,7 @@ import { createCharacter } from '../systems/Character.js';
 import { paletteLayerFiles } from '../systems/NpcLpc.js';
 import { isEn } from '../systems/i18n.js';  // раунд 37 (п.7): полоска загрузки по языку
 import { ensureFemaleChestTexture } from '../systems/CharacterAppearance.js'; // раунд 39 (п.4)
+import { buildHouseFacades } from '../systems/HouseFacade.js'; // раунд 60 (п.2): цельные дома
 
 // ============================================================
 // Раунд 41 (QA-хардендинг): защита от «тихого замерзания» игры.
@@ -162,7 +163,7 @@ export class BootScene extends Phaser.Scene {
         // ----- РАУНД 51/53: ДЕРЕВЯННЫЕ ДОМА И ЛАВКА (пак Rural_TileB/C/D) =====
         // Палатка лавки ремесленника, бревенчатые дома слободы. Раунд 53:
         // палатки снеди/мясной убраны — вместо них дома Rural_TileD.
-        const ruralKeys = ['rural_shop_1', 'rural_house_0', 'rural_house_1', 'rurald_house_0', 'rurald_house_1'];
+        const ruralKeys = ['rural_shop_1', 'rural_house_0', 'rurald_house_1']; // раунд 60: rural_house_1/rurald_house_0 больше не используются (цельные phouse_*)
         ruralKeys.forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
 
         // ----- РАУНД 51/53: ТАЙЛОВЫЕ ФОНЫ ИНТЕРЬЕРОВ СЛОБОДЫ =====
@@ -268,11 +269,12 @@ export class BootScene extends Phaser.Scene {
         const house3dKeys = ['blacksmith'];
         house3dKeys.forEach(k => this.load.image(`house3d_${k}`, `assets/sprites/house3d_${k}.png`));
 
-        // ----- РАУНД 52 (пп.1,4): ДЕРЕВЯННЫЕ ДОМА — ВСЕ ЖИЛЫЕ ДОМА ДЕРЕВНИ -----
-        // 9 новых фасадов, вырезанных из Rural_TileB/C/D; рыбак — rural_house_0 flipX.
-        ['wood_house_00', 'wood_house_01', 'wood_house_02', 'wood_house_03',
-         'wood_house_07', 'wood_house_08', 'wood_house_09', 'wood_house_10',
-         'wood_house_11'].forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
+        // ----- РАУНД 52 (пп.1,4): ДЕРЕВЯННЫЕ ДОМА — ЖИЛЫЕ ДОМА ДЕРЕВНИ -----
+        // РАУНД 60 (п.2 приказа владельца): 9 фасадов wood_house_* были БИТЫМИ
+        // вырезками (обрезаны крыши/стены/трубы) — больше НЕ загружаются;
+        // вместо них цельные процедурные phouse_* (systems/HouseFacade.js).
+        // Остались ТОЛЬКО цельные вырезки: трактир, дом старосты.
+        ['wood_house_02', 'wood_house_08'].forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
 
         // ===== НОВЫЕ АССЕТЫ (п.1-5 ТЗ) =====
 
@@ -402,6 +404,11 @@ export class BootScene extends Phaser.Scene {
         // ----- Раунд 39 (п.4 заявки): оверлей груди для женских LPC-персонажей —
         // canvas-слой «поверх одежды», один раз за игру (см. CharacterAppearance.js) -----
         ensureFemaleChestTexture(this);
+
+        // ----- РАУНД 60 (п.2 приказа владельца): ЦЕЛЬНЫЕ ДОМА — 9 фасадов,
+        // у которых раньше были обрезаны крыши/стены/трубы, перерисованы
+        // процедурно из настоящих тайлов (wall_*/roof_* уже загружены лоадером) -----
+        buildHouseFacades(this);
 
         // ----- Фаза 1: мягкая виньетка (radial gradient) — канвас-текстура,
         // создаётся ОДИН раз за игру, используется интерьерами и боем для читаемости -----

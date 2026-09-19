@@ -186,37 +186,41 @@ export class VillageScene extends Phaser.Scene {
         // больше не появляются на карте деревни, рыбалка переехала на Реку) -----
 
         // ----- Подсветка дверей и ворот -----
-        // Спрайты домов. РАУНД 52 (пп.1,4): ВСЕ ЖИЛЫЕ ДОМА — новые деревянные
-        // фасады wood_house_* из пакета владельца (Rural_TileB/C/D); старые
-        // 3D-модели удалены. ЦЕРКОВЬ (deco_church_building) и КУЗНИЦА
-        // (house3d_blacksmith) СОХРАНЕНЫ по приказу (копии — assets/reserve/).
+        // Спрайты домов. РАУНД 52 (пп.1,4): жилые дома — фасады wood_house_*
+        // (Rural_TileB/C/D). РАУНД 60 (п.2 приказа владельца): 9 домов с БИТЫМИ
+        // вырезками (обрезаны крыши/стены/трубы) заменены ЦЕЛЬНЫМИ процедурными
+        // фасадами phouse_* (systems/HouseFacade.js — все стены + целая крыша).
+        // Сохранены по прежним приказам: постоялый двор (wood_house_02, раунд 55),
+        // дом старосты (wood_house_08), кузница (house3d_blacksmith), церковь,
+        // butcher (rurald_house_1), рыбак/сапожник (rural_house_0), лавка (rural_shop_1).
         const HOUSE_SPRITE_BY_ID = {
-            elder_house: 'wood_house_08',        // большой дом с крыльцом и ступенями
-            tavern: 'wood_house_02',             // длинный трактир с каменной трубой
+            elder_house: 'wood_house_08',        // большой дом с крыльцом и ступенями (целый)
+            tavern: 'wood_house_02',             // длинный трактир с каменной трубой (целый)
             blacksmith: 'house3d_blacksmith',    // кузница с навесом и горном (сохранена)
-            potter_house: 'wood_house_09',       // соломенная мастерская с резной дверью
-            villager_house_1: 'wood_house_03',   // длинная изба Авдея
-            villager_house_2: 'wood_house_01',   // двойная изба Марфы с мансардой
-            beekeeper_house: 'wood_house_10',    // изба пахаря с цветами и трубой
-            healer_house: 'wood_house_00',       // малая изба знахарки с мансардой
-            carpenter_house: 'wood_house_11',    // черепичный дом плотника
-            fisher_house: 'rural_house_0',       // дом рыбака с навесом-сетями (зеркально)
-            weaver_house: 'wood_house_07',       // изба ткачихи с сенцами и цветами
+            potter_house: 'phouse_potter',       // РАУНД 60: цельная мастерская с резной дверью
+            villager_house_1: 'phouse_avdey',    // РАУНД 60: цельная изба Авдея (была без крыши)
+            villager_house_2: 'phouse_marfa',    // РАУНД 60: цельная изба Марфы с чердачным окном
+            beekeeper_house: 'phouse_pahar',     // РАУНД 60: цельная изба пахаря с цветами
+            healer_house: 'phouse_healer',       // РАУНД 60: цельная изба знахарки
+            carpenter_house: 'phouse_carpenter', // РАУНД 60: цельный черепичный дом плотника
+            fisher_house: 'rural_house_0',       // дом рыбака с навесом-сетями (целый, зеркально)
+            weaver_house: 'phouse_weaver',       // РАУНД 60: цельная изба ткачихи с крыльцом
             // Восточная слобода (раунд 51): лавка ремесленника — палатка.
             // РАУНД 53: лавки снеди/мясная удалены владельцем — на их месте
-            // ЖИЛЫЕ ДОМА Прасковьи и Потапа (новые фасады из Rural_TileD).
+            // ЖИЛЫЕ ДОМА Прасковьи и Потапа.
             shop_tools: 'rural_shop_1',          // лавка со светлым тентом — ремесленник
-            grocer_house: 'rurald_house_0',      // светлый дом с голубой дверью — снедница
-            butcher_house: 'rurald_house_1',     // дом с каменной кладкой — мясник
-            shoemaker_house: 'rural_house_0',    // дом с резными воротами — сапожник
-            woodcutter_house: 'rural_house_1',   // бревенчатая изба — дровосек
+            grocer_house: 'phouse_praskovya',    // РАУНД 60: цельный светлый дом с синей дверью
+            butcher_house: 'rurald_house_1',     // дом с каменной кладкой — мясник (целый)
+            shoemaker_house: 'rural_house_0',    // дом с резными воротами — сапожник (целый)
+            woodcutter_house: 'phouse_drovosek', // РАУНД 60: цельная бревенчатая изба дровосека
         };
         // Дома, рисуемые ЗЕРКАЛЬНО (разнообразие фасадов: один rural_house_0
         // у сапожника и рыбака выглядит по-разному)
         const FLIP_HOUSES = new Set(['fisher_house']);
         // Спрайты с собственными трубами (дым у них запечён в крышу — рисуем
-        // дым именно над трубой, а не по центру)
-        const CHIMNEY_SPRITES = new Set(['house3d_blacksmith', 'wood_house_02', 'wood_house_09', 'wood_house_10', 'rural_house_1']);
+        // дым именно над трубой, а не по центру). Раунд 60: у phouse_*
+        // труба правее центра (cx + 62/304 ширины ≈ +0.20 ширины дома)
+        const CHIMNEY_SPRITES = new Set(['house3d_blacksmith', 'wood_house_02', 'phouse_potter', 'phouse_pahar', 'phouse_drovosek', 'phouse_praskovya']);
         this.doors = [];
         BUILDINGS.forEach(b => {
             const doorX = b.col + Math.floor(b.w / 2);
@@ -319,7 +323,10 @@ export class VillageScene extends Phaser.Scene {
                 const key = HOUSE_SPRITE_BY_ID[b.interiorId];
                 // Раунд 55: у нового фасада постоялого двора (wood_house_02)
                 // труба стоит у ПРАВОГО края крыши — дым именно над ней
-                const dx = key === 'wood_house_02' ? ts * 1.0 : ts * 0.42;
+                // Раунд 60: у phouse_* труба на cx + 75px текстуры (≈ cx + 37px отображения)
+                let dx = ts * 0.42;
+                if (key === 'wood_house_02') dx = ts * 1.0;
+                else if (key && key.indexOf('phouse_') === 0) dx = ts * 0.78;
                 return {
                     x: b.col * ts + b.w * ts / 2 + dx,
                     y: b.row * ts - ts * 0.12,
