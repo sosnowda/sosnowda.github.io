@@ -19,9 +19,9 @@ import { initReputation } from '../data/reputation.js';
 import AudioManager from '../systems/AudioManager.js';
 import { t } from '../systems/i18n.js';
 import { ageUnitWord } from '../systems/AgeRules.js';
-// Раунд 60 (пп.1,4): облик героя — готовый прессет «Пауль»/«Баэнора»
-// ПО ПОЛУ, собирается здесь же (меню «Облик героя» удалено)
-import { getHeroPreset, composePlayerTexture } from '../systems/NpcLpc.js';
+// РАУНД 61 (пп.3,7,10 приказа владельца): меню «🎨 Свой облик» и LPC-кастомизация
+// героя УДАЛЕНЫ — у героя снова СТАРАЯ ГОТОВАЯ МОДЕЛЬ (спрайт прегена:
+// 'player' у мужчин / 'npc_merchant' у женщин), как до раунда 59.
 
 export class CharacterSelectionScene extends Phaser.Scene {
     constructor() {
@@ -48,7 +48,9 @@ export class CharacterSelectionScene extends Phaser.Scene {
             fontStyle: 'bold', stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5, 0);
 
-        // Кнопка "Случайный персонаж"
+        // Кнопка "Случайный персонаж" (центр)
+        // РАУНД 61: кнопка «🎨 Свой облик» УДАЛЕНА (кастомизация внешности
+        // не работала как надо — вернули готовые модели без кастомизации).
         // ФИКС аудита UI: кнопка стояла на y=90 и её верхний край касался
         // низа заголовка — опущена на y=100
         createButton(this, width / 2, 100, t('🎲 Случайный персонаж'), () => {
@@ -56,14 +58,6 @@ export class CharacterSelectionScene extends Phaser.Scene {
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
             fontSize: 18, padding: { left: 24, right: 24, top: 12, bottom: 12 },
-        });
-
-        // Кнопка "Свой персонаж (LPC)" — переход в CharacterGenerator
-        createButton(this, width / 2 + 280, 100, t('🎨 Свой облик'), () => {
-            this.scene.start('CharacterGenerator');
-        }, {
-            backgroundColor: 0x4a3a5a, hoverColor: 0x5a4a6a, textColor: RUS.text,
-            fontSize: 14, padding: { left: 18, right: 18, top: 12, bottom: 12 },
         });
 
         // 8 готовых героев в сетке (4 архетипа × 2 пола).
@@ -486,17 +480,9 @@ export class CharacterSelectionScene extends Phaser.Scene {
             // AD-месяц = (month+8)%12+1; для января–августа (индексы 4..11) AD-год = start+1.
             `Дата: ${startDate.day}.${((startDate.month + 8) % 12) + 1}.${startDate.yearFromChrist + (startDate.month >= 4 ? 1 : 0)} от Р.Х.`
         );
-        // П.11 (раунд 60): меню «Облик героя» УДАЛЕНО — прессет («Пауль» ♂ /
-        // «Баэнора» ♀) применяется автоматически по полу прямо здесь,
-        // после чего герой выходит в деревню.
-        const preset = getHeroPreset(hero.gender, hero.age);
-        const composed = composePlayerTexture(this, preset.appearance, 'player_composite');
-        hero.useComposite = composed;
-        hero.lpcAppearance = preset.appearance;
-        hero.presetName = preset.name;
-        if (composed) hero.sprite = 'player_composite';
-        ActionLog.add(this.registry,
-            `Облик героя: прессет «${preset.name}» выбран автоматически по полу (раунд 60).`);
+        // П.11 (раунд 61): кастомизация внешности УДАЛЕНА — герой выходит в
+        // деревню со СТАРОЙ ГОТОВОЙ МОДЕЛЬЮ (hero.sprite: 'player' у мужчин,
+        // 'npc_merchant' у женщин), как до раунда 59.
         this.scene.start('Village');
     }
 }

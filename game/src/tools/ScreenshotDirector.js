@@ -5,7 +5,7 @@
 // Сценарии (9 скриншотов сайта, по 3 в ряд):
 //   menu     — главное меню (Title)
 //   select   — окно выбора персонажа (CharacterSelection)
-//   custom   — окно кастомизации персонажа (CharacterGenerator)
+//   custom   — окно генерации случайного героя (CharacterSelection)
 //   village  — локация «Деревня»
 //   map      — карта местности (Fork + showMap)
 //   interior — интерьер дома старосты (Interior elder_house)
@@ -75,7 +75,12 @@ async function stageThiefAtRiver() {
 const SCENARIOS = {
     menu: async () => { await waitScene('Title', 15000); },
     select: async () => { await waitScene('Title', 15000); window.game.scene.start('CharacterSelection'); },
-    custom: async () => { await waitScene('Title', 15000); window.game.scene.start('CharacterGenerator'); },
+    custom: async () => { // раунд 61: окна кастомизации больше нет — снимаем генератор случайного героя
+        await waitScene('Title', 15000); window.game.scene.start('CharacterSelection');
+        await sleep(400);
+        const sel = window.game.scene.getScene('CharacterSelection');
+        if (sel) sel.showRandomGenerator();
+    },
     village: async () => { await startRun(); window.game.scene.start('Village'); },
     map: async () => {
         await startRun();

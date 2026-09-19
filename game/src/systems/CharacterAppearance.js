@@ -31,20 +31,25 @@ const IDLE_FRAME_IDX = 0;  // первый кадр ряда — idle
 // с лицом, закрытым волосами (задача 9) и без лица у героя (задача 8).
 export const LPC_WALK_ROW = { up: 8, left: 9, down: 10, right: 11 };
 
-// РАУНД 39: вертикальная привязка слоёв. Пак собран из LPC-наборов с РАЗНЫМИ
-// базовыми линиями: тело нарисовано в нижней половине кадра (голова y33-42),
-// а глаза/волосы/борода/одежда — под «высокого» персонажа (голова y25-38).
-// Без смещений рубаха закрывает лицо, волосы висят над головой, глаза — в волосах
-// («лица не видно / закрыты причёсками» — пп.3,8,9 заявки). Смещения выверены
-// попиксельно: тело — эталон (0), остальное подтянуто к нему.
+// РАУНД 61 (п.9 приказа владельца «одежда висит отдельно от тела»): ВСЕ
+// смещения слоёв ОБНУЛЕНЫ. Диагноз: слои текущего пака (Universal-LPC-
+// Spritesheet-Character-Generator, см. assets/lpc/manifest.json) нарисованы
+// на ЕДИНОЙ сетке 64×64 и попиксельно совмещены: в кадре walk-down тело
+// занимает y32..62, рубаха y32..47, глаза y29..32, волосы y12..27, ноги
+// y44..56, обувь y49..62 — всё сходится БЕЗ сдвигов. Смещения раунда 39
+// (torso +8, hair +7, eyes +8, beards +7) были выверены для СТАРОГО набора
+// слоёв с другими базовыми линиями; на нынешнем паке они рвали композит:
+// рубаха сползала на пояс (голая грудь), волосы — на лицо, борода — на шею.
+// Механизм смещения оставлен (нужен, если когда-нибудь вернутся слои с
+// чужими базовыми линиями), но все значения = 0.
 const CATEGORY_Y_OFFSET = {
     body: 0,
-    eyes: 8,
-    beards: 7,
-    hair: 7,
+    eyes: 0,
+    beards: 0,
+    hair: 0,
     legs: 0,
     feet: 0,
-    torso: 8,
+    torso: 0,
     chest: 0,   // оверлей груди генерируется уже привязанным
     extra: 0,
 };
@@ -102,11 +107,21 @@ export function composeCharacterTexture(scene, appearance, textureKey = 'player_
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, OUT_W, OUT_H);
 
-    // Порядок слоёв (снизу вверх): body, eyes, beards, hair, legs, feet, torso,
-    // chest (раунд 39, п.4: грудь у женских персонажей — поверх одежды), extra (плащ)
-    const layerOrder = manifest.layer_order
+    // Порядок слоёв (снизу вверх): body, HEAD, eyes, beards, hair, legs, feet,
+    // torso, chest (раунд 39, п.4: грудь у женских персонажей — поверх одежды), extra (плащ)
+    // РАУНД 61: между body и eyes вставлен слой HEAD (см. ensureHeadTextures):
+    // в текущем паке файлы body/* ГОЛОВЫ НЕ СОДЕРЖАТ (только торс/руки/ноги
+    // с шеей-культи на y32..38), а волосы/глаза/бороды нарисованы под
+    // «высокого» персонажа с головой y12..40. Голова собирается отдельно
+    // под цвет кожи тела и кладётся сразу после body.
+    const baseOrder = manifest.layer_order
         ? [...manifest.layer_order, 'chest']
         : ['body', 'eyes', 'beards', 'hair', 'legs', 'feet', 'torso', 'chest'];
+    const layerOrder = [];
+    baseOrder.forEach(cat => {
+        layerOrder.push(cat);
+        if (cat === 'body') layerOrder.push('head');
+    });
 
     // Для каждого направления (down, left, right, up)
     let allFound = true;
@@ -126,10 +141,13 @@ export function composeCharacterTexture(scene, appearance, textureKey = 'player_
 
             // Композим все слои в этот кадр
             for (const category of layerOrder) {
-                const optionName = appearance[category];
+                const optionName = (category === 'head')
+                    ? (appearance.head || appearance.body)      // голова — цветом тела
+                    : appearance[category];
                 if (!optionName) continue;
                 const texKey = `lpc_${category}_${optionName}`;
                 if (!scene.textures.exists(texKey)) {
+                    if (category === 'head') continue;          // головы нет — рисуем как раньше (не фолбэк!)
                     // Пробуем загрузить — но в нашей архитектуре слои уже загружены
                     // CharacterGeneratorScene'ом. Если нет — пропускаем.
                     console.warn(`LPC layer not loaded: ${texKey}`);
@@ -243,28 +261,145 @@ export function ensureFemaleChestTexture(scene) {
     };
 
     // Строки 9 (left), 10 (down), 11 (right) — на спине (8) груди не видно.
-    // Координаты — в ПРИВЯЗАННОЙ системе (после смещения торса на +8 кадр:
-    // рубха занимает y40-54, линия груди y45-47).
+    // РАУНД 61: торс больше НЕ смещается (смещения обнулены), рубаха занимает
+    // y32..46, линия груди ≈ y37..39 (точки подняты на 8: было 45..47).
     [LPC_WALK_ROW.left, LPC_WALK_ROW.down, LPC_WALK_ROW.right].forEach((row) => {
         for (let col = 0; col < 9; col++) {           // 9 кадров walk/idle
             if (row === LPC_WALK_ROW.down) {
                 // Вид спереди: две симметричные ложбинки + блики под ними
-                dot(row, col, 29, 45, DARK); dot(row, col, 29, 46, DARK);
-                dot(row, col, 34, 45, DARK); dot(row, col, 34, 46, DARK);
-                dot(row, col, 27, 47, LIGHT); dot(row, col, 28, 47, LIGHT);
-                dot(row, col, 35, 47, LIGHT); dot(row, col, 36, 47, LIGHT);
+                dot(row, col, 29, 37, DARK); dot(row, col, 29, 38, DARK);
+                dot(row, col, 34, 37, DARK); dot(row, col, 34, 38, DARK);
+                dot(row, col, 27, 39, LIGHT); dot(row, col, 28, 39, LIGHT);
+                dot(row, col, 35, 39, LIGHT); dot(row, col, 36, 39, LIGHT);
             } else {
                 // Профиль: бугор груди у переднего края (ставим симметрично —
                 // у LPC-паков перед профилем left/right зеркалится)
-                dot(row, col, 27, 45, DARK); dot(row, col, 28, 45, DARK);
-                dot(row, col, 35, 45, DARK); dot(row, col, 36, 45, DARK);
-                dot(row, col, 27, 47, LIGHT); dot(row, col, 36, 47, LIGHT);
+                dot(row, col, 27, 37, DARK); dot(row, col, 28, 37, DARK);
+                dot(row, col, 35, 37, DARK); dot(row, col, 36, 37, DARK);
+                dot(row, col, 27, 39, LIGHT); dot(row, col, 36, 39, LIGHT);
             }
         }
     });
 
     scene.textures.addCanvas(KEY, canvas);
     return scene.textures.exists(KEY);
+}
+
+/**
+ * РАУНД 61 (п.9 «одежда висит отдельно от тела»): ГОЛОВЫ для жителей.
+ *
+ * Диагноз (попиксельная проверка ассетов): в текущем паке Universal-LPC
+ * файлы body/* НЕ содержат головы — это безголовый торс (шея-культя на
+ * y32..38 кадра), а волосы/глаза/бороды нарисованы под персонажа с ГОЛОВОЙ
+ * y12..40 (48px «высокая» раскладка). Без головы композит собирался так:
+ * волосы висят в воздухе, глаза-точки плывут под ними «слезами», лицо
+ * отсутствует; старые смещения (r39) лишь маскировали это, спуская рубаху
+ * на пояс. Решение: генерируем слой ГОЛОВЫ под цвет кожи каждого тела,
+ * в «высокой» раскладке (голова y14..38) — тогда волосы (12..26), глаза
+ * (29..31) и бороды (33..38) ложатся НА голову БЕЗ всяких смещений.
+ *
+ * Тон кожи берётся из самого файла тела (сэмпл пикселя щеки/груди кадра
+ * walk-down idle), поэтому голова автоматически совпадает со всеми 12
+ * оттенками палитры (male/female × light/tan/olive/taupe/amber/bronze).
+ *
+ * Текстура 'lpc_head_<body>' имеет раскладку Universal-листа (13 колонок ×
+ * 12 рядов 64px) — composeCharacterTexture читает её тем же кодом, что и
+ * остальные слои (строки walk 8..11).
+ *
+ * @param {Phaser.Scene} scene
+ * @returns {number} сколько голов создано
+ */
+export function ensureHeadTextures(scene) {
+    if (typeof document === 'undefined') return 0;
+    const bodyKeys = scene.textures.getTextureKeys().filter(k => /^lpc_body_/.test(k));
+    let made = 0;
+    bodyKeys.forEach((bodyKey) => {
+        const bodyName = bodyKey.replace(/^lpc_body_/, '');
+        const KEY = `lpc_head_${bodyName}`;
+        if (scene.textures.exists(KEY)) return;
+        const bodyTex = scene.textures.get(bodyKey);
+        const src = bodyTex && bodyTex.source && bodyTex.source[0];
+        if (!src || !src.image) return;
+
+        // --- сэмпл тона кожи из кадра walk-down idle (row 10, col 0) ---
+        // РАУНД 61 (фикс тёмного лица): берём НЕСКОЛЬКО точек груди/рук,
+        // отбрасываем тёмный контур (низкая яркость) и красную шею-культю,
+        // усредняем оставшиеся — иначе голова могла выйти почти чёрной.
+        const probe = document.createElement('canvas');
+        probe.width = 64; probe.height = 64;
+        const pctx = probe.getContext('2d');
+        pctx.drawImage(src.image, 0, 640, 64, 64, 0, 0, 64, 64);
+        const candidates = [];
+        const points = [[28, 44], [32, 44], [36, 44], [28, 42], [32, 42], [30, 45]];
+        for (const [px, py] of points) {
+            const d = pctx.getImageData(px, py, 1, 1).data;
+            if (d[3] < 200) continue;                                  // пусто
+            const lum = 0.299 * d[0] + 0.587 * d[1] + 0.114 * d[2];
+            if (lum < 90) continue;                                    // тёмный контур/тень
+            if (d[0] > d[1] + 45 && d[1] > d[2] + 25) continue;        // красная культя шеи
+            candidates.push([d[0], d[1], d[2]]);
+        }
+        let skin;
+        if (candidates.length > 0) {
+            skin = candidates.reduce((acc, c) => [acc[0] + c[0], acc[1] + c[1], acc[2] + c[2]], [0, 0, 0])
+                .map(v => Math.round(v / candidates.length));
+        } else {
+            skin = [214, 166, 120]; // нейтральный тон
+        }
+
+        const shade = (rgb, k) => [Math.round(rgb[0] * k), Math.round(rgb[1] * k), Math.round(rgb[2] * k)];
+        const base = `rgb(${skin[0]},${skin[1]},${skin[2]})`;
+        const dark = `rgb(${shade(skin, 0.82).join(',')})`;
+        const darker = `rgb(${shade(skin, 0.66).join(',')})`;
+        const light = `rgb(${shade(skin, 1.12).join(',')})`;
+
+        const W = 13 * 64, H = 12 * 64;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+
+        // Профиль ширины головы по строкам (голова y14..38, «высокая» раскладка)
+        // [yStart, yEnd, halfWidthAtStart..]: рисуем рядами с центром x=32
+        const headRows = [];
+        const wProfile = [
+            [14, 15, 5], [15, 16, 7], [16, 18, 9], [18, 34, 10],
+            [34, 35, 9], [35, 36, 8], [36, 38, 5],
+        ];
+        wProfile.forEach(([y0, y1, hw]) => { for (let y = y0; y < y1; y++) headRows.push([y, hw]); });
+
+        const paintHeadCol = (row, mode, col) => {
+            const ox = col * 64;
+            const oy = row * 64;   // смещение строки walk-листа (up=8..right=11)
+            const xShift = mode === 'left' ? 1 : (mode === 'right' ? -1 : 0);
+            headRows.forEach(([y, hw]) => {
+                const x0 = ox + 32 - hw + xShift, x1 = ox + 32 + hw + xShift;
+                ctx.fillStyle = base;
+                ctx.fillRect(x0, oy + y, x1 - x0, 1);
+                ctx.fillStyle = dark;
+                ctx.fillRect(x0, oy + y, 2, 1);
+                ctx.fillRect(x1 - 2, oy + y, 2, 1);
+            });
+            ctx.fillStyle = light;
+            ctx.fillRect(ox + 30 + xShift, oy + 16, 4, 2);
+            ctx.fillStyle = darker;
+            ctx.fillRect(ox + 28 + xShift, oy + 36, 8, 2);
+            if (mode === 'down' || mode === 'up') {
+                ctx.fillStyle = dark;
+                ctx.fillRect(ox + 20, oy + 26, 2, 5);
+                ctx.fillRect(ox + 42, oy + 26, 2, 5);
+            }
+        };
+        for (let col = 0; col < 13; col++) {
+            paintHeadCol(8, 'up', col);
+            paintHeadCol(9, 'left', col);
+            paintHeadCol(10, 'down', col);
+            paintHeadCol(11, 'right', col);
+        }
+
+        scene.textures.addCanvas(KEY, canvas);
+        made++;
+    });
+    return made;
 }
 
 /**

@@ -300,66 +300,31 @@ export const PRESET_HEROES = [
     },
 ];
 
-// Паттерны процедурной генерации
+// ============================================================
+// РАУНД 61 (п.2 приказа владельца): паттерны случайной генерации —
+// АНАЛОГИ ЧЕТЫРЁХ ГОТОВЫХ ГЕРОЕВ (Следопыт/Воин/Сыщик/Приключенец).
+// Вариант «Учёный» УДАЛЕН (не по-крестьянски для Руси XV века и ломал
+// строй из четырёх архетипов). Каждый паттерн берёт за основу готового
+// героя того же архетипа и ДРЕЙФУЕТ все параметры в небольших пределах:
+//   • характеристики ±3..12 от базовых;
+//   • навыки ±2..7 от базовых;
+//   • возраст — от возраста базового паттерна (±2..6 лет, 15..50);
+//   • снаряжение то же, деньги ±(5..10) от базовых;
+//   • имя — случайное историческое по полу (можно переименовать в превью).
+// ============================================================
 export const GENERATION_PATTERNS = [
-    { id: 'balanced', name: 'Сбалансированный', desc: 'Все характеристики средние (40..60)' },
-    { id: 'combat',   name: 'Боевой',           desc: 'Высокие STR/CON/SIZ, низкие CHA/INT' },
-    { id: 'scholar',  name: 'Учёный',           desc: 'Высокие INT/POW, низкие физические' },
-    { id: 'social',   name: 'Социальный',       desc: 'Высокие CHA/APP, средние остальные' },
-    { id: 'agile',    name: 'Ловкий',           desc: 'Высокие DEX/INT, низкие SIZ/STR' },
+    { id: 'ranger',     name: 'Следопыт',    desc: 'Разведка, следы и лук — разброс от базы', basePresetId: ['ranger_m', 'ranger_f'] },
+    { id: 'warrior',    name: 'Воин',        desc: 'Меч и кольчуга — разброс от базы',       basePresetId: ['warrior_m', 'warrior_f'] },
+    { id: 'detective',  name: 'Сыщик',       desc: 'Слово и дознание — разброс от базы',     basePresetId: ['detective_m', 'detective_f'] },
+    { id: 'adventurer', name: 'Приключенец', desc: 'Всё в меру — разброс от базы',           basePresetId: ['adventurer_m', 'adventurer_f'] },
 ];
 
 function randInt(min, max) {
     return min + Math.floor(Math.random() * (max - min + 1));
 }
 
-function rollStat(pattern) {
-    // Базовый бросок 3d6×5 даёт 15..90 (среднее ~52)
-    const base = rollCharacteristic();
-    if (!pattern) return base;
-    
-    // Корректировка по паттерну
-    switch (pattern.id) {
-        case 'balanced': return randInt(40, 60);
-        case 'combat':   return randInt(55, 85);
-        case 'scholar':  return randInt(30, 55);
-        case 'social':   return randInt(35, 60);
-        case 'agile':    return randInt(35, 60);
-        default: return base;
-    }
-}
-
-function rollSpecificStat(pattern, statKey) {
-    const base = rollStat(null);
-    if (!pattern) return base;
-    
-    // В зависимости от паттерна и характеристики — корректируем
-    const high = ['STR', 'CON', 'SIZ', 'DEX', 'INT', 'POW', 'CHA', 'APP'];
-    
-    if (pattern.id === 'combat') {
-        if (['STR', 'CON', 'SIZ'].includes(statKey)) return randInt(60, 85);
-        if (['DEX'].includes(statKey)) return randInt(50, 70);
-        if (['CHA', 'APP'].includes(statKey)) return randInt(20, 40);
-        return randInt(35, 55); // INT/POW
-    }
-    if (pattern.id === 'scholar') {
-        if (['INT', 'POW'].includes(statKey)) return randInt(65, 90);
-        if (['CHA', 'APP'].includes(statKey)) return randInt(30, 55);
-        return randInt(35, 55); // физические
-    }
-    if (pattern.id === 'social') {
-        if (['CHA', 'APP'].includes(statKey)) return randInt(65, 90);
-        if (['INT', 'POW'].includes(statKey)) return randInt(45, 65);
-        return randInt(35, 60);
-    }
-    if (pattern.id === 'agile') {
-        if (['DEX', 'INT'].includes(statKey)) return randInt(65, 90);
-        if (['SIZ', 'STR'].includes(statKey)) return randInt(30, 50);
-        return randInt(45, 65);
-    }
-    // balanced
-    return randInt(40, 60);
-}
+// Раунд 61: old pattern-based stat rollers removed — the random hero now
+// drifts from a READY PRESET (see createRandomHero below).
 
 // Создание персонажа. Можно передать готовые характеристики в opts.
 export function createCharacter(name, opts = {}) {
@@ -440,35 +405,53 @@ export function createPresetHero(presetId, customName) {
     });
 }
 
-// Создать случайно сгенерированного героя по паттерну
+// ============================================================
+// Создать случайно сгенерированного героя по паттерну (РАУНД 61, п.2).
+// Паттерн = аналог одного из ЧЕТЫРЁХ готовых героев; все параметры
+// берутся от базового прегена и дрейфуют в небольших пределах.
+// ============================================================
 export function createRandomHero(patternId, customName) {
     const pattern = GENERATION_PATTERNS.find(p => p.id === patternId) || GENERATION_PATTERNS[0];
+
+    // Пол выбирается случайно; базовый преген — соответствующего пола.
+    const gender = Math.random() < 0.5 ? 'male' : 'female';
+    const baseId = pattern.basePresetId[gender === 'female' ? 1 : 0];
+    const base = PRESET_HEROES.find(h => h.id === baseId) || PRESET_HEROES[0];
+
+    const drift = (v, lo, hi) => Math.max(lo, Math.min(hi, v + randInt(-1, 1) * randInt(3, 12)));
+
+    // Характеристики: базовые ±3..12 (BRP-диапазон 15..90)
     const stats = {};
     CHARACTER_KEYS.forEach(c => {
-        stats[c.key] = rollSpecificStat(pattern, c.key);
+        stats[c.key] = drift(base.stats[c.key] != null ? base.stats[c.key] : 50, 15, 90);
     });
-    
-    // Случайное имя по полу
-    const gender = Math.random() < 0.5 ? 'male' : 'female';
+
+    // Навыки: базовые ±2..7 (1..95)
+    const skillOverrides = {};
+    Object.entries(base.skillOverrides).forEach(([key, val]) => {
+        skillOverrides[key] = Math.max(1, Math.min(95, val + randInt(-1, 1) * randInt(2, 7)));
+    });
+
+    // Возраст — ОТ БАЗОВОГО ПАТТЕРНА: возраст прегена ±2..6 лет (15..50)
+    const age = Math.max(AGE_MIN, Math.min(AGE_MAX, base.age + randInt(-1, 1) * randInt(2, 6)));
+
+    // Случайное историческое имя по полу (в превью можно переименовать)
     const maleNames = ['Добрыня', 'Ярополк', 'Ратибор', 'Боян', 'Ставр', 'Мирослав', 'Творимир', 'Гаврила'];
     const femaleNames = ['Милонега', 'Забава', 'Рогнеда', 'Предслава', 'Любава', 'Неслава', 'Горислава', 'Вера'];
-    const name = customName || (gender === 'male' ? maleNames[randInt(0, maleNames.length - 1)] : femaleNames[randInt(0, femaleNames.length - 1)]);
-    
-    // Случайное стартовое оружие и доспех
-    const weaponPool = ['sword', 'spear', 'axe', 'bow'];
-    const armorPool = ['padded', 'leather', 'none'];
-    const weaponId = weaponPool[randInt(0, weaponPool.length - 1)];
-    const armorId = armorPool[randInt(0, armorPool.length - 1)];
-    
+    const name = customName || (gender === 'male'
+        ? maleNames[randInt(0, maleNames.length - 1)]
+        : femaleNames[randInt(0, femaleNames.length - 1)]);
+
     return createCharacter(name, {
         ...stats,
-        age: randInt(AGE_MIN, AGE_MAX), // случайный герой — честный рандом возраста 15..50
+        age,
         archetype: pattern.name,
         gender,
-        sprite: gender === 'male' ? 'player' : 'npc_merchant',
-        armorId,
-        weaponId,
-        dengas: randInt(15, 50),
+        sprite: gender === 'male' ? 'player' : 'npc_merchant', // РАУНД 61: старая модель, без кастомизации
+        skillOverrides,
+        armorId: base.startArmor,
+        weaponId: base.startWeapon,
+        dengas: Math.max(0, base.startDengas + randInt(-5, 10)),
         inventory: [
             { id: 'herb', name: 'Целебная трава', count: 1, type: 'consumable' },
         ],

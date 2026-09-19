@@ -771,7 +771,7 @@ export class InteriorScene extends Phaser.Scene {
 
         const questText = `${quest.description}\n\n` +
             `${t('Цель:')} ${quest.objective}\n` +
-            `${t('Время на выполнение:')} ${tf(t('{0} действий'), quest.timeLimit)}\n` +
+            `${t('Срок:')} ${tf(t('≈{0} ч'), quest.timeLimitHours || Math.round((quest.timeLimit || 10) / 4))}\n` +
             `${t('Сложность:')} ${quest.difficulty === 'hard' ? t('тяжёлая') : (quest.difficulty === 'medium' ? t('средняя') : t('лёгкая'))}\n` +
             `${t('Награда:')} ${rewardTexts.join(', ')}`;
 

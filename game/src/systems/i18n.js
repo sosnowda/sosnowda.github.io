@@ -517,6 +517,11 @@ const EN = {
     // (EN для «⏳ Часов до побега вора: {0}» уже есть в словаре выше)
     '⏳{0} ч до побега': '⏳{0} h until escape',
     '{0} действий': '{0} actions',
+    // Раунд 61 (п.1): сроки поручений — в игровых часах (реалистичные)
+    'срок: {0} ч': 'deadline: {0} h',
+    'срок ≈{0} ч': 'deadline ≈{0} h',
+    '≈{0} ч': '≈{0} h',
+    'Срок:': 'Deadline:',
     'Найди и поймай вора!': 'Find and catch the thief!',
     'Найди вора.': 'Find the thief.',
     'Игра началась. Вор украл чудотворную икону и бежал из деревни в неизвестном направлении.':
@@ -607,7 +612,7 @@ const EN = {
     'В деревню!': 'To the village!',
     'Поручение «{0}» выполнено! Загляни к {1} за наградой.':
         'Errand "{0}" is done! Visit {1} to collect your reward.',
-    'Принял задание: {0} от {1}. Время: {2}.': 'Accepted errand: {0} from {1}. Time limit: {2}.',
+    'Принял задание: {0} от {1}. Срок: {2} ч.': 'Accepted errand: {0} from {1}. Deadline: {2} h.',
     '🏺 Вернуть икону!': '🏺 Return the icon!',
     '🏺 Вернуть икону церкви!': '🏺 Return the icon to the church!',
     '(дальше)': '(continue)',
@@ -1403,6 +1408,13 @@ const EN = {
     '{0}: «Ты ещё не выполнил моё прошлое поручение. Сперва закончи его!»': '{0}: "You have not yet finished my last errand. Finish it first!"',
     '{0}: «Нет у меня сейчас для тебя дел. Зайди попозже.»': '{0}: "I have no business for you right now. Come back later."',
     'что-то': 'something',
+    // Раунд 61 (п.1): исторические уточнения текстов поручений
+    'Слышно, лихие люди по большой дороге шалят. Постой на страже у ворот до утра.':
+        'Word is, brigands are prowling the great road. Stand watch at the gates till morning.',
+    'Снеси грамоту священнику соседнего погоста — ведётся дело о меже, нужна его рука.':
+        'Carry a letter to the priest of the neighbouring parish — a boundary dispute needs his hand.',
+    'Два соседа судятся из-за межи. Поговори с обоими — помири их, чтоб до волостного суда не дошло.':
+        'Two neighbours quarrel over a boundary. Speak to both and make peace before the volost court hears it.',
     'Цель:': 'Goal:',
     'Время на выполнение:': 'Time to complete:',
     'Сложность:': 'Difficulty:',

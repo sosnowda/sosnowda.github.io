@@ -278,6 +278,9 @@ const QUEST_TEMPLATES = {
         combat: true,
         enemyKeys: ['bandit'],
         baseTime: 4, // 4 хода на выполнение (подготовка + дорога + бой)
+        // РАУНД 61 (п.1): срок — реалистичный. Выследить и избить шайку —
+        // дело не одного часа: сутки (24 ч). 1 действие = 15 минут.
+        timeLimitHours: 24,
         difficulty: 'medium',
     },
     [QUEST_TYPES.WOLF]: {
@@ -292,6 +295,8 @@ const QUEST_TEMPLATES = {
         combat: true,
         enemyKeys: ['wolf'],
         baseTime: 3,
+        // РАУНД 61: выследить волка в лесу — полдня (12 ч)
+        timeLimitHours: 12,
         difficulty: 'easy',
     },
     [QUEST_TYPES.THIEF_CATCH]: {
@@ -304,6 +309,7 @@ const QUEST_TEMPLATES = {
         combat: true,
         enemyKeys: ['thief'],
         baseTime: 12, // главный квест — больше времени
+        timeLimitHours: 36, // отображается, но главный квест живёт по своим правилам (погоня)
         difficulty: 'hard',
         isMainQuest: true,
     },
@@ -311,7 +317,9 @@ const QUEST_TEMPLATES = {
         title: 'Стоять на страже',
         descriptions: [
             'Ночью у ворот неспокойно. Постой на страже, присмотри за околицей.',
-            'Разведка доносит: татары могут напасть. Встань на стражу у ворот до утра.',
+            // РАУНД 61 (п.1): «разведка доносит» — анахронизм; на Руси XV века
+            // о лихих людях узнавали от проезжих и купцов («слышно, шалят»).
+            'Слышно, лихие люди по большой дороге шалят. Постой на страже у ворот до утра.',
         ],
         objective: 'Отстоять на страже у ворот',
         // Раунд 22: 'gate' не был достижим (поручение было НЕВЫПОЛНИМО) —
@@ -319,6 +327,8 @@ const QUEST_TEMPLATES = {
         location: 'village',
         combat: false,
         baseTime: 2,
+        // РАУНД 61: ночная стража — от заката до утра ≈ 8 ч
+        timeLimitHours: 8,
         difficulty: 'easy',
     },
     [QUEST_TYPES.DELIVER]: {
@@ -326,12 +336,19 @@ const QUEST_TEMPLATES = {
         descriptions: [
             'Отнеси грамоту старосте соседнего села. Срочно нужно передать весточку!',
             'Передай свёрток кузнецу в соседнюю деревню. Там его ждут.',
-            'Снеси письмо отцу Савватию — пусть отслужит молебен о здравии.',
+            // РАУНД 61 (п.1): раньше письмо адресовали отцу Савватию — НАШЕМУ
+            // священнику, что живёт здесь же (поручение-дорога выходило нелепым).
+            // Теперь — священник соседнего погоста.
+            'Снеси грамоту священнику соседнего погоста — ведётся дело о меже, нужна его рука.',
         ],
         objective: 'Доставить послание адресату',
         location: 'road',
         combat: false,
         baseTime: 3,
+        // РАУНД 61: соседнее село — туда-обратно пешком за световой день (12 ч).
+        // Было 11 действий (≈3 ч) — «послание в соседнее село» сгорало раньше,
+        // чем герой успевал дойти и вернуться (проверено прогона̄ми раунда 60).
+        timeLimitHours: 12,
         difficulty: 'easy',
     },
     [QUEST_TYPES.FETCH]: {
@@ -345,6 +362,7 @@ const QUEST_TEMPLATES = {
         location: 'forest',
         combat: false,
         baseTime: 2,
+        timeLimitHours: 6,
         difficulty: 'easy',
     },
     [QUEST_TYPES.GATHER_HERBS]: {
@@ -358,6 +376,7 @@ const QUEST_TEMPLATES = {
         location: 'field',
         combat: false,
         baseTime: 2,
+        timeLimitHours: 6,
         difficulty: 'easy',
     },
     [QUEST_TYPES.FETCH_WOOD]: {
@@ -370,6 +389,8 @@ const QUEST_TEMPLATES = {
         location: 'forest',
         combat: false,
         baseTime: 3,
+        // РАУНД 61: нарубить и привезти воз дров — полдня работы (8 ч)
+        timeLimitHours: 8,
         difficulty: 'easy',
     },
     [QUEST_TYPES.FETCH_FISH]: {
@@ -382,6 +403,7 @@ const QUEST_TEMPLATES = {
         location: 'river',
         combat: false,
         baseTime: 2,
+        timeLimitHours: 6,
         difficulty: 'easy',
     },
     [QUEST_TYPES.FIND_PERSON]: {
@@ -395,6 +417,8 @@ const QUEST_TEMPLATES = {
         location: 'any',
         combat: false,
         baseTime: 4,
+        // РАУНД 61: искать человека — полдня до суток; ставим 12 ч
+        timeLimitHours: 12,
         difficulty: 'medium',
     },
     [QUEST_TYPES.ESCORT]: {
@@ -407,18 +431,22 @@ const QUEST_TEMPLATES = {
         location: 'road',
         combat: false,
         baseTime: 4,
+        timeLimitHours: 12,
         difficulty: 'medium',
     },
     [QUEST_TYPES.MEDIATE]: {
         title: 'Помирить соседей',
         descriptions: [
-            'Два соседа судятся из-за межи. Поговори с обоими — помири их, чтоб не довели до суда.',
+            // РАУНД 61 (п.1): суд на Руси XV века — ВОЛОСТНОЙ (судит волостель),
+            // не просто «суд». Уточнено для историчности.
+            'Два соседа судятся из-за межи. Поговори с обоими — помири их, чтоб до волостного суда не дошло.',
             'Крестьяне поругались из-за покоса. Уговори их поделить луг по-братски.',
         ],
         objective: 'Помирить поссорившихся соседей',
         location: 'village',
         combat: false,
         baseTime: 2,
+        timeLimitHours: 4,
         difficulty: 'easy',
     },
     [QUEST_TYPES.ICON_RETURN]: {
@@ -431,6 +459,7 @@ const QUEST_TEMPLATES = {
         combat: true,
         enemyKeys: ['thief'],
         baseTime: 12,
+        timeLimitHours: 36, // главный квест живёт по правилам погони
         difficulty: 'hard',
         isMainQuest: true,
     },
@@ -446,6 +475,7 @@ const QUEST_TEMPLATES = {
         location: 'apiary',
         combat: false,
         baseTime: 2,
+        timeLimitHours: 4,
         difficulty: 'easy',
     },
     [QUEST_TYPES.PRAYER]: {
@@ -458,11 +488,21 @@ const QUEST_TEMPLATES = {
         location: 'church',
         combat: false,
         baseTime: 1,
+        timeLimitHours: 2,
         difficulty: 'easy',
     },
 };
 
 // === НАГРАДЫ (зависят от NPC и типа задания) ===
+// РАУНД 61 (п.1): ПЕРЕСЧЁТ ПО РЕАЛИЯМ РУСИ XV ВЕКА.
+// Ориентир исторической цены: подённая работа крестьянина/работника —
+// порядка 1–3 денег в день; деньга — мелкое серебро. Поэтому:
+//   • лёгкое дело (грибы, травы, свеча) — 2–8 д. (небольшой приработок);
+//   • среднее (проводник, поиски человека, стража) — ×1.5;
+//   • тяжёлое (разбойники, шайка) — ×2.5, плюс заказчик-кузнец может
+//     добавить изделие своей руки (нож/топор — за лёгкое дело, копьё —
+//     за среднее, меч/сабля — только за тяжёлое: МЕЧ = 30 д., за дрова
+//     его раньше отдавали — несообразно).
 // Возвращает массив наград: [{ type, id, name, count, ... }]
 function generateRewards(npcId, questType, scale) {
     const pool = NPC_QUEST_POOLS[npcId];
@@ -473,9 +513,10 @@ function generateRewards(npcId, questType, scale) {
     const difficulty = QUEST_TEMPLATES[questType]?.difficulty || 'easy';
     const difficultyMult = difficulty === 'hard' ? 2.5 : (difficulty === 'medium' ? 1.5 : 1.0);
 
-    // Деньги (если NPC может давать деньги)
+    // Деньги (если NPC может давать деньги): база 3–8 д. (было 5–19 —
+    // крестьянин платил за грибы полумесячный заработок)
     if (rewardTypes.includes('money')) {
-        const baseAmount = Math.round((5 + Math.floor(Math.random() * 15)) * scale * difficultyMult);
+        const baseAmount = Math.max(1, Math.round((3 + Math.floor(Math.random() * 6)) * scale * difficultyMult));
         rewards.push({ type: 'money', amount: baseAmount });
     }
 
@@ -504,9 +545,18 @@ function generateRewards(npcId, questType, scale) {
         rewards.push({ type: 'item', id: 'icon', name: t('Чудотворная икона'), count: 1, quest: true });
     }
 
-    // Оружие (кузнец может выковать)
+    // Оружие (кузнец может выковать) — РАУНД 61: ПО СЛОЖНОСТИ ДЕЛА.
+    // Было: любой из sword/spear/axe/sabre даже за дрова. Теперь:
+    //   easy   → нож (3 д.) / дубина (2 д.) — мелочь от щедрот;
+    //   medium → боевой топор (25 д.) / копьё (8 д.);
+    //   hard   → меч (30 д.) / сабля (60 д.) — честная плата за кровь.
     if (rewardTypes.includes('weapon')) {
-        const weaponPool = ['sword', 'spear', 'axe', 'sabre'];
+        const weaponPoolByDiff = {
+            easy: ['knife', 'club'],
+            medium: ['axe', 'spear'],
+            hard: ['sword', 'sabre'],
+        };
+        const weaponPool = weaponPoolByDiff[difficulty] || weaponPoolByDiff.easy;
         const weaponId = weaponPool[Math.floor(Math.random() * weaponPool.length)];
         const weapon = WEAPONS[weaponId];
         if (weapon) {
@@ -514,8 +564,9 @@ function generateRewards(npcId, questType, scale) {
         }
     }
 
-    // Доспех (кузнец может выковать)
-    if (rewardTypes.includes('armor') && Math.random() < 0.5) {
+    // Доспех (кузнец может выковать) — только за среднее/тяжёлое дело
+    // (тегиляй/кожа за дрова — было несообразно)
+    if (rewardTypes.includes('armor') && difficulty !== 'easy' && Math.random() < 0.5) {
         const armorPool = ['padded', 'leather'];
         const armorId = armorPool[Math.floor(Math.random() * armorPool.length)];
         const armor = ARMORS[armorId];
@@ -569,13 +620,16 @@ export function generateQuest(npcId, registry) {
     // Награды
     const rewards = generateRewards(npcId, questType, pool.rewardScale);
 
-    // Время на выполнение: раунд 22, сверка проходимости (п.15).
-    // Реальный путь: дорога к развилке (1) + до цели (1-2) + обратно (1)
-    // + вход в дом (1) + разговоры. Старые лимиты (3-7 действий) были
-    // НЕПРОХОДИМЫ для дальних целей — поручения сгорали на обратном пути.
-    const FAR_LOCATIONS = ['lake', 'pogost', 'mill', 'apiary', 'pasture', 'road'];
-    const travelExtra = FAR_LOCATIONS.includes(template.location) ? 2 : 0;
-    const timeLimit = template.baseTime + 6 + travelExtra;
+    // Время на выполнение — РАУНД 61 (п.1): СРОКИ РЕАЛИСТИЧНЫ.
+    // У каждого шаблона свой разумный срок в ЧАСАХ (timeLimitHours):
+    //   молитва 2 ч · примирение 4 ч · воск 4 ч · грибы/рыба/травы 6 ч ·
+    //   дрова 8 ч · стража (ночь) 8 ч · послание в соседнее село 12 ч ·
+    //   поиски человека 12 ч · проводы 12 ч · волк 12 ч · разбойники 24 ч.
+    // 1 действие = 15 минут ⇒ timeLimit (в действиях) = часы × 4.
+    // Старая надбавка «+6 действий всем и +2 дальним» убрана: она делала
+    // сроки произвольными (послание ≈3 ч) и не менялась от дальности цели.
+    const hours = template.timeLimitHours || 8;
+    const timeLimit = Math.max(4, hours * 4); // минимум 1 час
 
     const quest = {
         id: 'quest_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
@@ -589,6 +643,7 @@ export function generateQuest(npcId, registry) {
         combat: template.combat || false,
         enemyKeys: template.enemyKeys || null,
         timeLimit: timeLimit,
+        timeLimitHours: hours,
         turnsUsed: 0,
         rewards: rewards,
         completed: false,
@@ -602,15 +657,18 @@ export function generateQuest(npcId, registry) {
 
 /**
  * Принять задание.
+ * РАУНД 61: срок показывается в ИГРОВЫХ ЧАСАХ (реалистично и понятно),
+ * а не в абстрактных «действиях».
  */
 export function acceptQuest(registry, quest) {
     const q = registry.get('quest') || {};
     if (!q.activeQuests) q.activeQuests = [];
     quest.accepted = true;
     q.activeQuests.push(quest);
-    q.currentObjective = quest.objective + ` (${tf(t('{0} действий'), quest.timeLimit)})`;
+    const hours = quest.timeLimitHours || Math.round((quest.timeLimit || 10) / 4);
+    q.currentObjective = quest.objective + ` (${tf(t('срок: {0} ч'), hours)})`;
     registry.set('quest', q);
-    ActionLog.add(registry, tf(t('Принял задание: {0} от {1}. Время: {2}.'), quest.title, quest.npcName, tf(t('{0} действий'), quest.timeLimit)));
+    ActionLog.add(registry, tf(t('Принял задание: {0} от {1}. Срок: {2} ч.'), quest.title, quest.npcName, hours));
     return quest;
 }
 

@@ -4,9 +4,8 @@
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { CharacterSelectionScene } from './scenes/CharacterSelectionScene.js';
-import { CharacterGeneratorScene } from './scenes/CharacterGeneratorScene.js';
-// Раунд 60: CharacterAppearanceScene удалена — облик героя это готовый
-// прессет «Пауль»/«Баэнора», применяемый автоматически по полу
+// Раунды 60-61: CharacterAppearanceScene и CharacterGeneratorScene удалены —
+// у героя старая готовая модель ('player'/'npc_merchant'), без кастомизации
 import { VillageScene } from './scenes/VillageScene.js';
 import { InteriorScene } from './scenes/InteriorScene.js';
 import { ForkScene } from './scenes/ForkScene.js';
@@ -35,7 +34,6 @@ const config = {
         BootScene,
         TitleScene,
         CharacterSelectionScene,
-        CharacterGeneratorScene,
         VillageScene,
         InteriorScene,
         ForkScene,
