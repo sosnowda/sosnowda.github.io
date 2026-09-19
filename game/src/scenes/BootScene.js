@@ -215,10 +215,10 @@ export class BootScene extends Phaser.Scene {
         // ----- Фаза 1: живописные фоны интерьеров (DarklandsReborn, файлы как есть) -----
         // РАУНД 52: таверна теперь на новом тайловом фоне (загружен выше из
         // int_bg_tavern.jpg) — старая перезапись bg_tavern.jpg УДАЛЕНА.
-        // Церковь и кузница НЕ ТРОНУТЫ (пп.3 приказа): фоны bg_church.jpg /
-        // bg_blacksmith.jpg (копии — в assets/reserve/).
-        this.load.image('int_bg_blacksmith', 'assets/interiors/bg_blacksmith.jpg');
-        this.load.image('int_bg_church', 'assets/interiors/bg_church.jpg');
+        // Раунд 54 (аудит): дублирующая загрузка 'int_bg_blacksmith'/'int_bg_church'
+        // из СТАРЫХ bg_blacksmith.jpg/bg_church.jpg удалена — Phaser игнорировал
+        // дубли ключей, а мёртвые строки сбивали с толку. Новые фоны (r54) грузятся
+        // выше через interiorBgIds; старые bg_*.jpg остаются в assets/reserve/.
 
         // ----- Фаза 1: пергамент GUI (DarklandsReborn) + лента-плашка имени -----
         this.load.image('ui_parchment_a', 'assets/ui/parchment_03.webp');

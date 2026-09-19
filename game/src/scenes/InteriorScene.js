@@ -570,8 +570,40 @@ export class InteriorScene extends Phaser.Scene {
         if (row.length) rows.push(row);
         // Центрируем ряды вокруг btnY (шаг рядов 44px)
         const rowH = 44;
+        // Раунд 54 ФИКС (проверка 390×844, таверна — 12 кнопок): панель
+        // уезжала ЗА нижний край и налезала на HUD ❤/💰 слева внизу.
+        // Узкие экраны (width<600): вся панель ставится ЦЕЛИКОМ в зону между
+        // описанием и HUD (низ = верх HUD − 6); если рядов всё же больше, чем
+        // влезает, — сжимаем кнопки масштабом и пересчитываем ряды.
+        const isNarrow = width < 600;
+        const bottomLimit = isNarrow ? (height - 88 - 6) : (height - 12);
+        const topLimit = height * 0.55;
+        const availH = bottomLimit - topLimit;
+        let btnScale = 1;
+        if (rows.length * rowH > availH) {
+            btnScale = Math.max(0.66, availH / (rows.length * rowH));
+            created.forEach(({ c }) => c.setScale(btnScale));
+            // пересборка рядов по сжатым ширинам
+            rows.length = 0;
+            row = []; rowW = 0;
+            created.forEach(({ b, c }) => {
+                const w = Math.max(c.width, 56) * btnScale + gap;
+                if (row.length && rowW + w - gap > availW) {
+                    rows.push(row); row = []; rowW = 0;
+                }
+                row.push({ b, c, w: Math.max(c.width, 56) * btnScale });
+                rowW += w;
+            });
+            if (row.length) rows.push(row);
+        }
+        const effRowH = rowH * btnScale;
+        // опорный центр: обычные экраны — btnY (как в раундах 51–53);
+        // узкие — центр свободной зоны между описанием и HUD.
+        const fitsAtBtnY = (btnY - effRowH / 2) >= topLimit
+            && (btnY + rows.length * effRowH - effRowH / 2) <= bottomLimit;
+        const panelCenterY = fitsAtBtnY ? btnY : (topLimit + bottomLimit) / 2;
         rows.forEach((r, ri) => {
-            const y = btnY + (ri - (rows.length - 1) / 2) * rowH;
+            const y = panelCenterY + (ri - (rows.length - 1) / 2) * effRowH;
             const total = r.reduce((s, it) => s + it.w, 0) + (r.length - 1) * gap;
             let x = (width - total) / 2;
             r.forEach(({ c, w }) => {
@@ -2039,6 +2071,49 @@ export class InteriorScene extends Phaser.Scene {
                 // очаг слева (дома, таверна) + мягкий светильня в центре горницы
                 this._lightSources.push({ x: 90, y: height * 0.48, w: 280, h: 160, a: 0.55 });
                 this._lightSources.push({ x: width * 0.56, y: height * 0.55, w: width * 0.72, h: height * 0.62, a: 0.22 });
+            }
+            // === РАУНД 54: ЖИВОЙ ОГОНЬ В ОЧАГЕ поверх запечённого фона ===
+            // (раньше фон был статичной картинкой — печь не горела «живьём»).
+            // Кузница: топка горна в центре горна; остальные дома — топка печи
+            // слева (центр ≈ (130, 392) на 1280×720 — совпадает с фоном r54).
+            if (this.textures.exists('int_fire_0')) {
+                const noFire = ['church'];
+                if (!noFire.includes(interior.id)) {
+                    const fp = interior.id === 'blacksmith'
+                        ? { x: width * 0.113, y: height * 0.465, sc: 0.9 }
+                        : { x: 130, y: height * 0.545, sc: 1.15 };
+                    const fire = this.add.image(fp.x, fp.y, 'int_fire_0')
+                        .setScale(fp.sc).setDepth(-5).setAlpha(0.95);
+                    let fFrame = 0;
+                    this.time.addEvent({
+                        delay: 110,
+                        loop: true,
+                        callback: () => { fFrame = (fFrame + 1) % 4; if (fire.active) fire.setTexture(`int_fire_${fFrame}`); },
+                    });
+                    // лёгкое «дыхание» пламени
+                    this.tweens.add({
+                        targets: fire,
+                        scale: { from: fp.sc, to: fp.sc * 1.12 },
+                        alpha: { from: 0.95, to: 0.8 },
+                        duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                }
+            }
+            // Раунд 54: пар над котлом постоялого двора (котёл запечён в фоне на ~275,330)
+            if (interior.id === 'tavern' && this.textures.exists('particle_spark')) {
+                const steam = this.add.particles(0, 0, 'particle_spark', {
+                    x: { min: 258, max: 292 },
+                    y: 300,
+                    lifespan: 1600,
+                    speedY: { min: -26, max: -12 },
+                    speedX: { min: -6, max: 6 },
+                    scale: { start: 0.22, end: 0.02 },
+                    alpha: { start: 0.35, end: 0 },
+                    quantity: 1,
+                    frequency: 260,
+                    tint: 0xf0e8d8,
+                }).setDepth(-4);
+                steam.setAlpha(0.7);
             }
         }
 
