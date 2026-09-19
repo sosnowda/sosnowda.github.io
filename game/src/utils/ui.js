@@ -817,7 +817,11 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         try {
             const bg = btn.getElement ? btn.getElement('background') : null;
             const w = bg ? (bg.width || 0) * Math.abs(bg.scaleX || 1) : 0;
-            return (w > 10) ? w : 120;
+            // Раунд 56: учитываем сжатие самого контейнера кнопки (см. layout —
+            // одиночная плашка шире панели сжимается контейнером целиком)
+            const cs = (typeof btn.scale === 'number' && btn.scale > 0) ? btn.scale : 1;
+            const total = w * cs;
+            return (total > 10) ? total : 120;
         } catch (e) { return 120; }
     };
     const packButtonRows = () => {
@@ -843,6 +847,21 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     };
 
     const layout = () => {
+        // Раунд 56 (приказ владельца: «плашки выбора действий не налезают друг
+        // на друга и не вылезают за рамки окна»): одиночная кнопка шире панели
+        // раньше влезала в свой ряд «как есть» и торчала за пергамент/экран.
+        // Теперь перед любым расчётом сжимаем такие кнопки контейнером —
+        // упаковка рядов (ниже) считает уже сжатые честные ширины.
+        const maxRowWClamp = Math.max(180, dialogWidth - 40);
+        actionContainers.forEach((btn) => {
+            let raw = 0;
+            try {
+                const bg = btn.getElement ? btn.getElement('background') : null;
+                raw = bg ? (bg.width || 0) * Math.abs(bg.scaleX || 1) : 0;
+            } catch (e) { raw = 0; }
+            const s = (raw > maxRowWClamp && raw > 0) ? maxRowWClamp / raw : 1;
+            if (typeof btn.setScale === 'function') btn.setScale(s, s);
+        });
         const titleH = titleText.height || 30;
         const availH = Math.max(280, cam.height * 0.9);
 

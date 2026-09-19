@@ -25,6 +25,21 @@ body{background:#2e2118;font-family:Arial,sans-serif}
 <!-- RexUI полностью убран — кнопки на чистом Phaser -->
 
 <script>
+// Раунд 56 (приказ владельца): F1 открывает СПРАВКУ ИГРЫ, а не браузера!
+// Браузерное поведение клавиши F1 (справка браузера поверх игры) глушится
+// на уровне документа ДО старта загрузки сцен. Игровые окна «❓ Помощь»
+// открывают обработчики сцен keydown-F1 (Title, Village, Interior, Forest,
+// Fork, Location, Combat, Apiary — раунд 32). preventDefault НЕ мешает
+// обработчикам Phaser — событие продолжает всплывать по window.
+(function () {
+    var swallowF1 = function (e) {
+        if (e.code === 'F1' || e.key === 'F1' || e.keyCode === 112) {
+            e.preventDefault();
+        }
+    };
+    window.addEventListener('keydown', swallowF1, { passive: false });
+})();
+
 window.addEventListener('load', function() {
     var loadingEl = document.getElementById('loading-text');
     var errorEl = document.getElementById('error-text');

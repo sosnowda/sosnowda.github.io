@@ -255,15 +255,11 @@ export class VillageScene extends Phaser.Scene {
                     .setDepth(bottomRow - 0.5);
             }
 
-            // Золотой кружок над дверью (глубина 20 — поверх спрайта дома).
-            // Раунд 37 (п.11 «мигающие тайлы»): маркер больше НЕ пульсирует альфой —
-            // стоит ровно (мигание ниже по яркости, тайлы выглядят стабильными).
-            const doorMarker = this.add.image(px, py - ts, 'particle_spark')
-                .setTint(0xc9a14a)
-                .setDisplaySize(20, 20)
-                .setAlpha(0.85)
-                .setDepth(20);
-            this.doors.push({ x: doorX, y: doorY, interiorId: b.interiorId, marker: doorMarker });
+            // РАУНД 56 (приказ владельца): «крестики» над дверями УДАЛЕНЫ.
+            // Раньше над дверью каждого дома стоял золотой маркер-искра
+            // ('particle_spark', 20×20) — владелец счёл его крестиком по центру
+            // строений. Здание и так размечено дверью и поп-апом при наведении.
+            this.doors.push({ x: doorX, y: doorY, interiorId: b.interiorId });
 
             // ----- П.7: Уникальные детали зданий (без дублей со спрайтом) -----
             // Раунд 38: передаём ключ спрайта — 3D-дома имеют собственные трубы.

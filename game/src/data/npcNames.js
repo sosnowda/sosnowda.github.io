@@ -378,6 +378,22 @@ export function spawnBlacksmithApprentice(registry) {
 }
 
 /**
+ * Раунд 56: русское имя по ID для НПЦ, у которых ещё НЕТ объекта в registry.
+ * Пример: ученик кузнеца (apprentice) участвует в расписаниях с самого начала
+ * (в обед ходит в таверну вместе с мастером — роль blacksmith), но объект
+ * NPC создаётся только после гибели кузнеца. Раньше плашка такого
+ * «гостя» показывала сырой идентификатор («apprentice»).
+ */
+export function getNpcFallbackName(npcId) {
+    const profs = [
+        ...(PROFESSIONS_BY_GENDER.male || []),
+        ...(PROFESSIONS_BY_GENDER.female || []),
+    ];
+    const p = profs.find(x => x.id === npcId);
+    return p ? p.name : npcId;
+}
+
+/**
  * Получить NPC из registry.
  */
 export function getNpcs(registry) {

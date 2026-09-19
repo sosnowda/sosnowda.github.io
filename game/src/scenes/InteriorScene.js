@@ -13,7 +13,7 @@ import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQu
 import { getTime, formatTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { getWeather } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
-import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
+import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs, getNpcFallbackName } from '../data/npcNames.js';
 import { buildNpcLookTextures, npcVariantKey, npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { ensureNpcLpcTexture } from '../systems/NpcLpc.js';
 import { getPresence, PLACE_NAMES, getNpcsAtPlace, NPC_DIALOGUE, ALL_NPC_IDS, pickOutdoorLine } from '../data/npcPresence.js';
@@ -356,7 +356,9 @@ export class InteriorScene extends Phaser.Scene {
             ];
             visitorIds.forEach((vId, vi) => {
                 const vData = findNpc(this.registry, vId);
-                const vName = vData ? getNpcDisplayName(this.registry, vId) : vId;
+                // Раунд 56: у НПЦ без объекта в registry (ученик кузнеца до гибели
+                // мастера) показываем русское имя по ID — не сырой «apprentice»
+                const vName = vData ? getNpcDisplayName(this.registry, vId) : t(getNpcFallbackName(vId));
                 const vSpriteKey = (vData && vData.sprite) || 'npc_merchant';
                 let vFinal = this.textures.exists(vSpriteKey) ? vSpriteKey : 'npc_elder';
                 const vLpc = vData ? ensureNpcLpcTexture(this, this.registry, vData) : null;
@@ -556,15 +558,23 @@ export class InteriorScene extends Phaser.Scene {
         }));
         const availW = width - 32;
         const gap = btnGap;
+        // Раунд 56 (приказ владельца: «плашки не налезают и не вылезают»):
+        // одиночная кнопка не бывает шире экрана — сжимаем её контейнер,
+        // иначе на узких окнах плашка торчит за край рамки
+        created.forEach((it) => {
+            const w0 = Math.max(it.c.width, 56);
+            it.base = (w0 > availW && availW > 0) ? Math.max(0.5, availW / w0) : 1;
+            if (it.base < 1) it.c.setScale(it.base);
+        });
         // Разбивка на ряды: жадно набираем ряд, пока влезает
         const rows = [];
         let row = [], rowW = 0;
-        created.forEach(({ b, c }) => {
-            const w = Math.max(c.width, 56) + gap;
+        created.forEach(({ b, c, base }) => {
+            const w = Math.max(c.width, 56) * (base || 1) + gap;
             if (row.length && rowW + w - gap > availW) {
                 rows.push(row); row = []; rowW = 0;
             }
-            row.push({ b, c, w: Math.max(c.width, 56) });
+            row.push({ b, c, w: Math.max(c.width, 56) * (base || 1) });
             rowW += w;
         });
         if (row.length) rows.push(row);
@@ -582,16 +592,16 @@ export class InteriorScene extends Phaser.Scene {
         let btnScale = 1;
         if (rows.length * rowH > availH) {
             btnScale = Math.max(0.66, availH / (rows.length * rowH));
-            created.forEach(({ c }) => c.setScale(btnScale));
+            created.forEach(({ c, base }) => c.setScale((base || 1) * btnScale));
             // пересборка рядов по сжатым ширинам
             rows.length = 0;
             row = []; rowW = 0;
-            created.forEach(({ b, c }) => {
-                const w = Math.max(c.width, 56) * btnScale + gap;
+            created.forEach(({ b, c, base }) => {
+                const w = Math.max(c.width, 56) * (base || 1) * btnScale + gap;
                 if (row.length && rowW + w - gap > availW) {
                     rows.push(row); row = []; rowW = 0;
                 }
-                row.push({ b, c, w: Math.max(c.width, 56) * btnScale });
+                row.push({ b, c, w: Math.max(c.width, 56) * (base || 1) * btnScale });
                 rowW += w;
             });
             if (row.length) rows.push(row);

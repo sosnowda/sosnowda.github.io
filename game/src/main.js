@@ -103,3 +103,25 @@ const config = {
 })();
 
 window.game = new Phaser.Game(config);
+
+// ============================================================
+// Раунд 56 (приказ владельца): F1 открывает СПРАВКУ ИГРЫ, а не браузера.
+// Игровые обработчики keydown-F1 есть во всех сценах (Title, Village,
+// Interior, Forest, Fork, Location, Combat, Apiary — раунд 32), но браузер
+// перехватывал клавишу и поверх игры открывал СВОЮ справку. Глушаем
+// браузерное поведение на уровне документа: preventDefault НЕ мешает
+// обработчикам Phaser (событие продолжает всплывать по window).
+// ============================================================
+(function () {
+    const swallowF1 = (e) => {
+        if (e.code === 'F1' || e.key === 'F1' || e.keyCode === 112) {
+            e.preventDefault();
+        }
+    };
+    window.addEventListener('keydown', swallowF1, { passive: false });
+    if (window.game && window.game.input && window.game.input.keyboard &&
+        typeof window.game.input.keyboard.addKeyCapture === 'function') {
+        // Идиоматичный дубль: Phaser тоже держит F1 в списке захвата
+        try { window.game.input.keyboard.addKeyCapture('F1'); } catch (e) { /* не критично */ }
+    }
+})();
