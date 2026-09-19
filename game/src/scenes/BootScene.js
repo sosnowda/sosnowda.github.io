@@ -212,7 +212,10 @@ export class BootScene extends Phaser.Scene {
         for (let f = 0; f < 4; f++) this.load.image(`int_fire_${f}`, `assets/effects/fire_${f}.png`);
 
         // ----- Фаза 1: живописные фоны интерьеров (DarklandsReborn, файлы как есть) -----
-        this.load.image('int_bg_tavern', 'assets/interiors/bg_tavern.jpg');
+        // РАУНД 52: таверна теперь на новом тайловом фоне (загружен выше из
+        // int_bg_tavern.jpg) — старая перезапись bg_tavern.jpg УДАЛЕНА.
+        // Церковь и кузница НЕ ТРОНУТЫ (пп.3 приказа): фоны bg_church.jpg /
+        // bg_blacksmith.jpg (копии — в assets/reserve/).
         this.load.image('int_bg_blacksmith', 'assets/interiors/bg_blacksmith.jpg');
         this.load.image('int_bg_church', 'assets/interiors/bg_church.jpg');
 
@@ -255,8 +258,20 @@ export class BootScene extends Phaser.Scene {
         for (let v = 0; v < 4; v++) this.load.image(`deco_house_${v}`, `assets/sprites/deco_house_${v}.png`);
         // Раунд 38 (этап 2 Варианта Б): дома, сконвертированные из 3D-моделей
         // (Google Drive glb → орто-рендер с UV-текстурами → квантование палитры + контур)
-        const house3dKeys = ['elder', 'tavern', 'blacksmith', 'potter', 'villager1', 'villager2', 'ploughman', 'healer', 'carpenter', 'fisher', 'weaver'];
+        // РАУНД 52: СТАРЫЕ 3D-ДОМА УДАЛЕНЫ (файлы house3d_elder/tavern/potter/
+        // villager1/villager2/ploughman/healer/carpenter/fisher/weaver удалены из репо).
+        // Осталась ТОЛЬКО кузница (house3d_blacksmith) — владелец велел церковь и
+        // кузню сохранить (копии в assets/reserve/). Все жилые дома — новые
+        // бревенчатые фасады wood_house_* из пакета владельца «Деревянные дома
+        // и торговые лавки» (Rural_TileB/C/D, см. tools раунда 52).
+        const house3dKeys = ['blacksmith'];
         house3dKeys.forEach(k => this.load.image(`house3d_${k}`, `assets/sprites/house3d_${k}.png`));
+
+        // ----- РАУНД 52 (пп.1,4): ДЕРЕВЯННЫЕ ДОМА — ВСЕ ЖИЛЫЕ ДОМА ДЕРЕВНИ -----
+        // 9 новых фасадов, вырезанных из Rural_TileB/C/D; рыбак — rural_house_0 flipX.
+        ['wood_house_00', 'wood_house_01', 'wood_house_02', 'wood_house_03',
+         'wood_house_07', 'wood_house_08', 'wood_house_09', 'wood_house_10',
+         'wood_house_11'].forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
 
         // ===== НОВЫЕ АССЕТЫ (п.1-5 ТЗ) =====
 

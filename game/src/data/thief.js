@@ -1092,7 +1092,7 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
         ], { singleton: false, portraitKey: 'portrait_thief', typing: true, typingSpeed: 25 });
     };
 
-    const noun = thiefNoun(registry);
+    const noun = thiefNounInstr(registry);
     const female = getThiefGender(registry) === 'female';
     const intro = female
         ? 'Воровка в тёмном плаще сжимает краденую икону. Она тебя заметила!'
@@ -1467,6 +1467,11 @@ export function getThiefSpriteKey(registry) {
 /** Слово для текстов: «вор» / «воровка». */
 export function thiefNoun(registry) {
     return getThiefGender(registry) === 'female' ? 'воровка' : 'вор';
+}
+
+/** Творительный падеж для заголовков вида «Встреча с {0}!» (раунд 52, QA). */
+export function thiefNounInstr(registry) {
+    return getThiefGender(registry) === 'female' ? 'воровкой' : 'вором';
 }
 
 // ----- Легаси-заглушки (старый экспорт, чтобы ничего не сломалось) -----

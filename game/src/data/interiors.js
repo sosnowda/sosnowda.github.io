@@ -328,31 +328,36 @@ export const INTERIORS = {
 // дома знахарки, плотника, рыбака и ткачихи. Двери и дорожки строятся
 // автоматически в world.buildMap(), проходимость проверяет validateMap().
 export const BUILDINGS = [
-    { interiorId: 'elder_house', col: 4, row: 4, w: 3, h: 3, label: t('Староста') },
-    { interiorId: 'tavern', col: 10, row: 4, w: 3, h: 3, label: t('Постоялый двор') },
-    { interiorId: 'blacksmith', col: 16, row: 4, w: 3, h: 3, label: t('Кузница') },
-    { interiorId: 'potter_house', col: 20, row: 4, w: 3, h: 3, label: t('Дом гончара') },
-    { interiorId: 'villager_house_1', col: 4, row: 11, w: 3, h: 3, label: t('Дом Авдея') },
-    { interiorId: 'villager_house_2', col: 10, row: 11, w: 3, h: 3, label: t('Дом Марфы') },
-    { interiorId: 'beekeeper_house', col: 15, row: 11, w: 3, h: 3, label: t('Дом пахаря') },
-    { interiorId: 'church', col: 20, row: 11, w: 3, h: 3, label: t('Церковь') },
-    // Раунд 37: новая улица (ряды 15–17, двери на второй улице)
-    { interiorId: 'healer_house', col: 3, row: 15, w: 3, h: 3, label: t('Дом знахарки') },
-    { interiorId: 'carpenter_house', col: 9, row: 15, w: 3, h: 3, label: t('Дом плотника') },
-    { interiorId: 'fisher_house', col: 15, row: 15, w: 3, h: 3, label: t('Дом рыбака') },
-    { interiorId: 'weaver_house', col: 20, row: 15, w: 3, h: 3, label: t('Дом ткачихи') },
-    // Раунд 51 (п.11 заявки): ВОСТОЧНАЯ СЛОБОДА — карта расширена на восток
-    // (MAP_W 26→32), рыночный ряд из трёх лавок и два деревянных дома.
-    // Двери всех новых зданий выходят на продлённые улицы (world.buildMap).
-    { interiorId: 'shop_food', col: 26, row: 3, w: 3, h: 3, label: t('Лавка снеди') },
-    { interiorId: 'shop_tools', col: 29, row: 3, w: 2, h: 3, label: t('Лавка ремесленника') },
-    { interiorId: 'shop_meat', col: 28, row: 6, w: 2, h: 2, label: t('Мясная лавка') },
-    { interiorId: 'shoemaker_house', col: 26, row: 11, w: 3, h: 3, label: t('Дом сапожника') },
-    { interiorId: 'woodcutter_house', col: 26, row: 15, w: 3, h: 3, label: t('Изба дровосека') },
+    // РАУНД 52 (п.5 приказа): ДЕРЕВНЯ УПЛОТНЕНА НА ОДИН ЭКРАН — карта 26×15
+    // (тайл 48 → мир 1248×720 влезает в 1280×720 без скролла). Три ряда
+    // застройки: северный (ряды 1–3, двери на 3), средний (ряды 6–8, двери на 8),
+    // южный (ряды 11–13, двери на 13). Главная улица 'B' — ряд 5, южная
+    // грунтовая 'S' — ряд 10. Ворота — на восточном краю (25,5).
+    // Северный ряд:
+    { interiorId: 'elder_house', col: 2, row: 1, w: 3, h: 3, label: t('Староста') },
+    { interiorId: 'tavern', col: 6, row: 1, w: 3, h: 3, label: t('Постоялый двор') },
+    { interiorId: 'blacksmith', col: 10, row: 1, w: 3, h: 3, label: t('Кузница') },
+    { interiorId: 'potter_house', col: 14, row: 1, w: 3, h: 3, label: t('Дом гончара') },
+    { interiorId: 'shop_food', col: 18, row: 1, w: 3, h: 3, label: t('Лавка снеди') },
+    { interiorId: 'shop_tools', col: 22, row: 1, w: 2, h: 3, label: t('Лавка ремесленника') },
+    // Средний ряд:
+    { interiorId: 'villager_house_1', col: 2, row: 6, w: 3, h: 3, label: t('Дом Авдея') },
+    { interiorId: 'villager_house_2', col: 6, row: 6, w: 3, h: 3, label: t('Дом Марфы') },
+    { interiorId: 'beekeeper_house', col: 10, row: 6, w: 3, h: 3, label: t('Дом пахаря') },
+    { interiorId: 'church', col: 14, row: 6, w: 3, h: 3, label: t('Церковь') },
+    { interiorId: 'shop_meat', col: 18, row: 6, w: 2, h: 3, label: t('Мясная лавка') },
+    { interiorId: 'shoemaker_house', col: 22, row: 6, w: 3, h: 3, label: t('Дом сапожника') },
+    // Южный ряд (справа — овчарня-загон, не интерьер):
+    { interiorId: 'healer_house', col: 2, row: 11, w: 3, h: 3, label: t('Дом знахарки') },
+    { interiorId: 'carpenter_house', col: 6, row: 11, w: 3, h: 3, label: t('Дом плотника') },
+    { interiorId: 'fisher_house', col: 10, row: 11, w: 3, h: 3, label: t('Дом рыбака') },
+    { interiorId: 'weaver_house', col: 14, row: 11, w: 3, h: 3, label: t('Дом ткачихи') },
+    { interiorId: 'woodcutter_house', col: 18, row: 11, w: 3, h: 3, label: t('Изба дровосека') },
 ];
 
-// Ворота на выходе из деревни (правый край карты)
-export const VILLAGE_GATE = { col: 23, row: 9, label: t('Ворота') };
+// Ворота на выходе из деревни (восточный край карты, ряд главной улицы).
+// world.buildMap() ставит 'G' на (MAP_W-1, VILLAGE_GATE.row).
+export const VILLAGE_GATE = { col: 25, row: 5, label: t('Ворота') };
 
 // Локации на развилке (раунд 30: лес — тремя частями; раунд 39 (п.23):
 // лес — единая локация цепочкой, вход только через Опушку; «Лес» = Густой лес).

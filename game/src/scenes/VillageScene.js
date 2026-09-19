@@ -3,7 +3,7 @@
 import { RUS } from '../config/RusTheme.js';
 import {
     buildMap, SOLID, tileTexture, roadTileSpec, validateMap, doorInteriorId, isGate,
-    PLAYER_START, MAP_W, MAP_H, getVillageName, YARD_PROPS,
+    PLAYER_START, MAP_W, MAP_H, getVillageName, YARD_PROPS, SHEEPFOLD,
 } from '../data/world.js';
 import { BUILDINGS, VILLAGE_GATE, INTERIORS } from '../data/interiors.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
@@ -40,10 +40,11 @@ export class VillageScene extends Phaser.Scene {
     }
 
     create() {
-        // Раунд 37 (п.5 заявки): тайл 48 → 56 — дома и деревня КРУПНЕЕ; карта
-        // 26×21 не влезает на один экран — добавлен обзор «🗺 Вся деревня» (M)
-        // и честная камера-скролл за игроком.
-        const ts = 56;
+        // РАУНД 52 (п.5 приказа): тайл 48, карта 26×15 → мир 1248×720 —
+        // деревня влезает на ОДИН ЭКРАН без скролла; камера показывает её
+        // целиком (см. applyCameraFit), обзор «🗺 Вся деревня» остаётся как
+        // переключатель камера/игрок для окон меньше мира.
+        const ts = 48;
         this.tileSize = ts;
         this.worldW = MAP_W * ts;
         this.worldH = MAP_H * ts;
@@ -96,7 +97,11 @@ export class VillageScene extends Phaser.Scene {
                 for (let dx = 0; dx < p.w; dx++) coveredTiles.add(`${p.col + dx},${p.row + dy}`);
             }
         });
-        for (let gx = 22; gx <= 24; gx++) coveredTiles.add(`${gx},19`); // овчарня-загон
+        for (let gx = SHEEPFOLD.col; gx < SHEEPFOLD.col + SHEEPFOLD.w; gx++) {
+            for (let gy = SHEEPFOLD.row; gy < SHEEPFOLD.row + SHEEPFOLD.h; gy++) {
+                coveredTiles.add(`${gx},${gy}`); // овчарня-загон
+            }
+        }
 
         // ----- QA коллизий и проходимости: BFS-проверка карты -----
         const validation = validateMap(this.map);
@@ -180,31 +185,35 @@ export class VillageScene extends Phaser.Scene {
         // больше не появляются на карте деревни, рыбалка переехала на Реку) -----
 
         // ----- Подсветка дверей и ворот -----
-        // Спрайты домов: рисованные избы (deco_house_0..3) вместо плоских
-        // двухтекстурных коробок. Крыльцо/окна/труба уже «запечены» в спрайте.
+        // Спрайты домов. РАУНД 52 (пп.1,4): ВСЕ ЖИЛЫЕ ДОМА — новые деревянные
+        // фасады wood_house_* из пакета владельца (Rural_TileB/C/D); старые
+        // 3D-модели удалены. ЦЕРКОВЬ (deco_church_building) и КУЗНИЦА
+        // (house3d_blacksmith) СОХРАНЕНЫ по приказу (копии — assets/reserve/).
         const HOUSE_SPRITE_BY_ID = {
-            // Раунд 38 (этап 2 Варианта Б): каждое здание — уникальный спрайт,
-            // сконвертированный из 3D-моделей владельца (glb → 2D-рендер).
-            // deco_house_0..3 остаются запасным вариантом, если texture не загрузилась.
-            elder_house: 'house3d_elder',        // большая изба с моховой крышей
-            tavern: 'house3d_tavern',            // двухэтажный постоялый двор с крыльцом
-            blacksmith: 'house3d_blacksmith',    // кузница с навесом и горном
-            potter_house: 'house3d_potter',      // мастерская с большими воротами (место амбара)
-            villager_house_1: 'house3d_villager1', // длинная изба Авдея
-            villager_house_2: 'house3d_villager2', // двойная изба Марфы
-            beekeeper_house: 'house3d_ploughman',  // высокая изба пахаря
-            healer_house: 'house3d_healer',      // сложная изба знахарки
-            carpenter_house: 'house3d_carpenter',// изба плотника
-            fisher_house: 'house3d_fisher',      // изба рыбака
-            weaver_house: 'house3d_weaver',      // изба ткачихи
-            // Раунд 51 (п.11 заявки): ВОСТОЧНАЯ СЛОБОДА — палатки рыночного
-            // ряда и бревенчатые дома из пакета владельца (Rural_TileB/C).
+            elder_house: 'wood_house_08',        // большой дом с крыльцом и ступенями
+            tavern: 'wood_house_02',             // длинный трактир с каменной трубой
+            blacksmith: 'house3d_blacksmith',    // кузница с навесом и горном (сохранена)
+            potter_house: 'wood_house_09',       // соломенная мастерская с резной дверью
+            villager_house_1: 'wood_house_03',   // длинная изба Авдея
+            villager_house_2: 'wood_house_01',   // двойная изба Марфы с мансардой
+            beekeeper_house: 'wood_house_10',    // изба пахаря с цветами и трубой
+            healer_house: 'wood_house_00',       // малая изба знахарки с мансардой
+            carpenter_house: 'wood_house_11',    // черепичный дом плотника
+            fisher_house: 'rural_house_0',       // дом рыбака с навесом-сетями (зеркально)
+            weaver_house: 'wood_house_07',       // изба ткачихи с сенцами и цветами
+            // Восточная слобода (раунд 51): палатки и бревенчатые дома
             shop_food: 'rural_shop_0',           // палатка с зелёным тентом — снедь
             shop_meat: 'rural_shop_2',           // палатка в полоску — мясная
             shop_tools: 'rural_shop_1',          // лавка со светлым тентом — ремесленник
             shoemaker_house: 'rural_house_0',    // дом с резными воротами — сапожник
             woodcutter_house: 'rural_house_1',   // бревенчатая изба — дровосек
         };
+        // Дома, рисуемые ЗЕРКАЛЬНО (разнообразие фасадов: один rural_house_0
+        // у сапожника и рыбака выглядит по-разному)
+        const FLIP_HOUSES = new Set(['fisher_house']);
+        // Спрайты с собственными трубами (дым у них запечён в крышу — рисуем
+        // дым именно над трубой, а не по центру)
+        const CHIMNEY_SPRITES = new Set(['house3d_blacksmith', 'wood_house_02', 'wood_house_09', 'wood_house_10', 'rural_house_1']);
         this.doors = [];
         BUILDINGS.forEach(b => {
             const doorX = b.col + Math.floor(b.w / 2);
@@ -234,6 +243,7 @@ export class VillageScene extends Phaser.Scene {
                 const houseImg = this.add.image(cx, cy, sprKey);
                 const fitS = Math.min((b.w * ts + 8) / houseImg.width, (b.h * ts + 6) / houseImg.height);
                 houseImg.setScale(fitS)
+                    .setFlipX(FLIP_HOUSES.has(b.interiorId))
                     .setDepth(bottomRow - 0.55);          // Y-сортировка: игрок ниже дома — перед домом;
                                                           // на строке двери (bottomRow-0.5) игрок тоже ПЕРЕД домом (п.15)
             } else {
@@ -297,10 +307,15 @@ export class VillageScene extends Phaser.Scene {
         });
 
         // ----- Дым из труб (атмосфера, §3 village-visual-upgrade) -----
-        // Амбар без трубы — дымит только жильё и очаги.
-        // Раунд 51: ТОРГОВЫЕ ЛАВКИ (палатки) не дымят — труб у палаток нет.
+        // Раунд 52: дымим только у домов с трубами (CHIMNEY_SPRITES) и церкви;
+        // ТОРГОВЫЕ ЛАВКИ (палатки) не дымят — труб у палаток нет.
         this.smokeBuildings = BUILDINGS
-            .filter(b => b.interiorId !== 'barn' && b.interiorId.indexOf('shop_') !== 0)
+            .filter(b => {
+                if (b.interiorId.indexOf('shop_') === 0) return false; // палатки
+                const key = b.interiorId === 'church' ? 'deco_church_building' : HOUSE_SPRITE_BY_ID[b.interiorId];
+                if (b.interiorId === 'church') return false; // у церкви купол, не труба
+                return CHIMNEY_SPRITES.has(key);
+            })
             .map(b => ({
                 x: b.col * ts + b.w * ts / 2 + ts * 0.42,   // трубы в спрайтах смещены вправо от центра
                 y: b.row * ts - ts * 0.12,
@@ -433,6 +448,18 @@ export class VillageScene extends Phaser.Scene {
         // перед ними — ПЕРЕД (Y-сортировка)
         this.playerObj.setDepth(this.playerObj.y / ts);
         this.cameras.main.startFollow(this.playerObj, true, 0.1, 0.1);
+        // РАУНД 52 (п.5): деревня 26×15 при тайле 48 = 1248×720 — на окнах
+        // 1280×720 она влезает ЦЕЛИКОМ: камера переходит в режим «вся деревня
+        // на одном экране» (без скролла). На мобильных (окно меньше мира)
+        // остаётся классическое следование за игроком.
+        this._fitMode = false;
+        this.applyCameraFit();
+        // Раунд 52 (QA-фикс): после остановки сцены камера уничтожена —
+        // resize-хендлер больше не должен падать на setZoom.
+        this.scale.on('resize', () => {
+            if (!this.scene.isActive() || !this.cameras || !this.cameras.main) return;
+            this.applyCameraFit();
+        });
 
         // ----- Управление -----
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -795,20 +822,22 @@ export class VillageScene extends Phaser.Scene {
      * Раунд 37: визуал овчарни — жерди частокола, 3 овцы, стог сена.
      */
     drawSheepfold(ts) {
-        if (!this.map || !this.map[19] || this.map[19][22] !== 'H') return; // нет загона — нет и овец
+        // Раунд 52: загон из константы SHEEPFOLD (юго-восток, 22–24 × 11–12)
+        const sf = SHEEPFOLD;
+        if (!this.map || !this.map[sf.row] || this.map[sf.row][sf.col] !== 'H') return; // нет загона — нет и овец
         const penCols = [];
-        for (let x = 21; x <= 25; x++) {
-            if (this.map[19] && this.map[19][x] === 'H') penCols.push(x);
+        for (let x = sf.col - 1; x <= sf.col + sf.w; x++) {
+            if (this.map[sf.row] && this.map[sf.row][x] === 'H') penCols.push(x);
         }
         if (!penCols.length) return;
-        const rowY = 19 * ts + ts / 2;
+        const rowY = (sf.row + 1) * ts; // нижний ряд загона — визуальный центр
         // Жерди частокола поверх «стенных» тайлов (визуально — частокол, не изба)
         penCols.forEach((col) => {
             const px = col * ts + ts / 2;
             if (this.textures.exists('tile_fence_h')) {
                 this.add.image(px, rowY, 'tile_fence_h')
                     .setScale(ts / 32)
-                    .setDepth(19 + 0.35);
+                    .setDepth(sf.row + 1 + 0.35);
             }
         });
         // Овцы — на подиуме загона, чуть дышат (лёгкий твин высоты)
@@ -822,7 +851,7 @@ export class VillageScene extends Phaser.Scene {
                 const sheep = this.add.image(sx, sy, sheepTex)
                     .setScale(0.85 + i * 0.08)
                     .setFlipX(i % 2 === 0)
-                    .setDepth(19 + 0.5);
+                    .setDepth(sf.row + 1 + 0.5);
                 this.tweens.add({
                     targets: sheep,
                     y: sy - 1.5,
@@ -834,7 +863,7 @@ export class VillageScene extends Phaser.Scene {
         if (this.textures.exists('deco_haystack')) {
             this.add.image(penCols[penCols.length - 1] * ts + ts / 2, rowY - 8, 'deco_haystack')
                 .setScale(0.7)
-                .setDepth(19 + 0.45);
+                .setDepth(sf.row + 1 + 0.45);
         }
     }
 
@@ -1369,36 +1398,37 @@ export class VillageScene extends Phaser.Scene {
      * жена рыбака, пастушок, дети).
      */
     streetSpotFor(id) {
+        // Раунд 52: все точки пересчитаны под компактную деревню 26×15
+        // (дома в трёх рядах; улица B — ряд 5, южная 'S' — ряд 10).
         const SPOTS = {
-            peasant1: { x: 6.5, y: 13.4 },      // у дома Авдея
-            widow: { x: 12.5, y: 13.4 },        // у дома Марфы
-            beekeeper1: { x: 18.4, y: 13.4 },   // у дома пахаря
-            beekeeper_wife: { x: 8.4, y: 10.4 }, // у колодца
-            elder_wife: { x: 11.5, y: 9.5 },    // у колодца, со стороны главной улицы
-            blacksmith: { x: 17.5, y: 8.2 },    // у кузницы
-            healer: { x: 4.4, y: 18.4 },        // у дома знахарки (новая улица)
-            hunter: { x: 19.2, y: 14.4 },       // у южного грунта
-            fisherman: { x: 16.4, y: 18.4 },    // у дома рыбака (новая улица)
-            carpenter1: { x: 10.4, y: 18.4 },   // у дома плотника
-            carpenter_wife: { x: 12.4, y: 14.4 }, // по воду
-            potter1: { x: 19.4, y: 7.4 },       // за домом гончара (сушит горшки)
-            potter_wife: { x: 19.4, y: 6.4 },   // у двора гончара
-            weaver1: { x: 19.4, y: 18.4 },      // у дома ткачихи
-            shepherd_boy: { x: 21.4, y: 19.4 }, // у овчарни
-            fisher_wife: { x: 14.4, y: 18.4 },  // у дома рыбака
-            guard: { x: 22.4, y: 9.5 },         // у ворот
-            tavernkeeper: { x: 11.4, y: 7.6 },  // у постоялого двора
+            peasant1: { x: 4.5, y: 9.4 },       // у дома Авдея (средний ряд)
+            widow: { x: 8.5, y: 9.4 },          // у дома Марфы
+            beekeeper1: { x: 12.5, y: 9.4 },    // у дома пахаря
+            beekeeper_wife: { x: 10.5, y: 10.4 }, // у колодца (9,9), со стороны южной улицы
+            elder_wife: { x: 8.5, y: 10.4 },    // у колодца
+            blacksmith: { x: 12.5, y: 4.4 },    // у кузницы (северный ряд)
+            healer: { x: 4.5, y: 14.4 },        // у дома знахарки (южный ряд)
+            hunter: { x: 16.5, y: 14.4 },       // у южного двора
+            fisherman: { x: 12.5, y: 14.4 },    // у дома рыбака
+            carpenter1: { x: 8.5, y: 14.4 },    // у дома плотника
+            carpenter_wife: { x: 6.5, y: 10.4 }, // по воду
+            potter1: { x: 17.5, y: 4.4 },       // за домом гончара (сушит горшки)
+            potter_wife: { x: 16.5, y: 4.4 },   // у двора гончара
+            weaver1: { x: 16.5, y: 14.4 },      // у дома ткачихи
+            shepherd_boy: { x: 23.5, y: 13.4 }, // у овчарни (22–24 × 11–12)
+            fisher_wife: { x: 11.5, y: 14.4 },  // у дома рыбака
+            guard: { x: 24.4, y: 5.4 },         // у ворот (25,5)
+            tavernkeeper: { x: 8.5, y: 4.4 },   // у постоялого двора
             priest: null,                       // батюшка не гуляет — он в церкви
-            // Раунд 28 (п.1): детские площадки — у колодца и у ворот
-            kid1: { x: 8.2, y: 9.8 }, kid2: { x: 12.6, y: 9.9 },
-            kid3: { x: 16.8, y: 10.1 }, kid4: { x: 7.6, y: 12.2 },
-            kid5: { x: 18.4, y: 12.3 }, kid6: { x: 13.2, y: 12.1 },
-            kid7: { x: 9.8, y: 9.6 },
-            // Раунд 37: новые дети
-            kid8: { x: 21.4, y: 7.4 },          // дочка гончара — у дома
-            kid9: { x: 6.4, y: 15.4 },          // внучка знахарки — у дома
+            // Детские площадки — у колодца, улицы и дворов
+            kid1: { x: 8.2, y: 10.4 }, kid2: { x: 12.6, y: 10.4 },
+            kid3: { x: 16.8, y: 10.4 }, kid4: { x: 5.5, y: 13.4 },
+            kid5: { x: 19.5, y: 14.4 }, kid6: { x: 13.5, y: 14.4 },
+            kid7: { x: 7.5, y: 5.4 },
+            kid8: { x: 17.5, y: 5.4 },          // дочка гончара — у дома
+            kid9: { x: 3.5, y: 14.4 },          // внучка знахарки — у дома
         };
-        return SPOTS[id] || { x: 7.5, y: 9.4 };
+        return SPOTS[id] || { x: 12.5, y: 5.4 };
     }
 
     /**
@@ -1748,12 +1778,48 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
+     * РАУНД 52 (п.5): если окно БОЛЬШЕ мира (1248×720), показываем деревню
+     * целиком — камера центрируется, скролл не нужен (локация уплотнена
+     * «на один экран»). Если окно меньше — обычный follow за игроком.
+     */
+    applyCameraFit() {
+        const cam = this.cameras.main;
+        const vw = this.scale.width, vh = this.scale.height;
+        // Раунд 52: деревня уплотнена до 26×15 — на десктопе держим её ЦЕЛИКОМ
+        // на экране (zoom-fit по меньшей стороне); на узких экранах (<900px)
+        // камера следует за героем как раньше.
+        const canFit = vw >= 900 && !this._overviewMode;
+        if (canFit) {
+            const zoom = Math.min(vw / this.worldW, vh / this.worldH);
+            if (!this._fitMode) {
+                this._fitMode = true;
+                cam.stopFollow();
+                cam.setBackgroundColor('#3d5232');
+            }
+            cam.setZoom(zoom);
+            cam.centerOn(this.worldW / 2, this.worldH / 2);
+        } else if (this._fitMode) {
+            this._fitMode = false;
+            cam.setZoom(1);
+            cam.startFollow(this.playerObj, true, 0.1, 0.1);
+        }
+    }
+
+    /**
      * Раунд 37 (п.5): обзор ВСЕЙ деревни одним экраном (клавиша M или кнопка 🗺).
-     * Камера отъезжает так, чтобы карта 26×21 влезла целиком; повторное
+     * Камера отъезжает так, чтобы карта влезла целиком; повторное
      * нажатие возвращает камеру к игроку.
      */
     toggleVillageOverview() {
         const cam = this.cameras.main;
+        // Раунд 52: на десктопе деревня и так целиком на экране (applyCameraFit) —
+        // «обзор» не отключаем, просто подсказываем, что камера уже показывает всё.
+        if (this.scale.width >= 900) {
+            this.applyCameraFit();
+            this.showFloatingText(this.scale.width / 2, this.scale.height - 80,
+                t('Деревня уместилась на один экран — обзор не нужен.'), '#c9a14a');
+            return;
+        }
         if (!this._overviewMode) {
             const zoom = Math.min(this.scale.width / this.worldW, this.scale.height / this.worldH);
             this._overviewMode = true;

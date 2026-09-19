@@ -551,7 +551,7 @@ const EN = {
     'Больше не даст.': 'Will give no more.',
     'Нет у меня лишних денег, сам перебиваюсь.': 'I have no spare money — I barely get by myself.',
     'репутация упала на': 'reputation dropped by',
-    '😱 Встреча с вором!': '😱 You met the thief!',
+    '😱 Встреча с {0}!': '😱 You met the thief!',
     'Вор в тёмном плаще сжимает краденую икону. Он тебя заметил! Можно напасть, убедить отдать краденое (проверка Убеждения) или подкрасться и оглушить (проверка Драки).':
         'The thief in a dark cloak clutches the stolen icon. He has spotted you! You can attack, persuade him to give it back (Persuasion check), or sneak up and knock him out (Brawl check).',
     '⚔ Напасть': '⚔ Attack',
