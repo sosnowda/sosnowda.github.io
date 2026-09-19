@@ -86,7 +86,21 @@ export class DialogueRunner {
 
         // Раунд 34: узел может нести EN-текст (node.en) — перевод глубоких
         // диалогов живёт прямо в дереве, без раздувания словаря
+        // РАУНД 55 (заявка «без повторений при взаимодействии»): приветственный
+        // узел может нести variants[] — при повторных беседах реплики РОТАЦИОННО
+        // сменяют друг друга (первая встреча — исходный текст, далее — варианты).
         let displayText = (isEn() && node.en) ? node.en : node.text;
+        if (nodeId === d.start && Array.isArray(node.variants) && node.variants.length) {
+            const reg = this.scene && this.scene.registry;
+            const key = 'dlgVar:' + this._dialogId;
+            const count = reg ? (reg.get(key) || 0) : 0;
+            if (reg) reg.set(key, count + 1);
+            const idx = count % (node.variants.length + 1);
+            if (idx > 0) {
+                const v = node.variants[idx - 1];
+                displayText = (isEn() && v.en) ? v.en : (v.text || v);
+            }
+        }
         if (displayText === '...' && this.scene._lastAskResult && this.scene._lastAskResult.message) {
             displayText = this.scene._lastAskResult.message;
         }

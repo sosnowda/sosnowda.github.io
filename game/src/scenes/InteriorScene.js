@@ -16,7 +16,7 @@ import { t, tf } from '../systems/i18n.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs } from '../data/npcNames.js';
 import { buildNpcLookTextures, npcVariantKey, npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { ensureNpcLpcTexture } from '../systems/NpcLpc.js';
-import { getPresence, PLACE_NAMES, getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES, ALL_NPC_IDS } from '../data/npcPresence.js';
+import { getPresence, PLACE_NAMES, getNpcsAtPlace, NPC_DIALOGUE, ALL_NPC_IDS, pickOutdoorLine } from '../data/npcPresence.js';
 import {
     checkNpcWillingToTalk, getNpcRep, getReputationLevel,
     applyGiftBonus, applyCompliment, applyTreatEveryoneBonus,
@@ -379,7 +379,7 @@ export class InteriorScene extends Phaser.Scene {
                         if (dId) {
                             this.dialogue.run(dId, () => { this.busyDialog = false; });
                         } else {
-                            const line = OUTDOOR_LINES[vId] || t('«Хорошая медовуха нынче...»');
+                            const line = pickOutdoorLine(this.registry, vId, t('«Хорошая медовуха нынче...»'));
                             createDialog(this, vName, line, [
                                 { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
                             ], { singleton: true, portraitKey: (vData && vData.portrait) || 'portrait_villager_f' });

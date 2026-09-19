@@ -29,7 +29,7 @@ import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js'
 import { isOpenedToday, markOpened, dayKeyOf } from '../data/chests.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
-import { getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES } from '../data/npcPresence.js';
+import { getNpcsAtPlace, NPC_DIALOGUE, pickOutdoorLine } from '../data/npcPresence.js';
 import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
 import { addMorningFog, addSeasonalGround } from '../systems/AmbientFX.js';
@@ -580,7 +580,7 @@ export class LocationScene extends Phaser.Scene {
             ]
             : [{ text: t('Продолжить'), callback: closeCb }];
 
-        const line = OUTDOOR_LINES[npcId] || t('Занят(а) своим делом. Заходи в другой раз.');
+        const line = pickOutdoorLine(this.registry, npcId, t('Занят(а) своим делом. Заходи в другой раз.'));
         createDialog(this, displayName, line, choices, talkOpts);
     }
 

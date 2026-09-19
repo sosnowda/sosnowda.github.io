@@ -70,7 +70,7 @@ export function attachNpcWander(scene, cfg) {
     const {
         spr, anchorX, anchorY, radius = 2, map, ts,
         label = null, hint = null,
-        idleMin = 1400, idleMax = 4200, stepMs = 420,
+        idleMin = 1400, idleMax = 4200, stepMs = 840, // раунд 55: жители ходят В 2 РАЗА МЕДЛЕННЕЕ (420 → 840 мс/тайл)
     } = cfg;
     if (!spr || !map) return { stop() {} };
 
@@ -103,13 +103,10 @@ export function attachNpcWander(scene, cfg) {
 
     const playIdle = () => {
         const texKey = spr.texture && spr.texture.key;
-        // сохраняем последний кадр направления как «стоящее» лицо
-        const cur = spr.anims && spr.anims.currentAnim ? spr.anims.currentAnim.key : '';
-        let dir = 'down';
-        for (const d of ['down', 'left', 'right', 'up']) {
-            if (cur.endsWith(`_walk_${d}`)) { dir = d; break; }
-        }
-        const idleKey = `${texKey}_idle_${dir}`;
+        // РАУНД 55 (заявка владельца): остановившись, житель ВСЕГДА
+        // поворачивается ЛИЦОМ К КАМЕРЕ/ИГРОКУ (idle_down) — раньше он мог
+        // замереть спиной («не видно лиц, повернулись спиной к игроку»).
+        const idleKey = `${texKey}_idle_down`;
         if (scene.anims.exists(idleKey)) spr.play(idleKey);
     };
 
@@ -142,7 +139,7 @@ export function attachNpcWander(scene, cfg) {
         walkTween = scene.tweens.add({
             targets: spr,
             x: nx, y: ny,
-            duration: Math.max(240, stepMs),
+            duration: Math.max(480, stepMs), // раунд 55: минимум тоже ×2 (240 → 480)
             ease: 'Linear',
             onComplete: () => {
                 walkTween = null;

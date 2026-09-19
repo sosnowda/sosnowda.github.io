@@ -22,7 +22,7 @@ import { getVillageRep } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
-import { getNpcsAtPlace, NPC_DIALOGUE, OUTDOOR_LINES } from '../data/npcPresence.js';
+import { getNpcsAtPlace, NPC_DIALOGUE, pickOutdoorLine } from '../data/npcPresence.js';
 import { getNpcSpriteKey } from '../systems/NpcLpc.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
@@ -478,7 +478,7 @@ export class ApiaryScene extends Phaser.Scene {
                 if (dId) {
                     this.dialogue.run(dId, () => { this.busyDialog = false; });
                 } else {
-                    const line = OUTDOOR_LINES[npcId] || t('Занят(а) работой на пасеке.');
+                    const line = pickOutdoorLine(this.registry, npcId, t('Занят(а) работой на пасеке.'));
                     // Раунд 31 (п.11): разговор с НПЦ — всегда 1 час
                     createDialog(this, displayName, line, [
                         { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },

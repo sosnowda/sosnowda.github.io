@@ -28,7 +28,7 @@ import { t, tf, tk } from '../systems/i18n.js';
 import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, dayKeyOf } from '../data/chests.js';
 import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
-import { getPresence, ALL_NPC_IDS, NPC_DIALOGUE, OUTDOOR_LINES, PLACE_NAMES } from '../data/npcPresence.js';
+import { getPresence, ALL_NPC_IDS, NPC_DIALOGUE, PLACE_NAMES, pickOutdoorLine } from '../data/npcPresence.js';
 import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
 import { attachNpcWander } from '../systems/NpcWander.js';
 import { npcPortraitVariantKey } from '../systems/NpcLook.js';
@@ -318,11 +318,17 @@ export class VillageScene extends Phaser.Scene {
                 if (b.interiorId === 'church') return false; // у церкви купол, не труба
                 return CHIMNEY_SPRITES.has(key);
             })
-            .map(b => ({
-                x: b.col * ts + b.w * ts / 2 + ts * 0.42,   // трубы в спрайтах смещены вправо от центра
-                y: b.row * ts - ts * 0.12,
-                depth: b.row + b.h + 1,
-            }));
+            .map(b => {
+                const key = HOUSE_SPRITE_BY_ID[b.interiorId];
+                // Раунд 55: у нового фасада постоялого двора (wood_house_02)
+                // труба стоит у ПРАВОГО края крыши — дым именно над ней
+                const dx = key === 'wood_house_02' ? ts * 1.0 : ts * 0.42;
+                return {
+                    x: b.col * ts + b.w * ts / 2 + dx,
+                    y: b.row * ts - ts * 0.12,
+                    depth: b.row + b.h + 1,
+                };
+            });
         this.time.addEvent({
             delay: 620,
             loop: true,
@@ -1322,9 +1328,10 @@ export class VillageScene extends Phaser.Scene {
                 radius: kid ? 3 : 2,
                 map: this.map, ts,
                 label, hint,
-                idleMin: kid ? 600 : 1500,
-                idleMax: kid ? 2200 : 4500,
-                stepMs: kid ? 320 : 460,
+                idleMin: kid ? 900 : 1800,
+                idleMax: kid ? 2600 : 5200,
+                // Раунд 55: жители/дети ходят В 2 РАЗА МЕДЛЕННЕЕ (460→920, 320→640 мс/тайл)
+                stepMs: kid ? 640 : 920,
             });
             this.streetNpcs.push(entry);
         });
@@ -1345,7 +1352,8 @@ export class VillageScene extends Phaser.Scene {
             const walkKey = `${spr.texture.key}_walk_right`;
             if (this.anims.exists(walkKey)) spr.play(walkKey);
             const targetX = Math.random() < 0.5 ? minX : maxX;
-            const walkDur = 12000 + Math.random() * 8000;
+            // Раунд 55: староста тоже прогуливается В 2 РАЗА МЕДЛЕННЕЕ
+            const walkDur = 24000 + Math.random() * 16000;
             this.tweens.add({
                 targets: spr,
                 x: { from: startX, to: targetX },
@@ -1455,7 +1463,7 @@ export class VillageScene extends Phaser.Scene {
         if (dialogueId) {
             this.dialogue.run(dialogueId, () => { this.busyDialog = false; });
         } else {
-            const line = OUTDOOR_LINES[npcId] || t('Занят(а) своим делом. Заходи в другой раз.');
+            const line = pickOutdoorLine(this.registry, npcId, t('Занят(а) своим делом. Заходи в другой раз.'));
             // Раунд 31 (п.11): разговор с НПЦ — всегда 1 час (списывается при закрытии)
             createDialog(this, displayName, line, [
                 { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
