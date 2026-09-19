@@ -144,11 +144,11 @@ export class ForkScene extends Phaser.Scene {
             // Раунд 39 (п.23): лес — ЕДИНАЯ локация; вход только через Опушку
             const isForestEntry = loc.id === 'forest_edge';
             const label = alreadySearched
-                ? tf('{0} (обыскано)', isForestEntry ? `${loc.icon} ${t('Лес')}` : `${loc.icon} ${loc.name}`)
-                : (isForestEntry ? `${loc.icon} ${t('Лес')}` : `${loc.icon} ${loc.name}`);
+                ? tf(t('{0} (обыскано)'), isForestEntry ? `${loc.icon} ${t('Лес')}` : `${loc.icon} ${t(loc.name)}`)
+                : (isForestEntry ? `${loc.icon} ${t('Лес')}` : `${loc.icon} ${t(loc.name)}`);
 
             createButton(this, x, y, label, () => {
-                ActionLog.add(this.registry, `Игрок отправился в локацию «${loc.name}».`);
+                ActionLog.add(this.registry, tf(t('Игрок отправился в локацию «{0}».'), t(loc.name)));
                 // Раунд 32 (п.5): ЛЮБОЕ перемещение по карте — РОВНО 1 игровой час
                 tickTime(this.registry, MAP_TRAVEL_MINUTES);
                 // Раунд 21: посещение локации может закрыть процедурное поручение
@@ -185,7 +185,7 @@ export class ForkScene extends Phaser.Scene {
         // отдельной сценой лесной чащи (ForestScene).
         const backBtnY = startY + rows * step + 36;   // раунд 39: ниже — строка-подсказка цепочки леса
         createButton(this, width / 2, backBtnY, t('🌲 Тёмный лес — прогулка'), () => {
-            ActionLog.add(this.registry, 'Игрок отправился гулять в Тёмный лес.');
+            ActionLog.add(this.registry, t('Игрок отправился гулять в Тёмный лес.'));
             tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
             this.scene.start('Forest', { from: 'Fork' });
         }, {
@@ -195,20 +195,17 @@ export class ForkScene extends Phaser.Scene {
             cornerRadius: 6,
         });
 
-        // ----- Кнопка "Пасека — прогулка" (раунд 17: пчёлы — только антураж) -----
-        createButton(this, width / 2, backBtnY + 40, t('🐝 Пасека — прогулка'), () => {
-            ActionLog.add(this.registry, 'Игрок отправился на Пасеку.');
-            tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
-            this.scene.start('Apiary', { from: 'Fork' });
-        }, {
-            backgroundColor: 0x5a4a1e, hoverColor: 0x6e5a28, pressColor: 0x3a3012,
-            textColor: '#f0d890',
-            fontSize: 14, padding: { left: 16, right: 16, top: 8, bottom: 8 },
-            cornerRadius: 6,
-        });
+        // Раунд 57 (п.2 приказа): СЛИЯНИЕ ДВУХ ПАСЕК ЗАВЕРШЕНО.
+        // Дубль-кнопка «🐝 Пасека — прогулка» (раунд 17) удалена: на околице
+        // была ВТОРАЯ кнопка пасеки рядом с кнопкой локации «Пасека» — обе
+        // открывали одну и ту же ходячую ApiaryScene (раунд 20 слил сцены,
+        // но записи в меню остались двумя). Теперь Пасека ОДНА: кнопка
+        // локации «Пасека» в списке выше. Поиск следов на ней работает как
+        // прежде (buildHuntUI сам включается только при активной погоне,
+        // а вне погоны это мирная прогулка) — ничего не потеряно.
 
         // ----- Кнопка "Вернуться в деревню" -----
-        createButton(this, width / 2, backBtnY + 80, t('◀ Вернуться в деревню'), () => {
+        createButton(this, width / 2, backBtnY + 40, t('◀ Вернуться в деревню'), () => {
             tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
             this.scene.start('Village');
         }, {
@@ -218,7 +215,7 @@ export class ForkScene extends Phaser.Scene {
         });
 
         // П.17: Кнопка "Карта" — показать карту местности
-        createButton(this, width / 2, backBtnY + 118, t('🗺 Карта местности'), () => {
+        createButton(this, width / 2, backBtnY + 78, t('🗺 Карта местности'), () => {
             this.showMap();
         }, {
             backgroundColor: 0x2a4a6a, hoverColor: 0x3a5a7a, textColor: RUS.text,

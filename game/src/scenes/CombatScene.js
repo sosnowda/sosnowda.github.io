@@ -76,8 +76,8 @@ export class CombatScene extends Phaser.Scene {
             // Раунд 50 (п.7): фигурка вора в бою — по СЛУЧАЙНОМУ полу (м/ж)
             if (this.enemies[0].spriteKey === 'enemy_thief' && this.textures.exists(getThiefSpriteKey(this.registry))) {
                 this.enemies[0].spriteKey = getThiefSpriteKey(this.registry);
-                if (this.enemies[0].name === 'Вор-иконокрад' && getThiefSpriteKey(this.registry) === 'enemy_thief_f') {
-                    this.enemies[0].name = 'Воровка-иконокрадка';
+                if (this.enemies[0].name === t('Вор-иконокрад') && getThiefSpriteKey(this.registry) === 'enemy_thief_f') {
+                    this.enemies[0].name = t('Воровка-иконокрадка');
                 }
             }
         }
@@ -304,9 +304,9 @@ export class CombatScene extends Phaser.Scene {
                 // Раунд 45 (п.4): сбежать от НПЦ можно НЕ убивая его.
                 // После побега НПЦ НЕ нападает повторно сразу — перемирье 12 ч.
                 setNpcTruce(this.registry, hostileVictimId, 12);
-                ActionLog.add(this.registry, `Побег из боя с разгневанным жителем (бросок ${res.roll}, успех). Он не нападёт снова сразу — перемирье на 12 часов.`);
+                ActionLog.add(this.registry, tf(t('Побег из боя с разгневанным жителем (бросок {0}, успех). Он не нападёт снова сразу — перемирье на 12 часов.'), res.roll));
             } else {
-                ActionLog.add(this.registry, `Побег из боя. Потеряно 2 действия (бросок ${res.roll}, успех).`);
+                ActionLog.add(this.registry, tf(t('Побег из боя. Потеряно 2 действия (бросок {0}, успех).'), res.roll));
             }
             this.time.delayedCall(1000, () => {
                 // Раунд 32 (п.12): после побега от вора — всегда деревня (вход в локацию)
@@ -325,7 +325,7 @@ export class CombatScene extends Phaser.Scene {
             if (this.audioManager) this.audioManager.playDamageTaken();
             // Раунд 21: неудачный побег занимает 1 тик
             tickTime(this.registry, 15);
-            ActionLog.add(this.registry, `Неудачный побег из боя. Потеряно 1 действие (бросок ${res.roll}, провал).`);
+            ActionLog.add(this.registry, tf(t('Неудачный побег из боя. Потеряно 1 действие (бросок {0}, провал).'), res.roll));
             this.time.delayedCall(800, () => this.enemyTurn());
         }
     }
@@ -644,11 +644,11 @@ export class CombatScene extends Phaser.Scene {
                     wordWrap: { width: 220 },
                 }).setOrigin(0.5, 0).setDepth(20);
             }
-            ActionLog.add(this.registry, `Изучил противника в бою (${intel}). ${checkLine}.`);
+            ActionLog.add(this.registry, tf(t('Изучил противника в бою ({0}). {1}.'), intel, checkLine));
             this.time.delayedCall(900, () => this.enemyTurn());
         } else {
             this.pushLog(tf('👁 Ты всматривался в противника, но ничего не понял ({0}).', checkLine));
-            ActionLog.add(this.registry, `Не сумел изучить противника в бою (${checkLine}).`);
+            ActionLog.add(this.registry, tf(t('Не сумел изучить противника в бою ({0}).'), checkLine));
             this.time.delayedCall(900, () => this.enemyTurn());
         }
     }
@@ -661,7 +661,7 @@ export class CombatScene extends Phaser.Scene {
         }
         const atk = target.attackSkill != null ? target.attackSkill : '?';
         const dod = (target.skills && target.skills.dodge) || target.dodge || '?';
-        return `❤${target.HP}/${target.HPmax} СИЛ ${target.STR} ТЕЛ ${target.CON} РАЗ ${target.SIZ} ЛОВ ${target.DEX} — ${t(target.weapon.name)} ${atk}%, уклон ${dod}%`;
+        return `❤${target.HP}/${target.HPmax} ${t('СИЛ')} ${target.STR} ${t('ТЕЛ')} ${target.CON} ${t('РАЗ')} ${target.SIZ} ${t('ЛОВ')} ${target.DEX} — ${t(target.weapon.name)} ${atk}%, уклон ${dod}%`;
     }
 
     useHerb() {
@@ -830,7 +830,7 @@ export class CombatScene extends Phaser.Scene {
         if (isThiefFight) {
             // Вор повержен в бою — икона в инвентарь, погоня завершена
             recoverStolenItem(this.registry, 'killed', null);
-            ActionLog.add(this.registry, `Бой с вором выигран. Вор повержен!`);
+            ActionLog.add(this.registry, t('Бой с вором выигран. Вор повержен!'));
         } else if (this.npcId === 'bandit') {
             q.banditDefeated = true;
         }
@@ -839,10 +839,10 @@ export class CombatScene extends Phaser.Scene {
             this.completeCombatQuests();
             // Раунд 45 (п.3): после убийства жителя баннер ведёт к вире
             q.currentObjective = murderVictimId
-                ? 'Кровная вина на тебе. Староста может помирить за виру.'
-                : 'Враг повержен';
+                ? t('Кровная вина на тебе. Староста может помирить за виру.')
+                : t('Враг повержен');
         } else {
-            q.currentObjective = 'Икона у тебя! Верни её старосте или священнику.';
+            q.currentObjective = t('Икона у тебя! Верни её старосте или священнику.');
         }
         this.registry.set('quest', q);
         this.autosave();
@@ -935,7 +935,7 @@ export class CombatScene extends Phaser.Scene {
         // Раунд 22 (п.6): смерть в ЛЮБОМ бою — проигрыш игры.
         // Раньше бой с волками/разбойниками просто возвращал в титул.
         loseHeroDead(this.registry);
-        ActionLog.add(this.registry, `Бой проигран. Герой пал — поход окончен.`);
+        ActionLog.add(this.registry, t('Бой проигран. Герой пал — поход окончен.'));
         // Затемнение
         this.cameras.main.fade(900, 0, 0, 0);
         this.time.delayedCall(1000, () => {

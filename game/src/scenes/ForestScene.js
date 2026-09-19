@@ -449,7 +449,7 @@ export class ForestScene extends Phaser.Scene {
         const charBtn = this.add.rectangle(charBtnX, btnY, btnW, btnH, 0x4a3520, 0.95)
             .setStrokeStyle(1, 0xC9A961).setInteractive({ useHandCursor: true })
             .setScrollFactor(0).setDepth(101);
-        this.add.text(charBtnX, btnY, '📜 Персонаж', {
+        this.add.text(charBtnX, btnY, t('📜 Персонаж'), {
             fontSize: '11px', color: '#E8DCC4', stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
         charBtn.on('pointerup', () => {
@@ -461,7 +461,7 @@ export class ForestScene extends Phaser.Scene {
         const invBtn = this.add.rectangle(invBtnX, btnY, btnW, btnH, 0x4a3520, 0.95)
             .setStrokeStyle(1, 0xC9A961).setInteractive({ useHandCursor: true })
             .setScrollFactor(0).setDepth(101);
-        this.add.text(invBtnX, btnY, '🎒 Инвентарь', {
+        this.add.text(invBtnX, btnY, t('🎒 Инвентарь'), {
             fontSize: '11px', color: '#E8DCC4', stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
         invBtn.on('pointerup', () => {
@@ -645,19 +645,19 @@ export class ForestScene extends Phaser.Scene {
                 const stash = stashPos();
                 if (cx === stash.col && cy === stash.row && this.stashMarker) {
                     bestDist = dist;
-                    nearest = { type: 'stash', label: 'Обыскать тайник разбойников' };
+                    nearest = { type: 'stash', label: t('Обыскать тайник разбойников') };
                     continue;
                 }
                 if (cx === FOREST_EXIT.col && cy === FOREST_EXIT.row) {
                     bestDist = dist;
-                    nearest = { type: 'exit', label: 'Вернуться к околице' };
+                    nearest = { type: 'exit', label: t('Вернуться к околице') };
                 }
             }
         }
         this.nearestInteractable = nearest;
 
         if (nearest && !this.busyDialog) {
-            this.prompt.setText(tf('Нажмите E — {0}', nearest.label)).setVisible(true);
+            this.prompt.setText(tf(t('Нажмите E — {0}'), nearest.label)).setVisible(true);
         } else {
             this.prompt.setVisible(false);
         }
@@ -666,7 +666,7 @@ export class ForestScene extends Phaser.Scene {
     tryInteract() {
         if (this.busyDialog || !this.nearestInteractable) return;
         const n = this.nearestInteractable;
-        ActionLog.add(this.registry, `Тёмный лес: взаимодействие — ${n.label}.`);
+        ActionLog.add(this.registry, tf(t('Тёмный лес: взаимодействие — {0}.'), n.label));
         if (n.type === 'gather') this.gatherResource(n.entry);
         else if (n.type === 'stash') this.openStash();
         else if (n.type === 'exit') this.leaveForest();
@@ -726,7 +726,7 @@ export class ForestScene extends Phaser.Scene {
 
         if (this.audioManager) this.audioManager.playLevelUp();
         this.showFloatingText(this.stashImg.x, this.stashImg.y - 18, `+${money} 💰`, '#e8cc7a');
-        ActionLog.add(this.registry, `Обыскал разбойничий тайник в лесу: +${money} денег.`);
+        ActionLog.add(this.registry, tf(t('Обыскал разбойничий тайник в лесу: +{0} денег.'), money));
         tickTime(this.registry, 10);
 
         // Засада: разбойник вернулся в лагерь
@@ -738,7 +738,7 @@ export class ForestScene extends Phaser.Scene {
                     callback: () => {
                         this.busyDialog = false;
                         this.registry.set('forestReturnPos', { x: this.playerObj.x, y: this.playerObj.y });
-                        ActionLog.add(this.registry, 'Засада у тайника: бой с разбойником.');
+                        ActionLog.add(this.registry, t('Засада у тайника: бой с разбойником.'));
                         tickTime(this.registry, 5);
                         // Раунд 40 (QA-фикс): переход в бой — на следующий кадр
                         this.time.delayedCall(0, () => {
@@ -756,13 +756,13 @@ export class ForestScene extends Phaser.Scene {
         this.busyDialog = true;
         wolf.cooldownUntil = this.time.now + 4000;
         this.registry.set('forestReturnPos', { x: this.playerObj.x, y: this.playerObj.y });
-        ActionLog.add(this.registry, 'Волк напал в Тёмном лесу!');
+        ActionLog.add(this.registry, t('Волк напал в Тёмном лесу!'));
         tickTime(this.registry, 5);
         this.scene.start('Combat', { enemyKeys: ['wolf'], fromScene: 'Forest' });
     }
 
     leaveForest() {
-        ActionLog.add(this.registry, 'Вернулся из Тёмного леса к околице.');
+        ActionLog.add(this.registry, t('Вернулся из Тёмного леса к околице.'));
         tickTime(this.registry, 15);
         this.scene.start('Fork');
     }

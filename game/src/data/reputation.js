@@ -1,7 +1,7 @@
 // Система репутации для «Летописи Руси».
 //
 // Раунд 15: названия уровней репутации локализованы (i18n).
-import { t } from '../systems/i18n.js';
+import { t, tf } from '../systems/i18n.js';
 // Два уровня репутации:
 // 1. Деревенская репутация (villageRep): -100..+100 — общее мнение деревни об игроке.
 // 2. Личная репутация у каждого NPC (npcRep[npcId]): -100..+100.
@@ -144,7 +144,7 @@ export function changeVillageRep(registry, delta, reason) {
     rep.villageRep = clamp(rep.villageRep + actualDelta, VILLAGE_REP_MIN, VILLAGE_REP_MAX);
     registry.set('reputation', rep);
     if (reason) {
-        ActionLog.add(registry, `Репутация в деревне ${actualDelta > 0 ? '+' : ''}${actualDelta} (${reason}). Итого: ${rep.villageRep}.`);
+        ActionLog.add(registry, tf(t('Репутация в деревне {0} ({1}). Итого: {2}.'), (actualDelta > 0 ? '+' : '') + actualDelta, t(reason), rep.villageRep));
     }
     return rep.villageRep;
 }
@@ -201,7 +201,7 @@ export function checkNpcWillingToTalk(registry, npcId, options = {}) {
                 canTalk: false,
                 reason: 'enemy',
                 willAttack: false,
-                message: '«Уходи! Я тебя ненавижу... но староста велел крови сегодня не проливать.»',
+                message: t('«Уходи! Я тебя ненавижу... но староста велел крови сегодня не проливать.»'),
             };
         }
         // Шанс нападения зависит от того, насколько низка репутация
@@ -213,14 +213,14 @@ export function checkNpcWillingToTalk(registry, npcId, options = {}) {
                 canTalk: false,
                 willAttack: true,
                 reason: 'enemy',
-                message: 'NPC в ярости и бросается на тебя!',
+                message: t('NPC в ярости и бросается на тебя!'),
             };
         } else {
             // Не напал, но говорить не будет
             return {
                 canTalk: false,
                 reason: 'enemy',
-                message: '«Не смей ко мне подходить! Уходи, пока цел!»',
+                message: t('«Не смей ко мне подходить! Уходи, пока цел!»'),
             };
         }
     }
@@ -233,7 +233,7 @@ export function checkNpcWillingToTalk(registry, npcId, options = {}) {
         return {
             canTalk: false,
             reason: 'low_rep',
-            message: '«Не желаю с тобой говорить! Уходи!»',
+            message: t('«Не желаю с тобой говорить! Уходи!»'),
         };
     }
     
@@ -257,7 +257,7 @@ export function checkNpcWillingToTalk(registry, npcId, options = {}) {
             return {
                 canTalk: false,
                 reason: 'night',
-                message: '«Какого ляда ты меня будишь среди ночи?! Спать мешаешь! Уходи, завтра поговорим!»',
+                message: t('«Какого ляда ты меня будишь среди ночи?! Спать мешаешь! Уходи, завтра поговорим!»'),
             };
         }
     }
@@ -278,7 +278,7 @@ export function checkNpcWillingToTalk(registry, npcId, options = {}) {
             return {
                 canTalk: false,
                 reason: 'busy',
-                message: '«Не видишь — я занят! Потом приходи.»',
+                message: t('«Не видишь — я занят! Потом приходи.»'),
             };
         }
     }
@@ -393,16 +393,16 @@ export function applyCompliment(registry, npcId, oratorySkill) {
     
     if (res.result === 'critical') {
         changeNpcRep(registry, npcId, 5, 'удачная похвала (крит)');
-        return { success: true, bonus: 5, message: '«Ох, спасибо на добром слове!»', roll: res.roll, checkLine };
+        return { success: true, bonus: 5, message: t('«Ох, спасибо на добром слове!»'), roll: res.roll, checkLine };
     } else if (res.result === 'success') {
         changeNpcRep(registry, npcId, 2, 'удачная похвала');
-        return { success: true, bonus: 2, message: '«Благодарю за доброе слово.»', roll: res.roll, checkLine };
+        return { success: true, bonus: 2, message: t('«Благодарю за доброе слово.»'), roll: res.roll, checkLine };
     } else if (res.result === 'fumble') {
         changeNpcRep(registry, npcId, -4, 'неудачная лесть (fumble)');
-        return { success: false, bonus: -4, message: '«Не льсти мне, не люблю я это!»', roll: res.roll, checkLine };
+        return { success: false, bonus: -4, message: t('«Не льсти мне, не люблю я это!»'), roll: res.roll, checkLine };
     } else {
         changeNpcRep(registry, npcId, -1, 'неудачная лесть');
-        return { success: false, bonus: -1, message: '«Хватит пустые слова говорить.»', roll: res.roll, checkLine };
+        return { success: false, bonus: -1, message: t('«Хватит пустые слова говорить.»'), roll: res.roll, checkLine };
     }
 }
 
@@ -418,7 +418,7 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
     
     const npcs = getNpcs(registry);
     const npc = npcs.find(n => n.id === npcId);
-    if (!npc) return { success: false, message: 'NPC не найден.' };
+    if (!npc) return { success: false, message: t('NPC не найден.') };
     
     const npcGender = npc.gender;
     const npcRep = getNpcRep(registry, npcId);
@@ -483,18 +483,18 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
     if (effectiveRes.result === 'critical') {
         // Критический успех — NPC полностью уступает
         result.success = true;
-        result.message = `${npc.name}: «Ладно, ладно! Не надо злиться! Вот, возьми.»`;
+        result.message = tf(t('{0}: «Ладно, ладно! Не надо злиться! Вот, возьми.»'), npc.name);
         result.repChange = -3; // небольшое падение — NPC обижен, но уступил
         changeNpcRep(registry, npcId, -3, 'угроза (успех)');
     } else if (effectiveRes.result === 'success') {
         // Успех — NPC уступает неохотно
         result.success = true;
-        result.message = `${npc.name}: «Ну... ладно. Только не злись. Возьми и уходи.»`;
+        result.message = tf(t('{0}: «Ну... ладно. Только не злись. Возьми и уходи.»'), npc.name);
         result.repChange = -5;
         changeNpcRep(registry, npcId, -5, 'угроза (успех)');
     } else if (effectiveRes.result === 'fumble') {
         // Fumble — NPC отвечает угрозой или нападает
-        result.message = `${npc.name}: «Ты мне угрожаешь?! Да я тебя на куски порву!»`;
+        result.message = tf(t('{0}: «Ты мне угрожаешь?! Да я тебя на куски порву!»'), npc.name);
         result.repChange = -10;
         changeNpcRep(registry, npcId, -10, 'угроза (fumble)');
         // Шанс нападения при fumble
@@ -506,7 +506,7 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
         }
     } else {
         // Провал — NPC отказывается и злится
-        result.message = `${npc.name}: «Пошёл прочь со своими угрозами! Ничего не получишь!»`;
+        result.message = tf(t('{0}: «Пошёл прочь со своими угрозами! Ничего не получишь!»'), npc.name);
         result.repChange = -6;
         changeNpcRep(registry, npcId, -6, 'угроза (провал)');
         // Шанс нападения при провале
@@ -514,7 +514,7 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
             const attackRoll = 1 + Math.floor(Math.random() * 100);
             if (attackRoll <= attackChance) {
                 result.willAttack = true;
-                result.message += ` ${npc.name} хватает оружие!`;
+                result.message += ` ${tf(t('{0} хватает оружие!'), npc.name)}`;
             }
         }
     }
@@ -539,8 +539,7 @@ export function checkExpulsion(registry) {
     if (villageRep <= EXPULSION_THRESHOLD) {
         return {
             expelled: true,
-            message: `Староста собрал сходку: «Ты позоришь нашу деревню! Уходи и не возвращайся!» ` +
-                     `Игрок изгнан из деревни с репутацией ${villageRep}.`,
+            message: tf(t('Староста собрал сходку: «Ты позоришь нашу деревню! Уходи и не возвращайся!» Игрок изгнан из деревни с репутацией {0}.'), villageRep),
         };
     }
     return { expelled: false };
@@ -686,21 +685,21 @@ export function applyNpcMurderConsequences(registry, victimNpcId) {
         if (app) apprenticeName = app.name;
     }
 
-    ActionLog.add(registry, `☠ Кровная вина: герой убил ${victimName}. Деревня и все жители −${MURDER_VILLAGE_PENALTY} репутации.`);
+    ActionLog.add(registry, tf(t('☠ Кровная вина: герой убил {0}. Деревня и все жители −{1} репутации.'), victimName, MURDER_VILLAGE_PENALTY));
     if (kinNames.length > 0) {
-        ActionLog.add(registry, `Родня убитого (${kinNames.join(', ')}) проклинает героя: их репутация до −100.`);
+        ActionLog.add(registry, tf(t('Родня убитого ({0}) проклинает героя: их репутация до −100.'), kinNames.join(', ')));
     }
     if (widowedName) {
-        ActionLog.add(registry, `${widowedName} оплакивает ${victimName}: теперь он(а) ${victim && victim.gender === 'female' ? 'вдовец' : 'вдова'}.`);
+        ActionLog.add(registry, tf(t('{0} оплакивает {1}: теперь он(а) {2}.'), widowedName, victimName, victim && victim.gender === 'female' ? t('вдовец') : t('вдова')));
     }
     if (playerWidowed) {
-        ActionLog.add(registry, `Ты овдовел(а): твой(я) супруг(а) ${victimName} мёртв(а).`);
+        ActionLog.add(registry, tf(t('Ты овдовел(а): твой(я) супруг(а) {0} мёртв(а).'), victimName));
     }
     if (apprenticeName) {
-        ActionLog.add(registry, `К горну встал ${apprenticeName}, ученик кузнеца: моложе мастера, но работа кузницы не встанет.`);
+        ActionLog.add(registry, tf(t('К горну встал {0}, ученик кузнеца: моложе мастера, но работа кузницы не встанет.'), apprenticeName));
     }
     if (isElder) {
-        ActionLog.add(registry, 'ПОРАЖЕНИЕ: староста мёртв от твоей руки. Деревня проклинает убийцу — репутация до −100. Проигрыш.');
+        ActionLog.add(registry, t('ПОРАЖЕНИЕ: староста мёртв от твоей руки. Деревня проклинает убийцу — репутация до −100. Проигрыш.'));
     }
 
     return {
@@ -792,8 +791,8 @@ export function calculateVira(registry, npcId) {
     return {
         wergild, sale, doubleWergild, total,
         breakdown: doubleWergild
-            ? `вира ${wergild} д. + продажа ${sale} д., за разбой без свады — вдвое`
-            : `вира ${wergild} д. + продажа ${sale} д.`,
+            ? tf(t('вира {0} д. + продажа {1} д., за разбой без свады — вдвое'), wergild, sale)
+            : tf(t('вира {0} д. + продажа {1} д.'), wergild, sale),
     };
 }
 
@@ -807,14 +806,14 @@ export function payViraToElder(registry, npcId) {
     const npc = getNpcs(registry).find(n => n.id === npcId);
     const npcName = npc ? (npc.name || npcId) : npcId;
     if (isNpcKilled(registry, npcId)) {
-        return { success: false, message: `Староста крестится: «${npcName} — мёртв(а). Судебник мёртвых не судит. Кровная вина на тебе до конца дней.»` };
+        return { success: false, message: tf(t('Староста крестится: «{0} — мёртв(а). Судебник мёртвых не судит. Кровная вина на тебе до конца дней.»'), npcName) };
     }
     const vira = calculateVira(registry, npcId);
-    if (!player) return { success: false, message: 'Ошибка: игрок не найден.' };
+    if (!player) return { success: false, message: t('Ошибка: игрок не найден.') };
     if ((player.dengas || 0) < vira.total) {
         return {
             success: false,
-            message: `Староста листает Судебник: «Вира за твою обиду — ${vira.total} д. (${vira.breakdown}). А в мошне у тебя лишь ${player.dengas || 0} д. Не будет мира — будет суд.»`,
+            message: tf(t('Староста листает Судебник: «Вира за твою обиду — {0} д. ({1}). А в мошне у тебя лишь {2} д. Не будет мира — будет суд.»'), vira.total, vira.breakdown, player.dengas || 0),
             vira,
         };
     }
@@ -826,12 +825,12 @@ export function payViraToElder(registry, npcId) {
     rep.npcRep[npcId] = 30;
     rep.npcTruceUntil[npcId] = 0; // перемирье больше не нужно — вражда снята
     registry.set('reputation', rep);
-    ActionLog.add(registry, `🤝 Примирение у старосты: выплачена вира ${vira.total} д. за ${npcName} (${vira.breakdown}). Репутация ${npcName} теперь +30.`);
+    ActionLog.add(registry, tf(t('🤝 Примирение у старосты: выплачена вира {0} д. за {1} ({2}). Репутация {3} теперь +30.'), vira.total, npcName, vira.breakdown, npcName));
 
     return {
         success: true,
         vira,
-        message: `Староста принимает виру — ${vira.total} д. (${vira.breakdown}) — и жмёт руку ${npcName}: «Обида смыта серебром, по Судебнику быть миру!»\n\nРепутация ${npcName} к тебе теперь +30.`,
+        message: tf(t('Староста принимает виру — {0} д. ({1}) — и жмёт руку {2}: «Обида смыта серебром, по Судебнику быть миру!»\n\nРепутация {3} к тебе теперь +30.'), vira.total, vira.breakdown, npcName, npcName),
     };
 }
 
@@ -850,10 +849,10 @@ export function canBuyMilitaryGear(registry, player) {
     const adult = (age == null) || age >= AGE_OF_MAJORITY;
     const trusted = getVillageRep(registry) >= 0;
     if (!adult) {
-        return { ok: false, reason: `По уложению Судебника воинское снаряжение не продаётся несовершеннолетним (с ${AGE_OF_MAJORITY} лет)` };
+        return { ok: false, reason: tf(t('По уложению Судебника воинское снаряжение не продаётся несовершеннолетним (с {0} лет)'), AGE_OF_MAJORITY) };
     }
     if (!trusted) {
-        return { ok: false, reason: 'По уложению Судебника воинское снаряжение не продаётся людям дурной славы (репутация деревни ниже 0)' };
+        return { ok: false, reason: t('По уложению Судебника воинское снаряжение не продаётся людям дурной славы (репутация деревни ниже 0)') };
     }
     return { ok: true };
 }
@@ -954,44 +953,44 @@ export function canMarry(registry, npcId, player) {
     const npcs = getNpcs(registry);
     const npc = npcs.find(n => n.id === npcId);
     
-    if (!npc || !player) return { canMarry: false, reason: 'NPC не найден' };
+    if (!npc || !player) return { canMarry: false, reason: t('NPC не найден') };
     
     // Проверка пола
     if (npc.gender === player.gender) {
-        return { canMarry: false, reason: 'Традиции не позволяют брак с человеком того же пола' };
+        return { canMarry: false, reason: t('Традиции не позволяют брак с человеком того же пола') };
     }
 
     // Раунд 43 (п.13 заявки): НПЦ должен быть совершеннолетним.
     // Дети (kid1–kid9, 5–12 лет) и подросток Ивашка (14) браку не подлежат.
     if ((npc.age || 0) < AGE_OF_MAJORITY) {
-        return { canMarry: false, reason: `${npc.name} ещё несовершеннолетний(няя) — венчают только с ${AGE_OF_MAJORITY} лет` };
+        return { canMarry: false, reason: tf(t('{0} ещё несовершеннолетний(няя) — венчают только с {1} лет'), npc.name, AGE_OF_MAJORITY) };
     }
 
     // Раунд 43 (п.13): игрок тоже должен быть совершеннолетним
     // (сейчас age у игрока нет = взрослый; проверка на будущее).
     if (player.age != null && player.age < AGE_OF_MAJORITY) {
-        return { canMarry: false, reason: `Ты ещё несовершеннолетний(яя) — венчают только с ${AGE_OF_MAJORITY} лет` };
+        return { canMarry: false, reason: tf(t('Ты ещё несовершеннолетний(яя) — венчают только с {0} лет'), AGE_OF_MAJORITY) };
     }
 
     // Раунд 47 (п.1 заявки): игрок уже женат — второго венчания не бывает
     // (брак — это жизнь в деревне, а НЕ автоматическая победа).
     if (player.married) {
-        return { canMarry: false, reason: `Ты уже венчан(а) с ${player.spouseNpcName || 'другим человеком'} — Церковь второго брака не благословит` };
+        return { canMarry: false, reason: tf(t('Ты уже венчан(а) с {0} — Церковь второго брака не благословит'), player.spouseNpcName || t('другим человеком')) };
     }
 
     // Проверка личной репутации
     if (npcRep < MARRIAGE_NPC_REP) {
-        return { canMarry: false, reason: `Недостаточно личной репутации (нужно +${MARRIAGE_NPC_REP}, у вас ${npcRep})` };
+        return { canMarry: false, reason: tf(t('Недостаточно личной репутации (нужно +{0}, у вас {1})'), MARRIAGE_NPC_REP, npcRep) };
     }
     
     // Проверка деревенской репутации
     if (villageRep < MARRIAGE_VILLAGE_REP) {
-        return { canMarry: false, reason: `Недостаточно деревенской репутации (нужно +${MARRIAGE_VILLAGE_REP}, у вас ${villageRep})` };
+        return { canMarry: false, reason: tf(t('Недостаточно деревенской репутации (нужно +{0}, у вас {1})'), MARRIAGE_VILLAGE_REP, villageRep) };
     }
     
     // Проверка денег
     if ((player.dengas || 0) < MARRIAGE_COST) {
-        return { canMarry: false, reason: `Недостаточно денег на свадебное торжество (нужно ${MARRIAGE_COST} д., у вас ${player.dengas || 0} д.)` };
+        return { canMarry: false, reason: tf(t('Недостаточно денег на свадебное торжество (нужно {0} д., у вас {1} д.)'), MARRIAGE_COST, player.dengas || 0) };
     }
     
     // Проверка, не состоит ли NPC в браке.
@@ -1000,10 +999,10 @@ export function canMarry(registry, npcId, player) {
     // поэтому проверка проходит честно. isNpcKilled добавлен для ясности:
     // мёртвого не венчают.
     if (npc.married) {
-        return { canMarry: false, reason: `${npc.name} уже состоит в браке` };
+        return { canMarry: false, reason: tf(t('{0} уже состоит в браке'), npc.name) };
     }
     if (isNpcKilled(registry, npcId)) {
-        return { canMarry: false, reason: `${npc.name} покинул(а) мир живых — над ним(ей) уже отпели` };
+        return { canMarry: false, reason: tf(t('{0} покинул(а) мир живых — над ним(ей) уже отпели'), npc.name) };
     }
     
     return { canMarry: true };
@@ -1041,10 +1040,8 @@ export function marry(registry, npcId, player) {
     
     // Раунд 44: гендерно-согласованная формулировка летописи свадьбы
     const marriedVerb = player.gender === 'female' ? 'вышла замуж за' : 'женился на';
-    ActionLog.add(registry, 
-        `СВАДЬБА: ${player.name} ${marriedVerb} ${npc.name} (${npc.profession.name}). ` +
-        `Свадебное торжество обошлось в ${MARRIAGE_COST} д. ` +
-        `Деревенская репутация выросла.`
+    ActionLog.add(registry, tf(t('СВАДЬБА: {0} {1} {2} ({3}). Свадебное торжество обошлось в {4} д. Деревенская репутация выросла.'),
+        player.name, marriedVerb, npc.name, npc.profession.name, MARRIAGE_COST)
     );
     
     return { success: true, npcName: npc.name };

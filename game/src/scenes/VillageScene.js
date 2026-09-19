@@ -12,7 +12,8 @@ import SaveManager from '../systems/SaveManager.js';
 import { Tutorial } from '../systems/Tutorial.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
 import { ActionLog } from '../data/actionLog.js';
-import { checkGameEnd, chaseTicksLeft } from '../data/thief.js';
+// Раунд 58 (п.2): chaseHoursLeft — часы до побега вора (тик = 1 игровой час)
+import { checkGameEnd, chaseHoursLeft } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog } from '../utils/ui.js';
@@ -21,7 +22,7 @@ import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/Tim
 import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear, MONTH_NAMES, MONTH_NAMES_GEN } from '../systems/RusTime.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
 import { attachChurchBells } from '../systems/ChurchBells.js';
-import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
+import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
 import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep, isNpcKilled } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
@@ -400,12 +401,12 @@ export class VillageScene extends Phaser.Scene {
         const gatePx = (MAP_W - 1) * ts + ts / 2;
         const gatePy = VILLAGE_GATE.row * ts + ts / 2;
         this.drawVillageGate(gatePx, gatePy, ts);
-        const gateLabel = this.add.text(gatePx - ts * 1.6, gatePy - ts * 1.15, 'ВЫХОД ▶', {
+        const gateLabel = this.add.text(gatePx - ts * 3.4, gatePy - ts * 0.4, t('ВЫХОД ▶'), {
             fontSize: '16px', color: '#ff8060', backgroundColor: '#00000088',
             padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(20);
-        const gateMarker = this.add.image(gatePx, gatePy - ts * 1.8, 'particle_spark')
+        const gateMarker = this.add.image(gatePx, gatePy - ts * 3.5, 'particle_spark')
             .setTint(0xff6040)
             .setDisplaySize(24, 24)
             .setDepth(20);
@@ -483,7 +484,7 @@ export class VillageScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-F1', () => {
             if (this.busyDialog) return;
             this.busyDialog = true;
-            createDialog(this, '❓ Помощь',
+            createDialog(this, '❓ ' + t('Инструкция'),
                 timeRatioInfoLine() + '\n\n' +
                 tk('village.help.body',
                     'Управление: WASD/стрелки — движение, E/пробел — действие, M — обзор деревни, ESC — меню.\n\n' +
@@ -967,64 +968,27 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
-     * Раунд 39 (п.20 заявки): НОВЫЕ ВОРОТА деревни.
-     * Ворота стоят на восточной околице, дорога подходит С ЗАПАДА — проезд
-     * «на восток». Рисуем в 3/4-виде: два бревенчатых столба по краям проезда,
-     * верхний прогон с двускатной крышей и распахнутые створки. Тайл tile_gate
-     * (повёрнутый не в ту сторону) больше не используется — под воротами трава.
+     * Раунд 57 (п.3 приказа «ПЕРЕДЕЛАТЬ ВОРОТА В ДЕРЕВНЮ!»): ВОРОТНЯ ТРЕТЬЕГО
+     * ПОКОЛЕНИЯ. Раунд 39 рисовал ворота фигурами Graphics — две палки с
+     * крышей. Теперь BootScene.createGateTexture() строит ПАРАДНУЮ ВОРОТНЮ
+     * (текстура village_gate_r57, 232×336): башни-срубы с кровлями и коньками,
+     * надвратный прогон с кровлей над проездом, фонарь, тыновые крылья,
+     * каменный фундамент. Здесь только постановка в мир с Y-сортировкой:
+     * игрок проходит «сквозь» ворота (глубина чуть ниже строки ворот).
      */
     drawVillageGate(gx, gy, ts) {
-        const g = this.add.graphics();
-        const depth = gy / ts + 0.45;   // Y-сортировка: игрок проходит «сквозь» ворота
-
-        // Тень под воротами
-        g.fillStyle(0x000000, 0.22);
-        g.fillEllipse(gx, gy + ts * 0.34, ts * 1.5, ts * 0.28);
-
-        // Столбы (брёвна) по краям проезда — северный и южный
-        const postW = ts * 0.2;
-        const postH = ts * 0.66;
-        [gy - ts * 0.34, gy + ts * 0.34].forEach((py) => {
-            g.fillStyle(0x4a3520, 1);
-            g.fillRect(gx - postW / 2, py - postH / 2, postW, postH);
-            g.fillStyle(0x5f462c, 1);
-            g.fillRect(gx - postW / 2 + 2, py - postH / 2 + 2, 3, postH - 4);
-            g.lineStyle(1, 0x241708, 1);
-            g.strokeRect(gx - postW / 2, py - postH / 2, postW, postH);
-            // Торец бревна
-            g.fillStyle(0x7a5c38, 1);
-            g.fillEllipse(gx, py - postH / 2, postW * 0.9, postW * 0.42);
-        });
-
-        // Верхний прогон — брус через оба столба
-        g.fillStyle(0x3e2c18, 1);
-        g.fillRect(gx - ts * 0.3, gy - ts * 0.62, ts * 0.6, ts * 0.14);
-        g.lineStyle(1, 0x241708, 1);
-        g.strokeRect(gx - ts * 0.3, gy - ts * 0.62, ts * 0.6, ts * 0.14);
-
-        // Двускатная крышка над прогоном
-        g.fillStyle(0x6b4a2a, 1);
-        g.fillTriangle(gx - ts * 0.42, gy - ts * 0.6, gx + ts * 0.42, gy - ts * 0.6, gx, gy - ts * 0.92);
-        g.fillStyle(0x513620, 1);
-        g.fillTriangle(gx - ts * 0.42, gy - ts * 0.6, gx, gy - ts * 0.6, gx, gy - ts * 0.92);
-        g.lineStyle(1, 0x241708, 0.9);
-        g.lineBetween(gx - ts * 0.42, gy - ts * 0.6, gx, gy - ts * 0.92);
-        g.lineBetween(gx + ts * 0.42, gy - ts * 0.6, gx, gy - ts * 0.92);
-
-        // Распахнутые створки (двери открыты настежь — гостей ждут)
-        g.fillStyle(0x6a4a2a, 1);
-        g.fillRect(gx - ts * 0.34, gy - ts * 0.30, ts * 0.10, ts * 0.56);  // западная створка
-        g.fillRect(gx + ts * 0.24, gy - ts * 0.30, ts * 0.10, ts * 0.56);  // восточная створка
-        g.lineStyle(1, 0x241708, 0.8);
-        g.strokeRect(gx - ts * 0.34, gy - ts * 0.30, ts * 0.10, ts * 0.56);
-        g.strokeRect(gx + ts * 0.24, gy - ts * 0.30, ts * 0.10, ts * 0.56);
-
-        // Скважины-петли и засов
-        g.fillStyle(0xc9a14a, 0.9);
-        g.fillCircle(gx - ts * 0.29, gy - ts * 0.05, 1.6);
-        g.fillCircle(gx + ts * 0.29, gy - ts * 0.05, 1.6);
-
-        g.setDepth(depth);
+        // Раунд 57: глубина ВЫШЕ окрестных деревьев (их глубина = ряд+0.4 ≤ 8.4),
+        // иначе сосны околицы (25,4)/(25,6) рисуются ПОВЕРХ башен воротни.
+        // Игрок при этом честно отсортирован: севернее башен — за воротами
+        // (глубина игрока < 8.6), южнее — перед воротами (> 8.6), в проезде
+        // игрок уходит «за» прогон — проходит сквозь ворота.
+        const depth = 8.6;
+        if (!this.textures.exists('village_gate_r57')) return;
+        // Текстура рисована под тайл 48: центр дороги в ней на y=170/336
+        const img = this.add.image(gx, gy, 'village_gate_r57');
+        img.setScale(ts / 48);
+        img.setOrigin(0.5, 170 / 336);
+        img.setDepth(depth);
     }
 
     /**
@@ -1060,7 +1024,7 @@ export class VillageScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0)
             .setDepth(101);
-        const questText = this.add.text(questBtnX, btnY, '📋 Задания', {
+        const questText = this.add.text(questBtnX, btnY, t('📋 Задания'), {
             fontSize: '10px', color: '#E8DCC4',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
@@ -1075,7 +1039,7 @@ export class VillageScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0)
             .setDepth(101);
-        const charText = this.add.text(charBtnX, btnY, '📜 Персонаж', {
+        const charText = this.add.text(charBtnX, btnY, t('📜 Персонаж'), {
             fontSize: '11px', color: '#E8DCC4',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
@@ -1086,7 +1050,7 @@ export class VillageScene extends Phaser.Scene {
                 this.scene.start('CharacterSelection');
                 return;
             }
-            ActionLog.add(this.registry, 'Открыл меню персонажа.');
+            ActionLog.add(this.registry, t('Открыл меню персонажа.'));
             this.scene.pause();
             this.scene.launch('Character', { from: 'Village' });
         });
@@ -1100,7 +1064,7 @@ export class VillageScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0)
             .setDepth(101);
-        const invText = this.add.text(invBtnX, btnY, '🎒 Инвентарь', {
+        const invText = this.add.text(invBtnX, btnY, t('🎒 Инвентарь'), {
             fontSize: '11px', color: '#E8DCC4',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
@@ -1110,7 +1074,7 @@ export class VillageScene extends Phaser.Scene {
                 this.scene.start('CharacterSelection');
                 return;
             }
-            ActionLog.add(this.registry, 'Открыл инвентарь.');
+            ActionLog.add(this.registry, t('Открыл инвентарь.'));
             this.scene.pause();
             this.scene.launch('Character', { from: 'Village', tab: 'inventory' });
         });
@@ -1143,7 +1107,7 @@ export class VillageScene extends Phaser.Scene {
         // Пункт 12: Проверка изгнания из деревни при низкой репутации
         const expulsion = checkExpulsion(this.registry);
         if (expulsion.expelled) {
-            ActionLog.add(this.registry, `ПОРАЖЕНИЕ: ${expulsion.message}`);
+            ActionLog.add(this.registry, tf(t('ПОРАЖЕНИЕ: {0}'), expulsion.message));
             const q = this.registry.get('quest');
             q.heroDead = true;
             // Раунд 45 (п.2): отдельный флаг изгнания — свой титул финала
@@ -1163,7 +1127,7 @@ export class VillageScene extends Phaser.Scene {
         // victory_continue: «обучалка» пройдена + выбрано «Продолжить игру»).
         const victory = checkVictory(this.registry);
         if (victory.victory) {
-            ActionLog.add(this.registry, `ПОБЕДА: ${victory.message}`);
+            ActionLog.add(this.registry, tf(t('ПОБЕДА: {0}'), victory.message));
             const q = this.registry.get('quest');
             q.reputationVictory = true;
             q.currentObjective = t('Тебя приняли в деревню как своего! Победа!');
@@ -1383,18 +1347,17 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
-     * Раунд 37 (п.4 заявки): ЕДИНЫЙ масштаб персонажей по возрасту.
+     * ЕДИНЫЙ масштаб персонажей по возрасту (раунд 37 п.4; раунд 58 п.5 —
+     * строго по возрасту, индивидуальный разброс look.scale удалён).
      * Взрослый — ровно как игрок (ts/32 × 0.75), подросток (13–17) — 0.85,
-     * ребёнок (≤12) — 0.7. Мелкий индивидуальный разброс look.scale сохранён
-     * только у взрослых (±7%) — рост людей всё же немного различается.
+     * ребёнок (≤12) — 0.7.
      */
     npcScaleByAge(npcData) {
         const base = this.tileSize / 32 * 0.75;
         const age = (npcData && npcData.age) || 30;
-        const lookVar = (npcData && npcData.look && npcData.look.scale) || 1;
         if (age <= 12) return base * 0.7;
         if (age <= 17) return base * 0.85;
-        return base * lookVar;
+        return base;
     }
 
     /**
@@ -1460,13 +1423,13 @@ export class VillageScene extends Phaser.Scene {
             this.dialogue.run(dialogueId, () => { this.busyDialog = false; });
         } else {
             const line = pickOutdoorLine(this.registry, npcId, t('Занят(а) своим делом. Заходи в другой раз.'));
-            // Раунд 31 (п.11): разговор с НПЦ — всегда 1 час (списывается при закрытии)
+            // Раунд 58 (п.1): разговор с НПЦ — 10 минут (было 1 час, раунд 31)
             createDialog(this, displayName, line, [
                 { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
             ], {
                 singleton: true,
                 portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f',
-                talkMinutes: 60,
+                talkMinutes: TALK_MINUTES,
                 talkKey: npcId + '@' + Math.floor(Date.now() / 90000),
             });
         }
@@ -1501,7 +1464,7 @@ export class VillageScene extends Phaser.Scene {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < bestDist) {
                         bestDist = dist;
-                        nearest = { type: 'chest', chest: chestEntry, label: tf('Открыть: {0}', chestEntry.label) };
+                        nearest = { type: 'chest', chest: chestEntry, label: tf(t('Открыть: {0}'), t(chestEntry.label)) };
                     }
                 }
                 if (isGate(cx, cy)) {
@@ -1533,7 +1496,7 @@ export class VillageScene extends Phaser.Scene {
 
         this.nearestInteractable = nearest;
         if (nearest) {
-            this.prompt.setText(tf('Нажмите E — {0}', nearest.label)).setVisible(true);
+            this.prompt.setText(tf(t('Нажмите E — {0}'), nearest.label)).setVisible(true);
         } else {
             this.prompt.setVisible(false);
         }
@@ -1548,7 +1511,7 @@ export class VillageScene extends Phaser.Scene {
         const villageRep = getVillageRep(this.registry);
         const repLevel = getReputationLevel(villageRep);
         // Раунд 21: отсчёт до побега вора в ДЕЙСТВИЯХ (тиках)
-        const ticksLeft = chaseTicksLeft(this.registry);
+        const ticksLeft = chaseHoursLeft(this.registry);
         
         // Единый статус-бар (п.10): HP | Деньги | Дата | Действия | Репутация
         // Раунд 45 (п.1 заявки): параметр «меч» (⚔%) из виджета УДАЛЁН —
@@ -1573,7 +1536,8 @@ export class VillageScene extends Phaser.Scene {
             this.showNovoletieAnnounce(novoletie);
         }
         if (ticksLeft > 0) {
-            statusLine += `  ${tf(t('⏳{0}действ.'), ticksLeft)}`;
+            // Раунд 58 (п.2): в статус-баре — часы до побега вора (тик = 1 час)
+            statusLine += `  ${tf(t('⏳{0} ч до побега'), ticksLeft)}`;
         }
         // Раунд 46 (п.9 заявки): репутация игрока в деревне — в статус-баре
         // деревни, с явной подписью (раньше была только безымянная звезда ⭐).
@@ -1590,7 +1554,7 @@ export class VillageScene extends Phaser.Scene {
         if (statusTooLong && timeState) {
             const icon = this.weather ? ` ${this.weather.icon}` : '';
             const rep = `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}`;
-            const act = ticksLeft > 0 ? `  ${tf(t('⏳{0}действ.'), ticksLeft)}` : '';
+            const act = ticksLeft > 0 ? `  ${tf(t('⏳{0} ч до побега'), ticksLeft)}` : '';
             const candidates = [
                 // 1) без народного ориентира (« · заутреня отошла»)
                 `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${formatDateRus(timeState)}${icon}` +
@@ -1693,7 +1657,7 @@ export class VillageScene extends Phaser.Scene {
 
     tryInteract() {
         if (this.busyDialog || !this.nearestInteractable) return;
-        ActionLog.add(this.registry, `Игрок взаимодействует с: ${this.nearestInteractable.label}.`);
+        ActionLog.add(this.registry, tf(t('Игрок взаимодействует с: {0}.'), this.nearestInteractable.label));
         if (this.nearestInteractable.type === 'door') {
             // Раунд 37 (п.19 заявки): если в жилом доме никого нет — дверь ЗАКРЫТА,
             // внутрь не пускаем (поп-ап). Постоялый двор и церковь открыты всегда.
@@ -1709,7 +1673,7 @@ export class VillageScene extends Phaser.Scene {
             // Раунд 32 (п.5): выход за околицу — перемещение между локациями,
             // занимает РОВНО 1 игровой час — вор тоже двигается
             tickTime(this.registry, 60);
-            ActionLog.add(this.registry, 'Игрок вышел за околицу.');
+            ActionLog.add(this.registry, t('Игрок вышел за околицу.'));
             this.scene.start('Fork');
         } else if (this.nearestInteractable.type === 'chest') {
             // nearestInteractable.chest — сырой объект из CHESTS; нужен отрисованный
@@ -1737,7 +1701,7 @@ export class VillageScene extends Phaser.Scene {
         this.playerObj.x = tx * ts + ts / 2;
         this.playerObj.y = (ty + 1) * ts + ts / 2;  // на тайл ниже двери
         if (this.playerObj.body) this.playerObj.body.reset(this.playerObj.x, this.playerObj.y);
-        ActionLog.add(this.registry, `Игрок вошёл в здание.`);
+        ActionLog.add(this.registry, t('Игрок вошёл в здание.'));
         this.scene.pause();
         this.scene.launch('Interior', { interiorId: interiorId, from: 'Village' });
     }
@@ -1771,8 +1735,8 @@ export class VillageScene extends Phaser.Scene {
         const name = interior ? interior.name : '';
         const pres = closure.pres;
         const where = t(PLACE_NAMES[pres.place] || '') || pres.place;
-        const activity = (pres.activity || t('занят(а) своим делом'));
-        ActionLog.add(this.registry, tf('Дверь закрыта: {0}. Хозяин: {1} ({2})', name, activity, where));
+        const activity = (pres.activity ? t(pres.activity) : t('занят(а) своим делом'));
+        ActionLog.add(this.registry, tf(t('Дверь закрыта: {0}. Хозяин: {1} ({2})'), name, activity, where));
         this.busyDialog = true;
         createDialog(this,
             t('Дом закрыт'),
@@ -1868,9 +1832,9 @@ export class VillageScene extends Phaser.Scene {
         // Раунд 27: активность по системе присутствия (где человек сейчас)
         const pres = interior.npcId ? getPresence(this.registry, interior.npcId) : null;
         const activity = pres
-            ? `${pres.activity}${pres.place !== 'home' ? ` · ${t(PLACE_NAMES[pres.place] || '')}` : ''}`
+            ? `${t(pres.activity)}${pres.place !== 'home' ? ` · ${t(PLACE_NAMES[pres.place] || '')}` : ''}`
             : 'занят';
-        const text = `${interior.name}\n${npcName}\n${tf('Реп: {0} ({1})', `${npcRep > 0 ? '+' : ''}${npcRep}`, t(repLevel.name))}\n${activity}`;
+        const text = `${t(interior.name)}\n${npcName}\n${tf(t('Реп: {0} ({1})'), `${npcRep > 0 ? '+' : ''}${npcRep}`, t(repLevel.name))}\n${activity}`;
         this.buildingTooltipText.setText(text);
         // Не выходим за правый край экрана
         const tx = Math.min(screenX + 120, this.scale.width - 130);
@@ -2141,11 +2105,11 @@ export class VillageScene extends Phaser.Scene {
             // Раунд 27: активность по системе присутствия (где человек сейчас)
             const pres2 = interior.npcId ? getPresence(this.registry, interior.npcId) : null;
             const activity = pres2
-                ? `${pres2.activity}${pres2.place !== 'home' ? ` · ${t(PLACE_NAMES[pres2.place] || '')}` : ''}`
-                : 'занят';
+                ? `${t(pres2.activity)}${pres2.place !== 'home' ? ` · ${t(PLACE_NAMES[pres2.place] || '')}` : ''}`
+                : t('занят');
             info = `${interior.name}\n` +
                 `${tf('NPC: {0}', npcName)}\n` +
-                `${tf('Личная репутация: {0} ({1})', `${npcRep > 0 ? '+' : ''}${npcRep}`, t(repLevel.name))}\n` +
+                `${tf(t('Личная репутация: {0} ({1})'), `${npcRep > 0 ? '+' : ''}${npcRep}`, t(repLevel.name))}\n` +
                 `${tf('Сейчас: {0}', activity)}`;
         }
         
@@ -2213,7 +2177,7 @@ export class VillageScene extends Phaser.Scene {
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 20, '📋 Журнал заданий', {
+        this.add.text(width / 2, height / 2 - panelH / 2 + 20, t('📋 Журнал заданий'), {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
@@ -2224,50 +2188,50 @@ export class VillageScene extends Phaser.Scene {
         const timeState = getTime(this.registry);
 
         if (quests.length === 0) {
-            this.add.text(width / 2, height / 2, 'Нет активных заданий.\nПоговорите с жителями деревни.', {
+            this.add.text(width / 2, height / 2, t('Нет активных заданий.\nПоговорите с жителями деревни.'), {
                 fontSize: '16px', color: RUS.textDim, align: 'center',
             }).setOrigin(0.5).setDepth(202);
         } else {
             let y = height / 2 - panelH / 2 + 60;
             quests.forEach((quest) => {
                 // П.21: Детальная информация о задании
-                const status = quest.completed ? '✅ Выполнено' : (quest.failed ? '❌ Провалено' : '🔄 Выполняется');
+                const status = quest.completed ? t('✅ Выполнено') : (quest.failed ? t('❌ Провалено') : t('🔄 Выполняется'));
                 const statusColor = quest.completed ? '#60ff60' : (quest.failed ? '#ff4040' : '#c9a14a');
                 
                 // П.22: Срок — время на выполнение измеряется в ДЕЙСТВИЯХ
                 // (переход/бой/вход в дом ≈ 1 игровое действие ≈ 1 час).
                 // Раунд 43: убраны бредовые «×4 часа / дни» (журнал показывал
                 // «Срок: 3 дн. (108 ч.)» для поручения на 27 действий).
-                const deadline = `${quest.timeLimit || 10} действ. (≈${quest.timeLimit || 10} ч.)`;
+                const deadline = tf(t('{0} действ. (≈{1} ч.)'), quest.timeLimit || 10, quest.timeLimit || 10);
 
                 // П.18: Штрафы за невыполнение
                 // Раунд 43: текст приведён в соответствие с реальным поведением
                 // (штраф применяется к репутации заказчика при просрочке).
                 const penaltyText = quest.difficulty === 'hard' 
-                    ? 'Штраф за провал: −15 к репутации у заказчика' 
+                    ? t('Штраф за провал: −15 к репутации у заказчика') 
                     : (quest.difficulty === 'medium' 
-                        ? 'Штраф за провал: −8 к репутации у заказчика' 
-                        : 'Штраф за провал: −3 к репутации у заказчика');
+                        ? t('Штраф за провал: −8 к репутации у заказчика') 
+                        : t('Штраф за провал: −3 к репутации у заказчика'));
 
                 // П.21.7: Награды
                 const rewardsText = (quest.rewards || []).map(r => {
                     if (r.type === 'money') return `${r.amount} д.`;
                     if (r.type === 'item') return `${r.name} ×${r.count}`;
-                    if (r.type === 'blessing') return 'благословение';
+                    if (r.type === 'blessing') return t('благословение');
                     return r.name || '';
                 }).join(', ');
 
                 const questInfo = [
                     `${quest.title}`,
-                    `Выдал: ${quest.npcName || 'неизвестно'}`,
+                    `${t('Выдал:')} ${quest.npcName || t('неизвестно')}`,
                     // Раунд 43 (п.3 заявки): ПОЛНОЕ описание задания — только здесь,
                     // в журнале «📋 Задания» (в мире — только короткий статус).
-                    `Описание: ${quest.description || '—'}`,
-                    `Срок: ${deadline}  |  Сложность: ${quest.difficulty}`,
-                    `Цель: ${quest.objective}`,
-                    `Награда: ${rewardsText || 'нет'}`,
+                    `${t('Описание:')} ${quest.description || '—'}`,
+                    `${t('Срок:')} ${deadline}  |  ${t('Сложность:')} ${t(quest.difficulty === 'hard' ? 'тяжёлая' : (quest.difficulty === 'medium' ? 'средняя' : 'лёгкая'))}`,
+                    `${t('Цель:')} ${quest.objective}`,
+                    `${t('Награда:')} ${rewardsText || t('нет')}`,
                     `${penaltyText}`,
-                    `Сдавать: ${quest.npcName || 'тому же NPC'}`,
+                    `${t('Сдавать:')} ${quest.npcName || t('тому же NPC')}`,
                 ].join('\n');
 
                 this.add.text(width / 2 - panelW / 2 + 20, y, questInfo, {
@@ -2293,7 +2257,7 @@ export class VillageScene extends Phaser.Scene {
         const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 25, 140, 30, 0x8B2C1A, 1)
             .setStrokeStyle(2, 0xC9A961)
             .setInteractive({ useHandCursor: true }).setDepth(202);
-        const btnText = this.add.text(width / 2, height / 2 + panelH / 2 - 25, 'Закрыть', {
+        const btnText = this.add.text(width / 2, height / 2 + panelH / 2 - 25, t('Закрыть'), {
             fontSize: '14px', color: '#E8DCC4',
         }).setOrigin(0.5).setDepth(203);
 
@@ -2488,7 +2452,7 @@ export class VillageScene extends Phaser.Scene {
         const today = dayKeyOf(getTime(this.registry));
 
         if (isOpenedToday(q, chest.id, today)) {
-            ActionLog.add(this.registry, `Заглянул в «${chest.label}» — уже обыскан сегодня.`);
+            ActionLog.add(this.registry, tf(t('Заглянул в «{0}» — уже обыскан сегодня.'), t(chest.label)));
             this.showFloatingText(entry.img.x, entry.img.y - 26, 'Уже обыскан', '#b8a88a');
             return;
         }
@@ -2537,7 +2501,7 @@ export class VillageScene extends Phaser.Scene {
         this.time.delayedCall(1200, () => burst.destroy());
 
         tickTime(this.registry, 5);
-        ActionLog.add(this.registry, `Обыскал «${chest.label}»: ${msg}.`);
+        ActionLog.add(this.registry, tf(t('Обыскал «{0}»: {1}.'), t(chest.label), msg));
     }
 
     // ================================================================
@@ -2621,15 +2585,15 @@ export class VillageScene extends Phaser.Scene {
         const mpMax = player.MPmax || player.MP;
         if (player.HP >= hpMax && player.MP >= mpMax) {
             this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Ты полон сил', '#b8a88a');
-            ActionLog.add(this.registry, 'Погрелся у костра — силы и так полны.');
+            ActionLog.add(this.registry, t('Погрелся у костра — силы и так полны.'));
             return;
         }
         this.busyDialog = true;
         const close = () => { this.busyDialog = false; };
-        createDialog(this, '🔥 Костёр',
+        createDialog(this, t('🔥 Костёр'),
             'Тёплый огонь разгоняет усталость. Присесть на минутку — а очнёшься через час крепкого сна.\n\nОтдохнуть у костра? (1 час — здоровье и Воля восстановятся полностью.)',
             [
-                { text: 'Присесть у огня', callback: () => {
+                { text: t('Присесть у огня'), callback: () => {
                     close();
                     this.cameras.main.fadeOut(700, 0, 0, 0);
                     this.time.delayedCall(750, () => {
@@ -2639,7 +2603,7 @@ export class VillageScene extends Phaser.Scene {
                         this.registry.set('player', player);
                         this.updateHUD();
                         this.audioManager.playSound('sfx_heal');
-                        ActionLog.add(this.registry, 'Отдохнул у костра — час крепкого сна, силы восстановились.');
+                        ActionLog.add(this.registry, t('Отдохнул у костра — час крепкого сна, силы восстановились.'));
                         this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Силы восстановились', '#8fdc7a');
                         this.cameras.main.fadeIn(700, 0, 0, 0);
                     });
@@ -2666,7 +2630,7 @@ export class VillageScene extends Phaser.Scene {
         const today = dayKeyOf(getTime(this.registry));
         if (isOpenedToday(q, 'cross_prayer', today)) {
             this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Душа уже очистилась сегодня', '#b8a88a');
-            ActionLog.add(this.registry, 'Помолился у креста (уже молился сегодня).');
+            ActionLog.add(this.registry, t('Помолился у креста (уже молился сегодня).'));
             return;
         }
         this.busyDialog = true;

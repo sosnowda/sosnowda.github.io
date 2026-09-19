@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // Туториал: показывает всплывающие подсказки управления при первом входе в деревню.
 // Подсказки исчезают по таймауту (3 сек) или при выполнении соответствующего действия.
 
@@ -97,7 +98,7 @@ export class Tutorial {
         container.add(icon);
 
         // Заголовок
-        const title = this.scene.add.text(-bgWidth / 2 + 55, -18, hint.title, {
+        const title = this.scene.add.text(-bgWidth / 2 + 55, -18, t(hint.title), {
             fontSize: '15px',
             color: '#c9a14a',
             fontStyle: 'bold',
@@ -106,7 +107,7 @@ export class Tutorial {
         container.add(title);
 
         // Текст — с wordWrap, чтобы не выходил за рамки
-        const text = this.scene.add.text(-bgWidth / 2 + 55, 8, hint.text, {
+        const text = this.scene.add.text(-bgWidth / 2 + 55, 8, t(hint.text), {
             fontSize: '12px',
             color: '#f3e9d2',
             fontFamily: 'Georgia, serif',

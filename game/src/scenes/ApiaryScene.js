@@ -12,7 +12,7 @@ import {
 } from '../data/apiary.js';
 import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals, getWeather } from '../systems/Weather.js';
-import { checkGameEnd, searchLocation, getHuntState, isChaseActive, isThiefAt, presentThiefEncounter, chaseTicksLeft } from '../data/thief.js';
+import { checkGameEnd, searchLocation, getHuntState, isChaseActive, isThiefAt, presentThiefEncounter, chaseTicksLeft, chaseHoursLeft } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
 import { createDialog, createButton } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
@@ -27,7 +27,7 @@ import { getNpcSpriteKey } from '../systems/NpcLpc.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
 import { attachChurchBells } from '../systems/ChurchBells.js';
-import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
+import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
 
 const TS = 48;   // как в деревне/лесу — мир 1248×960, камера скроллится
 const WORLD_W = APIARY_COLS * TS;
@@ -149,7 +149,7 @@ export class ApiaryScene extends Phaser.Scene {
         if (!chaseActive) return;
 
         // Счётчик действий — под сводкой о пчёлах (левый верхний угол)
-        this.huntTurnsText = this.add.text(12, 72, tf(t('⏳ Действий: {0}'), state.turnsLeft), {
+        this.huntTurnsText = this.add.text(12, 72, tf(t('⏳ Часов до побега вора: {0}'), state.turnsLeft), {
             fontSize: '13px', color: state.turnsLeft <= 3 ? '#ff4040' : '#ff8060',
             fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
             backgroundColor: '#000000aa', padding: { x: 6, y: 4 },
@@ -185,10 +185,12 @@ export class ApiaryScene extends Phaser.Scene {
         if (this.busyDialog) return;
         this.busyDialog = true;
         const result = searchLocation(this.registry, 'apiary');
-        const ticksLeft = chaseTicksLeft(this.registry);
+        // Раунд 58 (п.2): счётчик в ЧАСАХ до побега вора (тик = 1 игровой час)
+        const ticksLeft = chaseHoursLeft(this.registry);
         if (this.huntTurnsText) {
-            this.huntTurnsText.setText(tf(t('⏳ Действий: {0}'), ticksLeft));
+            this.huntTurnsText.setText(tf(t('⏳ Часов до побега вора: {0}'), ticksLeft));
             if (ticksLeft <= 3) this.huntTurnsText.setColor('#ff4040');
+            else if (ticksLeft <= 6) this.huntTurnsText.setColor('#ffaa40');
         }
 
         if (result.thiefEscaped) {
@@ -479,13 +481,13 @@ export class ApiaryScene extends Phaser.Scene {
                     this.dialogue.run(dId, () => { this.busyDialog = false; });
                 } else {
                     const line = pickOutdoorLine(this.registry, npcId, t('Занят(а) работой на пасеке.'));
-                    // Раунд 31 (п.11): разговор с НПЦ — всегда 1 час
+                    // Раунд 58 (п.1): разговор с НПЦ — 10 минут (было 1 час, раунд 31)
                     createDialog(this, displayName, line, [
                         { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
                     ], {
                         singleton: true,
                         portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f',
-                        talkMinutes: 60,
+                        talkMinutes: TALK_MINUTES,
                         talkKey: npcId + '@' + Math.floor(Date.now() / 90000),
                     });
                 }
@@ -779,7 +781,7 @@ export class ApiaryScene extends Phaser.Scene {
         this.nearestInteractable = nearest;
 
         if (nearest && !this.busyDialog) {
-            this.prompt.setText(tf('Нажмите E — {0}', nearest.label)).setVisible(true);
+            this.prompt.setText(tf(t('Нажмите E — {0}'), nearest.label)).setVisible(true);
         } else {
             this.prompt.setVisible(false);
         }
@@ -800,13 +802,13 @@ export class ApiaryScene extends Phaser.Scene {
             (entry.col * 7 + entry.row * 13 + (this.hiveNoteIdx = (this.hiveNoteIdx || 0) + 1)) % HIVE_NOTES.length
         ]);
         this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, note, '#e8cc7a');
-        ActionLog.add(this.registry, 'Пасека: наблюдал за пчёлами у колодного улья.');
+        ActionLog.add(this.registry, t('Пасека: наблюдал за пчёлами у колодного улья.'));
         tickTime(this.registry, 2);
         this.updateHUD();
     }
 
     leaveApiary() {
-        ActionLog.add(this.registry, 'Вернулся с пасеки к околице.');
+        ActionLog.add(this.registry, t('Вернулся с пасеки к околице.'));
         tickTime(this.registry, 15);
         this.scene.start('Fork');
     }

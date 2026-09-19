@@ -481,27 +481,27 @@ function generateRewards(npcId, questType, scale) {
 
     // Еда (хлеб, каша)
     if (rewardTypes.includes('food')) {
-        rewards.push({ type: 'item', id: 'bread', name: 'Хлеб', count: 1 + Math.floor(Math.random() * 2), consumable: true, heal: 2 });
+        rewards.push({ type: 'item', id: 'bread', name: t('Хлеб'), count: 1 + Math.floor(Math.random() * 2), consumable: true, heal: 2 });
     }
 
     // Питьё (медовуха, квас)
     if (rewardTypes.includes('drink') && Math.random() < 0.5) {
-        rewards.push({ type: 'item', id: 'mead', name: 'Медовуха', count: 1, consumable: true, mpHeal: 2 });
+        rewards.push({ type: 'item', id: 'mead', name: t('Медовуха'), count: 1, consumable: true, mpHeal: 2 });
     }
 
     // Лечебная трава
     if (rewardTypes.includes('herb') && Math.random() < 0.6) {
-        rewards.push({ type: 'item', id: 'herb', name: 'Целебная трава', count: 1 + Math.floor(Math.random() * 2), consumable: true });
+        rewards.push({ type: 'item', id: 'herb', name: t('Целебная трава'), count: 1 + Math.floor(Math.random() * 2), consumable: true });
     }
 
     // Благословение (восстановление HP/MP)
     if (rewardTypes.includes('blessing')) {
-        rewards.push({ type: 'blessing', name: 'Благословение батюшки (полное восстановление)' });
+        rewards.push({ type: 'blessing', name: t('Благословение батюшки (полное восстановление)') });
     }
 
     // Икона (только за главный квест)
     if (rewardTypes.includes('icon') && questType === QUEST_TYPES.ICON_RETURN) {
-        rewards.push({ type: 'item', id: 'icon', name: 'Чудотворная икона', count: 1, quest: true });
+        rewards.push({ type: 'item', id: 'icon', name: t('Чудотворная икона'), count: 1, quest: true });
     }
 
     // Оружие (кузнец может выковать)
@@ -580,11 +580,11 @@ export function generateQuest(npcId, registry) {
     const quest = {
         id: 'quest_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         type: questType,
-        title: template.title,
-        description: description,
-        objective: template.objective,
+        title: t(template.title),
+        description: t(description),
+        objective: t(template.objective),
         npcId: npcId,
-        npcName: pool.description,
+        npcName: t(pool.description),
         location: template.location,
         combat: template.combat || false,
         enemyKeys: template.enemyKeys || null,
@@ -717,13 +717,13 @@ export function grantQuestRewards(registry, quest) {
         } else if (reward.type === 'blessing') {
             player.HP = player.HPmax;
             player.MP = player.MPmax;
-            grantedRewards.push('Благословение (полное восстановление)');
+            grantedRewards.push(t('Благословение (полное восстановление)'));
         }
     });
 
     registry.set('player', player);
     registry.set('quest', q);
-    ActionLog.add(registry, `Награда за «${quest.title}»: ${grantedRewards.join(', ')}.`);
+    ActionLog.add(registry, tf(t('Награда за «{0}»: {1}.'), quest.title, grantedRewards.join(', ')));
     return grantedRewards;
 }
 

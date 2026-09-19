@@ -60,7 +60,7 @@ v45 — релиз (раунд 47, 5 пунктов владельца): 1) СВ
  */
 
 
-var CACHE_NAME = 'chronicles-ruthenia-v54';
+var CACHE_NAME = 'chronicles-ruthenia-v55';
 var GAME_ASSETS_CACHE = 'game-assets-v15';
 
 self.addEventListener('install', function (event) {

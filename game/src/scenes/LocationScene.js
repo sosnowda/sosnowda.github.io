@@ -21,7 +21,7 @@ import { MAP_TRAVEL_MINUTES } from './ForkScene.js';
 import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel } from '../systems/RusTime.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
 import { attachChurchBells } from '../systems/ChurchBells.js';
-import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
+import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
 // Раунд 31 (п.2): стадо и пастухи на водопое
 import { getHerdState } from '../data/herd.js';
 import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
@@ -260,7 +260,7 @@ export class LocationScene extends Phaser.Scene {
 
         let exitLabel;
         if (inForest && shallowerLoc) {
-            exitLabel = `◀ ${shallowerLoc.name}`;           // шаг назад по цепочке
+            exitLabel = `◀ ${t(shallowerLoc.name)}`;           // шаг назад по цепочке
         } else if (inForest) {
             exitLabel = t('◀ К околице');                    // Опушка → развилка
         } else {
@@ -271,7 +271,7 @@ export class LocationScene extends Phaser.Scene {
         // раунд 30 — где вор прошёл, там следы проверяются по одному кликом) -----
         const hasSearchBtn = chaseActive && !alreadySearched && !hasFootprints;
         if (hasSearchBtn) {
-            createButton(this, width / 2, height - 100, tf('{0} (проверка Внимательности)', searchLabel), () => {
+            createButton(this, width / 2, height - 100, tf(t('{0} (проверка Внимательности)'), t(searchLabel)), () => {
                 this.doSearch();
             }, {
                 backgroundColor: RUS.accent, hoverColor: RUS.accentLight, textColor: RUS.text,
@@ -284,9 +284,9 @@ export class LocationScene extends Phaser.Scene {
         if (deeperLoc) {
             const hasSearch = hasSearchBtn;
             const deeperY = hasSearch ? height - 152 : height - 100;
-            createButton(this, width / 2, deeperY, tf('🌿 Глубже в лес: {0} →', deeperLoc.name), () => {
+            createButton(this, width / 2, deeperY, tf(t('🌿 Глубже в лес: {0} →'), t(deeperLoc.name)), () => {
                 tickTime(this.registry, MAP_TRAVEL_MINUTES);   // переход = 1 игровой час
-                ActionLog.add(this.registry, `Игрок углубился в лес: «${deeperLoc.name}».`);
+                ActionLog.add(this.registry, tf(t('Игрок углубился в лес: «{0}».'), t(deeperLoc.name)));
                 onLocationVisited(this.registry, deeperId);
                 this.scene.restart({ locationId: deeperId, from: this.from });
             }, {
@@ -315,10 +315,10 @@ export class LocationScene extends Phaser.Scene {
             // Раунд 32 (п.5): любое перемещение по карте — РОВНО 1 игровой час
             tickTime(this.registry, MAP_TRAVEL_MINUTES);
             if (inForest && shallowerLoc) {
-                ActionLog.add(this.registry, `Игрок вышел из леса на «${shallowerLoc.name}».`);
+                ActionLog.add(this.registry, tf(t('Игрок вышел из леса на «{0}».'), t(shallowerLoc.name)));
                 this.scene.restart({ locationId: shallowerId, from: this.from });
             } else {
-                ActionLog.add(this.registry, `Игрок покинул локацию «${loc.name}».`);
+                ActionLog.add(this.registry, tf(t('Игрок покинул локацию «{0}».'), t(loc.name)));
                 this.scene.start(this.from);
             }
         }, {
@@ -371,10 +371,10 @@ export class LocationScene extends Phaser.Scene {
             player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
             this.registry.set('player', player);
             ActionLog.add(this.registry, winter
-                ? `Порыбачил через лунку — налим к ужину (+${heal} ❤).`
+                ? tf(t('Порыбачил через лунку — налим к ужину (+{0} ❤).'), heal)
                 : (raining
-                    ? `Дождь — рыба идёт на крючок смело. Отличный улов (+${heal} ❤).`
-                    : `Наловил рыбы на реке к обеду (+${heal} ❤).`));
+                    ? tf(t('Дождь — рыба идёт на крючок смело. Отличный улов (+{0} ❤).'), heal)
+                    : tf(t('Наловил рыбы на реке к обеду (+{0} ❤).'), heal)));
             createDialog(this, title,
                 (winter
                     ? t('Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим. Ужин обеспечен.')
@@ -424,8 +424,8 @@ export class LocationScene extends Phaser.Scene {
             ], { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
         });
         ActionLog.add(this.registry, expired
-            ? `Наводка на «${locName}» устарела (п.10).`
-            : `Наводка привела на «${locName}» (п.10, осталось ~${hoursLeft} ч.).`);
+            ? tf(t('Наводка на «{0}» устарела (п.10).'), locName)
+            : tf(t('Наводка привела на «{0}» (п.10, осталось ~{1} ч.).'), locName, hoursLeft));
     }
 
     /**
@@ -553,12 +553,12 @@ export class LocationScene extends Phaser.Scene {
         const canAsk = chaseActive && !alreadyAsked;
 
         const closeCb = () => { this.busyDialog = false; };
-        // Раунд 31 (п.11): разговор с НПЦ — всегда 1 час (списывается при закрытии
-        // приветствия; поп-ап ответа о воре — та же беседа, второй час не берём)
+        // Раунд 58 (п.1): разговор с НПЦ — 10 минут (было 1 час, раунд 31).
+        // Поп-ап ответа о воре — та же беседа, второй раз время не списываем
         const talkOpts = {
             singleton: true,
             portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f',
-            talkMinutes: 60,
+            talkMinutes: TALK_MINUTES,
             talkKey: npcId + '@' + Math.floor(Date.now() / 90000),
         };
         const choices = canAsk
@@ -1590,7 +1590,7 @@ export class LocationScene extends Phaser.Scene {
                     const npc = findNpc(this.registry, npcId);
                     const npcName = npc ? (npc.name || npcId) : npcId;
                     const profName = npc && npc.profession ? npc.profession.name : '';
-                    const who = (info && info.by) || 'Герой';
+                    const who = (info && info.by) || t('Герой');
                     const day = (info && info.day) || 1;
                     const epitaph = (info && info.epitaph) || t('Спи спокойно, добрая душа.');
                     const reasonText = t('житель сам напал на героя — пал(а) в честной схватке');
@@ -1618,12 +1618,12 @@ export class LocationScene extends Phaser.Scene {
                         grave.on('pointerdown', (pointer) => {
                             if (!pointer.leftButtonDown() || this.busyDialog) return;
                             this.busyDialog = true;
-                            ActionLog.add(this.registry, `Посетил могилу ${npcName} на погосте.`);
+                            ActionLog.add(this.registry, tf(t('Посетил могилу {0} на погосте.'), npcName));
                             createDialog(this, t('⚰ Могила'),
                                 tf(t('Здесь покоится {0}{1}.\nУпокоен(а) на {2}-й день странствия.\n\nОт руки героя {3} — {4}.\n\n«{5}»'),
                                     npcName,
                                     profName ? t(' (') + t(profName) + t(')') : '',
-                                    day, who, reasonText, epitaph),
+                                    day, t(who), reasonText, t(epitaph)),
                                 [{ text: t('Помянуть (печально)'), callback: () => { this.busyDialog = false; } }],
                                 { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 20 });
                         });
@@ -2103,8 +2103,9 @@ export class LocationScene extends Phaser.Scene {
      */
     doSearch() {
         const result = searchLocation(this.registry, this.locationId);
-        const ticksLeft = chaseTicksLeft(this.registry);
-        this.turnsText.setText(tf(t('⏳ Действий: {0}'), ticksLeft));
+        // Раунд 58 (п.2): счётчик в ЧАСАХ до побега вора (тик = 1 игровой час)
+        const ticksLeft = chaseHoursLeft(this.registry);
+        this.turnsText.setText(tf(t('⏳ Часов до побега вора: {0}'), ticksLeft));
         if (ticksLeft <= 3) this.turnsText.setColor('#ff4040');
         else if (ticksLeft <= 6) this.turnsText.setColor('#ffaa40');
 

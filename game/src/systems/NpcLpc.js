@@ -1,18 +1,18 @@
 // NpcLpc.js — раунд 28 (п.2): LPC-композиты для ВСЕХ жителей деревни.
 //
-// Владелец выбрал Вариант A: жители собираются той же системой
-// композитинга LPC, что и герой (CharacterAppearance.composeCharacterTexture):
+// РАУНД 58 (п.5 приказа владельца) — ЕДИНЫЙ ШАБЛОН ЖИТЕЛЕЙ:
+// все жители собираются ОДНИМ шаблоном (CharacterAppearance.composeCharacterTexture):
 //   тело + глаза + причёска + борода + штаны + обувь + рубаха = 64×64,
-//   ходьба в 4 стороны + idle, у каждого жителя СВОЯ внешность.
-//
-// Отличие от героя: слои для жителей выбираются ДЕТЕРМИНИРОВАННО
-// (FNV-хэш от npcSeed + id NPC) из фиксированной «крестьянской» палитры
-// (PALETTE ниже). Поэтому BootScene заранее подгружает ровно эти файлы
-// (быстро), а внешность уникальна в каждой новой игре и стабильна в течение
-// партии. Живописные портреты DarklandsReborn в диалогах остаются как были.
-//
-// Дети (п.1 раунда 28) собираются из той же палитры, но без бород и
-// отображаются в меньшем масштабе (решает сцена по возрасту NPC).
+//   ходьба в 4 стороны + idle.
+// Отличаются жители ДРУГ ОТ ДРУГА только:
+//   1) РАЗМЕРОМ ПО ВОЗРАСТУ (ребёнок 0.7 / подросток 0.85 / взрослый 1.0 —
+//      решает сцена по возрасту NPC, индивидуального разброса роста больше нет);
+//   2) ИНДИВИДУАЛЬНОЙ РАСЦВЕТКОЙ ОДЕЖДЫ (торс/штаны/обувь — детерминированно
+//      из крестьянской палитры PALETTE ниже, FNV-хэш от npcSeed + id NPC);
+//   3) ВОЗРАСТНЫМИ ПРИЗНАКАМИ (это тоже «по возрасту»): седые волосы у 60+,
+//      окладистая борода у мужчин 45+.
+// Тело (тон кожи), глаза и форма причёски у всех ОДИНАКОВЫЕ. Живописные
+// портреты DarklandsReborn в диалогах остаются как были.
 
 import { composeCharacterTexture, createCustomCharacterAnimations } from './CharacterAppearance.js';
 
@@ -103,7 +103,10 @@ function pick(list, rnd) {
 }
 
 /**
- * Детерминированная внешность жителя (по зерну игры и id).
+ * ЕДИНЫЙ ШАБЛОН жителя (раунд 58, п.5 приказа): детерминированная внешность
+ * (по зерну игры и id). Отличия между жителями — только расцветка ОДЕЖДЫ
+ * и возрастные признаки (седина 60+, борода у мужчин 45+). Тело, глаза и
+ * форма причёски у всех одинаковые.
  * @returns {Object} appearance — { body, eyes, beards?, hair, legs, feet, torso }
  */
 export function rollLpcAppearance(registry, npc) {
@@ -111,19 +114,20 @@ export function rollLpcAppearance(registry, npc) {
     const base = `${seed}:${npc.id}`;
     const female = npc.gender === 'female';
     const isChild = (npc.age || 30) <= 13;
+    const age = (npc.age || 30);
     const rnd = (tag) => hash01(`${base}:${tag}`);
 
-    const bodies = female ? PALETTE.body_female : PALETTE.body_male;
-    const hairShapes = female
-        ? (isChild ? [...PALETTE.hair_female_shapes, ...PALETTE.hair_girl_extra_shapes] : PALETTE.hair_female_shapes)
-        : PALETTE.hair_male_shapes;
+    // --- ЕДИНАЯ БАЗА ШАБЛОНА (у всех жителей одинаковая) ---
+    const body = female ? 'female_tan' : 'male_tan';
+    const eyes = 'human_adult_brown';
+    // Причёска: одна форма по полу; цвет по возрасту — седость у 60+.
+    const hairShape = female ? 'bangslong' : 'mop';
+    const hairColor = age >= 60 ? 'white' : 'dark_brown';
 
-    const hairShape = pick(hairShapes, rnd('hair.shape'));
-    const hairColor = pick(PALETTE.hair_male_colors, rnd('hair.color'));
-
+    // --- ИНДИВИДУАЛЬНОЕ: только расцветка одежды ---
     const appearance = {
-        body: pick(bodies, rnd('body')),
-        eyes: pick(PALETTE.eyes, rnd('eyes')),
+        body,
+        eyes,
         hair: `${hairShape}_${hairColor}`,
         legs: pick(female ? PALETTE.legs_female : PALETTE.legs_male, rnd('legs')),
         feet: pick(female ? PALETTE.feet_female : PALETTE.feet_male, rnd('feet')),
@@ -133,13 +137,10 @@ export function rollLpcAppearance(registry, npc) {
     // (слой lpc_chest_female генерируется в BootScene.ensureFemaleChestTexture)
     if (female) appearance.chest = 'female';
 
-    // Борода — только взрослым мужчинам (65%), цвет совпадает с волосами
-    if (!female && !isChild && rnd('beard.want') < 0.65) {
-        const shape = pick(PALETTE.beards, rnd('beard.shape'));
-        const bColor = PALETTE.beard_colors.includes(hairColor)
-            ? hairColor
-            : pick(PALETTE.beard_colors, rnd('beard.color'));
-        appearance.beards = `${shape}_${bColor}`;
+    // Борода — ВОЗРАСТНОЙ признак: мужчины 45+ носят единую окладистую
+    // бороду цвета волос (у седых — седая). Молодые мужики бреются.
+    if (!female && !isChild && age >= 45) {
+        appearance.beards = `beard_medium_${hairColor}`;
     }
     return appearance;
 }

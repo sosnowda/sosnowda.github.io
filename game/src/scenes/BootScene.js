@@ -359,6 +359,9 @@ export class BootScene extends Phaser.Scene {
         // ----- Процедурные текстуры хозяйственных построек — раунд 17 -----
         this.createVillageYardTextures();
 
+        // ----- Раунд 57 (п.3): НОВАЯ ВОРОТНЯ деревни (вместо плоских ворот r39) -----
+        this.createGateTexture();
+
         // ----- АУДИО -----
         // SFX
         const sfxKeys = [
@@ -1214,6 +1217,165 @@ export class BootScene extends Phaser.Scene {
         });
         g.generateTexture('deco_cart', 48, 30);
 
+        g.destroy();
+    }
+
+    /**
+     * Раунд 57 (п.3 приказа «ПЕРЕДЕЛАТЬ ВОРОТА В ДЕРЕВНЮ»): НОВАЯ ВОРОТНЯ —
+     * парадный въезд деревни вместо прежних плоских «двух палок с крышей».
+     * Единая процедурная текстура 232×336 (рисована под тайл 48): две мощные
+     * башни-сруба по бокам проезда (северная и южная), зубчатые крыши с
+     * коньками-«конями» и вымпелами, надвратный прогон с двускатной кровлей
+     * над самой дорогой, фонарь с тёплым светом, створки-вороты с петлями,
+     * тыновые крылья частокола, уходящие к лесу, каменный фундамент.
+     * Всё детерминировано (без Math.random) — как остальные процедурные.
+     */
+    createGateTexture() {
+        const g = this.make.graphics({ add: false });
+        const W = 232, H = 336;
+        const CX = 116;              // ось ворот (центр проезда)
+        const ROAD_TOP = 146, ROAD_BOT = 194;   // лента дороги (48px, тайл)
+
+        const logBand = (x, y, w, h) => {
+            // Один венец сруба: бревно с бликом и тенью
+            g.fillStyle(0x4e3820, 1); g.fillRect(x, y, w, h);
+            g.fillStyle(0x5f462c, 1); g.fillRect(x, y + 1, w, Math.max(1, h * 0.45));
+            g.fillStyle(0x6b5030, 1); g.fillRect(x, y + 1, w, 1);
+            g.fillStyle(0x33240f, 1); g.fillRect(x, y + h - 1, w, 1);
+        };
+        const towerWall = (x, yTop, yBot, w) => {
+            // Стена-сруб: венцы + угловые стойки
+            for (let y = yTop; y < yBot; y += 8) logBand(x, y, w, Math.min(8, yBot - y));
+            // Угловые стойки (пересечения брёвен)
+            [x, x + w - 10].forEach(px => {
+                g.fillStyle(0x3a2a16, 1); g.fillRect(px, yTop, 10, yBot - yTop);
+                g.fillStyle(0x523c22, 1); g.fillRect(px + 1, yTop, 3, yBot - yTop);
+                g.fillStyle(0x241708, 1); g.fillRect(px, yTop, 1, yBot - yTop);
+                g.fillRect(px + 9, yTop, 1, yBot - yTop);
+            });
+        };
+        const shingleRoof = (xL, xR, yBase, apexY) => {
+            // Двускатная кровля: тёплое дерево, тень на левой половине, дранка
+            const CXr = (xL + xR) / 2;
+            g.fillStyle(0x6b4a2a, 1);
+            g.fillTriangle(xL, yBase, xR, yBase, CXr, apexY);
+            g.fillStyle(0x513620, 1);
+            g.fillTriangle(xL, yBase, CXr, yBase, CXr, apexY);
+            const steps = Math.floor((yBase - apexY) / 5);
+            for (let i = 1; i <= steps; i++) {
+                const yy = yBase - i * 5;
+                const half = ((yBase - yy) / (yBase - apexY)) * (CXr - xL);
+                g.fillStyle(0x3a2818, 0.8);
+                g.fillRect(CXr - half, yy, half * 2, 1);
+                g.fillStyle(0x7d5a36, 0.5);
+                g.fillRect(CXr - half + 2, yy + 1, half * 2 - 4, 1);
+            }
+            g.lineStyle(1, 0x241708, 0.9);
+            g.lineBetween(xL, yBase, CXr, apexY);
+            g.lineBetween(xR, yBase, CXr, apexY);
+            g.lineBetween(xL, yBase, xR, yBase);
+        };
+        const finial = (cx, yTop, flag) => {
+            // Конёк-«конь»: столбик с резным ромбом; на северной башне — вымпел
+            g.fillStyle(0x241708, 1); g.fillRect(cx - 1, yTop - 14, 2, 14);
+            g.fillStyle(0xc9a14a, 1);
+            g.fillTriangle(cx, yTop - 12, cx - 4, yTop - 8, cx, yTop - 4);
+            g.fillTriangle(cx, yTop - 12, cx + 4, yTop - 8, cx, yTop - 4);
+            if (flag) {
+                g.fillStyle(0x8B2C1A, 1);
+                g.fillTriangle(cx + 1, yTop - 14, cx + 15, yTop - 10, cx + 1, yTop - 6);
+            }
+        };
+
+        // ===== 1. ТЫНОВЫЕ КРЫЛЬЯ (частокол уходит к лесу, север и юг) =====
+        const palisade = (x0, yTop, yBot) => {
+            for (let px = x0; px < x0 + 64; px += 12) {
+                const wobble = ((px * 7) % 5) - 2;      // детерминированный «разнобой»
+                const top = yTop + Math.abs(wobble) * 2;
+                g.fillStyle(0x4a3520, 1); g.fillRect(px, top, 9, yBot - top);
+                g.fillStyle(0x5f462c, 1); g.fillRect(px + 1, top, 3, yBot - top);
+                g.fillStyle(0x33240f, 1); g.fillRect(px + 8, top, 1, yBot - top);
+                // Осторожно заострённый край
+                g.fillStyle(0x5f462c, 1);
+                g.fillTriangle(px, top, px + 9, top, px + 4.5, top - 6);
+                g.fillStyle(0x241708, 0.7);
+                g.fillRect(px, top, 9, 1);
+            }
+            // Поперечная поперечина (связывает колья)
+            g.fillStyle(0x33240f, 1);
+            g.fillRect(x0 - 2, Math.floor((yTop + yBot) / 2), 68, 3);
+        };
+        palisade(CX - 32, 4, 96);        // северное крыло (за башней)
+        palisade(CX - 32, 250, 334);     // южное крыло (выглядывает из-под башни)
+
+        // ===== 2. ТЕНЬ =====
+        g.fillStyle(0x000000, 0.22);
+        g.fillEllipse(CX, 316, 176, 22);
+
+        // ===== 3. СЕВЕРНАЯ БАШНЯ (сторожевая, дальше от зрителя) =====
+        towerWall(CX - 44, 88, ROAD_TOP - 2, 88);
+        // Бойница со ставнем
+        g.fillStyle(0x140c04, 1); g.fillRect(CX - 4, 104, 8, 20);
+        g.fillStyle(0x5f462c, 1); g.fillRect(CX - 7, 100, 14, 3);
+        shingleRoof(CX - 54, CX + 54, 88, 30);
+        finial(CX, 30, true);
+        // Каменный фундамент (цоколь)
+        g.fillStyle(0x6a625a, 1); g.fillRect(CX - 48, ROAD_TOP - 10, 96, 10);
+        g.fillStyle(0x544c44, 1);
+        g.fillRect(CX - 44, ROAD_TOP - 8, 14, 6); g.fillRect(CX - 22, ROAD_TOP - 7, 18, 5);
+        g.fillRect(CX + 2, ROAD_TOP - 8, 16, 6); g.fillRect(CX + 26, ROAD_TOP - 7, 14, 5);
+
+        // ===== 4. ЮЖНАЯ БАШНЯ (ближе к зрителю) =====
+        // Как все постройки южной стороны: КРОВЛЯ вверху (под дорогой),
+        // ниже — стена-сруб, ниже — каменный фундамент. Ничего не левитирует.
+        shingleRoof(CX - 50, CX + 50, 254, 196);
+        finial(CX, 196, false);
+        towerWall(CX - 44, 254, 310, 88);
+        // Круглое волоковое окошко с тёплым отсветом (внутри кто-то есть)
+        g.fillStyle(0x140c04, 1); g.fillCircle(CX, 280, 5);
+        g.lineStyle(1.5, 0x33240f, 1); g.strokeCircle(CX, 280, 5);
+        g.fillStyle(0xffb050, 0.5); g.fillCircle(CX - 1, 279, 2);
+        g.fillStyle(0x6a625a, 1); g.fillRect(CX - 48, 310, 96, 10);
+        g.fillStyle(0x544c44, 1);
+        g.fillRect(CX - 44, 312, 14, 6); g.fillRect(CX - 22, 313, 18, 5);
+        g.fillRect(CX + 2, 312, 16, 6); g.fillRect(CX + 26, 313, 14, 5);
+
+        // ===== 5. НАДВРАТНЫЙ ПРОГОН над дорогой + кровля ворот =====
+        // Мостина идёт от башни к башне поперёк проезда (вид сбоку — стоймя)
+        g.fillStyle(0x3e2c18, 1); g.fillRect(CX - 9, ROAD_TOP - 6, 18, ROAD_BOT - ROAD_TOP + 12);
+        g.fillStyle(0x523c22, 1); g.fillRect(CX - 9, ROAD_TOP - 6, 5, ROAD_BOT - ROAD_TOP + 12);
+        g.fillStyle(0x241708, 1);
+        g.fillRect(CX - 9, ROAD_TOP - 6, 1, ROAD_BOT - ROAD_TOP + 12);
+        g.fillRect(CX + 8, ROAD_TOP - 6, 1, ROAD_BOT - ROAD_TOP + 12);
+        // Кровля над прогоном — двускатная, выше обеих крыш башен по оси
+        shingleRoof(CX - 26, CX + 26, ROAD_TOP - 6, ROAD_TOP - 34);
+        finial(CX, ROAD_TOP - 34, false);
+        // Кованые петли и засов на прогоне (вороты раскрыты настежь)
+        g.fillStyle(0xc9a14a, 1);
+        g.fillCircle(CX - 4, ROAD_TOP + 4, 1.6); g.fillCircle(CX - 4, ROAD_BOT - 4, 1.6);
+        g.fillStyle(0x8a6a30, 1); g.fillRect(CX - 2, ROAD_TOP + 14, 2, 20);
+
+        // ===== 6. ФОНАРЬ на кронштейне прогона — тёплый вечерний свет =====
+        g.lineStyle(2, 0x33240f, 1);
+        g.lineBetween(CX + 9, ROAD_TOP + 2, CX + 30, ROAD_TOP + 2);
+        g.fillStyle(0x140c04, 1); g.fillRect(CX + 26, ROAD_TOP + 4, 9, 13);
+        g.fillStyle(0xffc860, 0.95); g.fillRect(CX + 28, ROAD_TOP + 6, 5, 9);
+        g.fillStyle(0x5f462c, 1);
+        g.fillTriangle(CX + 25, ROAD_TOP + 4, CX + 36, ROAD_TOP + 4, CX + 30.5, ROAD_TOP);
+        g.fillStyle(0x33240f, 1); g.fillRect(CX + 26, ROAD_TOP + 17, 9, 2);
+        // Сияние (три концентрических ореола)
+        [16, 11, 7].forEach((r, i) => {
+            g.fillStyle(0xffb050, 0.05 + i * 0.05);
+            g.fillCircle(CX + 30.5, ROAD_TOP + 10, r);
+        });
+
+        // ===== 7. Порог-настил через дорогу (колеи от телег) =====
+        g.fillStyle(0x7a5c38, 0.55);
+        g.fillRect(CX - 26, ROAD_TOP + 8, 14, 3);
+        g.fillRect(CX - 26, ROAD_BOT - 11, 14, 3);
+        g.fillRect(CX + 12, ROAD_TOP + 12, 14, 3);
+
+        g.generateTexture('village_gate_r57', W, H);
         g.destroy();
     }
 

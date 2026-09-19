@@ -51,13 +51,22 @@ export const DIALOGUES = {
                 // Раунд 21: если икона у игрока — первым делом предлагаем её вернуть
                 action: (scene) => {
                     const q = scene.registry.get('quest') || {};
+                    const node = DIALOGUES.elder_quest.nodes.a;
+                    // Раунд 57 (п.5): после возврата иконы диалог НЕ должен
+                    // заново рассказывать про кражу — староста благодарит и
+                    // предлагает завершить поход (victory_continue) или остаться.
+                    if (q.mainQuestDone) {
+                        node.text = 'Ты вернул нашу святыню! Вся деревня у тебя в долгу. Что решаешь, {address}?';
+                        node.en = 'You have returned our holy treasure! The whole village is in your debt. What will you do now, {address}?';
+                        node.choices = [{ text: t('📜 Поговорить об исходе похода'), next: 'victory_continue' }];
+                        return;
+                    }
                     const base = [
                         { text: t('Я помогу найти вора.'), next: 'b' },
                         { text: t('Расскажи подробнее.'), next: 'c' },
                         { text: t('Дай задаток за работу.'), next: 'ask_advance' },
                         { text: t('Извини, я спешу.'), end: true },
                     ];
-                    const node = DIALOGUES.elder_quest.nodes.a;
                     // Раунд 45 (п.5 заявки): есть разозлённые НПЦ — староста
                     // может их примирить с игроком за виру по Судебнику.
                     // Раунд 46 (п.4): СО СТАРОСТОЙ помириться можно ВСЕГДА —
@@ -65,6 +74,8 @@ export const DIALOGUES = {
                     if (getViraCandidates(scene.registry).length > 0) {
                         base.unshift({ text: t('🤝 Просить мира (вира по Судебнику)'), next: 'vira_hub' });
                     }
+                    node.text = 'Здравствуй, {address}. У нас беда! Ночью неизвестный вор забрался в церковь и украл чудотворную икону. Это наша главная святыня!';
+                    node.en = 'Greetings, {address}. We are in trouble! In the night an unknown thief crept into the church and stole the wonderworking icon. It is our chief holy treasure!';
                     node.choices = (q.stolenItemRecovered && !q.mainQuestDone)
                         ? [{ text: t('🏺 Вернуть икону!'), next: 'return_icon' }, ...base]
                         : base;
@@ -135,7 +146,7 @@ export const DIALOGUES = {
                     q.elderTalked = true;
                     // Раунд 43 (п.3): в баннере над деревней — только короткий статус.
                     q.currentObjective = 'Найди вора.';
-                    ActionLog.add(scene.registry, 'Поговорил со старостой — получил задание найти вора.');
+                    ActionLog.add(scene.registry, t('Поговорил со старостой — получил задание найти вора.'));
                 },
                 choices: [{ text: t('Я найду его!'), end: true }],
             },
@@ -211,7 +222,7 @@ export const DIALOGUES = {
                         action: (scene) => {
                             const q = scene.registry.get('quest');
                             q.runFinished = true;
-                            ActionLog.add(scene.registry, 'Поход завершён по воле героя.');
+                            ActionLog.add(scene.registry, t('Поход завершён по воле героя.'));
                         },
                         end: true,
                     },
@@ -964,7 +975,7 @@ export const DIALOGUES = {
                         action: (scene) => {
                             const q = scene.registry.get('quest');
                             q.runFinished = true;
-                            ActionLog.add(scene.registry, 'Поход завершён по воле героя.');
+                            ActionLog.add(scene.registry, t('Поход завершён по воле героя.'));
                         },
                         end: true,
                     },
@@ -979,7 +990,7 @@ export const DIALOGUES = {
                     q.elderTalked = true; // отмечаем, что игрок узнал о краже
                     // Раунд 43 (п.3): короткий статус в баннере.
                     q.currentObjective = 'Найди вора.';
-                    ActionLog.add(scene.registry, 'Поговорил с батюшкой о краже иконы.');
+                    ActionLog.add(scene.registry, t('Поговорил с батюшкой о краже иконы.'));
                 },
                 choices: [{ text: t('Я найду её, батюшка!'), end: true }],
             },
@@ -1012,7 +1023,7 @@ export const DIALOGUES = {
                 action: (scene) => {
                     const p = scene.registry.get('player');
                     p.MP = Math.min(p.MPmax, p.MP + 2);
-                    ActionLog.add(scene.registry, 'Помолился в церкви (+2 MP).');
+                    ActionLog.add(scene.registry, t('Помолился в церкви (+2 MP).'));
                 },
                 choices: [{ text: t('Аминь.'), end: true }],
             },

@@ -57,11 +57,13 @@ export class ActionLog {
      */
     getRating(finalOutcome = null) {
         const total = this.entries.length;
-        // Подсчитываем разные типы действий
-        const searches = this.entries.filter(e => e.action.includes('Поиск') || e.action.includes('следы')).length;
-        const talks = this.entries.filter(e => e.action.includes('Поговорил') || e.action.includes('Спросил')).length;
-        const failed = this.entries.filter(e => e.action.includes('провал') || e.action.includes('не удалось')).length;
-        const found = this.entries.filter(e => e.action.includes('нашёл') || e.action.includes('нашла') || e.action.includes('НАЙДЕН')).length;
+        // Раунд 57 (EN-глубинные тексты): летопись пишется НА ЯЗЫКЕ СЕССИИ —
+        // ключевые слова двуязычные (RU + EN), оценка работает в обоих режимах.
+        const has = (e, words) => words.some(w => e.action.includes(w));
+        const searches = this.entries.filter(e => has(e, ['Поиск', 'следы', 'Search', 'traces', 'footprints'])).length;
+        const talks = this.entries.filter(e => has(e, ['Поговорил', 'Спросил', 'Talked', 'Asked'])).length;
+        const failed = this.entries.filter(e => has(e, ['провал', 'не удалось', 'failed'])).length;
+        const found = this.entries.filter(e => has(e, ['нашёл', 'нашла', 'НАЙДЕН', 'found', 'FOUND'])).length;
 
         // Определяем исход игры
         let isVictory = false;
@@ -79,11 +81,11 @@ export class ActionLog {
         // Раунд 46 (п.2): убийство старосты — немедленный Проигрыш
         else if (finalOutcome === 'defeat_elder_murdered') { isExpelled = true; isElderMurdered = true; }
         else {
-            // Fallback на лог
-            isVictory = this.entries.some(e => e.action.includes('ПОБЕДА'));
-            isEscaped = this.entries.some(e => e.action.includes('сбежал'));
-            isHeroDead = this.entries.some(e => e.action.includes('пал в бою'));
-            isExpelled = this.entries.some(e => e.action.includes('изгнан'));
+            // Fallback на лог (ключевые слова двуязычные — раунд 57)
+            isVictory = this.entries.some(e => has(e, ['ПОБЕДА', 'VICTORY']));
+            isEscaped = this.entries.some(e => has(e, ['сбежал', 'escaped']));
+            isHeroDead = this.entries.some(e => has(e, ['пал в бою', 'fell in battle']));
+            isExpelled = this.entries.some(e => has(e, ['изгнан', 'expelled']));
         }
 
         let stars = 0;

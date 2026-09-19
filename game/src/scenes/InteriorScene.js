@@ -120,9 +120,10 @@ export class InteriorScene extends Phaser.Scene {
         }
         this.interior = interior;
 
-        // Раунд 21: вход в дом занимает время (1 тик) — вор тоже двигается.
+        // Раунд 21: вход в дом занимает время — вор тоже двигается.
         // До рисования HUD, чтобы дата/время уже были с учётом входа.
-        tickTime(this.registry, 15);
+        // Раунд 58 (п.1 приказа): вход в дом — 10 минут (было 15 минут).
+        tickTime(this.registry, 10);
         // Раунд 21: визит в церковь может закрыть поручение «Помолиться за больного»
         if (this.interiorId === 'church') {
             onLocationVisited(this.registry, 'church');
@@ -290,7 +291,7 @@ export class InteriorScene extends Phaser.Scene {
                 fontSize: '18px', color: RUS.textDim,
                 fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(20);
-            this.add.text(width * 0.65, height * 0.52, `${absentName}\n${this.ownerPresence.activity || ''}\n📍 ${where}`, {
+            this.add.text(width * 0.65, height * 0.52, `${absentName}\n${this.ownerPresence.activity ? t(this.ownerPresence.activity) : ''}\n📍 ${where}`, {
                 fontSize: '15px', color: RUS.text, align: 'center',
                 backgroundColor: '#000000aa', padding: { x: 10, y: 8 },
                 stroke: '#000', strokeThickness: 2,
@@ -638,8 +639,8 @@ export class InteriorScene extends Phaser.Scene {
         const talkCheck = checkNpcWillingToTalk(this.registry, interior.npcId, { npcBusy: false });
         if (talkCheck.willAttack) {
             createDialog(this, t('Нападение!'),
-                `${getNpcDisplayName(this.registry, interior.npcId)} бросается на тебя с кулаками!`,
-                [{ text: 'Драться!', callback: () => {
+                tf(t('{0} бросается на тебя с кулаками!'), getNpcDisplayName(this.registry, interior.npcId)),
+                [{ text: t('Драться!'), callback: () => {
                     // Раунд 40 (QA-фикс): переход в бой — на следующий кадр,
                     // вне стека обработчика клика (иначе зависание цикла Phaser)
                     this.time.delayedCall(0, () => {
@@ -651,17 +652,17 @@ export class InteriorScene extends Phaser.Scene {
             return;
         }
         if (!talkCheck.canTalk) {
-            createDialog(this, 'Отказ', talkCheck.message,
-                [{ text: 'Понятно', callback: () => {} }],
+            createDialog(this, t('Отказ'), talkCheck.message,
+                [{ text: t('Понятно'), callback: () => {} }],
                 { singleton: false, portraitKey: this.npcPortraitKey }
             );
             return;
         }
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
-        ActionLog.add(this.registry, `Поговорил с ${npcName} в «${interior.name}».`);
+        ActionLog.add(this.registry, tf(t('Поговорил с {0} в «{1}».'), npcName, interior.name));
         if (this.npcData && !this.npcData.met) {
             meetNpc(this.registry, interior.npcId);
-            ActionLog.add(this.registry, `Познакомился с ${this.npcData.knownDescription}.`);
+            ActionLog.add(this.registry, tf(t('Познакомился с {0}.'), this.npcData.knownDescription));
             this.npcNameText.setText(getNpcDisplayName(this.registry, interior.npcId));
         }
         this.activeNpc = {
@@ -696,7 +697,7 @@ export class InteriorScene extends Phaser.Scene {
         done.rewardClaimed = true;
         this.audioManager.playGoldReceive(); // раунд 24: звон монет
         applyQuestCompleteBonus(this.registry, interior.npcId, done.difficulty);
-        ActionLog.add(this.registry, `Награда за «${done.title}»: ${rewards.join(', ')}.`);
+        ActionLog.add(this.registry, tf(t('Награда за «{0}»: {1}.'), done.title, rewards.join(', ')));
         this.busyDialog = true;
         const address = this.player && this.player.gender === 'female' ? t('путница') : t('путник');
         createDialog(this, t('✓ Поручение выполнено!'),
@@ -716,8 +717,8 @@ export class InteriorScene extends Phaser.Scene {
         // Раунд 47 (п.4): показываем ВСТРЕЧУЮ проверку Убеждения:
         // «бросок 22: Убеждение 45 против (Упорство жителя 35 + 10 сложности) — успех»
         const text = result.checkLine ? `${result.message}\n(${result.checkLine})` : result.message;
-        createDialog(this, 'Просьба о деньгах', text, [
-            { text: 'Понятно', callback: () => {} },
+        createDialog(this, t('Просьба о деньгах'), text, [
+            { text: t('Понятно'), callback: () => {} },
         ], {
             singleton: false,
             portraitKey: interior.portrait,
@@ -741,9 +742,9 @@ export class InteriorScene extends Phaser.Scene {
         const hasActiveFromThisNpc = activeQuests.some(q => q.npcId === interior.npcId);
         
         if (hasActiveFromThisNpc) {
-            createDialog(this, 'Задание', 
-                `${npcName}: «Ты ещё не выполнил моё прошлое поручение. Сперва закончи его!»`, 
-                [{ text: 'Понятно', callback: () => {} }],
+            createDialog(this, t('Задание'), 
+                tf(t('{0}: «Ты ещё не выполнил моё прошлое поручение. Сперва закончи его!»'), npcName), 
+                [{ text: t('Понятно'), callback: () => {} }],
                 { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 }
             );
             return;
@@ -752,9 +753,9 @@ export class InteriorScene extends Phaser.Scene {
         // Генерируем задание
         const quest = generateQuest(interior.npcId, this.registry);
         if (!quest) {
-            createDialog(this, 'Задание',
-                `${npcName}: «Нет у меня сейчас для тебя дел. Зайди попозже.»`,
-                [{ text: 'Понятно', callback: () => {} }],
+            createDialog(this, t('Задание'),
+                tf(t('{0}: «Нет у меня сейчас для тебя дел. Зайди попозже.»'), npcName),
+                [{ text: t('Понятно'), callback: () => {} }],
                 { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 }
             );
             return;
@@ -765,32 +766,32 @@ export class InteriorScene extends Phaser.Scene {
             if (r.type === 'money') return formatMoney(r.amount);
             if (r.type === 'item') return `${r.name} ×${r.count}`;
             if (r.type === 'blessing') return r.name;
-            return r.name || 'что-то';
+            return r.name || t('что-то');
         });
 
         const questText = `${quest.description}\n\n` +
-            `Цель: ${quest.objective}\n` +
-            `Время на выполнение: ${tf(t('{0} действий'), quest.timeLimit)}\n` +
-            `Сложность: ${quest.difficulty === 'hard' ? 'тяжёлая' : (quest.difficulty === 'medium' ? 'средняя' : 'лёгкая')}\n` +
-            `Награда: ${rewardTexts.join(', ')}`;
+            `${t('Цель:')} ${quest.objective}\n` +
+            `${t('Время на выполнение:')} ${tf(t('{0} действий'), quest.timeLimit)}\n` +
+            `${t('Сложность:')} ${quest.difficulty === 'hard' ? t('тяжёлая') : (quest.difficulty === 'medium' ? t('средняя') : t('лёгкая'))}\n` +
+            `${t('Награда:')} ${rewardTexts.join(', ')}`;
 
         // Показываем задание с кнопками "Принять" и "Отказаться"
         createDialog(this, `📜 ${quest.title}`, questText, [
             {
-                text: '✓ Принять',
+                text: t('✓ Принять'),
                 callback: () => {
                     acceptQuest(this.registry, quest);
-                    createDialog(this, 'Задание принято',
-                        `${npcName}: «Благодарю! Не подведи. Возвращайся, как выполнишь.»`,
-                        [{ text: 'Понятно', callback: () => {} }],
+                    createDialog(this, t('Задание принято'),
+                        tf(t('{0}: «Благодарю! Не подведи. Возвращайся, как выполнишь.»'), npcName),
+                        [{ text: t('Понятно'), callback: () => {} }],
                         { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 }
                     );
                 },
             },
             {
-                text: '✗ Отказаться',
+                text: t('✗ Отказаться'),
                 callback: () => {
-                    ActionLog.add(this.registry, `Отказался от задания: ${quest.title}.`);
+                    ActionLog.add(this.registry, tf(t('Отказался от задания: {0}.'), quest.title));
                 },
             },
         ], {
@@ -813,7 +814,7 @@ export class InteriorScene extends Phaser.Scene {
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 25, `Подарить ${npcName}`, {
+        this.add.text(width / 2, height / 2 - panelH / 2 + 25, tf(t('Подарить {0}'), npcName), {
             fontSize: '18px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
@@ -824,7 +825,7 @@ export class InteriorScene extends Phaser.Scene {
         // Подарить деньги (10 д.)
         createButton(this, width / 2, y, t('💸 Подарить 10 денег'), () => {
             if ((player.dengas || 0) < 10) {
-                createDialog(this, 'Подарок', 'Не хватает денег!', [{ text: 'Понятно', callback: () => {} }],
+                createDialog(this, t('Подарок'), t('Не хватает денег!'), [{ text: t('Понятно'), callback: () => {} }],
                     { singleton: false, portraitKey: interior.portrait });
                 return;
             }
@@ -833,10 +834,10 @@ export class InteriorScene extends Phaser.Scene {
             // П.6: ценность денег = номинал × 0.5 = 5
             const result = applyGiftBonus(this.registry, interior.npcId, 5);
             const msg = result.success
-                ? `${npcName}: «Спасибо тебе! Доброе дело сделал.» (+${result.bonus} реп.)`
-                : `${npcName}: «Не нужно мне твоих подачек!» (${result.bonus} реп.)`;
+                ? tf(t('{0}: «Спасибо тебе! Доброе дело сделал.» (+{1} реп.)'), npcName, result.bonus)
+                : tf(t('{0}: «Не нужно мне твоих подачек!» ({1} реп.)'), npcName, result.bonus);
             this._closeGiftMenu(overlay, panel);
-            createDialog(this, 'Подарок', msg, [{ text: 'Понятно', callback: () => {} }],
+            createDialog(this, t('Подарок'), msg, [{ text: t('Понятно'), callback: () => {} }],
                 { singleton: false, portraitKey: this.npcPortraitKey });
         }, {
             backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
@@ -847,7 +848,7 @@ export class InteriorScene extends Phaser.Scene {
         // Подарить деньги (50 д.)
         createButton(this, width / 2, y, t('💸 Подарить 50 денег'), () => {
             if ((player.dengas || 0) < 50) {
-                createDialog(this, 'Подарок', 'Не хватает денег!', [{ text: 'Понятно', callback: () => {} }],
+                createDialog(this, t('Подарок'), t('Не хватает денег!'), [{ text: t('Понятно'), callback: () => {} }],
                     { singleton: false, portraitKey: interior.portrait });
                 return;
             }
@@ -856,10 +857,10 @@ export class InteriorScene extends Phaser.Scene {
             // П.6: ценность = 50 × 0.5 = 25
             const result = applyGiftBonus(this.registry, interior.npcId, 25);
             const msg = result.success
-                ? `${npcName}: «Ох, какая щедрость! Благодарю от сердца!» (+${result.bonus} реп.)`
-                : `${npcName}: «Что-то ты уж слишком щедр... Чего хочешь?» (${result.bonus} реп.)`;
+                ? tf(t('{0}: «Ох, какая щедрость! Благодарю от сердца!» (+{1} реп.)'), npcName, result.bonus)
+                : tf(t('{0}: «Что-то ты уж слишком щедр... Чего хочешь?» ({1} реп.)'), npcName, result.bonus);
             this._closeGiftMenu(overlay, panel);
-            createDialog(this, 'Подарок', msg, [{ text: 'Понятно', callback: () => {} }],
+            createDialog(this, t('Подарок'), msg, [{ text: t('Понятно'), callback: () => {} }],
                 { singleton: false, portraitKey: this.npcPortraitKey });
         }, {
             backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
@@ -874,7 +875,7 @@ export class InteriorScene extends Phaser.Scene {
         // кузницей и боевой системой.
 
         if (player.inventory && player.inventory.length > 0) {
-            this.add.text(width / 2, y, 'Предметы из инвентаря:', {
+            this.add.text(width / 2, y, t('Предметы из инвентаря:'), {
                 fontSize: '13px', color: RUS.textDim,
             }).setOrigin(0.5).setDepth(202);
             y += 25;
@@ -889,7 +890,7 @@ export class InteriorScene extends Phaser.Scene {
                 else itemPrice = 10; // базовая цена
 
                 const giftValue = Math.round(itemPrice * 0.5); // п.6: ценность = цена × 0.5
-                const itemLabel = `${item.name}${item.count > 1 ? ' ×' + item.count : ''} (ценность ${giftValue})`;
+                const itemLabel = `${item.name}${item.count > 1 ? ' ×' + item.count : ''} (${t('ценность')} ${giftValue})`;
 
                 createButton(this, width / 2, y, `📦 ${itemLabel}`, () => {
                     // Удаляем один предмет
@@ -900,10 +901,10 @@ export class InteriorScene extends Phaser.Scene {
                     this.registry.set('player', player);
                     const result = applyGiftBonus(this.registry, interior.npcId, giftValue);
                     const msg = result.success
-                        ? `${npcName}: «Ох, вещь добрая! Спасибо, пригодится.» (+${result.bonus} реп.)`
-                        : `${npcName}: «Не нужна мне такая вещь.» (${result.bonus} реп.)`;
+                        ? tf(t('{0}: «Ох, вещь добрая! Спасибо, пригодится.» (+{1} реп.)'), npcName, result.bonus)
+                        : tf(t('{0}: «Не нужна мне такая вещь.» ({1} реп.)'), npcName, result.bonus);
                     this._closeGiftMenu(overlay, panel);
-                    createDialog(this, 'Подарок', msg, [{ text: 'Понятно', callback: () => {} }],
+                    createDialog(this, t('Подарок'), msg, [{ text: t('Понятно'), callback: () => {} }],
                         { singleton: false, portraitKey: this.npcPortraitKey });
                 }, {
                     backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
@@ -914,7 +915,7 @@ export class InteriorScene extends Phaser.Scene {
         }
 
         // Закрыть
-        createButton(this, width / 2, height / 2 + panelH / 2 - 25, 'Закрыть', () => {
+        createButton(this, width / 2, height / 2 + panelH / 2 - 25, t('Закрыть'), () => {
             this._closeGiftMenu(overlay, panel);
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
@@ -937,9 +938,9 @@ export class InteriorScene extends Phaser.Scene {
         
         // Раунд 47 (п.4): в диалоге видна ВСТРЕЧАЯ проверка:
         // «бросок 22: Красноречие 45 против (Красноречие жителя 40) — успех»
-        const checkNote = result.checkLine ? `\n(${result.checkLine})` : ` (бросок ${result.roll})`;
-        createDialog(this, 'Похвала', `${npcName}: ${result.message}${checkNote}\n${result.bonus > 0 ? '+' : ''}${result.bonus} репутации`, [
-            { text: 'Понятно', callback: () => {} },
+        const checkNote = result.checkLine ? `\n(${result.checkLine})` : ` (${t('бросок')} ${result.roll})`;
+        createDialog(this, t('Похвала'), tf(t('{0}: {1}{2}\n{3} репутации'), npcName, result.message, checkNote, (result.bonus > 0 ? '+' : '') + result.bonus), [
+            { text: t('Понятно'), callback: () => {} },
         ], {
             singleton: false,
             portraitKey: this.npcPortraitKey,
@@ -964,18 +965,18 @@ export class InteriorScene extends Phaser.Scene {
             const loot = 5 + Math.floor(Math.random() * 11);
             player.dengas = (player.dengas || 0) + loot;
             this.registry.set('player', player);
-            ActionLog.add(this.registry, `Угрозой вымогал ${loot} д. у ${npcName} (бросок ${result.roll}).`);
-            createDialog(this, 'Угроза',
-                `${result.message}\n\nПолучено: ${loot} д.\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})${checkNote}`,
-                [{ text: 'Понятно', callback: () => {} }],
+            ActionLog.add(this.registry, tf(t('Угрозой вымогал {0} д. у {1} (бросок {2}).'), loot, npcName, result.roll));
+            createDialog(this, t('Угроза'),
+                tf(t('{0}\n\nПолучено: {1} д.\n(Репутация {2}){3}'), result.message, loot, (result.repChange > 0 ? '+' : '') + result.repChange, checkNote),
+                [{ text: t('Понятно'), callback: () => {} }],
                 { singleton: false, portraitKey: this.npcPortraitKey,
                   typing: true, typingSpeed: 30 }
             );
         } else if (result.willAttack) {
             // NPC нападает
-            createDialog(this, 'Угроза — нападение!',
-                `${result.message}\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})${checkNote}`,
-                [{ text: 'Драться!', callback: () => {
+            createDialog(this, t('Угроза — нападение!'),
+                tf(t('{0}\n(Репутация {1}){2}'), result.message, (result.repChange > 0 ? '+' : '') + result.repChange, checkNote),
+                [{ text: t('Драться!'), callback: () => {
                     // Раунд 40 (QA-фикс): переход в бой — на следующий кадр,
                     // вне стека обработчика клика (иначе зависание цикла Phaser)
                     this.time.delayedCall(0, () => {
@@ -985,9 +986,9 @@ export class InteriorScene extends Phaser.Scene {
                 { singleton: false, portraitKey: this.npcPortraitKey }
             );
         } else {
-            createDialog(this, 'Угроза',
-                `${result.message}\n(Репутация ${result.repChange > 0 ? '+' : ''}${result.repChange})${checkNote}`,
-                [{ text: 'Понятно', callback: () => {} }],
+            createDialog(this, t('Угроза'),
+                tf(t('{0}\n(Репутация {1}){2}'), result.message, (result.repChange > 0 ? '+' : '') + result.repChange, checkNote),
+                [{ text: t('Понятно'), callback: () => {} }],
                 { singleton: false, portraitKey: this.npcPortraitKey,
                   typing: true, typingSpeed: 30 }
             );
@@ -1015,26 +1016,24 @@ export class InteriorScene extends Phaser.Scene {
             // NPC отказывает
             let message = '';
             if (npcRepValue < npcRepThreshold) {
-                message = `${npcName}: «Ты мне хоть и ${heroIsF ? 'люба' : 'люб'}, но я тебя ещё не так хорошо знаю, ` +
-                    `чтобы семью создавать. Подожди ещё, наберись опыта в деревне.» ` +
-                    `(Нужно личная репутация +${npcRepThreshold}, у вас ${npcRepValue})`;
+                message = tf(t('{0}: «Ты мне хоть и {1}, но я тебя ещё не так хорошо знаю, чтобы семью создавать. Подожди ещё, наберись опыта в деревне.» (Нужно личная репутация +{2}, у вас {3})'),
+                    npcName, heroIsF ? t('люба') : t('люб'), npcRepThreshold, npcRepValue);
             } else if (villageRepValue < villageRepThreshold) {
-                message = `${npcName}: «Я бы ${npcIsF ? 'рада' : 'рад'}, да староста не благословит. ` +
-                    `Ты ещё не ${heroIsF ? 'заслужила' : 'заслужил'} уважение всей деревни.» ` +
-                    `(Нужно деревенская репутация +${villageRepThreshold}, у вас ${villageRepValue})`;
+                message = tf(t('{0}: «Я бы {1}, да староста не благословит. Ты ещё не {2} уважение всей деревни.» (Нужно деревенская репутация +{3}, у вас {4})'),
+                    npcName, npcIsF ? t('рада') : t('рад'), heroIsF ? t('заслужила') : t('заслужил'), villageRepThreshold, villageRepValue);
             } else if ((player.dengas || 0) < cost) {
-                message = `${npcName}: «Свадьба — дело не дешёвое! Нужно ${cost} д. ` +
-                    `на свадебное торжество и подарки. А у тебя всего ${player.dengas || 0} д.»`;
+                message = tf(t('{0}: «Свадьба — дело не дешёвое! Нужно {1} д. на свадебное торжество и подарки. А у тебя всего {2} д.»'),
+                    npcName, cost, player.dengas || 0);
             } else if (this.npcData.married) {
                 // Раунд 44 (п.7): вежливый отказ чужого мужа/жены
-                message = `${npcName}: «Я ${npcIsF ? 'замужем' : 'женат'} — венчан(а) с другим человеком. ` +
-                    `Ищи себе пару среди свободных сердец.»`;
+                message = tf(t('{0}: «Я {1} — венчан(а) с другим человеком. Ищи себе пару среди свободных сердец.»'),
+                    npcName, npcIsF ? t('замужем') : t('женат'));
             } else {
-                message = `${npcName}: «Не могу я ${npcIsF ? 'выйти за тебя' : 'жениться на тебе'}. ${check.reason}.»`;
+                message = tf(t('{0}: «Не могу я {1}. {2}.»'), npcName, npcIsF ? t('выйти за тебя') : t('жениться на тебе'), t(check.reason));
             }
             
-            createDialog(this, 'Сватовство', message, [
-                { text: 'Понятно', callback: () => {} },
+            createDialog(this, t('Сватовство'), message, [
+                { text: t('Понятно'), callback: () => {} },
             ], {
                 singleton: false,
                 portraitKey: this.npcPortraitKey,
@@ -1044,16 +1043,13 @@ export class InteriorScene extends Phaser.Scene {
         }
         
         // Условия выполнены — предложение брака
-        const proposalText = `Ты ${heroIsF ? 'решила' : 'решил'} свататься: ${npcName}.\n\n` +
-            `Условия для свадьбы:\n` +
-            `✓ Личная репутация: ${npcRepValue} (нужно +${npcRepThreshold})\n` +
-            `✓ Деревенская репутация: ${villageRepValue} (нужно +${villageRepThreshold})\n` +
-            `✓ Свадебное торжество: ${cost} д. (у вас ${player.dengas || 0} д.)\n\n` +
-            `${npcName} ${npcIsF ? 'согласна' : 'согласен'} принять твоё предложение! Свадьба состоится по обычаям Руси!`;
+        const proposalText = tf(t('Ты {0} свататься: {1}.\n\nУсловия для свадьбы:\n✓ Личная репутация: {2} (нужно +{3})\n✓ Деревенская репутация: {4} (нужно +{5})\n✓ Свадебное торжество: {6} д. (у вас {7} д.)\n\n{8} {9} принять твоё предложение! Свадьба состоится по обычаям Руси!'),
+            heroIsF ? t('решила') : t('решил'), npcName, npcRepValue, npcRepThreshold, villageRepValue, villageRepThreshold,
+            cost, player.dengas || 0, npcName, npcIsF ? t('согласна') : t('согласен'));
         
-        createDialog(this, '💍 Сватовство', proposalText, [
+        createDialog(this, t('💍 Сватовство'), proposalText, [
             {
-                text: '💍 Сыграем свадьбу!',
+                text: t('💍 Сыграем свадьбу!'),
                 callback: () => {
                     const result = marry(this.registry, interior.npcId, player);
                     if (result.success) {
@@ -1062,22 +1058,20 @@ export class InteriorScene extends Phaser.Scene {
                         // уходила в EndScene («ВОР ПОВЕРЖЕН» вместо свадьбы,
                         // а Проигрыш перебивался победным флагом). Теперь игра
                         // ПРОДОЛЖАЕТСЯ: герой просто женат/замужем в деревне.
-                        const winMessage = `🎉 СВАДЬБА! 🎉\n\n` +
-                            `По обычаям Руси, отец Савватий обвенчал вас в церкви. ` +
-                            `Вся деревня гуляла три дня на свадебном пиру!\n\n` +
-                            `${player.name} и ${result.npcName} теперь — муж и жена.\n` +
-                            `${heroIsF ? 'Ты принята в деревню как своя!' : 'Ты принят в деревню как свой!'}\n\n` +
-                            `Жизнь в деревне продолжается!`;
+                        const winMessage = t('🎉 СВАДЬБА! 🎉\n\nПо обычаям Руси, отец Савватий обвенчал вас в церкви. Вся деревня гуляла три дня на свадебном пиру!\n\n') +
+                            tf(t('{0} и {1} теперь — муж и жена.\n'), player.name, result.npcName) +
+                            (heroIsF ? t('Ты принята в деревню как своя!') : t('Ты принят в деревню как свой!')) + '\n\n' +
+                            t('Жизнь в деревне продолжается!');
                         
-                        createDialog(this, '🎉 СВАДЬБА', winMessage, [
+                        createDialog(this, t('🎉 СВАДЬБА'), winMessage, [
                             {
-                                text: '🎉 Продолжить игру',
+                                text: t('🎉 Продолжить игру'),
                                 callback: () => {
                                     const q = this.registry.get('quest') || {};
                                     // Никаких победных флагов — только семейный статус
                                     q.currentObjective = heroIsF
-                                        ? `Ты замужем за ${result.npcName}. Живи и обустраивай жизнь в деревне!`
-                                        : `Ты женат на ${result.npcName}. Живи и обустраивай жизнь в деревне!`;
+                                        ? tf(t('Ты замужем за {0}. Живи и обустраивай жизнь в деревне!'), result.npcName)
+                                        : tf(t('Ты женат на {0}. Живи и обустраивай жизнь в деревне!'), result.npcName);
                                     this.registry.set('quest', q);
                                     // Остались в интерьере — игра идёт дальше
                                 },
@@ -1091,11 +1085,11 @@ export class InteriorScene extends Phaser.Scene {
                 },
             },
             {
-                text: 'Подумать ещё',
+                text: t('Подумать ещё'),
                 callback: () => {
                     ActionLog.add(this.registry, heroIsF
-                        ? `Решила пока не выходить замуж за ${npcName}.`
-                        : `Решил пока не жениться на ${npcName}.`);
+                        ? tf(t('Решила пока не выходить замуж за {0}.'), npcName)
+                        : tf(t('Решил пока не жениться на {0}.'), npcName));
                 },
             },
         ], {
@@ -1110,20 +1104,18 @@ export class InteriorScene extends Phaser.Scene {
         const player = this.registry.get('player');
         const cost = 20;
         if ((player.dengas || 0) < cost) {
-            createDialog(this, 'Таверна', 'Не хватает денег на выпивку для всех!', [
-                { text: 'Понятно', callback: () => {} },
+            createDialog(this, t('Таверна'), t('Не хватает денег на выпивку для всех!'), [
+                { text: t('Понятно'), callback: () => {} },
             ], { singleton: false, portraitKey: interior.portrait });
             return;
         }
         player.dengas -= cost;
         this.registry.set('player', player);
         const totalBonus = applyTreatEveryoneBonus(this.registry);
-        ActionLog.add(this.registry, `Угостил всех выпивкой в таверне за ${cost} д. (+${totalBonus} к репутации).`);
-        createDialog(this, '🎉 Выпивка для всех',
-            `Ты заказал бочку медовуги на всех! Гости радостно поднимают кубки. ` +
-            `«За гостеприимного гостя!» — раздаётся по залу. ` +
-            `(Репутация у всех NPC +3, в деревне +5)`, [
-            { text: '🎉 За нас!', callback: () => {} },
+        ActionLog.add(this.registry, tf(t('Угостил всех выпивкой в таверне за {0} д. (+{1} к репутации).'), cost, totalBonus));
+        createDialog(this, t('🎉 Выпивка для всех'),
+            t('Ты заказал бочку медовуги на всех! Гости радостно поднимают кубки. «За гостеприимного гостя!» — раздаётся по залу. (Репутация у всех NPC +3, в деревне +5)'), [
+            { text: t('🎉 За нас!'), callback: () => {} },
         ], {
             singleton: false,
             portraitKey: this.npcPortraitKey,
@@ -1151,7 +1143,7 @@ export class InteriorScene extends Phaser.Scene {
 
         // Отказ от торговли при дурной славе (репутация ≤ −50)
         if (willNpcRefuseTrade(this.registry, interior.npcId)) {
-            ActionLog.add(this.registry, `${npcName} отказался торговаться с героем дурной славы (репутация ≤ −50).`);
+            ActionLog.add(this.registry, tf(t('{0} отказался торговаться с героем дурной славы (репутация ≤ −50).'), npcName));
             createDialog(this, interior.name,
                 tf(t('{0} загораживает прилавок рукой:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»'), npcName),
                 [{ text: t('Понятно'), callback: () => {} }],
@@ -1193,13 +1185,13 @@ export class InteriorScene extends Phaser.Scene {
             const y = startY + i * 46;
             const price = Math.max(1, Math.round(item.price * priceMod));
             const canAfford = (player.dengas || 0) >= price;
-            let desc = `${item.name} — ${price} д.`;
+            let desc = `${t(item.name)} — ${price} ${t('д.')}`;
             if (item.kind === 'weapon') {
                 const w = WEAPONS[item.weaponId];
-                if (w) desc += ` (урон ${w.dice.min}-${w.dice.max}+${w.bonus || 0})`;
+                if (w) desc += ` (${t('урон')} ${w.dice.min}-${w.dice.max}+${w.bonus || 0})`;
             } else if (item.kind === 'armor') {
                 const a = ARMORS[item.armorId];
-                if (a) desc += ` (защита ${a.def})`;
+                if (a) desc += ` (${t('защита')} ${a.def})`;
             } else if (item.note) {
                 desc += ` (${t(item.note)})`;
             }
@@ -1233,7 +1225,7 @@ export class InteriorScene extends Phaser.Scene {
                     if (item.mpHeal) player.MP = Math.min(player.MPmax || 0, (player.MP || 0) + item.mpHeal);
                 }
                 this.registry.set('player', player);
-                ActionLog.add(this.registry, `Купил «${t(item.name)}» в «${interior.name}» за ${price} д.${logNote ? ` (${logNote})` : ''}.`);
+                ActionLog.add(this.registry, tf(t('Купил «{0}» в «{1}» за {2} д.{3}'), t(item.name), interior.name, price, logNote ? ` (${logNote})` : ''));
                 this.updateHUD();
                 // Пересобрать панель с обновлённым балансом
                 closeMenu();
@@ -1261,7 +1253,7 @@ export class InteriorScene extends Phaser.Scene {
         // (1 час / 8 часов), чтобы время реально текло, пока герой спит.
         const priceMod = getPriceModifier(this.registry, 'tavernkeeper');
         const items = [
-            { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: '+2 HP', heal: 2, mpHeal: 0 },
+            { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: '+2 HP', heal: 2, mpHeal: 0 },  // name через t() при показе
             { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: '+3 HP', heal: 3, mpHeal: 0 },
             { id: 'mead', name: 'Медовуха', price: Math.max(1, Math.round(4 * priceMod)), effect: '+2 MP', heal: 0, mpHeal: 2 },
             { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: '+1 MP', heal: 0, mpHeal: 1 },
@@ -1275,14 +1267,14 @@ export class InteriorScene extends Phaser.Scene {
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 30, 'Таверна «У дороги» — меню', {
+        this.add.text(width / 2, height / 2 - panelH / 2 + 30, t('Таверна «У дороги» — меню'), {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 65,
-            `Денег: ${formatMoney(player.dengas || 0)}`, {
+            `${t('Денег:')} ${formatMoney(player.dengas || 0)}`, {
             fontSize: '16px', color: '#c9a14a',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setDepth(202);
@@ -1294,8 +1286,8 @@ export class InteriorScene extends Phaser.Scene {
             const canAfford = (player.dengas || 0) >= item.price;
             createButton(this, width / 2, y, `${t(item.name)} — ${item.price} ${t('д.')} (${item.effect})`, () => {
                 if (!canAfford) {
-                    createDialog(this, 'Таверна', 'Не хватает денег!', [
-                        { text: 'Понятно', callback: () => {} },
+                    createDialog(this, t('Таверна'), t('Не хватает денег!'), [
+                        { text: t('Понятно'), callback: () => {} },
                     ], { singleton: false, portraitKey: 'portrait_tavernkeeper' });
                     return;
                 }
@@ -1304,7 +1296,7 @@ export class InteriorScene extends Phaser.Scene {
                 player.HP = Math.min(player.HPmax, player.HP + item.heal);
                 player.MP = Math.min(player.MPmax, player.MP + item.mpHeal);
                 this.registry.set('player', player);
-                ActionLog.add(this.registry, `Купил «${item.name}» в таверне за ${item.price} д. (${item.effect}).`);
+                ActionLog.add(this.registry, tf(t('Купил «{0}» в таверне за {1} д. ({2}).'), t(item.name), item.price, item.effect));
                 this.updateHUD();
                 // Закрыть меню и открыть заново с обновлённым балансом
                 overlay.destroy();
@@ -1320,7 +1312,7 @@ export class InteriorScene extends Phaser.Scene {
         });
 
         // Кнопка закрытия
-        createButton(this, width / 2, height / 2 + panelH / 2 - 30, 'Закрыть', () => {
+        createButton(this, width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), () => {
             overlay.destroy();
             panel.destroy();
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
@@ -1666,7 +1658,7 @@ export class InteriorScene extends Phaser.Scene {
 
         // 7э: отказ от торговли при дурной славе (репутация ≤ −50)
         if (willNpcRefuseTrade(this.registry, smithId)) {
-            ActionLog.add(this.registry, `${smithName} отказался торговаться с героем дурной славы (репутация ≤ −50).`);
+            ActionLog.add(this.registry, tf(t('{0} отказался торговаться с героем дурной славы (репутация ≤ −50).'), smithName));
             createDialog(this, t('Кузница'),
                 tf(t('{0} откладывает молот и крестит руки на груди:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»'), smithName),
                 [{ text: t('Понятно'), callback: () => {} }],
@@ -1688,14 +1680,14 @@ export class InteriorScene extends Phaser.Scene {
         };
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 30,
-            smithId === 'blacksmith' ? 'Кузница Данилы' : tf(t('Кузница — {0}'), smithName), {
+            smithId === 'blacksmith' ? t('Кузница Данилы') : tf(t('Кузница — {0}'), smithName), {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 65,
-            `Денег: ${formatMoney(player.dengas || 0)}`, {
+            `${t('Денег:')} ${formatMoney(player.dengas || 0)}`, {
             fontSize: '16px', color: '#c9a14a',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setDepth(202);
@@ -1712,7 +1704,7 @@ export class InteriorScene extends Phaser.Scene {
         }).setDepth(202);
         mkTab(width / 2 - 150, 'Оружие', 'weapon');
         mkTab(width / 2, 'Доспехи', 'armor');
-        mkTab(width / 2 + 150, 'Продать', 'sell');
+        mkTab(width / 2 + 150, 'Продать', 'sell');  // метки через t(label) в mkTab
 
         // Список товаров
         const startY = height / 2 - panelH / 2 + 150;
@@ -1739,7 +1731,7 @@ export class InteriorScene extends Phaser.Scene {
                 const base = (WEAPONS[item.id] && WEAPONS[item.id].price)
                     || (ARMORS[item.id] && ARMORS[item.id].price) || 10;
                 const sellPrice = Math.max(1, Math.floor(base / 2));
-                const label = `💰 ${item.name} — ${sellPrice} д. (полцены)`;
+                const label = `💰 ${t(item.name)} — ${sellPrice} ${t('д.')} (${t('полцены')})`;
                 createButton(this, width / 2, y, label, () => {
                     item.count -= 1;
                     if (item.count <= 0) {
@@ -1748,7 +1740,7 @@ export class InteriorScene extends Phaser.Scene {
                     player.dengas = (player.dengas || 0) + sellPrice;
                     this.registry.set('player', player);
                     if (this.audioManager) this.audioManager.playGoldReceive();
-                    ActionLog.add(this.registry, `Продал «${item.name}» кузнецу за ${sellPrice} д. (полцены, урок Судебника о честной торговле).`);
+                    ActionLog.add(this.registry, tf(t('Продал «{0}» кузнецу за {1} д. (полцены, урок Судебника о честной торговле).'), t(item.name), sellPrice));
                     this.updateHUD();
                     closeMenu();
                     this.showBlacksmithShop('sell');
@@ -1773,11 +1765,11 @@ export class InteriorScene extends Phaser.Scene {
                 const allowed = canAfford && gearCheck.ok;
                 const lockNote = isMilitary ? (gearCheck.ok ? t(' 🔒 воинское') : t(' 🔒')) : '';
                 const desc = tab === 'weapon'
-                    ? `${item.name} — ${price} д.${modNote} (урон ${item.dice.min}-${item.dice.max}+${item.bonus || 0})${lockNote}`
-                    : `${item.name} — ${price} д.${modNote} (защита ${item.def})${lockNote}`;
+                    ? `${t(item.name)} — ${price} ${t('д.')}${modNote} (${t('урон')} ${item.dice.min}-${item.dice.max}+${item.bonus || 0})${lockNote}`
+                    : `${t(item.name)} — ${price} ${t('д.')}${modNote} (${t('защита')} ${item.def})${lockNote}`;
                 createButton(this, width / 2, y, desc, () => {
                     if (isMilitary && !gearCheck.ok) {
-                        createDialog(this, t('Кузница'), tf(t('{0} качает головой: «{1}.»'), smithName, gearCheck.reason), [
+                        createDialog(this, t('Кузница'), tf(t('{0} качает головой: «{1}.»'), smithName, t(gearCheck.reason)), [
                             { text: t('Понятно'), callback: () => {} },
                         ], { singleton: false, portraitKey: smithPortrait });
                         return;
@@ -1804,7 +1796,7 @@ export class InteriorScene extends Phaser.Scene {
                         }
                     }
                     this.registry.set('player', player);
-                    ActionLog.add(this.registry, `Купил «${item.name}» у кузнеца за ${price} д.${isMilitary ? t(' (воинское снаряжение, по уложению Судебника)') : ''}`);
+                    ActionLog.add(this.registry, tf(t('Купил «{0}» у кузнеца за {1} д.{2}'), t(item.name), price, isMilitary ? t(' (воинское снаряжение, по уложению Судебника)') : ''));
                     this.updateHUD();
                     closeMenu();
                     this.showBlacksmithShop(tab);
@@ -1818,7 +1810,7 @@ export class InteriorScene extends Phaser.Scene {
         }
 
         // Кнопка закрытия
-        createButton(this, width / 2, height / 2 + panelH / 2 - 30, 'Закрыть', () => {
+        createButton(this, width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), () => {
             closeMenu();
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
@@ -1845,7 +1837,7 @@ export class InteriorScene extends Phaser.Scene {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
         if (!player) return;
-        ActionLog.add(this.registry, 'Осмотрел себя у кузнеца (свиток персонажа).');
+        ActionLog.add(this.registry, t('Осмотрел себя у кузнеца (свиток персонажа).'));
         this.scene.pause();
         this.scene.launch('Character', { from: 'Interior', tab: 'inventory' });
     }
@@ -1863,9 +1855,9 @@ export class InteriorScene extends Phaser.Scene {
         const q = this.registry.get('quest') || {};
         const today = this.dayKey();
         if (q.prayerDay === today) {
-            ActionLog.add(this.registry, 'Помолился в церкви (уже молился сегодня).');
-            createDialog(this, 'Молитва', 'Ты снова стоишь перед киотом. Сердце уже нашло покой сегодня — больше не нужно.', [
-                { text: 'Аминь.', callback: () => {} },
+            ActionLog.add(this.registry, t('Помолился в церкви (уже молился сегодня).'));
+            createDialog(this, t('Молитва'), t('Ты снова стоишь перед киотом. Сердце уже нашло покой сегодня — больше не нужно.'), [
+                { text: t('Аминь.'), callback: () => {} },
             ]);
             return;
         }
@@ -1877,11 +1869,11 @@ export class InteriorScene extends Phaser.Scene {
         this.registry.set('player', player);
         this.audioManager.playPrayerChant(); // раунд 24: тихая молитва
         this.updateHUD();
-        ActionLog.add(this.registry, `Помолился в церкви — Воля +${gain}.`);
+        ActionLog.add(this.registry, tf(t('Помолился в церкви — Воля +{0}.'), gain));
 
-        createDialog(this, 'Молитва',
-            'Ты опускаешься на колени перед киотом. В полумраке церкви, под мерцание лампад, приходит покой.\n\nВоля восстановлена: +' + gain + '.',
-            [{ text: 'Встать с колен.', callback: () => {} }]);
+        createDialog(this, t('Молитва'),
+            tf(t('Ты опускаешься на колени перед киотом. В полумраке церкви, под мерцание лампад, приходит покой.\n\nВоля восстановлена: +{0}.'), gain),
+            [{ text: t('Встать с колен.'), callback: () => {} }]);
     }
 
     /**
@@ -1896,14 +1888,14 @@ export class InteriorScene extends Phaser.Scene {
         const q = this.registry.get('quest') || {};
         const today = this.dayKey();
         if (q.donationDay === today) {
-            createDialog(this, 'Пожертвование', 'Ты уже жертвовал сегодня. Свечей куплено на всю неделю вперёд.', [
-                { text: 'Ну ладно.', callback: () => {} },
+            createDialog(this, t('Пожертвование'), t('Ты уже жертвовал сегодня. Свечей куплено на всю неделю вперёд.'), [
+                { text: t('Ну ладно.'), callback: () => {} },
             ]);
             return;
         }
         if ((player.dengas || 0) < 5) {
-            createDialog(this, 'Пожертвование', 'В мошне пусто — не до пожертвований. Заработай в амбаре или помоги деревне.', [
-                { text: 'Приду позже.', callback: () => {} },
+            createDialog(this, t('Пожертвование'), t('В мошне пусто — не до пожертвований. Заработай в амбаре или помоги деревне.'), [
+                { text: t('Приду позже.'), callback: () => {} },
             ]);
             return;
         }
@@ -1911,15 +1903,15 @@ export class InteriorScene extends Phaser.Scene {
         this.registry.set('player', player);
         q.donationDay = today;
         this.registry.set('quest', q);
-        const res = changeVillageRep(this.registry, 1, 'Пожертвование в церкви');
+        const res = changeVillageRep(this.registry, 1, t('Пожертвование в церкви'));
         tickTime(this.registry, 10);
         this.updateHUD();
-        ActionLog.add(this.registry, 'Пожертвовал 5 д. в церкви — деревня это помнит (+1 репутация).');
+        ActionLog.add(this.registry, t('Пожертвовал 5 д. в церкви — деревня это помнит (+1 репутация).'));
 
-        createDialog(this, 'Пожертвование',
-            'Ты кладёшь пять денег на блюдо у входа. «На свечи и ладан», — говоришь тихо. Казначей церкви будет рад.\n\n' +
-            (res && res.message ? res.message : 'Репутация в деревне +1.'),
-            [{ text: 'Низко поклониться иконам.', callback: () => {} }]);
+        createDialog(this, t('Пожертвование'),
+            t('Ты кладёшь пять денег на блюдо у входа. «На свечи и ладан», — говоришь тихо. Казначей церкви будет рад.\n\n') +
+            (res && res.message ? res.message : t('Репутация в деревне +1.')),
+            [{ text: t('Низко поклониться иконам.'), callback: () => {} }]);
     }
 
     /**
@@ -1933,22 +1925,21 @@ export class InteriorScene extends Phaser.Scene {
         tickTime(this.registry, 10);
 
         if (q.kiotInspected || q.chapelInspected) {
-            createDialog(this, 'Пустой киот', 'Больше тут ничего не изменилось: ниша без иконы, воск на полу, верёвка.', [
-                { text: 'Уйти от киота.', callback: () => {} },
+            createDialog(this, t('Пустой киот'), t('Больше тут ничего не изменилось: ниша без иконы, воск на полу, верёвка.'), [
+                { text: t('Уйти от киота.'), callback: () => {} },
             ]);
             return;
         }
         q.kiotInspected = true;
         if (!q.cluesGathered) q.cluesGathered = [];
-        const clue = 'На полу церкви — капли стеарина и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в церкви горела свеча.';
-        q.cluesGathered.push({ npcId: 'church', npcName: 'Церковь', clue });
+        const clue = t('На полу церкви — капли стеарина и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в церкви горела свеча.');
+        q.cluesGathered.push({ npcId: 'church', npcName: t('Церковь'), clue });
         this.registry.set('quest', q);
-        ActionLog.add(this.registry, 'Осмотрел киот в церкви — нашёл улику (воск, верёвка с узлами).');
+        ActionLog.add(this.registry, t('Осмотрел киот в церкви — нашёл улику (воск, верёвка с узлами).'));
 
-        createDialog(this, 'Осмотр киота',
-            'Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли стеарина, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\n' +
-            'Вор был не один — и нёс святыню бережно. Это стоит рассказать старосте.\n\nУлика добавлена к делу.',
-            [{ text: 'Запомнить.', callback: () => {} }]);
+        createDialog(this, t('Осмотр киота'),
+            t('Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли стеарина, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\nВор был не один — и нёс святыню бережно. Это стоит рассказать старосте.\n\nУлика добавлена к делу.'),
+            [{ text: t('Запомнить.'), callback: () => {} }]);
     }
 
     // ================================================================
@@ -1960,14 +1951,15 @@ export class InteriorScene extends Phaser.Scene {
      * 15% шанс найти монетку в соломе. При истощении (HP ≤ 5) отказ.
      */
     /**
-     * Раунд 37 (п.4): единый масштаб по возрасту в интерьерах.
-     * Взрослый — 1.0 (базовый 2.5, как игрок), подросток — 0.85, ребёнок — 0.7.
+     * Единый масштаб по возрасту в интерьерах (раунд 37 п.4; раунд 58 п.5 —
+     * строго по возрасту). Взрослый — 1.0 (базовый 2.5, как игрок),
+     * подросток — 0.85, ребёнок — 0.7.
      */
     interiorAgeScale(npcData) {
         const age = (npcData && npcData.age) || 30;
         if (age <= 12) return 0.7;
         if (age <= 17) return 0.85;
-        return ((npcData && npcData.look && npcData.look.scale) || 1);
+        return 1;
     }
 
     workInPotter() {
@@ -1976,8 +1968,8 @@ export class InteriorScene extends Phaser.Scene {
         if (!player) return;
 
         if ((player.HP || 0) <= 5) {
-            createDialog(this, 'Силы кончились', 'Руки не поднимаются таскать дрова и мять глину. Нужно поесть и отдохнуть, прежде чем браться за работу.', [
-                { text: 'Справедливо...', callback: () => {} },
+            createDialog(this, t('Силы кончились'), t('Руки не поднимаются таскать дрова и мять глину. Нужно поесть и отдохнуть, прежде чем браться за работу.'), [
+                { text: t('Справедливо...'), callback: () => {} },
             ]);
             return;
         }
@@ -1988,16 +1980,16 @@ export class InteriorScene extends Phaser.Scene {
         let bonusMsg = '';
         if (Math.random() < 0.15) {
             bonus = Phaser.Math.Between(2, 4);
-            bonusMsg = '\n\nВ углу мастерской блеснула чужая монетка — видать, обронил кто-то из заказчиков. Она твоя: +' + bonus + ' д.';
+            bonusMsg = '\n\n' + tf(t('В углу мастерской блеснула чужая монетка — видать, обронил кто-то из заказчиков. Она твоя: +{0} д.'), bonus);
         }
         player.dengas = (player.dengas || 0) + wage + bonus;
         this.registry.set('player', player);
         this.updateHUD();
-        ActionLog.add(this.registry, `Отработал час в гончарной мастерской: +${wage + bonus} д., усталость −3 HP.`);
+        ActionLog.add(this.registry, tf(t('Отработал час в гончарной мастерской: +{0} д., усталость −3 HP.'), wage + bonus));
 
-        createDialog(this, 'Помощь в мастерской',
-            'Час у круга и печи: носил дрова, мешал глину, ставил горшки на обжиг. Игнат доволен: «Работник, что надо!»\n\n' +
-            'Заработано: +' + wage + ' д. Усталость: −3 здоровья.' + bonusMsg,
+        createDialog(this, t('Помощь в мастерской'),
+            t('Час у круга и печи: носил дрова, мешал глину, ставил горшки на обжиг. Игнат доволен: «Работник, что надо!»\n\n') +
+            tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), wage) + bonusMsg,
             [
                 { text: t('Спасибо'), callback: () => {} },
             ]);
@@ -2011,8 +2003,8 @@ export class InteriorScene extends Phaser.Scene {
 
     inspectBarnGrain() {
         // Раунд 37: зерно амбара больше не осматривается — амбара нет (п.18).
-        createDialog(this, 'Мастерская',
-            'Гончарного зерна тут нет — только глина, дрова и ряды горшков на просушке.',
+        createDialog(this, t('Мастерская'),
+            t('Гончарного зерна тут нет — только глина, дрова и ряды горшков на просушке.'),
             [
                 { text: t('Понятно'), callback: () => {} },
             ]);
@@ -2031,14 +2023,14 @@ export class InteriorScene extends Phaser.Scene {
             player.HP = Math.min(player.HPmax || player.HP + 2, player.HP + 2);
             this.registry.set('player', player);
             this.updateHUD();
-            extra = '\n\nВ углу мастерской нашлась горсть сушёных яблок — Игнат не обидится. +2 здоровья.';
-            ActionLog.add(this.registry, 'Подкрепился сушёными яблоками в мастерской: +2 HP.');
+            extra = '\n\n' + t('В углу мастерской нашлась горсть сушёных яблок — Игнат не обидится. +2 здоровья.');
+            ActionLog.add(this.registry, t('Подкрепился сушёными яблоками в мастерской: +2 HP.'));
         }
-        const mice = ['мышь-хвостунья черкнула за мешками глины', 'воробей вылетел в слуховое окно', 'кот-невидимка оставил следы на просушке'];
-        createDialog(this, 'Осмотр мастерской',
-            'Всё при деле: глина вымешена, горшки на просушке, дрова в поленнице. Пахнет печным жаром.\n\n' +
-            'Мимо ' + mice[Phaser.Math.Between(0, mice.length - 1)] + '.' + extra,
-            [{ text: 'Довольно.', callback: () => {} }]);
+        const mice = [t('мышь-хвостунья черкнула за мешками глины'), t('воробей вылетел в слуховое окно'), t('кот-невидимка оставил следы на просушке')];
+        createDialog(this, t('Осмотр мастерской'),
+            t('Всё при деле: глина вымешена, горшки на просушке, дрова в поленнице. Пахнет печным жаром.\n\n') +
+            t('Мимо ') + mice[Phaser.Math.Between(0, mice.length - 1)] + '.' + extra,
+            [{ text: t('Довольно.'), callback: () => {} }]);
     }
 
     /**
@@ -2400,7 +2392,7 @@ export class InteriorScene extends Phaser.Scene {
             // След от иконы: чуть более светлая «тень» в нише
             kiot.fillStyle(0x2c1e10, 1);
             kiot.fillRect(kx - 26, ky - 52, 52, 104);
-            this.add.text(kx, ky + 62, 'слово Божие — в сердцах', {
+            this.add.text(kx, ky + 62, t('слово Божие — в сердцах'), {
                 fontSize: '10px', color: '#8a7248', fontFamily: 'Georgia, serif',
             }).setOrigin(0.5).setDepth(5);
             if (!painted && !hasBg) {

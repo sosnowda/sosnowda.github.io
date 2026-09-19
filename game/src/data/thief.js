@@ -76,8 +76,9 @@ function talkerName(registry, npcId, fallbackName) {
 
 // Раунд 32 (п.2): длительность одного тика погони = 1 ИГРОВОЙ ЧАС.
 // Вор делает НЕ БОЛЕЕ ОДНОГО ШАГА за час: за тик он либо ждёт на локации,
-// либо один раз переходит к следующей. Часы для игрока: разговор — 1 час,
-// обследование следа — 1 час, переход по карте — ровно 1 час (п.5).
+// либо один раз переходит к следующей. Часы для игрока (раунд 58 п.1):
+// разговор — 10 минут, вход в дом — 10 минут, обследование следа — 1 час,
+// переход по карте — ровно 1 час (п.5).
 export const TICK_MINUTES = 60;
 // Сколько локаций проходит вор, прежде чем сбежать (раунд 22: было 2, стало 3)
 export const CHASE_STOPS = 3;
@@ -413,14 +414,14 @@ export function examineFootprint(registry, locationId, fpId) {
             message += '\n' + tf(t('Сам след ведёт в сторону «{0}».'), next ? next.name : trace.wentTo);
         }
         message += nightNote;
-        ActionLog.add(registry, `Обследовал след в «${loc.name}» — след прочитан (бросок ${res.roll}, успех${nightPenalty ? ', ночь' : ''}): вор у «${nowLoc ? nowLoc.name : '?'}».`);
+        ActionLog.add(registry, tf(t('Обследовал след в «{0}» — след прочитан (бросок {1}, успех{2}): вор у «{3}».'), t(loc.name), res.roll, nightPenalty ? t(', ночь') : '', t(nowLoc ? nowLoc.name : '?')));
         return { resolved: true, found: true, message, turnsLeft: chaseTicksLeft(registry), thiefEscaped: false };
     }
 
     // НЕУДАЧА: след пропадает (п.5)
     st[fpId] = 'gone';
     registry.set('quest', q);
-    ActionLog.add(registry, `Обследовал след в «${loc.name}» — провал (бросок ${res.roll}${nightPenalty ? ', ночь' : ''}), след затёрт.`);
+    ActionLog.add(registry, tf(t('Обследовал след в «{0}» — провал (бросок {1}{2}), след затёрт.'), t(loc.name), res.roll, nightPenalty ? t(', ночь') : ''));
     return {
         resolved: true, found: false,
         message: t('Ты пригляделся к следу, но неосторожно наступил — отпечаток затрётся и пропал. Больше этот след не обследовать.') + nightNote,
@@ -536,6 +537,17 @@ export function chaseTicksLeft(registry) {
         total += TRAVEL_TICKS + (c.stays[j] || 0);
     }
     return total;
+}
+
+/**
+ * Раунд 58 (п.2 приказа владельца): ИНДИКАЦИЯ ВРЕМЕНИ ДО ПОБЕГА ВОРА.
+ * Каждый тик погони = 1 игровой час (TICK_MINUTES = 60), поэтому
+ * chaseTicksLeft — это ровно «сколько игровых часов осталось до того,
+ * как вор покинет последнюю локацию и скроется». Сцены показывают это
+ * счётчиком «⏳ До побега вора: ~N ч» (красный ≤3 ч, оранжевый ≤6 ч).
+ */
+export function chaseHoursLeft(registry) {
+    return chaseTicksLeft(registry);
 }
 
 /** Где вор сейчас/куда направляется — для подсказок селян и следов. */
@@ -722,7 +734,7 @@ export function searchLocation(registry, locationId) {
     if (isThiefAt(registry, locationId)) {
         if (!q.locationsSearched.includes(locationId)) q.locationsSearched.push(locationId);
         registry.set('quest', q);
-        ActionLog.add(registry, `Поиск следов в «${loc.name}» — вор рядом!`);
+        ActionLog.add(registry, tf(t('Поиск следов в «{0}» — вор рядом!'), t(loc.name)));
         return {
             found: false, alreadySearched: false, thiefNearby: true,
             message: t('Следы свежайшие — трава ещё примята! Вор где-то совсем рядом, оглянись!'),
@@ -764,10 +776,10 @@ export function searchLocation(registry, locationId) {
                     ? ' ' + tf(t('По свежести примятой травы ясно: вор сейчас на дороге к «{0}»!'), nowLoc.name)
                     : ' ' + tf(t('Судя по свежести следов, вор сейчас где-то у «{0}»!'), nowLoc.name);
             }
-            ActionLog.add(registry, `Поиск следов в «${loc.name}» — следы прочитаны (бросок ${res.roll}, успех${nightPenaltyS ? ', ночь' : ''}).`);
+            ActionLog.add(registry, tf(t('Поиск следов в «{0}» — следы прочитаны (бросок {1}, успех{2}).'), t(loc.name), res.roll, nightPenaltyS ? t(', ночь') : ''));
             return { found: true, direction: trace.wentTo, message, turnsLeft: chaseTicksLeft(registry), thiefEscaped: false };
         }
-        ActionLog.add(registry, `Поиск следов в «${loc.name}» — провал (бросок ${res.roll}, следы были, но не разобраны).`);
+        ActionLog.add(registry, tf(t('Поиск следов в «{0}» — провал (бросок {1}, следы были, но не разобраны).'), t(loc.name), res.roll));
         return {
             found: false, alreadySearched: false,
             message: t('Кто-то здесь проходил — видны примятые травы, но разобрать следы не вышло. Больше следы здесь не обследовать: придётся искать вора ВСЛЕПУЮ — обходить локации или расспрашивать других селян.'),
@@ -778,7 +790,7 @@ export function searchLocation(registry, locationId) {
     // 3) Вор здесь не проходил
     if (!q.locationsSearched.includes(locationId)) q.locationsSearched.push(locationId);
     registry.set('quest', q);
-    ActionLog.add(registry, `Поиск следов в «${loc.name}» — следов нет.`);
+    ActionLog.add(registry, tf(t('Поиск следов в «{0}» — следов нет.'), t(loc.name)));
     return {
         found: false, alreadySearched: true,
         message: t('Ты тщательно осмотрел местность — свежих следов вора здесь нет. Видимо, он пошёл другой дорогой.'),
@@ -930,7 +942,7 @@ export function askNPC(registry, npcId, npcName) {
         // Раунд 41: в улике храним динамическое имя (панель «Улики от жителей»)
         q.cluesGathered.push({ npcId, npcName: who, clue: clueText, whereClue: true });
         message = `${who}: «${clueText}»`;
-        ActionLog.add(registry, `Расспрос ${who} о воре — СВИДЕТЕЛЬ: ${clueText}.`);
+        ActionLog.add(registry, tf(t('Расспрос {0} о воре — СВИДЕТЕЛЬ: {1}.'), who, clueText));
     } else {
         // Не все могли видеть вора — этот селянин ничего не знает
         const notSeen = [
@@ -939,7 +951,7 @@ export function askNPC(registry, npcId, npcName) {
             t('Темных людей не видал, батиушко упаси. Может, в другой стороне ищешь?'),
         ];
         message = `${who}: «${notSeen[Math.floor(Math.random() * notSeen.length)]}»`;
-        ActionLog.add(registry, `Расспрос ${who} о воре — не свидетель, ничего не знает.`);
+        ActionLog.add(registry, tf(t('Расспрос {0} о воре — не свидетель, ничего не знает.'), who));
     }
 
     registry.set('quest', q);
@@ -990,18 +1002,18 @@ export function askMoneyForHelp(registry, npcId, npcName) {
         amount = Math.round((15 + Math.floor(Math.random() * 15)) * npcGenerosity * 2);
         success = true;
         message = `${who}: «${t('Возьми, путник, чем богат. Помоги тебе Господь!')}» (+${amount} д.)`;
-        ActionLog.add(registry, `Просил денег у ${who} — КРИТИЧЕСКИЙ успех, получено ${amount} д. (${checkLine}).`);
+        ActionLog.add(registry, tf(t('Просил денег у {0} — КРИТИЧЕСКИЙ успех, получено {1} д. ({2}).'), who, amount, checkLine));
     } else if (res.result === 'success') {
         amount = Math.round((5 + Math.floor(Math.random() * 15)) * npcGenerosity);
         success = true;
         message = `${who}: «${t('Вот тебе немного денег на дорогу.')}» (+${amount} д.)`;
-        ActionLog.add(registry, `Просил денег у ${who} — успех, получено ${amount} д. (${checkLine}).`);
+        ActionLog.add(registry, tf(t('Просил денег у {0} — успех, получено {1} д. ({2}).'), who, amount, checkLine));
     } else if (res.result === 'fumble') {
         message = `${who}: «${t('Попрошайка! Уходи, не позорься!')}» (${t('Больше не даст.')})`;
-        ActionLog.add(registry, `Просил денег у ${who} — FUMBLE, ничего не получено (${checkLine}).`);
+        ActionLog.add(registry, tf(t('Просил денег у {0} — FUMBLE, ничего не получено ({1}).'), who, checkLine));
     } else {
         message = `${who}: «${t('Нет у меня лишних денег, сам перебиваюсь.')}»`;
-        ActionLog.add(registry, `Просил денег у ${who} — провал, ничего не получено (${checkLine}).`);
+        ActionLog.add(registry, tf(t('Просил денег у {0} — провал, ничего не получено ({1}).'), who, checkLine));
     }
 
     if (success) {
@@ -1164,7 +1176,7 @@ export function persuadeThief(registry) {
 
     // Провал убеждения — вор паникует и бежит
     const fled = thiefFleesNow(registry);
-    ActionLog.add(registry, `Убеждение не подействовало (${checkLine})${fled.escaped ? ' — вор скрылся!' : ' — вор пустился наутёк!'}`);
+    ActionLog.add(registry, tf(t('Убеждение не подействовало ({0}){1}'), checkLine, fled.escaped ? t(' — вор скрылся!') : t(' — вор пустился наутёк!')));
     return {
         success: false,
         message: fled.escaped
@@ -1206,7 +1218,7 @@ export function stunThief(registry) {
     }
 
     const fled = thiefFleesNow(registry);
-    ActionLog.add(registry, `Оглушить вора не вышло (${checkLine})${fled.escaped ? ' — вор скрылся!' : ' — вор пустился наутёк!'}`);
+    ActionLog.add(registry, tf(t('Оглушить вора не вышло ({0}){1}'), checkLine, fled.escaped ? t(' — вор скрылся!') : t(' — вор пустился наутёк!')));
     return {
         success: false,
         message: fled.escaped

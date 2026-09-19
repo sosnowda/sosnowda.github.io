@@ -6,7 +6,7 @@ import { getHuntState, checkGameEnd } from '../data/thief.js';
 import { createButton, bindRestartOnResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { getTime, formatDateTime } from '../systems/TimeSystem.js';
-import { t } from '../systems/i18n.js';
+import { t, tf } from '../systems/i18n.js';
 
 export class EndScene extends Phaser.Scene {
     constructor() {
@@ -63,12 +63,12 @@ export class EndScene extends Phaser.Scene {
             endType = 'victory';
             // Раунд 21: победа бывает двух степеней — святыня возвращена деревне
             // или вор повержен, но икона ещё у героя
-            endTitle = quest.mainQuestDone ? '🏆 ПОБЕДА! ИКОНА ВОЗВРАЩЕНА' : '⚖ ВОР ПОВЕРЖЕН';
+            endTitle = quest.mainQuestDone ? t('🏆 ПОБЕДА! ИКОНА ВОЗВРАЩЕНА') : t('⚖ ВОР ПОВЕРЖЕН');
             endColor = '#ffcc40';
             this.audioManager.playLevelUp();
         } else if (quest.thiefEscaped) {
             endType = 'defeat';
-            endTitle = '🏃 ВОР СБЕЖАЛ';
+            endTitle = t('🏃 ВОР СБЕЖАЛ');
             endColor = '#ff6040';
         } else if (quest.expelledFromVillage) {
             // Раунд 45 (п.2): изгнание за дурную славу (репутация −100) —
@@ -78,7 +78,7 @@ export class EndScene extends Phaser.Scene {
             endColor = '#ff4040';
         } else if (quest.heroDead) {
             endType = 'defeat';
-            endTitle = '☠ ГЕРОЙ ПАЛ';
+            endTitle = t('☠ ГЕРОЙ ПАЛ');
             endColor = '#ff4040';
         }
 
@@ -108,7 +108,7 @@ export class EndScene extends Phaser.Scene {
         // ----- Подзаголовок оценки -----
         // Раунд 41 (QA): титулы вида «Путник пал» теперь подставляют имя героя
         const hero = this.registry.get('player') || {};
-        const heroName = hero.name || (hero.gender === 'female' ? 'Путница' : 'Путник');
+        const heroName = hero.name || (hero.gender === 'female' ? t('Путница') : t('Путник'));
         const titleLine = t(rating.title).replace(/Путница|Путник(ка)?/, heroName);
         this.add.text(width / 2, panelY + 140, titleLine, {
             fontSize: '24px', color: RUS.text, fontStyle: 'bold',
@@ -128,13 +128,13 @@ export class EndScene extends Phaser.Scene {
         // ----- Статистика -----
         const stats = rating.stats || {};
         const timeState = getTime(this.registry);
-        const finalDate = timeState ? formatDateTime(timeState) : 'неизвестно';
+        const finalDate = timeState ? formatDateTime(timeState) : t('неизвестно');
         const statsText = [
-            `Всего действий: ${stats.total || 0}`,
-            `Поисков следов: ${stats.searches || 0}`,
-            `Бесед с жителями: ${stats.talks || 0}`,
-            `Провалов проверок: ${stats.failed || 0}`,
-            `Финальная дата: ${finalDate}`,
+            tf(t('Всего действий: {0}'), stats.total || 0),
+            tf(t('Поисков следов: {0}'), stats.searches || 0),
+            tf(t('Бесед с жителями: {0}'), stats.talks || 0),
+            tf(t('Провалов проверок: {0}'), stats.failed || 0),
+            tf(t('Финальная дата: {0}'), finalDate),
         ].join('   |   ');
         this.add.text(width / 2, panelY + 220, statsText, {
             fontSize: '12px', color: '#c9a14a',
@@ -145,14 +145,14 @@ export class EndScene extends Phaser.Scene {
         }).setOrigin(0.5, 0);
 
         // ----- Лог действий -----
-        this.add.text(width / 2, panelY + 260, '📜 Хроника действий:', {
+        this.add.text(width / 2, panelY + 260, t('📜 Хроника действий:'), {
             fontSize: '18px', color: RUS.text, fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5, 0);
 
         // Контейнер лога с прокруткой (через Text с wordWrap)
-        const logText = log ? log.getFormattedText().join('\n') : 'Лог пуст';
+        const logText = log ? log.getFormattedText().join('\n') : t('Лог пуст');
         const logBox = this.add.text(width / 2, panelY + 295, logText, {
             fontSize: '12px', color: RUS.text,
             fontFamily: 'Courier New, monospace',
@@ -184,7 +184,7 @@ export class EndScene extends Phaser.Scene {
 
         // ----- Кнопки -----
         const btnY = panelY + panelH - 50;
-        createButton(this, width / 2 - 130, btnY, 'Новая игра', () => {
+        createButton(this, width / 2 - 130, btnY, t('Новая игра'), () => {
             // Очистка состояния
             this.registry.set('quest', null);
             this.registry.set('actionLog', null);
@@ -195,7 +195,7 @@ export class EndScene extends Phaser.Scene {
             cornerRadius: 8,
         });
 
-        createButton(this, width / 2 + 130, btnY, 'В меню', () => {
+        createButton(this, width / 2 + 130, btnY, t('В меню'), () => {
             this.scene.start('Title');
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
