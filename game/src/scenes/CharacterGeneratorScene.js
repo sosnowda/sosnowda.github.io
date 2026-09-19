@@ -1,13 +1,16 @@
 // CharacterGeneratorScene.js — создание собственного персонажа.
 //
-// РАУНД 50 (пп.8,9 заявки): меню LPC-кастомизации ОТКЛЮЧЕНО — готовые
-// спрайты Medieval - Heroes I не слоевые, перекрашивать их слоями нельзя.
-// Оставлено только то, что велено владельцем: ИМЯ, КЛАСС, ВОЗРАСТ —
-// плюс выбор ОБЛИКА героя (4 готовых фигурки Medieval-Heroes I,
-// список фильтруется по полу; сам выбор облика = п.9 заявки).
+// РАУНД 50 (пп.8,9 заявки): меню послойной LPC-кастомизации было отключено —
+// готовые спрайты Medieval - Heroes I не слоевые.
+// РАУНД 59 (пп.7,8 приказа владельца): облик героя снова СОБИРАЕТСЯ ИЗ СЛОЁВ
+// LPC — тем же единым шаблоном, что и жители (NpcLpc), а цвета ОДЕЖДЫ,
+// ВОЛОС и ГЛАЗ выбираются СЛУЧАЙНЫМ ОБРАЗОМ при каждом старте игры.
+// Осталось по-прежнему: ИМЯ, КЛАСС, ВОЗРАСТ, ПОЛ (+ кнопка «Другой облик»).
 //
-// Контракт со сценами: player.sprite = 'hero_<key>' (лист 4×4 × 64px,
-// анимации созданы в BootScene.createWalkAnimations), player.useComposite=false.
+// Контракт со сценами (раунд 59): player.useComposite = true, спрайт —
+// LPC-композит 'player_composite' (анимации player_composite_walk_*/idle_*).
+// Все сцены (Village/Interior/Location/Apiary/Forest) уже поддерживают
+// композитный путь — проверяют player.useComposite.
 
 import { RUS } from '../config/RusTheme.js';
 import { createButton, bindRestartOnResize } from '../utils/ui.js';
@@ -20,7 +23,9 @@ import { resetVillageName } from '../data/world.js';
 import { initTime, createRandomStartDate } from '../systems/TimeSystem.js';
 import { initNpcNames } from '../data/npcNames.js';
 import { initReputation } from '../data/reputation.js';
-import { HERO_LOOKS, heroLooksForGender } from '../data/heroes.js';
+// Раунд 59 (пп.7,8 приказа владельца): облик героя собирается ЕДИНМ шаблоном
+// LPC (как у жителей), а цвета ОДЕЖДЫ/ВОЛОС/ГЛАЗ — СЛУЧАЙНЫЕ на каждый старт
+import { rollPlayerAppearance, composePlayerTexture } from '../systems/NpcLpc.js';
 import AudioManager from '../systems/AudioManager.js';
 
 const ARCHETYPES = ['Следопыт', 'Воин', 'Сыщик', 'Приключенец'];
@@ -40,15 +45,14 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         this.sex = 'male';
         this.selectedAge = AGE_DEFAULT; // возраст героя 15..50 (раунд 44)
         this.archetype = 'Приключенец';
-        this.heroKey = 'hero_baenor';
-        this.heroCards = [];
+        this.playerLook = null;  // раунд 59: случайный облик (LPC-слои)
 
         this.add.text(width / 2, 26, t('🎨 Создание персонажа'), {
             fontFamily: 'Georgia, serif',
             fontSize: '28px', color: RUS.text, fontStyle: 'bold',
             stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5, 0);
-        this.add.text(width / 2, 60, t('Имя, класс, возраст — и облик из готовых героев. Кастомизация слоёв отключена (раунд 50).'), {
+        this.add.text(width / 2, 60, t('Имя, класс, возраст, пол — облик собран единым шаблоном со случайными цветами (раунд 59).'), {
             fontSize: '13px', color: RUS.textDim,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5, 0);
@@ -63,7 +67,7 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         this.sexBtnM = createButton(this, width / 2 - 60, sexY, t('♂ Муж'), () => {
             this.sex = 'male';
             this.refreshSexButtons();
-            this.refreshHeroes();
+            this.rerollLook();
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
             fontSize: 14, padding: { left: 14, right: 14, top: 6, bottom: 6 },
@@ -71,7 +75,7 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         this.sexBtnF = createButton(this, width / 2 + 30, sexY, t('♀ Жен'), () => {
             this.sex = 'female';
             this.refreshSexButtons();
-            this.refreshHeroes();
+            this.rerollLook();
         }, {
             backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
             fontSize: 14, padding: { left: 14, right: 14, top: 6, bottom: 6 },
@@ -139,12 +143,12 @@ export class CharacterGeneratorScene extends Phaser.Scene {
             this.classBtns.push({ arc, btn });
         });
 
-        // === Облик (Medieval - Heroes I) ===
-        this.heroTitle = this.add.text(width / 2, 308, t('Облик героя:'), {
+        // === Облик (раунд 59): случайные цвета одежды/волос/глаз на каждый старт ===
+        this.heroTitle = this.add.text(width / 2, 308, t('Облик героя (случайные цвета на каждый старт игры):'), {
             fontSize: '14px', color: RUS.textDim, stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
-        this.heroLayer = this.add.container(0, 0);
-        this.refreshHeroes();
+        this.lookLayer = this.add.container(0, 0);
+        this.buildLookPreview();
 
         // === Кнопки внизу ===
         createButton(this, narrow ? 80 : 100, height - 40, t('◀ Назад'), () => {
@@ -176,6 +180,7 @@ export class CharacterGeneratorScene extends Phaser.Scene {
 
     refreshClassButtons() {
         (this.classBtns || []).forEach(({ arc, btn }) => {
+            if (!btn) return;
             const bg = (typeof btn.getElement === 'function') ? btn.getElement('background') : null;
             if (bg && typeof bg.setFillStyle === 'function') {
                 bg.setFillStyle(arc === this.archetype ? RUS.accent : 0x4a3520, 1);
@@ -183,40 +188,38 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         });
     }
 
-    refreshHeroes() {
+    /**
+     * Раунд 59 (пп.7,8): превью СЛУЧАЙНОГО облика героя (LPC-композит).
+     * Цвета одежды/волос/глаз — Math.random; кнопка «🎲 Другой облик»
+     * перебрасывает. Возраст влияет на бороду (25+) и седину (50+).
+     */
+    buildLookPreview() {
         const { width } = this.scale;
-        this.heroLayer.removeAll(true);
-        this.heroCards = [];
-        const looks = heroLooksForGender(this.sex);
-        if (!looks.some(h => h.key === this.heroKey)) {
-            this.heroKey = looks[0].key;
+        this.lookLayer.removeAll(true);
+        if (!this.playerLook) {
+            this.playerLook = rollPlayerAppearance(this.sex, this.selectedAge);
         }
-        const step2 = width < 760 ? 110 : 140;
-        const startX2 = width / 2 - step2 * (looks.length - 1) / 2;
-        looks.forEach((h, i) => {
-            const cx = startX2 + i * step2;
-            const cy = 420;
-            const selected = h.key === this.heroKey;
-            const frame = this.add.rectangle(cx, cy, step2 - 16, 150, selected ? 0x3a2c14 : 0x1a140e, 0.95)
-                .setStrokeStyle(2, selected ? RUS.accent : 0x5a4530);
-            const spr = this.add.sprite(cx, cy - 22, h.key, 0).setScale(1.6);
-            if (this.anims.exists(`${h.key}_walk_down`)) spr.play(`${h.key}_walk_down`);
-            const name = this.add.text(cx, cy + 40, t(h.name), {
-                fontSize: '14px', color: selected ? '#c9a14a' : RUS.text, fontStyle: 'bold',
-                stroke: '#000', strokeThickness: 1,
-            }).setOrigin(0.5);
-            const desc = this.add.text(cx, cy + 58, t(h.desc), {
-                fontSize: '10px', color: RUS.textDim, stroke: '#000', strokeThickness: 1,
-                align: 'center', wordWrap: { width: step2 - 24 },
-            }).setOrigin(0.5);
-            const hit = this.add.rectangle(cx, cy, step2 - 12, 156, 0xffffff, 0.001)
-                .setInteractive({ useHandCursor: true });
-            hit.on('pointerdown', () => {
-                this.heroKey = h.key;
-                this.refreshHeroes();
-            });
-            this.heroLayer.add([frame, spr, name, desc, hit]);
+        // Собираем превью-текстуру (обновляется на месте — без remove/add)
+        composePlayerTexture(this, this.playerLook, 'player_preview');
+        const cy = 408;
+        const frame = this.add.rectangle(width / 2, cy, 170, 172, 0x1a140e, 0.95)
+            .setStrokeStyle(2, RUS.accent);
+        const spr = this.add.sprite(width / 2, cy - 24, 'player_preview', 0).setScale(2.3);
+        if (this.anims.exists('player_preview_walk_down')) spr.play('player_preview_walk_down');
+        const hint = this.add.text(width / 2, cy + 66, t('Цвета одежды, волос и глаз выбираются случайно'), {
+            fontSize: '10px', color: RUS.textDim, stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5);
+        const reroll = createButton(this, width / 2, cy + 102, t('🎲 Другой облик'), () => this.rerollLook(), {
+            backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
+            fontSize: 13, padding: { left: 14, right: 14, top: 6, bottom: 6 },
         });
+        this.lookLayer.add([frame, spr, hint, reroll]);
+    }
+
+    /** Перебросить случайный облик (пол/возраст учитываются). */
+    rerollLook() {
+        this.playerLook = rollPlayerAppearance(this.sex, this.selectedAge);
+        this.buildLookPreview();
     }
 
     editName() {
@@ -237,19 +240,30 @@ export class CharacterGeneratorScene extends Phaser.Scene {
             ? `${group} · ${effects.join(', ')}`
             : t('в расцвете сил — без штрафов');
         this.ageEffectsText.setText(`${t('Возраст')} ${this.selectedAge} ${ageUnitWord(this.selectedAge)}: ${suffix}`);
+        // Раунд 59: возраст меняет облик (борода 25+, седина 50+) —
+        // перебрасываем только ВОЗРАСТНЫЕ признаки, сохраняя цвета
+        if (this.playerLook) {
+            const fresh = rollPlayerAppearance(this.sex, this.selectedAge);
+            this.playerLook = { ...fresh, ...this.playerLook, hair: fresh.hair, beards: fresh.beards };
+            if (!this.playerLook.beards) delete this.playerLook.beards;
+            this.buildLookPreview();
+        }
     }
 
     confirmCharacter() {
-        // Раунд 50 (пп.8,9): облик — готовый герой Medieval-Heroes I,
-        // LPC-кастомизация отключена. Класс и возраст — выбор игрока.
+        // Раунд 59 (пп.7,8): облик героя — LPC-композит 'player_composite'
+        // со случайными цветами одежды/волос/глаз (своими на каждый старт).
+        if (!this.playerLook) this.playerLook = rollPlayerAppearance(this.sex, this.selectedAge);
         const player = createCharacter(this.characterName || 'Путник', {
             age: this.selectedAge,
             gender: this.sex,
             archetype: this.archetype,
         });
-        player.sprite = this.heroKey;
-        player.useComposite = false;
-        player.heroLook = this.heroKey;
+        // Собираем ИТОГОВУЮ текстуру героя (+ анимации walk/idle)
+        const composed = composePlayerTexture(this, this.playerLook, 'player_composite');
+        player.useComposite = composed;          // при неудаче — честный фолбэк на hero_*
+        player.lpcAppearance = this.playerLook;  // состав слоёв (для отладки/будущих сейвов)
+        player.sprite = composed ? 'player_composite' : player.sprite;
         player.name = this.characterName || player.name;
 
         // Инициализация игры (общая логика для нового старта)
@@ -272,7 +286,7 @@ export class CharacterGeneratorScene extends Phaser.Scene {
         initNpcNames(this.registry);
         initReputation(this.registry);
         ActionLog.init(this.registry);
-        ActionLog.add(this.registry, `Создан новый персонаж: ${player.name} (${player.archetype}, облик «${t((HERO_LOOKS.find(h => h.key === this.heroKey) || {}).name || 'герой')}»).`);
+        ActionLog.add(this.registry, `Создан новый персонаж: ${player.name} (${player.archetype}). Облик собран из случайных цветов одежды, волос и глаз (раунд 59).`);
 
         this.scene.start('Village');
     }

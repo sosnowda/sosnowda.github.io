@@ -636,8 +636,12 @@ const EN = {
         'By the freshness of the trampled grass you can tell: the thief is right now on the road to "{0}"!',
     'Судя по свежести следов, вор сейчас где-то у «{0}»!':
         'Judging by how fresh the tracks are, the thief is somewhere near "{0}" right now!',
-    'Кто-то здесь проходил — видны примятые травы, но разобрать следы не вышло. Больше следы здесь не обследовать: придётся искать вора ВСЛЕПУЮ — обходить локации или расспрашивать других селян.':
-        'Someone passed here — the grass is trampled, but you could not make out the tracks. These tracks cannot be examined again: you will have to search for the thief BLIND — checking locations one by one or questioning other villagers.',
+    'Кто-то здесь проходил — видны примятые травы, но разобрать следы не вышло. Можно присмотреться ещё раз (это займёт час), но следы уже примяты — шансы будут ниже.':
+        'Someone passed here — the grass is trampled, but you could not make out the tracks. You may look again (it will take an hour), but the tracks are already trampled — the chances will be lower.',
+    'Ты вторично присмотрелся к примятым травам, но следы так и не поддались. Здесь больше нечего искать: придётся искать вора ВСЛЕПУЮ — обходить локации или расспрашивать других селян.':
+        'You studied the trampled grass a second time, but the tracks would not yield. There is nothing more to find here: you will have to search for the thief BLIND — checking locations one by one or questioning other villagers.',
+    '(Вторая попытка: присмотрелся внимательнее — и след поддался.)':
+        '(Second attempt: you looked closer — and the trail gave in.)',
     'Я уже всё тебе рассказал. Больше не знаю ничего — спроси у других людей.':
         'I have told you everything I know. Ask other folk — I know nothing more.',
     'Вор не стал испытывать судьбу: он бежал в другое место и затаился там. У тебя появилось немного больше времени, но искать нужно заново.':
@@ -845,8 +849,10 @@ const EN = {
     'След прочитан, но человек он скрытный — куда подался, не разобрать.':
         'The print is read, but he is a stealthy one — where he went is anyone\'s guess.',
     'Сам след ведёт в сторону «{0}».': 'The print itself leads toward "{0}".',
-    'Ты пригляделся к следу, но неосторожно наступил — отпечаток затрётся и пропал. Больше этот след не обследовать.':
-        'You studied the print, but stepped carelessly — the print will smear away. This track can be examined no more.',
+    'Ты пригляделся к следу, но неосторожно наступил — отпечаток заветрился. Можно попытаться прочесть его ещё раз (это займёт час), но шансы уже ниже.':
+        'You studied the print, but stepped carelessly — the print is weathered now. You may try to read it once more (it will take an hour), but the chances are lower.',
+    'Ты снова присмотрелся к следу, но тот окончательно затёрся — второй попытки больше не будет.':
+        'You studied the print again, but it is finally smeared away — there will be no third attempt.',
     'Видел я его, темного человека! Он бежит к «{0}» — поспеши, догонешь!':
         'I saw him, the dark man! He is running toward "{0}" — hurry, you will catch him!',
     'Видел я его, темного человека! Он сейчас прячется у «{0}» — поспеши!':
@@ -856,8 +862,8 @@ const EN = {
         'The thief? No one ran past here. I would have noticed — I was in plain sight all day.',
     'Темных людей не видал, батиушко упаси. Может, в другой стороне ищешь?':
         'I saw no dark figures, God forbid. Perhaps you should search another way?',
-    'Вор затаился на месте — уйдёт не раньше, чем через три часа. Но и раны его не заживали: сил у него меньше, чем было.':
-        'The thief is lying low — he will not move for at least three hours. But his wounds have not healed: his strength is less than it was.',
+    'Вор затаился на месте, но ненадолго: когда погоня ушла из локации, он снялся с места — уже через час он будет в другом месте и оставит там следы. Но и раны его не заживали: сил у него меньше, чем было.':
+        'The thief is lying low, but not for long: once the pursuit left his location, he will move on — in just one hour he will be elsewhere, leaving fresh tracks. But his wounds have not healed: his strength is less than it was.',
     'Вор ещё не залечил раны с прошлой схватки — он ослаблен!': 'The thief has not yet healed from your last fight — he is weakened!',
     '⚔ Бой пошаговый (BRP d100): атака, уклон, трава, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.':
         '⚔ Combat is turn-based (BRP d100): attack, dodge, herbs, escape.\nSkill checks roll d100: success is within the skill value,\ncritical is 1/20 of it (damage ×1.5), special success — 1/5 (damage ×2).\n🛡 Armour absorbs damage from every hit.',
@@ -1277,9 +1283,16 @@ const EN = {
     'Обследовал след в «{0}» — след прочитан (бросок {1}, успех{2}): вор у «{3}».':
         'Examined a footprint in "{0}" — trail read (roll {1}, success{2}): the thief is near "{3}".',
     ', ночь': ', night',
-    'Обследовал след в «{0}» — провал (бросок {1}{2}), след затёрт.': 'Examined a footprint in "{0}" — failure (roll {1}{2}), the trail is trampled.',
+    ', повтор': ', retry',
+    'Обследовал след в «{0}» — провал (бросок {1}{2}), след заветрился, но не пропал.':
+        'Examined a footprint in "{0}" — failure (roll {1}{2}), the print is weathered but not gone.',
+    'Обследовал след в «{0}» — вторичная попытка провалена (бросок {1}{2}), след затёрт.':
+        'Examined a footprint in "{0}" — second attempt failed (roll {1}{2}), the trail is trampled for good.',
     'Поиск следов в «{0}» — вор рядом!': 'Searching for traces in "{0}" — the thief is near!',
-    'Поиск следов в «{0}» — следы прочитаны (бросок {1}, успех{2}).': 'Searching for traces in "{0}" — trails read (roll {1}, success{2}).',
+    'Поиск следов в «{0}» — следы прочитаны (бросок {1}, успех{2}{3}).':
+        'Searching for traces in "{0}" — trails read (roll {1}, success{2}{3}).',
+    'Поиск следов в «{0}» — вторичная попытка провалена (бросок {1}), следы не читаются.':
+        'Searching for traces in "{0}" — second attempt failed (roll {1}), the trails remain unreadable.',
     'Поиск следов в «{0}» — провал (бросок {1}, следы были, но не разобраны).':
         'Searching for traces in "{0}" — failure (roll {1}, trails were there but could not be made out).',
     'Поиск следов в «{0}» — следов нет.': 'Searching for traces in "{0}" — no trails.',
@@ -1302,11 +1315,16 @@ const EN = {
     'Пасека: наблюдал за пчёлами у колодного улья.': 'Apiary: watched the bees at the log hive.',
     'Вернулся с пасеки к околице.': 'Returned from the apiary to the outskirts.',
     '🧝 Облик героя': '🧝 Hero\'s Look',
-    'Готовые фигурки Medieval-Heroes: тонкая настройка слоёв недоступна (раунд 50).\nВыбери, кем ты войдёшь в летопись.':
-        'Ready-made Medieval-Heroes figures: fine layer tuning is unavailable (round 50).\nChoose who will enter the chronicle.',
+    // Раунд 59: облик героя — единый шаблон со случайными цветами (пп.7,8)
+    'Цвета одежды, волос и глаз выбираются случайным образом\nпри каждом старте игры (раунд 59). Кнопка «Другой облик» — переброс.':
+        'Clothes, hair and eye colors are chosen at random\nwith every game start (round 59). The "Another look" button rerolls them.',
+    'Единый шаблон жителя, случайная расцветка': 'One villager template, random coloring',
+    '🎲 Другой облик': '🎲 Another look',
+    'Облик героя (случайные цвета на каждый старт игры):': 'Hero\'s look (random colors on every game start):',
+    'Цвета одежды, волос и глаз выбираются случайно': 'Clothes, hair and eye colors are random',
+    'Имя, класс, возраст, пол — облик собран единым шаблоном со случайными цветами (раунд 59).':
+        'Name, class, age, gender — the look is assembled from one template with random colors (round 59).',
     '🎨 Создание персонажа': '🎨 Character Creation',
-    'Имя, класс, возраст — и облик из готовых героев. Кастомизация слоёв отключена (раунд 50).':
-        'Name, class, age — and a look from the ready-made heroes. Layer customisation is disabled (round 50).',
     'Имя:': 'Name:',
     'Класс:': 'Class:',
     'Облик героя:': 'Hero\'s look:',
@@ -1803,7 +1821,11 @@ const EN_KEYS = {
         '  Any travel between locations on the map takes EXACTLY 1 game hour.\n' +
         '  Talking to an NPC costs 10 minutes; entering a house costs 10 minutes; examining a footprint costs 1 hour.\n' +
         '  While a conversation is open, the real-time countdown is PAUSED.\n' +
+        '  🔍 Track searching allows TWO ATTEMPTS: after the first failure you may\n' +
+        '  look again, but the second attempt has lower chances (−15 to Spotting).\n' +
         '  The thief moves AT MOST ONE STEP per game hour.\n' +
+        '  🏃 If you fled the fight with the thief and left his location, he moves\n' +
+        '  to another location EXACTLY 1 HOUR later, leaving fresh tracks.\n' +
         '  ⏳ The "until the thief escapes" counter shows how many GAME HOURS remain\n' +
         '  before he vanishes for good (a thief tick = 1 game hour; ≤3 h red, ≤6 h orange).\n' +
         '  🔔 Bells ring for the services: a toll before Matins (~6 o\'clock),\n' +

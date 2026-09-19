@@ -4,15 +4,20 @@
 // все жители собираются ОДНИМ шаблоном (CharacterAppearance.composeCharacterTexture):
 //   тело + глаза + причёска + борода + штаны + обувь + рубаха = 64×64,
 //   ходьба в 4 стороны + idle.
-// Отличаются жители ДРУГ ОТ ДРУГА только:
-//   1) РАЗМЕРОМ ПО ВОЗРАСТУ (ребёнок 0.7 / подросток 0.85 / взрослый 1.0 —
-//      решает сцена по возрасту NPC, индивидуального разброса роста больше нет);
-//   2) ИНДИВИДУАЛЬНОЙ РАСЦВЕТКОЙ ОДЕЖДЫ (торс/штаны/обувь — детерминированно
+// РАУНД 59 (приказ владельца, пп.2,3,6,7,8) — уточнения шаблона:
+//   1) РАЗМЕР ПО ВОЗРАСТУ (ребёнок 0.7 / подросток 0.85 / взрослый 1.0) —
+//      решает сцена по возрасту NPC;
+//   2) ИНДИВИДУАЛЬНАЯ РАСЦВЕТКА ОДЕЖДЫ (торс/штаны/обувь — детерминированно
 //      из крестьянской палитры PALETTE ниже, FNV-хэш от npcSeed + id NPC);
-//   3) ВОЗРАСТНЫМИ ПРИЗНАКАМИ (это тоже «по возрасту»): седые волосы у 60+,
-//      окладистая борода у мужчин 45+.
-// Тело (тон кожи), глаза и форма причёски у всех ОДИНАКОВЫЕ. Живописные
-// портреты DarklandsReborn в диалогах остаются как были.
+//   3) ПРИЧЁСКИ У ВСЕХ РАЗНЫЕ (п.2): у мужчин — КОРОТКИЕ стрижки
+//      (mop/swoop/messy1), у женщин — ДЛИННЫЕ волосы (bangslong/loose/wavy),
+//      у девочек — ещё и косички (bunches); цвет волос тоже индивидуален;
+//   4) БОРОДА У МУЖЧИН 25+ (п.3, было 45+), единая окладистая;
+//   5) СЕДИНА У 50+ (п.6, было 60+) — белые волосы и борода;
+//   6) ЦВЕТ ГЛАЗ У ВСЕХ РАЗНЫЙ (п.7): случайно из реалистичных
+//      (карие/синие/серые/зелёные);
+//   7) все случайные цвета (одежда/волосы/глаза) свои на КАЖДЫЙ СТАРТ ИГРЫ
+//      (п.8 — зерно npcSeed создаётся заново при initNpcNames).
 
 import { composeCharacterTexture, createCustomCharacterAnimations } from './CharacterAppearance.js';
 
@@ -103,10 +108,12 @@ function pick(list, rnd) {
 }
 
 /**
- * ЕДИНЫЙ ШАБЛОН жителя (раунд 58, п.5 приказа): детерминированная внешность
- * (по зерну игры и id). Отличия между жителями — только расцветка ОДЕЖДЫ
- * и возрастные признаки (седина 60+, борода у мужчин 45+). Тело, глаза и
- * форма причёски у всех одинаковые.
+ * ЕДИНЫЙ ШАБЛОН жителя (раунды 58–59): детерминированная внешность
+ * (по зерну игры и id — своё на КАЖДЫЙ СТАРТ ИГРЫ, п.8).
+ * Раунд 59 (пп.2,3,6,7): индивидуальны — ПРИЧЁСКА (муж. короткие /
+ * жен. длинные, у всех разные), ЦВЕТ ВОЛОС (седина у 50+), ЦВЕТ ГЛАЗ
+ * (случайный из реалистичных), расцветка ОДЕЖДЫ; борода у мужчин 25+.
+ * Тело собирается одним и тем же шаблоном; масштаб — строго по возрасту.
  * @returns {Object} appearance — { body, eyes, beards?, hair, legs, feet, torso }
  */
 export function rollLpcAppearance(registry, npc) {
@@ -117,14 +124,23 @@ export function rollLpcAppearance(registry, npc) {
     const age = (npc.age || 30);
     const rnd = (tag) => hash01(`${base}:${tag}`);
 
-    // --- ЕДИНАЯ БАЗА ШАБЛОНА (у всех жителей одинаковая) ---
-    const body = female ? 'female_tan' : 'male_tan';
-    const eyes = 'human_adult_brown';
-    // Причёска: одна форма по полу; цвет по возрасту — седость у 60+.
-    const hairShape = female ? 'bangslong' : 'mop';
-    const hairColor = age >= 60 ? 'white' : 'dark_brown';
+    // --- ЕДИНАЯ БАЗА ШАБЛОНА: тон кожи (случаен, п.8) ---
+    const body = pick(female ? PALETTE.body_female : PALETTE.body_male, rnd('body'));
 
-    // --- ИНДИВИДУАЛЬНОЕ: только расцветка одежды ---
+    // --- ПРИЧЁСКА (раунд 59, п.2): У ВСЕХ РАЗНЫЕ, разделение по полу ---
+    // Мужчины — КОРОТКИЕ стрижки; женщины — ДЛИННЫЕ волосы; у девочек —
+    // ещё и косички. Цвет волос индивидуален; СЕДИНА У 50+ (п.6) — белые.
+    const hairShapes = female
+        ? [...PALETTE.hair_female_shapes, ...(isChild ? PALETTE.hair_girl_extra_shapes : [])]
+        : PALETTE.hair_male_shapes;
+    const hairShape = pick(hairShapes, rnd('hairShape'));
+    const hairColor = age >= 50 ? 'white'
+        : pick(PALETTE.hair_male_colors.filter(c => c !== 'white'), rnd('hairColor'));
+
+    // --- ЦВЕТ ГЛАЗ (раунд 59, п.7): случайный из РЕАЛИСТИЧНЫХ ---
+    const eyes = pick(PALETTE.eyes, rnd('eyes'));
+
+    // --- ИНДИВИДУАЛЬНОЕ: расцветка одежды (п.8: своя на каждый старт) ---
     const appearance = {
         body,
         eyes,
@@ -137,12 +153,72 @@ export function rollLpcAppearance(registry, npc) {
     // (слой lpc_chest_female генерируется в BootScene.ensureFemaleChestTexture)
     if (female) appearance.chest = 'female';
 
-    // Борода — ВОЗРАСТНОЙ признак: мужчины 45+ носят единую окладистую
-    // бороду цвета волос (у седых — седая). Молодые мужики бреются.
-    if (!female && !isChild && age >= 45) {
+    // Борода — ВОЗРАСТНОЙ признак: мужчины 25+ (раунд 59, п.3 — было 45+)
+    // носят единую окладистую бороду цвета волос (у седых — седая).
+    if (!female && !isChild && age >= 25) {
         appearance.beards = `beard_medium_${hairColor}`;
     }
     return appearance;
+}
+
+/**
+ * Раунд 59 (пп.7,8 приказа владельца): внешность ИГРОКА.
+ * Цвета ОДЕЖДЫ, ВОЛОС и ГЛАЗ выбираются СЛУЧАЙНЫМ ОБРАЗОМ при каждом
+ * старте игры (Math.random, НЕ зерно — каждый запуск даёт нового героя).
+ * Причёски: мужские короткие / женские длинные (п.2); борода у мужчин 25+
+ * (п.3); седина у 50+ (п.6); глаза — реалистичные цвета (п.7).
+ * Тело собирается тем же ЕДИНЫМ шаблоном, что и жители (раунд 58).
+ * @param {string} gender — 'male' | 'female'
+ * @param {number} age — возраст героя (15..50)
+ * @returns {Object} appearance для composeCharacterTexture
+ */
+export function rollPlayerAppearance(gender, age) {
+    const female = gender === 'female';
+    const a = Math.max(15, Math.min(AGE_MAX_PLAYER, Number(age) || 25));
+    const r = () => Math.random();
+
+    // Тон кожи — случайный
+    const body = pick(female ? PALETTE.body_female : PALETTE.body_male, r());
+    // Причёска: мужские КОРОТКИЕ / женские ДЛИННЫЕ (п.2); СЕДИНА У 50+ (п.6)
+    const hairShape = pick(female ? PALETTE.hair_female_shapes : PALETTE.hair_male_shapes, r());
+    const hairColor = a >= 50 ? 'white'
+        : pick(PALETTE.hair_male_colors.filter(c => c !== 'white'), r());
+    // Глаза — случайный реалистичный цвет (п.7)
+    const eyes = pick(PALETTE.eyes, r());
+
+    const appearance = {
+        body,
+        eyes,
+        hair: `${hairShape}_${hairColor}`,
+        legs: pick(female ? PALETTE.legs_female : PALETTE.legs_male, r()),
+        feet: pick(female ? PALETTE.feet_female : PALETTE.feet_male, r()),
+        torso: pick(PALETTE.torso, r()),
+    };
+    if (female) appearance.chest = 'female';
+    // Борода у мужчин 25+ (п.3) — цвета волос
+    if (!female && a >= 25) {
+        appearance.beards = `beard_medium_${hairColor}`;
+    }
+    return appearance;
+}
+
+// Верхняя граница возраста игрока (AgeRules.AGE_MAX = 50 — без циклического импорта)
+const AGE_MAX_PLAYER = 50;
+
+/**
+ * Собрать текстуру ИГРОКА 'player_composite' (LPC-композит, 9×4 кадра)
+ * и создать анимации walk/idle. Все слои уже предзагружены в BootScene.
+ * Анимации создаются ОДИН РАЗ (повторная сборка той же текстуры обновляет
+ * кадры на месте — анимации остаются валидными; так консоль чиста от
+ * «AnimationManager key already exists»).
+ * @returns {boolean} true — текстура собрана
+ */
+export function composePlayerTexture(scene, appearance, textureKey = 'player_composite') {
+    const ok = composeCharacterTexture(scene, appearance, textureKey);
+    if (ok && !scene.anims.exists(`${textureKey}_walk_down`)) {
+        createCustomCharacterAnimations(scene, textureKey, textureKey);
+    }
+    return ok;
 }
 
 /** Ключ LPC-текстуры жителя */

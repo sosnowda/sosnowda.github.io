@@ -2,7 +2,7 @@
 // раунд 22: ТРИ локации, следы и расспросы — по одному разу, побег вора из боя;
 // раунд 30: СЛЕДЫ — отдельные видимые метки: каждый след проверяется ОДИН раз,
 // после неудачи след исчезает, после удачи светится и показывает, где вор;
-// свидетели о воре — 3–5 случайных селян, выбираются на старте игры.
+// свидетели о воре — случайные селяне (раунд 59: 10–15 взрослых из всех жителей).
 // раунд 31 (пп.1,4,5,7,10 владельца): в лес вор входит ПОСЛЕДОВАТЕЛЬНО
 // (Опушка → Поляна → Чаща); следов НЕ БОЛЬШЕ ДВУХ на локацию (два — только
 // на Реке с двумя берегами); каждый след — цепочка из 6 чёрных отпечатков;
@@ -20,7 +20,13 @@
 //         вор уходит в другую локацию (поп-ап при входе на указанную локацию);
 //  п.11 — вор НЕ лечится после прерванного побегом игрока боя;
 //  п.12 — после побега игрока его переносит ко входу в деревню;
-//  п.13 — после побега игрока вор сидит на этой локации ещё 3 часа.
+//  п.13 — после побега игрока вор сидит на этой локации, а когда игрок
+//         покинул локацию с вором — ровно через 1 ЧАС вор уходит дальше
+//         (раунд 59: было 3 часа).
+// Раунд 59 (п.1 приказа владельца): поиск следов — ДВЕ ПОПЫТКИ: после первой
+// неудачи локацию/след можно обследовать ВТОРИЧНО, но с меньшими шансами
+// (штраф TRACK_RETRY_PENALTY к Внимательности). После второй неудачи
+// локация/след закрываются навсегда, как раньше.
 //
 // Механика:
 // - Вор бежит из деревни в случайном направлении и проходит ПО ТРЁМ локациям
@@ -99,8 +105,12 @@ export const TRAIL_LOCK_HOURS = 2;
 // Раунд 32 (п.10): наводка от НПЦ действительна 5 игровых часов; когда срок
 // выходит, вор уходит в другую локацию (принудительный переход).
 export const NPC_HINT_VALID_HOURS = 5;
-// Раунд 32 (п.13): после побега игрока из боя вор остаётся на локации ещё 3 часа
-export const POST_FIGHT_STAY_HOURS = 3;
+// Раунд 32 (п.13): после побега игрока из боя вор остаётся на локации.
+// Раунд 59 (п.5 приказа владельца): когда игрок ПОКИНУЛ локацию с вором
+// (после побега из боя игрока переносит в деревню — выход из локации
+// происходит сразу), вор уходит ДАЛЬШЕ ровно через 1 ЧАС — в другую локацию,
+// оставляя следы (как при обычном уходе). Было: 3 часа.
+export const POST_FIGHT_STAY_HOURS = 1;
 // Раунд 32 (п.9): следы вора исчезают через 12–24 часа (случайно) после
 // оставления — но только если за это время не было осадков.
 export const TRACE_LIFETIME_MIN_MINUTES = 12 * 60; // 12 часов
@@ -137,6 +147,10 @@ export const MIN_PERSUADE = 35;  // убеждение вора (Убежден�
 export const MIN_BRAWL = 35;     // оглушение вора (Драка)
 // Раунд 31 (п.4): ночью проверка обнаружения следов СЛОЖНЕЕ, чем днём
 export const NIGHT_SPOT_PENALTY = 15;
+// Раунд 59 (п.1 приказа владельца): ПОИСК СЛЕДОВ — ДВЕ ПОПЫТКИ.
+// Первая неудача больше НЕ «сжигает» локацию/след: можно присмотреться
+// вторично, но шансы ниже — штраф к Внимательности.
+export const TRACK_RETRY_PENALTY = 15;
 // Раунд 31 (п.10): обследование следов занимает ровно 1 час
 export const FOOTPRINT_EXAMINE_MINUTES = 60;
 
@@ -269,15 +283,23 @@ export function washTracksByWeather(registry) {
 
 // Раунд 30: свидетели о воре — не всякий селянин его видел. На старте игры
 // (по спецификации владельца, п.9) случайным образом выбирается, КТО может
-// рассказать о воре и месте его нахождения — но не менее ТРЁХ человек.
-// Священник и староста в списке не участвуют: батюшка сам не видел вора
-// (он рассказывает о краже при первом диалоге), староста выдаёт задание.
-export const MIN_WITNESSES = 3;
+// рассказать о воре и месте его нахождения.
+// Раунд 59 (п.4 приказа владельца): свидетелей о воре — НЕ 3–5, а 10–15
+// случайных ВЗРОСЛЫХ жителей. Священник и староста в списке не участвуют:
+// батюшка сам не видел вора (он рассказывает о краже при первом диалоге),
+// староста выдаёт задание.
+export const MIN_WITNESSES = 10;
+export const MAX_WITNESSES = 15;
 // Раунд 34 добавлял детей (kid1, kid2) — НО раунд 44 (п.6 владельца):
 // «дети не могут выдавать задания и наводки» — дети исключены из пула.
+// Раунд 59 (п.4): пул расширен до ВСЕХ взрослых жителей (кроме старосты
+// и священника) — из них выбирается 10–15 случайных свидетелей.
 const WITNESS_POOL = [
-    'peasant1', 'widow', 'beekeeper1', 'beekeeper_wife', 'elder_wife',
-    'blacksmith', 'tavernkeeper', 'hunter', 'fisherman',
+    'tavernkeeper', 'blacksmith', 'peasant1', 'widow', 'healer',
+    'hunter', 'guard', 'fisherman', 'beekeeper1', 'beekeeper_wife',
+    'elder_wife', 'shepherd1', 'shepherd2', 'carpenter1', 'carpenter_wife',
+    'potter1', 'potter_wife', 'weaver1', 'fisher_wife', 'grocer',
+    'butcher', 'peddler', 'shoemaker', 'shoemaker_wife', 'woodcutter',
 ];
 
 /** Список свидетелей (ленивая инициализация — для старых сейвов тоже работает). */
@@ -285,7 +307,9 @@ export function ensureWitnesses(registry) {
     const q = registry.get('quest') || {};
     if (!q.thiefWitnesses || !q.thiefWitnesses.length) {
         const pool = [...WITNESS_POOL];
-        const count = MIN_WITNESSES + Math.floor(Math.random() * 3); // 3..5
+        // Раунд 59 (п.4): 10–15 случайных свидетелей (было 3–5)
+        const count = MIN_WITNESSES +
+            Math.floor(Math.random() * (MAX_WITNESSES - MIN_WITNESSES + 1)); // 10..15
         q.thiefWitnesses = [];
         for (let i = 0; i < count && pool.length; i++) {
             q.thiefWitnesses.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
@@ -325,8 +349,10 @@ export function hasFreshFootprints(registry, locationId) {
 
 /**
  * Обследовать КОНКРЕТНЫЙ след (раунд 30, пп.4–6 спецификации владельца):
- * - проверка отдельная на каждый след и только ЕДИНожды на след;
- * - после НЕУДАЧНОЙ проверки след пропадает (затёрт);
+ * - проверка отдельная на каждый след;
+ * - раунд 59 (п.1 приказа): след можно обследовать ДВАЖДЫ — после первой
+ *   неудачи след остаётся, но вторая попытка идёт с меньшими шансами
+ *   (штраф TRACK_RETRY_PENALTY); после второй неудачи след затирается;
  * - после УДАЧНОЙ след «светится» и появляется подсказка с названием
  *   локации текущего местоположения вора.
  * Раунд 31 (п.10): обследование занимает ровно 1 ЧАС реального времени
@@ -345,6 +371,10 @@ export function examineFootprint(registry, locationId, fpId) {
     q.footprintStates = q.footprintStates || {};
     q.footprintStates[locationId] = q.footprintStates[locationId] || {};
     const st = q.footprintStates[locationId];
+    // Раунд 59 (п.1): счётчик неудачных попыток по каждому следу
+    q.footprintRetries = q.footprintRetries || {};
+    q.footprintRetries[locationId] = q.footprintRetries[locationId] || {};
+    const retries = q.footprintRetries[locationId];
 
     // Уже обследованный след повторно НЕ проверяется (без траты времени)
     if (st[fpId]) {
@@ -365,6 +395,7 @@ export function examineFootprint(registry, locationId, fpId) {
     }
 
     const wasActive = isChaseActive(registry);
+    const isRetry = !!retries[fpId];
     // Раунд 31 (п.10): обследование следа занимает ровно 1 час —
     // вор тоже двигается (четыре шага за час)
     tickTime(registry, FOOTPRINT_EXAMINE_MINUTES);
@@ -389,14 +420,18 @@ export function examineFootprint(registry, locationId, fpId) {
     const trace = c.traces[locationId];
     const player = registry.get('player');
     // Раунд 31 (п.4): ночью проверка Внимательности СЛОЖНЕЕ (штраф)
+    // Раунд 59 (п.1): вторая попытка по тому же следу — штраф повторного поиска
     const nightPenalty = isNightCheck(registry) ? NIGHT_SPOT_PENALTY : 0;
-    const spotSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT) - nightPenalty);
+    const retryPenalty = isRetry ? TRACK_RETRY_PENALTY : 0;
+    const spotSkill = consumeBlessing(registry, Math.max(
+        Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT) - nightPenalty - retryPenalty, 5));
     const res = skillCheck(spotSkill);
     const success = res.result === 'critical' || res.result === 'success';
 
     if (success) {
         // УДАЧА: след «светится» и выдаёт местоположение вора (п.6)
         st[fpId] = 'found';
+        delete retries[fpId];
         // Раунд 32 (п.4): прочитанный след «прибивает» вора к его текущей
         // локации на 2 часа — даже если его счётчик уже обнулился
         pinThiefAtCurrentStop(registry, TRAIL_LOCK_HOURS, false);
@@ -413,18 +448,31 @@ export function examineFootprint(registry, locationId, fpId) {
             const next = getLocationById(trace.wentTo);
             message += '\n' + tf(t('Сам след ведёт в сторону «{0}».'), next ? next.name : trace.wentTo);
         }
+        if (isRetry) message += '\n' + t('(Вторая попытка: присмотрелся внимательнее — и след поддался.)');
         message += nightNote;
-        ActionLog.add(registry, tf(t('Обследовал след в «{0}» — след прочитан (бросок {1}, успех{2}): вор у «{3}».'), t(loc.name), res.roll, nightPenalty ? t(', ночь') : '', t(nowLoc ? nowLoc.name : '?')));
+        ActionLog.add(registry, tf(t('Обследовал след в «{0}» — след прочитан (бросок {1}, успех{2}): вор у «{3}».'), t(loc.name), res.roll, (nightPenalty ? t(', ночь') : '') + (retryPenalty ? t(', повтор') : ''), t(nowLoc ? nowLoc.name : '?')));
         return { resolved: true, found: true, message, turnsLeft: chaseTicksLeft(registry), thiefEscaped: false };
     }
 
-    // НЕУДАЧА: след пропадает (п.5)
-    st[fpId] = 'gone';
+    // НЕУДАЧА (раунд 59, п.1): первая — след остаётся (вторая попытка
+    // с меньшими шансами), вторая — след затирается навсегда.
+    if (isRetry) {
+        st[fpId] = 'gone';
+        delete retries[fpId];
+        registry.set('quest', q);
+        ActionLog.add(registry, tf(t('Обследовал след в «{0}» — вторичная попытка провалена (бросок {1}{2}), след затёрт.'), t(loc.name), res.roll, nightPenalty ? t(', ночь') : ''));
+        return {
+            resolved: true, found: false,
+            message: t('Ты снова присмотрелся к следу, но тот окончательно затёрся — второй попытки больше не будет.') + nightNote,
+            turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
+        };
+    }
+    retries[fpId] = 1;
     registry.set('quest', q);
-    ActionLog.add(registry, tf(t('Обследовал след в «{0}» — провал (бросок {1}{2}), след затёрт.'), t(loc.name), res.roll, nightPenalty ? t(', ночь') : ''));
+    ActionLog.add(registry, tf(t('Обследовал след в «{0}» — провал (бросок {1}{2}), след заветрился, но не пропал.'), t(loc.name), res.roll, nightPenalty ? t(', ночь') : ''));
     return {
         resolved: true, found: false,
-        message: t('Ты пригляделся к следу, но неосторожно наступил — отпечаток затрётся и пропал. Больше этот след не обследовать.') + nightNote,
+        message: t('Ты пригляделся к следу, но неосторожно наступил — отпечаток заветрился. Можно попытаться прочесть его ещё раз (это займёт час), но шансы уже ниже.') + nightNote,
         turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
     };
 }
@@ -489,9 +537,12 @@ export function initThiefHunt(registry) {
     quest.turnLimit = TURN_LIMIT;
     quest.cluesGathered = [];
     quest.locationsSearched = [];
-    // Раунд 30: состояния отдельных следов ({ locId: { fp0: 'fresh'|'found'|'gone' } })
-    // и случайные свидетели о воре (не менее трёх селян)
+    // Раунд 30: состояния отдельных следов ({ locId: { fp0: 'fresh'|'found'|'gone' } }),
+    // счётчики вторичных попыток поиска (раунд 59, п.1) и случайные
+    // свидетели о воре (раунд 59: 10–15 взрослых селян)
     quest.footprintStates = {};
+    quest.searchRetries = {};
+    quest.footprintRetries = {};
     ensureWitnesses(registry);
     // Раунд 43 (п.3 заявки): в строке цели над деревней — ТОЛЬКО короткий статус;
     // полные описания и инструкции — в журнале «📋 Задания» и диалогах.
@@ -685,21 +736,24 @@ export function escapeThief(registry) {
 // ============================================================
 
 /**
- * Поиск следов в локации (проверка «Внимательность»). Тратит 1 тик.
- * Раунд 22: обследовать следы в локации можно ТОЛЬКО ОДИН РАЗ:
- * - удачное обследование показывает, где вор находится ПРЯМО СЕЙЧАС;
- * - неудачное не даёт ничего — дальше придётся искать вора «вслепую»
- *   (об этом прямо сказано в тексте неудачи);
+ * Поиск следов в локации (проверка «Внимательность»). Тратит 1 тик (1 час).
+ * Раунд 59 (п.1 приказа владельца): поиск — ДВЕ ПОПЫТКИ, вторая с меньшими
+ * шансами (штраф TRACK_RETRY_PENALTY):
+ * - первая неудача НЕ закрывает локацию — можно присмотреться ещё раз (1 час),
+ *   но следы уже примяты и читаются хуже;
+ * - вторая неудача закрывает локацию навсегда (как раньше — после первой);
+ * - удачное обследование (с любой попытки) показывает, где вор прямо сейчас;
  * - если вора здесь не было — локация помечается обысканной (исключение варианта).
  */
 export function searchLocation(registry, locationId) {
     let q = registry.get('quest');
     if (!q) q = {};
     if (!q.locationsSearched) q.locationsSearched = [];
+    if (!q.searchRetries) q.searchRetries = {};
 
     const loc = getLocationById(locationId) || { id: locationId, name: locationId };
 
-    // Раунд 22: следы обследуются только единожды (до траты времени)
+    // Закрыта ли локация навсегда (две неудачные попытки, раунды 22/59)
     if (q.locationsSearched.includes(locationId)) {
         return {
             found: false, alreadySearched: true,
@@ -709,6 +763,8 @@ export function searchLocation(registry, locationId) {
     }
 
     const wasActive = isChaseActive(registry);
+    // Раунд 59 (п.1): это ВТОРАЯ попытка? (первая уже была неудачной)
+    const isRetry = !!q.searchRetries[locationId];
 
     // Раунд 31 (п.10): исследование следов занимает ровно 1 час — вор тоже двигается
     tickTime(registry, FOOTPRINT_EXAMINE_MINUTES);
@@ -747,20 +803,22 @@ export function searchLocation(registry, locationId) {
     const player = registry.get('player');
     // Раунд 22: нижний порог Внимательности + благословение (+10, одна проверка)
     // Раунд 31 (п.4): ночью проверка СЛОЖНЕЕ (штраф к Внимательности)
+    // Раунд 59 (п.1): вторая попытка — ещё и штраф повторного поиска
     const nightPenaltyS = isNightCheck(registry) ? NIGHT_SPOT_PENALTY : 0;
-    const spotSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT) - nightPenaltyS);
+    const retryPenaltyS = isRetry ? TRACK_RETRY_PENALTY : 0;
+    const spotSkill = consumeBlessing(registry, Math.max(
+        Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT) - nightPenaltyS - retryPenaltyS, 5));
 
     if (trace) {
         const res = skillCheck(spotSkill);
-        // Следы разбираются ОДИН раз — неудача закрывает эту локацию навсегда
-        if (!q.locationsSearched.includes(locationId)) q.locationsSearched.push(locationId);
-        if (res.result === 'critical' || res.result === 'success') {
+        const success = res.result === 'critical' || res.result === 'success';
+        if (success) {
+            // Удача: локация закрывается (следы прочитаны), вор «прибит» на 2 часа
+            if (!q.locationsSearched.includes(locationId)) q.locationsSearched.push(locationId);
             // Раунд 32 (п.4): прочитанный след «прибивает» вора на 2 часа
             pinThiefAtCurrentStop(registry, TRAIL_LOCK_HOURS, false);
-        }
-        registry.set('quest', q);
+            registry.set('quest', q);
 
-        if (res.result === 'critical' || res.result === 'success') {
             // Удача: видно и направление следов, и где вор сейчас
             const where = thiefWhereabouts(registry);
             const nowLoc = where ? getLocationById(where.locId) : null;
@@ -776,13 +834,30 @@ export function searchLocation(registry, locationId) {
                     ? ' ' + tf(t('По свежести примятой травы ясно: вор сейчас на дороге к «{0}»!'), nowLoc.name)
                     : ' ' + tf(t('Судя по свежести следов, вор сейчас где-то у «{0}»!'), nowLoc.name);
             }
-            ActionLog.add(registry, tf(t('Поиск следов в «{0}» — следы прочитаны (бросок {1}, успех{2}).'), t(loc.name), res.roll, nightPenaltyS ? t(', ночь') : ''));
+            if (isRetry) message += '\n' + t('(Вторая попытка: присмотрелся внимательнее — и след поддался.)');
+            ActionLog.add(registry, tf(t('Поиск следов в «{0}» — следы прочитаны (бросок {1}, успех{2}{3}).'), t(loc.name), res.roll, nightPenaltyS ? t(', ночь') : '', retryPenaltyS ? t(', повтор') : ''));
             return { found: true, direction: trace.wentTo, message, turnsLeft: chaseTicksLeft(registry), thiefEscaped: false };
         }
+
+        // НЕУДАЧА (раунд 59, п.1): первая — локация остаётся открытой (можно
+        // присмотреться ещё раз с меньшими шансами), вторая — закрывает навсегда.
+        if (isRetry) {
+            if (!q.locationsSearched.includes(locationId)) q.locationsSearched.push(locationId);
+            delete q.searchRetries[locationId];
+            registry.set('quest', q);
+            ActionLog.add(registry, tf(t('Поиск следов в «{0}» — вторичная попытка провалена (бросок {1}), следы не читаются.'), t(loc.name), res.roll));
+            return {
+                found: false, alreadySearched: true,
+                message: t('Ты вторично присмотрелся к примятым травам, но следы так и не поддались. Здесь больше нечего искать: придётся искать вора ВСЛЕПУЮ — обходить локации или расспрашивать других селян.'),
+                turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
+            };
+        }
+        q.searchRetries[locationId] = 1;
+        registry.set('quest', q);
         ActionLog.add(registry, tf(t('Поиск следов в «{0}» — провал (бросок {1}, следы были, но не разобраны).'), t(loc.name), res.roll));
         return {
             found: false, alreadySearched: false,
-            message: t('Кто-то здесь проходил — видны примятые травы, но разобрать следы не вышло. Больше следы здесь не обследовать: придётся искать вора ВСЛЕПУЮ — обходить локации или расспрашивать других селян.'),
+            message: t('Кто-то здесь проходил — видны примятые травы, но разобрать следы не вышло. Можно присмотреться ещё раз (это займёт час), но следы уже примяты — шансы будут ниже.'),
             turnsLeft: chaseTicksLeft(registry), thiefEscaped: false,
         };
     }
@@ -1310,29 +1385,32 @@ export function clearThiefHp(registry) {
  * Раунд 32 (пп.11,13): игрок СБЕЖАЛ из боя с вором.
  *  п.11 — вор НЕ лечится: текущий запас его HP сохраняется в quest.thiefHp
  *         и восстанавливается при следующем бое (см. CombatScene);
- *  п.13 — вор ЕЩЁ 3 ЧАСА сидит на ЭТОЙ ЖЕ локации, а потом снова убегает
- *         ПО ОБЫЧНЫМ ПРАВИЛАМ (один шаг в час, следы, следующая остановка).
- * (раньше вор сразу перебегал в случайную локацию — по п.13 он больше не
- * срывается с места: игрок знает, где он, но повторный вход стоит часа).
+ *  п.13 — вор ещё немного сидит на ЭТОЙ ЖЕ локации, а потом снова убегает
+ *         ПО ОБЫЧНЫМ ПРАВИЛАМ (следы, следующая остановка).
+ * Раунд 59 (п.5 приказа владельца): после побега игрока из боя И ВЫХОДА
+ * из локации с вором (игрока сразу переносит в деревню, п.12 — то есть
+ * локация покинута) вор уходит в ДРУГУЮ ЛОКАЦИЮ ровно ЧЕРЕЗ 1 ЧАС,
+ * оставляя следы (thiefLeaveLocation — те же правила, что при обычном уходе).
  */
 export function thiefFleesFromFight(registry, fromLocationId) {
     const q = registry.get('quest');
     const c = getChase(registry);
     if (!c) return false;
 
-    // Раунд 32 (п.13): ровно 3 часа на текущей локации, дальше — обычные правила
+    // Раунд 59 (п.5): ровно 1 час на текущей локации — потом вор уходит
+    // в другую локацию и оставляет следы (обычный thiefLeaveLocation)
     c.phase = 'stay';
     c.stays[c.stop] = c.stays[c.stop] || randomStayHours();
     c.ticksLeft = POST_FIGHT_STAY_HOURS;
     // «Заморозки» от старых подсказок больше не действуют — теперь вора
-    // держит на месте срок из п.13
+    // держит на месте срок из п.13/раунда 59
     c.hintLockHours = 0;
     c.hintLockFlee = false;
     c.npcLockHours = 0;
     c.traceLockHours = 0;
     void fromLocationId;
 
-    ActionLog.add(registry, t('Вор затаился на месте — уйдёт не раньше, чем через три часа. Но и раны его не заживали: сил у него меньше, чем было.'));
+    ActionLog.add(registry, t('Вор затаился на месте, но ненадолго: когда погоня ушла из локации, он снялся с места — уже через час он будет в другом месте и оставит там следы. Но и раны его не заживали: сил у него меньше, чем было.'));
     registry.set('quest', q);
     return true;
 }

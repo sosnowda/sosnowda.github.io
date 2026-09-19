@@ -181,12 +181,12 @@ function runSession(presetId, strategy, talkMinutes) {
             lastEncounterLoc = dest;
             const enc = runEncounter(registry, hero, stats, (r) => { retreatPending = r; thiefHpCarry = thiefHpCarry; });
             if (enc === 'retreat') {
-                // Побег: 30 минут + вор сидит 3 часа (thiefFleesFromFight 1:1)
+                // Побег: 30 минут + вор уходит через 1 час (раунд 59 п.5, thiefFleesFromFight 1:1)
                 spend(30);
                 stats.retreats++;
                 const q2 = registry.get('quest');
                 const c2 = q2.chase;
-                if (c2) { c2.phase = 'stay'; c2.ticksLeft = 3; registry.set('quest', q2); }
+                if (c2) { c2.phase = 'stay'; c2.ticksLeft = 1; registry.set('quest', q2); }
                 thiefHpCarry = lastThiefHp;
                 retreatPending = true;
                 continue;
@@ -210,7 +210,7 @@ function runSession(presetId, strategy, talkMinutes) {
                     stats.retreats++;
                     const q2 = registry.get('quest');
                     const c2 = q2.chase;
-                    if (c2) { c2.phase = 'stay'; c2.ticksLeft = 3; registry.set('quest', q2); }
+                    if (c2) { c2.phase = 'stay'; c2.ticksLeft = 1; registry.set('quest', q2); }
                     thiefHpCarry = lastThiefHp;
                     retreatPending = true;
                     continue;
