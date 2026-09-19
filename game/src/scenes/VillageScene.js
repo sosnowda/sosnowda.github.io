@@ -201,10 +201,12 @@ export class VillageScene extends Phaser.Scene {
             carpenter_house: 'wood_house_11',    // черепичный дом плотника
             fisher_house: 'rural_house_0',       // дом рыбака с навесом-сетями (зеркально)
             weaver_house: 'wood_house_07',       // изба ткачихи с сенцами и цветами
-            // Восточная слобода (раунд 51): палатки и бревенчатые дома
-            shop_food: 'rural_shop_0',           // палатка с зелёным тентом — снедь
-            shop_meat: 'rural_shop_2',           // палатка в полоску — мясная
+            // Восточная слобода (раунд 51): лавка ремесленника — палатка.
+            // РАУНД 53: лавки снеди/мясная удалены владельцем — на их месте
+            // ЖИЛЫЕ ДОМА Прасковьи и Потапа (новые фасады из Rural_TileD).
             shop_tools: 'rural_shop_1',          // лавка со светлым тентом — ремесленник
+            grocer_house: 'rurald_house_0',      // светлый дом с голубой дверью — снедница
+            butcher_house: 'rurald_house_1',     // дом с каменной кладкой — мясник
             shoemaker_house: 'rural_house_0',    // дом с резными воротами — сапожник
             woodcutter_house: 'rural_house_1',   // бревенчатая изба — дровосек
         };
@@ -360,7 +362,7 @@ export class VillageScene extends Phaser.Scene {
         // ----- Ограда для общественных зданий (староста, таверна, кузница, церковь) -----
         // Раунд 51: восточная слобода (лавки, сапожник, дровосек) — БЕЗ оград:
         // слободская застройка открыта, заборы мешали бы дорожкам к палаткам.
-        const FENCELESS = ['shop_food', 'shop_tools', 'shop_meat', 'shoemaker_house', 'woodcutter_house'];
+        const FENCELESS = ['grocer_house', 'shop_tools', 'butcher_house', 'shoemaker_house', 'woodcutter_house'];
         BUILDINGS.forEach(b => {
             if (b.interiorId !== 'villager_house_1' && b.interiorId !== 'villager_house_2' && FENCELESS.indexOf(b.interiorId) < 0) {
                 this.addPublicFence(b, ts);
@@ -735,13 +737,13 @@ export class VillageScene extends Phaser.Scene {
             this.add.text(cx, topY - ts * 0.3, '🧵', {
                 fontSize: '14px',
             }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'shop_food') {
-            // Раунд 51: лавка снеди — каравай (эмблема)
+        } else if (b.interiorId === 'grocer_house') {
+            // Раунд 53: дом снедницы — каравай (эмблема)
             this.add.text(cx, topY - ts * 0.35, '🥖', {
                 fontSize: '16px',
             }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'shop_meat') {
-            // Раунд 51: мясная лавка — окорок (эмблема)
+        } else if (b.interiorId === 'butcher_house') {
+            // Раунд 53: дом мясника — окорок (эмблема)
             this.add.text(cx, topY - ts * 0.35, '🍖', {
                 fontSize: '16px',
             }).setOrigin(0.5).setDepth(9);

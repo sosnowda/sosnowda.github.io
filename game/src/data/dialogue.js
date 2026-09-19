@@ -2145,14 +2145,15 @@ export const DIALOGUES = {
     // ===== РАУНД 51 (п.11 заявки): ВОСТОЧНАЯ СЛОБОДА =====
     // Три лавки рыночного ряда и два новых деревянных дома.
 
-    // ПРАСКОВЬЯ — снедница (лавка снеди; торговля — кнопка «Торговать»)
+    // ПРАСКОВЬЯ — снедница (раунд 53: лавка удалена — Прасковья печёт дома,
+    // гостей принимает на своём дворе)
     grocer: {
         start: 'a',
         nodes: {
             a: {
                 speaker: 'Снедница Прасковья',
-                text: 'Здравствуй, дорогой гость! Прасковья я, снедницу держу. Караваи с утра горячие, сыр — из-за Реки, молоко — от своих коровок. Каждому гостю — угощение да ласковое слово. Загляни в мои припасы — не уйдёшь с пустыми руками!',
-                en: 'Greetings, dear guest! I am Praskovya, I keep the victuals stall. Loaves are hot since morning, cheese comes from beyond the River, milk from my own cows. A treat and a kind word for every guest. Have a look at my goods — you will not leave empty-handed!',
+                text: 'Здравствуй, дорогой гость! Прасковья я, снедница: пеку дома. Караваи с утра горячие, сыр — из-за Реки, молоко — от своих коровок. Заходи на двор, каждому гостю — угощение да ласковое слово!',
+                en: 'Greetings, dear guest! I am Praskovya, the victualer: I bake at home. Loaves are hot since morning, cheese comes from beyond the River, milk from my own cows. Step into my yard — a treat and a kind word for every guest!',
                 action: (scene) => {
                     DIALOGUES.grocer.nodes.a.choices = withAskThief(scene, 'grocer', [
                         { text: t('Что нынче свежее?'), next: 'fresh' },
@@ -2211,14 +2212,14 @@ export const DIALOGUES = {
         },
     },
 
-    // ПОТАП — мясник (мясная лавка)
+    // ПОТАП — мясник (раунд 53: лавка удалена — столешня при его доме)
     butcher: {
         start: 'a',
         nodes: {
             a: {
                 speaker: 'Мясник Потап',
-                text: 'Чего надобно? Потап я, мясник. Тесак острый, товар свежий. Колбаса — бери, окорок — копчёный, рыба вяленая — к пиву самому постоялому двору не снилось лучше. Смотри не тяни — к вечеру всё разберут!',
-                en: 'What do you need? I am Potap, the butcher. Sharp cleaver, fresh goods. Take the sausage, the smoked ham, the dried fish — even the tavern cellars never dreamt of better. Do not dawdle — by evening it is all sold!',
+                text: 'Чего надобно? Потап я, мясник. Тесак острый, товар свежий. Заходи на двор: колбаса — бери, окорок — копчёный, рыба вяленая — к пиву самому постоялому двору не снилось лучше. Смотри не тяни — к вечеру всё разберут!',
+                en: 'What do you need? I am Potap, the butcher. Sharp cleaver, fresh goods. Step into my yard: take the sausage, the smoked ham, the dried fish — even the tavern cellars never dreamt of better. Do not dawdle — by evening it is all sold!',
                 action: (scene) => {
                     DIALOGUES.butcher.nodes.a.choices = withAskThief(scene, 'butcher', [
                         { text: t('Откуда скот?'), next: 'cattle' },
@@ -2429,8 +2430,8 @@ export const DIALOGUES = {
             },
             settlement: {
                 speaker: 'Агафья, жена сапожника',
-                text: 'Слобода наша новая — но уже как своя. Утром Прасковья пирогами ветер гоняет — вся слобода к её лавке носами идёт. А по вечерам Горазд дрова колет — эхом по лесу отдаётся, будто кто дровосека вторит.',
-                en: 'Our settlement is new — but already feels like our own. In the morning Praskovya\'s pies chase the wind — the whole settlement walks to her stall by the nose. And in the evenings Gorazd splits firewood — it echoes through the forest, as if someone answers the woodcutter.',
+                text: 'Слобода наша новая — но уже как своя. Утром Прасковья пирогами ветер гоняет — вся слобода к её двору носами идёт. А по вечерам Горазд дрова колет — эхом по лесу отдаётся, будто кто дровосека вторит.',
+                en: 'Our settlement is new — but already feels like our own. In the morning Praskovya\'s pies chase the wind — the whole settlement walks to her yard by the nose. And in the evenings Gorazd splits firewood — it echoes through the forest, as if someone answers the woodcutter.',
                 choices: [
                     { text: t('(продолжить)'), next: 'a' },
                 ],
@@ -2503,8 +2504,8 @@ export const DIALOGUES = {
             },
             marks: {
                 speaker: 'Дровосек Горазд',
-                text: 'Метки? Это счёт. Каждое дерево — зарубка на бревне у печи. Зима нынешняя — сто сорок. Зимой топить надо, а летом из сухостоя — на новые избы. Гляди-ка: слобода наша растёт — Прасковья палатку ладит, сапожник дом ставит. Хорошо пойдёт!',
-                en: 'The marks? That is my tally. Every tree — a notch on the log by the stove. This winter — one hundred and forty. In winter one must heat, and in summer the deadwood goes to new houses. Look: our settlement grows — Praskovya sets up her stall, the shoemaker raises his house. Things will go well!',
+                text: 'Метки? Это счёт. Каждое дерево — зарубка на бревне у печи. Зима нынешняя — сто сорок. Зимой топить надо, а летом из сухостоя — на новые избы. Гляди-ка: слобода наша растёт — Прасковья печью обзаводится, сапожник дом ставит. Хорошо пойдёт!',
+                en: 'The marks? That is my tally. Every tree — a notch on the log by the stove. This winter — one hundred and forty. In winter one must heat, and in summer the deadwood goes to new houses. Look: our settlement grows — Praskovya builds her bread oven, the shoemaker raises his house. Things will go well!',
                 choices: [
                     { text: t('(продолжить)'), next: 'a' },
                 ],

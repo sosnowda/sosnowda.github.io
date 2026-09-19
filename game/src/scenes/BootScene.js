@@ -159,13 +159,14 @@ export class BootScene extends Phaser.Scene {
             this.load.image(`int_bg_${id}`, `assets/interiors/int_bg_${id}.jpg`);
         });
 
-        // ----- РАУНД 51 (п.11): ДЕРЕВЯННЫЕ ДОМА И ТОРГОВЫЕ ЛАВКИ (пак Rural_TileB/C) =====
-        // Палатки рыночного ряда и два бревенчатых дома восточной слободы.
-        const ruralKeys = ['rural_shop_0', 'rural_shop_1', 'rural_shop_2', 'rural_house_0', 'rural_house_1'];
+        // ----- РАУНД 51/53: ДЕРЕВЯННЫЕ ДОМА И ЛАВКА (пак Rural_TileB/C/D) =====
+        // Палатка лавки ремесленника, бревенчатые дома слободы. Раунд 53:
+        // палатки снеди/мясной убраны — вместо них дома Rural_TileD.
+        const ruralKeys = ['rural_shop_1', 'rural_house_0', 'rural_house_1', 'rurald_house_0', 'rurald_house_1'];
         ruralKeys.forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
 
-        // ----- РАУНД 51: ТАЙЛОВЫЕ ФОНЫ НОВЫХ ИНТЕРЬЕРОВ (лавки и дома слободы) =====
-        const round51BgIds = ['shop_food', 'shop_meat', 'shop_tools', 'shoemaker_house', 'woodcutter_house'];
+        // ----- РАУНД 51/53: ТАЙЛОВЫЕ ФОНЫ ИНТЕРЬЕРОВ СЛОБОДЫ =====
+        const round51BgIds = ['grocer_house', 'butcher_house', 'shop_tools', 'shoemaker_house', 'woodcutter_house'];
         round51BgIds.forEach(id => {
             this.load.image(`int_bg_${id}`, `assets/interiors/int_bg_${id}.jpg`);
         });

@@ -214,56 +214,36 @@ export const INTERIORS = {
         decor: ['bed', 'loom', 'yarn'],
     },
 
-    // ===== РАУНД 51 (п.11 заявки): ТОРГОВЫЕ ЛАВКИ И НОВЫЕ ДЕРЕВЯННЫЕ ДОМА =====
-    // Восточная слобода: рыночный ряд из трёх лавок (спрайты-палатки из пакета
-    // владельца Rural_TileB) и два новых бревенчатых дома. Каждая лавка торгует
-    // своим товаром (market.items — панель showMarketShop в InteriorScene).
+    // ===== РАУНД 51: ВОСТОЧНАЯ СЛОБОДА / РАУНД 53: ЛАВКИ → ЖИЛЫЕ ДОМА =====
+    // Владелец удалил торговую и мясную лавки (дома нужнее) — на их месте
+    // стоят жилые дома Прасковьи и Потапа. Лавка ремесленника (shop_tools)
+    // сохранена. Профессии жителей остались: снедница печёт дома, мясник
+    // держит столешню — торгуют с крыльца, панель «Торговать» снята.
 
-    // Лавка снеди — Прасковья торгует хлебом, сыром, молоком и пирогами
-    shop_food: {
-        id: 'shop_food',
-        name: t('Лавка снеди'),
+    // Дом Прасковьи — снедница: печёт караваи и пироги в своей печи
+    grocer_house: {
+        id: 'grocer_house',
+        name: t('Дом Прасковьи'),
         npcId: 'grocer',
-        npcName: t('Снедница Прасковья'),
+        npcName: t('Прасковья, снедница'),
         npcSprite: 'npc_elder',
         portrait: 'portrait_villager_f',
         dialogueId: 'grocer',
-        description: t('Прилавки под зелёным пологом ломятся от припасов: караваи, головки сыра, крынки молока, связки сушёных грибов. Хозяйка отсчитывает сдачу, не глядя.'),
-        decor: ['shelf', 'table', 'barrel'],
-        // Раунд 51: торговля (панель «Торговать»; цены гибкие — от репутации)
-        market: {
-            title: t('Лавка снеди — припасы'),
-            items: [
-                { id: 'bread_r', name: 'Каравай ржаного', price: 1, kind: 'heal', heal: 1, note: '+1 HP' },
-                { id: 'cheese', name: 'Головка сыра', price: 2, kind: 'heal', heal: 2, note: '+2 HP' },
-                { id: 'milk', name: 'Крынка молока', price: 1, kind: 'heal', heal: 1, mpHeal: 1, note: '+1 HP, +1 MP' },
-                { id: 'pie', name: 'Пирог с репой', price: 2, kind: 'heal', heal: 2, mpHeal: 1, note: '+2 HP, +1 MP' },
-                { id: 'mushrooms', name: 'Грибы сушёные (узел)', price: 3, kind: 'heal', heal: 3, note: '+3 HP' },
-            ],
-        },
+        description: t('Тёплая горница с хлебной печью. На полках — караваи, головы сыра и связки сушёных грибов, на столе остывают пироги с репой. Хозяйка присыпает мукой столешницу, не глядя.'),
+        decor: ['bed', 'table', 'shelf'],
     },
 
-    // Мясная лавка — Потап держит туши, колбасы и вяленую рыбу
-    shop_meat: {
-        id: 'shop_meat',
-        name: t('Мясная лавка'),
+    // Дом Потапа — мясник: при доме держит столешню и коптильню
+    butcher_house: {
+        id: 'butcher_house',
+        name: t('Дом Потапа'),
         npcId: 'butcher',
-        npcName: t('Мясник Потап'),
+        npcName: t('Потап, мясник'),
         npcSprite: 'npc_merchant',
         portrait: 'portrait_peasant',
         dialogueId: 'butcher',
-        description: t('Пахнет дымом и свежим мясом. Под навесом — туши на крюках, связки колбас, вяленая рыба и копчёные окорока. Хозяин точит тесак о оселок.'),
-        decor: ['barrel', 'table', 'shelf'],
-        market: {
-            title: t('Мясная лавка — мясо и рыба'),
-            items: [
-                { id: 'kolbasa', name: 'Связка колбасы', price: 2, kind: 'heal', heal: 2, note: '+2 HP' },
-                { id: 'salo', name: 'Кусок сала', price: 1, kind: 'heal', heal: 1, note: '+1 HP' },
-                { id: 'dried_fish', name: 'Рыба вяленая', price: 2, kind: 'heal', heal: 2, mpHeal: 1, note: '+2 HP, +1 MP' },
-                { id: 'ham', name: 'Окорок копчёный', price: 4, kind: 'heal', heal: 4, note: '+4 HP' },
-                { id: 'stew', name: 'Похлёбка мясная (чашка)', price: 2, kind: 'heal', heal: 3, mpHeal: 1, note: '+3 HP, +1 MP' },
-            ],
-        },
+        description: t('Пахнет дымом и свежим мясом: при доме у Потапа своя столешня. Колбасы и окорока подвешены под потолком, на разделочном столе — ряды нарезки, у печи сушится медвежья шкура.'),
+        decor: ['bed', 'table', 'barrel'],
     },
 
     // Лавка ремесленника — Аверьян: дешёвое оружие, ножи, обереги, свечи
@@ -338,14 +318,14 @@ export const BUILDINGS = [
     { interiorId: 'tavern', col: 6, row: 1, w: 3, h: 3, label: t('Постоялый двор') },
     { interiorId: 'blacksmith', col: 10, row: 1, w: 3, h: 3, label: t('Кузница') },
     { interiorId: 'potter_house', col: 14, row: 1, w: 3, h: 3, label: t('Дом гончара') },
-    { interiorId: 'shop_food', col: 18, row: 1, w: 3, h: 3, label: t('Лавка снеди') },
+    { interiorId: 'grocer_house', col: 18, row: 1, w: 3, h: 3, label: t('Дом Прасковьи') },
     { interiorId: 'shop_tools', col: 22, row: 1, w: 2, h: 3, label: t('Лавка ремесленника') },
     // Средний ряд:
     { interiorId: 'villager_house_1', col: 2, row: 6, w: 3, h: 3, label: t('Дом Авдея') },
     { interiorId: 'villager_house_2', col: 6, row: 6, w: 3, h: 3, label: t('Дом Марфы') },
     { interiorId: 'beekeeper_house', col: 10, row: 6, w: 3, h: 3, label: t('Дом пахаря') },
     { interiorId: 'church', col: 14, row: 6, w: 3, h: 3, label: t('Церковь') },
-    { interiorId: 'shop_meat', col: 18, row: 6, w: 2, h: 3, label: t('Мясная лавка') },
+    { interiorId: 'butcher_house', col: 18, row: 6, w: 2, h: 3, label: t('Дом Потапа') },
     { interiorId: 'shoemaker_house', col: 22, row: 6, w: 3, h: 3, label: t('Дом сапожника') },
     // Южный ряд (справа — овчарня-загон, не интерьер):
     { interiorId: 'healer_house', col: 2, row: 11, w: 3, h: 3, label: t('Дом знахарки') },

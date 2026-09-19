@@ -266,8 +266,8 @@ export function initNpcNames(registry) {
         // Раунд 51 (п.11 заявки): ВОСТОЧНАЯ СЛОБОДА — торговцы рыночного ряда
         // и жители двух новых деревянных домов. Имена закреплены (торговые
         // лавки узнаваемы от игры к игре).
-        { id: 'grocer',       gender: 'female', age: 44, professionId: 'grocer',   sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'shop_food', name: 'Прасковья' },
-        { id: 'butcher',      gender: 'male',   age: 48, professionId: 'butcher',   sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'shop_meat', name: 'Потап' },
+        { id: 'grocer',       gender: 'female', age: 44, professionId: 'grocer',   sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'grocer_house', name: 'Прасковья' },
+        { id: 'butcher',      gender: 'male',   age: 48, professionId: 'butcher',   sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'butcher_house', name: 'Потап' },
         { id: 'peddler',      gender: 'male',   age: 37, professionId: 'merchant',   sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'shop_tools', name: 'Аверьян' },
         { id: 'shoemaker',    gender: 'male',   age: 43, professionId: 'shoemaker',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'shoemaker_house', name: 'Нефёд', married: true }, // женат на Агафье
         { id: 'shoemaker_wife', gender: 'female', age: 39, professionId: 'homemaker', sprite: 'npc_elder',   portrait: 'portrait_villager_f', interiorId: 'shoemaker_house', name: 'Агафья', married: true },

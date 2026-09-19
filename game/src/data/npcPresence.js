@@ -104,8 +104,10 @@ const BASE_SCHEDULE = {
     weaver:       { dawn: 'home',    morning: 'village', noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' }, // Пелагея при стане, отлучается по делу
     // Раунд 51: восточная слобода. Место лавки = её interiorId — InteriorScene
     // считает хозяина «на месте», лавка работает весь день.
-    grocer:      { dawn: 'home', morning: 'shop_food', noon: 'shop_food', evening: 'shop_food', dusk: 'home', night: 'home' },
-    butcher:     { dawn: 'home', morning: 'shop_meat', noon: 'shop_meat', evening: 'shop_meat', dusk: 'home', night: 'home' },
+    // Раунд 53: лавки снеди/мясная удалены — Прасковья и Потап живут и
+    // работают в своих домах (снедница при печи, мясник при столешне).
+    grocer:      { dawn: 'home', morning: 'home', noon: 'home', evening: 'home', dusk: 'home', night: 'home' },
+    butcher:     { dawn: 'home', morning: 'home', noon: 'home', evening: 'home', dusk: 'home', night: 'home' },
     peddler:     { dawn: 'home', morning: 'shop_tools', noon: 'shop_tools', evening: 'shop_tools', dusk: 'home', night: 'home' },
     shoemaker:   { dawn: 'home', morning: 'home', noon: 'village', evening: 'home', dusk: 'home', night: 'home' },
     woodcutter:  { dawn: 'home', morning: 'forest', noon: 'forest', evening: 'home', dusk: 'home', night: 'home' },
@@ -123,11 +125,11 @@ const NIGHT_FORBIDDEN_PLACES = new Set([
 const ACTIVITY = {
     // Раунд 51: восточная слобода
     grocer: {
-        shop_food: 'торгует снедью за прилавком', home: 'печёт караваи',
+        home: 'печёт караваи да пироги',
         village: 'с поклоном торговалась с покупателями',
     },
     butcher: {
-        shop_meat: 'рубит тушу и торгует мясом', home: 'колет тушу к утру',
+        home: 'колет тушу к утру',
         village: 'несёт окорок заказчику',
     },
     peddler: {
@@ -222,8 +224,7 @@ export const PLACE_NAMES = {
     mill: 'на мельнице', apiary: 'на пасеке', lake: 'у озера',
     river: 'на реке', forest: 'в лесу', field: 'в поле',
     gate: 'у ворот', church: 'в церкви', pasture: 'на выпасе',
-    // Раунд 51: восточная слобода
-    shop_food: 'в лавке снеди', shop_meat: 'в мясной лавке',
+    // Раунд 53: дома слободы вместо удалённых лавок
     shop_tools: 'в лавке ремесленника',
 };
 

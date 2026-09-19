@@ -26,8 +26,8 @@ export const PROFESSIONS = {
     MONK: 'monk',             // Монах
     HOMEMAKER: 'homemaker',   // Хозяйка дома (раунд 27: жёны старосты и пасечника)
     // Раунд 51 (п.11 заявки): восточная слобода — лавки и ремёсла
-    GROCER: 'grocer',         // Снедница (Прасковья, лавка снеди)
-    BUTCHER: 'butcher',       // Мясник (Потап, мясная лавка)
+    GROCER: 'grocer',         // Снедница (Прасковья, дом с хлебной печью)
+    BUTCHER: 'butcher',       // Мясник (Потап, дом со столешней)
     PEDDLER: 'peddler',       // Торгарь (Аверьян, лавка ремесленника)
     SHOEMAKER: 'shoemaker',   // Сапожник (Нефёд)
     WOODCUTTER: 'woodcutter', // Дровосек (Горазд)
@@ -109,22 +109,22 @@ export const PROFESSION_SCHEDULES = {
         dusk:      { activity: 'на постоялом дворе', location: 'tavern', available: true },
         night:     { activity: 'спит на постоялом дворе', location: 'tavern', available: false },
     },
-    // === РАУНД 51: ЛАВКИ ВОСТОЧНОЙ СЛОБОДЫ ===
-    // Днём хозяин В СВОЕЙ ЛАВКЕ (location = interiorId лавки — InteriorScene
-    // считает место «хозяин на месте», лавка работает).
+    // === РАУНД 51/53: СЛОБОДА. ЛАВКИ СНЕДИ И МЯСНАЯ УДАЛЕНЫ (дома нужнее) ===
+    // Прасковья и Потап живут в своих домах: днём работают при доме
+    // (снедница печёт, мясник рубит) и принимают гостей с крыльца.
     [PROFESSIONS.GROCER]: {
         dawn:      { activity: 'печёт караваи', location: 'home', available: false },
-        morning:   { activity: 'торгует снедью', location: 'shop_food', available: true },
-        noon:      { activity: 'торгует снедью', location: 'shop_food', available: true },
-        evening:   { activity: 'допродает остатки', location: 'shop_food', available: true },
-        dusk:      { activity: 'запирает лавку', location: 'home', available: true },
+        morning:   { activity: 'печёт снедь да торгует с крыльца', location: 'home', available: true },
+        noon:      { activity: 'принимает гостей за столом', location: 'home', available: true },
+        evening:   { activity: 'допродаёт пироги с крыльца', location: 'home', available: true },
+        dusk:      { activity: 'запирает двор', location: 'home', available: true },
         night:     { activity: 'спит', location: 'home', available: false },
     },
     [PROFESSIONS.BUTCHER]: {
         dawn:      { activity: 'колет тушу', location: 'home', available: false },
-        morning:   { activity: 'торгует мясом', location: 'shop_meat', available: true },
-        noon:      { activity: 'торгует мясом', location: 'shop_meat', available: true },
-        evening:   { activity: 'коптит окорока', location: 'shop_meat', available: true },
+        morning:   { activity: 'рубит тушу в столешне', location: 'home', available: true },
+        noon:      { activity: 'коптит окорока', location: 'home', available: true },
+        evening:   { activity: 'допродаёт мясо с крыльца', location: 'home', available: true },
         dusk:      { activity: 'точит тесак', location: 'home', available: true },
         night:     { activity: 'спит', location: 'home', available: false },
     },
