@@ -345,7 +345,9 @@ export const BUILDINGS = [
     { interiorId: 'grocer_house', col: 18, row: 1, w: 3, h: 3, label: t('Дом Прасковьи') },
     // РАУНД 63 (п.2): вместо лавки-палатки — НОРМАЛЬНЫЙ ДОМ ремесленника
     // (спрайт-изба вместо полосатого тента; торговля с крыльца сохранена).
-    { interiorId: 'shop_tools', col: 22, row: 1, w: 2, h: 3, label: t('Дом ремесленника') },
+    // РАУНД 64 (п.3): сдвинут на колонку 21 — восточнее (колонки 23–25)
+    // освобождено место видимой воротне-арке village_gate_r64.
+    { interiorId: 'shop_tools', col: 21, row: 1, w: 2, h: 3, label: t('Дом ремесленника') },
     // Средний ряд:
     { interiorId: 'villager_house_1', col: 2, row: 6, w: 3, h: 3, label: t('Дом Авдея') },
     { interiorId: 'villager_house_2', col: 6, row: 6, w: 3, h: 3, label: t('Дом Марфы') },

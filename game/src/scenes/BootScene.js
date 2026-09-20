@@ -161,16 +161,17 @@ export class BootScene extends Phaser.Scene {
             this.load.image(`int_bg_${id}`, `assets/interiors/int_bg_${id}.jpg`);
         });
 
-        // ----- РАУНД 62: НОВЫЙ ЕДИНЫЙ НАБОР ДОМОВ «ДЕРЕВЯННЫЕ ДОМА И
-        // СТРОЕНИЯ» (vh_* — вырезы из Rural_TileB/C/D по приказу владельца:
-        // дома НЕ ОБРЕЗАНЫ по стенам, крышам и трубам; вся деревня в одном
-        // стиле). Каждый вырез проверен попиксельно и визуально; постоялый
-        // двор (vh_inn) достроен зеркальным торцом, часовня (vh_chapel)
-        // собрана из башни, каменного шатра и креста. Старые ключи
-        // rural_*/wood_house_*/house3d_blacksmith из загрузки УБРАНЫ.
-        const vhHouseKeys = ['vh_manor', 'vh_inn', 'vh_chapel', 'vh_loghouse', 'vh_logroof',
-            'vh_flowers', 'vh_redflowers', 'vh_cottage_mid', 'vh_cottage_right', 'vh_stall'];
-        vhHouseKeys.forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
+        // ----- РАУНД 64 (пп.8,9 приказа владельца): ДОМА СОБРАНЫ ИЗ ЧАСТЕЙ —
+        // «СТЕН И КРЫШ» (вариант 9 из приказа; генератор tools/make_houses_r64.py,
+        // тайлы деревни wall_log/wall_plank/plaster + roof_thatch/roof_wood).
+        // У каждого дома ЧЕСТНЫЕ БОКОВЫЕ СТЕНЫ (угловые столбы-замки во всю
+        // высоту), каменный цоколь, наличники/ставни — НИЧЕГО НЕ ОБРЕЗАНО.
+        // Двухэтажный только постоялый двор (hp_inn); часовня — vh_chapel.
+        // Старые вырезы vh_* (кроме часовни) из загрузки УБРАНЫ.
+        const hpHouseKeys = ['hp_log_thatch_a', 'hp_log_thatch_b', 'hp_log_wood_a', 'hp_log_wood_b',
+            'hp_plank_thatch_a', 'hp_plank_wood_a', 'hp_plaster_thatch_a', 'hp_plaster_wood_a',
+            'hp_narrow_thatch', 'hp_narrow_wood', 'hp_inn', 'village_gate_r64', 'vh_chapel'];
+        hpHouseKeys.forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
 
         // ----- РАУНД 51/53: ТАЙЛОВЫЕ ФОНЫ ИНТЕРЬЕРОВ СЛОБОДЫ =====
         const round51BgIds = ['grocer_house', 'butcher_house', 'shop_tools', 'shoemaker_house', 'woodcutter_house'];
@@ -360,8 +361,9 @@ export class BootScene extends Phaser.Scene {
         // ----- Процедурные текстуры хозяйственных построек — раунд 17 -----
         this.createVillageYardTextures();
 
-        // ----- Раунд 57 (п.3): НОВАЯ ВОРОТНЯ деревни (вместо плоских ворот r39) -----
-        this.createGateTexture();
+        // ----- РАУНД 64: воротня village_gate_r64 — ГОТОВЫЙ PNG из
+        // tools/make_houses_r64.py (фронтальная арка без башенок).
+        // Процедурный createGateTexture (r57–r63) удалён вместе с методом.
 
         // ----- АУДИО -----
         // SFX
@@ -1244,128 +1246,7 @@ export class BootScene extends Phaser.Scene {
      *  - створки раскрыты настежь (прижаты к башням), фонарь с тёплым
      *    светом, порог с колеями, тыновые крылья на север и юг.
      */
-    createGateTexture() {
-        const g = this.make.graphics({ add: false });
-        const W = 48, H = 300;
-        const CX = 24;                           // ось ворот (центр колонки)
-        const ROAD_TOP = 90, ROAD_BOT = 138;     // лента дороги (48px, тайл)
-
-        const logBand = (x, y, w, h) => {
-            // Один венец сруба: бревно с бликом и тенью
-            g.fillStyle(0x4e3820, 1); g.fillRect(x, y, w, h);
-            g.fillStyle(0x5f462c, 1); g.fillRect(x, y + 1, w, Math.max(1, h * 0.45));
-            g.fillStyle(0x6b5030, 1); g.fillRect(x, y + 1, w, 1);
-            g.fillStyle(0x33240f, 1); g.fillRect(x, y + h - 1, w, 1);
-        };
-        const cornerPost = (x, yTop, yBot) => {
-            g.fillStyle(0x3a2a16, 1); g.fillRect(x, yTop, 6, yBot - yTop);
-            g.fillStyle(0x523c22, 1); g.fillRect(x + 1, yTop, 2, yBot - yTop);
-            g.fillStyle(0x241708, 1); g.fillRect(x, yTop, 1, yBot - yTop);
-        };
-        // Кровля «как у домов деревни»: конёк ВДОЛЬ улицы (запад-восток) —
-        // зритель видит передний скат трапецией, а не треугольным щипцом.
-        const streetRoof = (xL, xR, yRidge, yEave) => {
-            g.fillStyle(0x6b4a2a, 1);
-            g.fillPoints([
-                { x: xL + 8, y: yRidge }, { x: xR - 8, y: yRidge },
-                { x: xR + 3, y: yEave }, { x: xL - 3, y: yEave },
-            ], true);
-            // Тень под коньком + ряды дранки
-            g.fillStyle(0x513620, 0.55); g.fillRect(xL + 8, yRidge + 1, xR - xL - 16, 2);
-            for (let yy = yRidge + 4; yy < yEave; yy += 4) {
-                const t = (yy - yRidge) / (yEave - yRidge);
-                const half = 8 + t * 8;
-                g.fillStyle(0x3a2818, 0.7);
-                g.fillRect(CX - half, yy, half * 2, 1);
-                g.fillStyle(0x7d5a36, 0.5);
-                g.fillRect(CX - half + 1, yy + 1, half * 2 - 2, 1);
-            }
-            // Свес (толстая тёмная кромка) и конёк
-            g.fillStyle(0x241708, 1);
-            g.fillRect(xL - 3, yEave, xR - xL + 6, 3);
-            g.fillStyle(0x815f38, 1);
-            g.fillRect(xL + 7, yRidge - 2, xR - xL - 14, 2);
-        };
-        const stoneBase = (x, y, w, h) => {
-            // Каменный цоколь с рустом
-            g.fillStyle(0x6a625a, 1); g.fillRect(x, y, w, h);
-            g.fillStyle(0x544c44, 1);
-            for (let sx = x + 3; sx < x + w - 6; sx += 11) g.fillRect(sx, y + 1, 7, h - 3);
-            g.fillStyle(0x7d766c, 0.7); g.fillRect(x, y, w, 1);
-        };
-        const palisadeRun = (yTop, yBot, pointedAtTop) => {
-            const PX = CX - 10;                    // лента частокола 20px
-            for (let py = yTop; py < yBot; py += 8) {
-                const hh = Math.min(8, yBot - py);
-                g.fillStyle(0x4a3520, 1); g.fillRect(PX, py, 20, hh);
-                g.fillStyle(0x5f462c, 1); g.fillRect(PX + 2, py, 4, hh);
-                g.fillStyle(0x33240f, 1); g.fillRect(PX + 19, py, 1, hh);
-                g.fillStyle(0x241708, 0.6); g.fillRect(PX, py, 20, 1);
-            }
-            const tipY = pointedAtTop ? yTop : yBot;
-            g.fillStyle(0x5f462c, 1);
-            g.fillTriangle(PX, tipY, PX + 20, tipY, PX + 10, tipY + (pointedAtTop ? -6 : 6));
-            g.fillStyle(0x33240f, 1);
-            g.fillRect(PX - 2, Math.floor((yTop + yBot) / 2), 24, 3);
-        };
-
-        // ===== 1. ТЫНОВЫЕ КРЫЛЬЯ по линии частокола (север/юг) =====
-        palisadeRun(2, 46, true);              // северное крыло (над башней)
-        palisadeRun(184, 298, false);          // южное крыло — вдоль околицы
-
-        // ===== 2. СЕВЕРНАЯ БАШЕНКА — малая сторожевая будка над дорогой =====
-        streetRoof(4, 44, 40, 56);
-        logBand(4, 59, 40, 27);
-        cornerPost(4, 59, 86); cornerPost(38, 59, 86);
-        // Бойница со ставнем
-        g.fillStyle(0x140c04, 1); g.fillRect(CX - 3, 64, 6, 14);
-        g.fillStyle(0x5f462c, 1); g.fillRect(CX - 6, 61, 12, 2);
-        stoneBase(2, 84, 44, 6);
-
-        // ===== 3. ЮЖНАЯ БАШЕНКА (ближе к зрителю: кровля, сруб, цоколь) =====
-        streetRoof(4, 44, 138, 154);
-        logBand(4, 157, 40, 27);
-        cornerPost(4, 157, 184); cornerPost(38, 157, 184);
-        // Волоковое окошко с тёплым отсветом (внутри кто-то есть)
-        g.fillStyle(0x140c04, 1); g.fillCircle(CX, 168, 4);
-        g.lineStyle(1.5, 0x33240f, 1); g.strokeCircle(CX, 168, 4);
-        g.fillStyle(0xffb050, 0.5); g.fillCircle(CX - 1, 167, 1.8);
-        // ФОНАРЬ у входа — тёплый вечерний свет
-        g.fillStyle(0x140c04, 1); g.fillRect(CX + 13, 161, 7, 10);
-        g.fillStyle(0xffc860, 0.95); g.fillRect(CX + 14.5, 163, 4, 6);
-        g.fillStyle(0x5f462c, 1);
-        g.fillTriangle(CX + 12, 161, CX + 21, 161, CX + 16.5, 157);
-        [12, 8, 4].forEach((r, i) => {
-            g.fillStyle(0xffb050, 0.05 + i * 0.05);
-            g.fillCircle(CX + 16.5, 166, r);
-        });
-        stoneBase(2, 184, 44, 6);
-
-        // ===== 4. ПРОЕЗД: створки настежь (прижаты к башням), порог =====
-        const leaf = (yTop) => {
-            g.fillStyle(0x4e3820, 1); g.fillRect(1, yTop, 8, 26);
-            g.fillStyle(0x5f462c, 1); g.fillRect(2, yTop, 2, 26);
-            g.fillStyle(0x33240f, 1);
-            g.fillRect(4, yTop, 1, 26);
-            g.fillRect(1, yTop, 8, 1);
-            g.fillRect(1, yTop + 25, 8, 1);
-            g.fillStyle(0xc9a14a, 1);          // кованые петли
-            g.fillCircle(7, yTop + 5, 1.4);
-            g.fillCircle(7, yTop + 21, 1.4);
-        };
-        leaf(60);                              // прижата к северной башне
-        leaf(156);                             // прижата к южной башне
-        // Порог-настил с колеями от телег (у восточной кромки проезда)
-        g.fillStyle(0x7a5c38, 0.55);
-        g.fillRect(10, ROAD_TOP + 6, 30, 3);
-        g.fillRect(10, ROAD_BOT - 9, 30, 3);
-
-        g.generateTexture('village_gate_r63', W, H);
-        g.destroy();
-    }
-
-
-    /**
+/**
      * Создать walk-анимации в 4 направлениях для spritesheet 4×4.
      * Структура: строки 0=down, 1=left, 2=right, 3=up; колонки 0..3 = кадры.
      */
