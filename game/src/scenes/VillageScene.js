@@ -3,7 +3,7 @@
 import { RUS } from '../config/RusTheme.js';
 import {
     buildMap, SOLID, tileTexture, roadTileSpec, validateMap, doorInteriorId, isGate,
-    PLAYER_START, MAP_W, MAP_H, getVillageName, YARD_PROPS, SHEEPFOLD,
+    PLAYER_START, MAP_W, MAP_H, getVillageName, YARD_PROPS,
 } from '../data/world.js';
 import { BUILDINGS, VILLAGE_GATE, INTERIORS } from '../data/interiors.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
@@ -98,11 +98,14 @@ export class VillageScene extends Phaser.Scene {
                 for (let dx = 0; dx < p.w; dx++) coveredTiles.add(`${p.col + dx},${p.row + dy}`);
             }
         });
-        for (let gx = SHEEPFOLD.col; gx < SHEEPFOLD.col + SHEEPFOLD.w; gx++) {
-            for (let gy = SHEEPFOLD.row; gy < SHEEPFOLD.row + SHEEPFOLD.h; gy++) {
-                coveredTiles.add(`${gx},${gy}`); // овчарня-загон
-            }
-        }
+        // Раунд 63 (п.1): овчарня-загон удалена — её тайлы покрыты новым
+        // домом Степана автоматически (он в BUILDINGS).
+
+        // ----- РАУНД 63 (пп.3-5): тайлы линии частокола у ворот (колонка 25,
+        // ряды 3-4 и 6-9) — жители не должны блуждать «сквозь» тын; для
+        // игрока здесь же ставятся невидимые тела (см. drawVillageGate).
+        this.gateFenceTiles = new Set();
+        [3, 4, 6, 7, 8, 9].forEach(r => this.gateFenceTiles.add(`${MAP_W - 1},${r}`));
 
         // ----- QA коллизий и проходимости: BFS-проверка карты -----
         const validation = validateMap(this.map);
@@ -205,11 +208,12 @@ export class VillageScene extends Phaser.Scene {
             carpenter_house: 'vh_cottage_mid',   // изба с каменной трубой, ЗЕРКАЛЬНО (TileD)
             fisher_house: 'vh_logroof',          // как кузница, ЗЕРКАЛЬНО
             weaver_house: 'vh_redflowers',       // изба с красными цветами под кровлей (TileC)
-            shop_tools: 'vh_stall',              // лавка ремесленника с полосатым тентом (TileB)
+            shop_tools: 'vh_cottage_right',      // РАУНД 63 (п.2): дом ремесленника (белая изба с трубой)
             grocer_house: 'vh_cottage_mid',      // белая изба с каменной трубой (TileD)
             butcher_house: 'vh_cottage_mid',     // как дом Прасковьи, ЗЕРКАЛЬНО
             shoemaker_house: 'vh_loghouse',      // как дом Авдея (железная дверь)
             woodcutter_house: 'vh_loghouse',     // лесная изба, ЗЕРКАЛЬНО
+            villager_house_3: 'vh_flowers',      // РАУНД 63 (п.1): дом Степана (на месте овчарни)
             church: 'vh_chapel',                 // часовня: звонница с колоколом, шатёр и крест (TileD)
         };
         // Дома, рисуемые ЗЕРКАЛЬНО (разнообразие фасадов; зеркала разнесены
@@ -313,11 +317,12 @@ export class VillageScene extends Phaser.Scene {
         });
 
         // ----- Дым из труб (атмосфера, §3 village-visual-upgrade) -----
-        // Раунд 52: дымим только у домов с трубами (CHIMNEY_SPRITES) и церкви;
-        // ТОРГОВЫЕ ЛАВКИ (палатки) не дымят — труб у палаток нет.
+        // Дымим только у домов с трубами (CHIMNEY_SPRITES); у часовни крест,
+        // не труба. С раунда 63 торговых палаток в деревне больше нет.
         this.smokeBuildings = BUILDINGS
             .filter(b => {
-                if (b.interiorId.indexOf('shop_') === 0) return false; // палатки
+                // Раунд 63 (п.2): торговых палаток больше нет — дом ремесленника
+                // стоит на vh_cottage_right с трубой и тоже дымит.
                 if (b.interiorId === 'church') return false; // у часовни крест, не труба
                 const key = HOUSE_SPRITE_BY_ID[b.interiorId];
                 return CHIMNEY_SPRITES.has(key);
@@ -389,8 +394,10 @@ export class VillageScene extends Phaser.Scene {
             }
         });
 
-        // ----- Живность: бабочки днём / светлячки ночью (атмосфера) -----
-        this.createAmbientCritters(ts);
+        // ----- Живность: бабочки/светлячки УДАЛЕНЫ (раунд 63, п.8:
+        // «УДАЛИТЬ ВСЕ ЛЕТАЮЩИЕ ПО ДЕРЕВНЕ КРУТЯЩИЕСЯ ПРИЗМЫ») —
+        // ромбовидные бабочки и ночные искры владелец счёл летающими призмами.
+        // Осталась только живая живность: куры/коровы и воробьи -----
 
         // ----- Полевые цветы/кочки и сундуки с лутом (раунд 11) -----
         this.scatterFlowers(ts);
@@ -411,31 +418,19 @@ export class VillageScene extends Phaser.Scene {
         this._lastStreetHour = -1;
         this.rebuildStreetNpcs();
 
-        // ----- Ворота (п.20 заявки раунда 39): НОВЫЕ ВОРОТА —
-        // старый тайл tile_gate был «повёрнут не в ту сторону». Ворота стоят
-        // на ВОСТОЧНОЙ околице: рисуем сторожевую башенку со створками во всю
-        // ширину дороги (проезд с запада на восток), столбы по бокам дороги.
+        // ----- Ворота (п.20 заявки раунда 39): ворота на ВОСТОЧНОЙ околице.
+        // РАУНД 63 (пп.3-5): новая воротня village_gate_r63 — малые башенки,
+        // коньки ВДОЛЬ улицы, полоса ровно в колонке ворот (лавка и изба
+        // сапожника больше не перекрыты!). Маркер-искра над воротами удалена
+        // (п.8 — «летающие призмы»); осталась надпись «ВЫХОД ▶».
         const gatePx = (MAP_W - 1) * ts + ts / 2;
         const gatePy = VILLAGE_GATE.row * ts + ts / 2;
         this.drawVillageGate(gatePx, gatePy, ts);
-        const gateLabel = this.add.text(gatePx - ts * 3.4, gatePy - ts * 0.4, t('ВЫХОД ▶'), {
+        const gateLabel = this.add.text(gatePx - ts * 2.6, gatePy - ts * 0.4, t('ВЫХОД ▶'), {
             fontSize: '16px', color: '#ff8060', backgroundColor: '#00000088',
             padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(20);
-        const gateMarker = this.add.image(gatePx, gatePy - ts * 3.5, 'particle_spark')
-            .setTint(0xff6040)
-            .setDisplaySize(24, 24)
-            .setDepth(20);
-        this.tweens.add({
-            targets: gateMarker,
-            alpha: { from: 0.7, to: 1 },
-            scale: { from: 0.9, to: 1.2 },
-            duration: 600,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-        });
 
         // ----- Игрок (раунд 37: единый масштаб с жителями, п.4/п.12) -----
         // П.1-2: Если игрок настроил внешность через генератор — используем
@@ -507,7 +502,7 @@ export class VillageScene extends Phaser.Scene {
                     'Управление: WASD/стрелки — движение, E/пробел — действие, M — обзор деревни, ESC — меню.\n\n' +
                     '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
                     '🔒 Закрытые избы: хозяин ушёл — подскажут, где искать.\n' +
-                    '✝ Крест — молитва. 🎣 Рыбалка — на Реке (по карте). 🐑 Овчарня — на востоке новой улицы.\n' +
+                    '✝ Крест — молитва. 🎣 Рыбалка — на Реке (по карте). 🚪 Новый дом Степана — на востоке южной улицы.\n' +
                     '🐺 За воротами, в Тёмном лесу, водятся волки — там же грибы и ягоды.\n' +
                     '🚪 Выход за околицу (по карте) занимает ровно 1 игровой час.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
@@ -754,9 +749,12 @@ export class VillageScene extends Phaser.Scene {
                 fontSize: '16px',
             }).setOrigin(0.5).setDepth(9);
         } else if (b.interiorId === 'shop_tools') {
-            // Раунд 51: лавка ремесленника — весы/товар (эмблема)
-            this.add.text(cx, topY - ts * 0.35, '⚖️', {
-                fontSize: '16px',
+            // Раунд 63 (п.2): лавка стала ДОМОМ ремесленника — эмблема весов снята
+            // (у жилых домов эмблем ремесла не ставят; труба с дымом теперь есть).
+        } else if (b.interiorId === 'villager_house_3') {
+            // Раунд 63 (п.1): дом Степана — куриный двор (эмблема)
+            this.add.text(cx, topY - ts * 0.3, '🐔', {
+                fontSize: '14px',
             }).setOrigin(0.5).setDepth(9);
         } else if (b.interiorId === 'shoemaker_house') {
             // Раунд 51: сапожник — сапог (эмблема)
@@ -820,59 +818,8 @@ export class VillageScene extends Phaser.Scene {
             }
         });
 
-        // ----- Раунд 37 (вариант Б): ОВЧАРНЯ на восточном конце второй улицы -----
-        // Частокол 'H' уже стоит (world.buildMap); рисуем поверх него жерди,
-        // овец (мелкий рогатый скот — спрайт козы) и сено. Ивашка пасёт рядом.
-        this.drawSheepfold(ts);
-    }
-
-    /**
-     * Раунд 37: визуал овчарни — жерди частокола, 3 овцы, стог сена.
-     */
-    drawSheepfold(ts) {
-        // Раунд 52: загон из константы SHEEPFOLD (юго-восток, 22–24 × 11–12)
-        const sf = SHEEPFOLD;
-        if (!this.map || !this.map[sf.row] || this.map[sf.row][sf.col] !== 'H') return; // нет загона — нет и овец
-        const penCols = [];
-        for (let x = sf.col - 1; x <= sf.col + sf.w; x++) {
-            if (this.map[sf.row] && this.map[sf.row][x] === 'H') penCols.push(x);
-        }
-        if (!penCols.length) return;
-        const rowY = (sf.row + 1) * ts; // нижний ряд загона — визуальный центр
-        // Жерди частокола поверх «стенных» тайлов (визуально — частокол, не изба)
-        penCols.forEach((col) => {
-            const px = col * ts + ts / 2;
-            if (this.textures.exists('tile_fence_h')) {
-                this.add.image(px, rowY, 'tile_fence_h')
-                    .setScale(ts / 32)
-                    .setDepth(sf.row + 1 + 0.35);
-            }
-        });
-        // Овцы — на подиуме загона, чуть дышат (лёгкий твин высоты)
-        const sheepTex = this.textures.exists('deco_goat') ? 'deco_goat'
-            : (this.textures.exists('deco_cow') ? 'deco_cow' : null);
-        if (sheepTex) {
-            const cols = [penCols[0], penCols[Math.floor(penCols.length / 2)], penCols[penCols.length - 1]];
-            cols.forEach((col, i) => {
-                const sx = col * ts + ts / 2 + (i % 2 ? 10 : -8);
-                const sy = rowY - 4;
-                const sheep = this.add.image(sx, sy, sheepTex)
-                    .setScale(0.85 + i * 0.08)
-                    .setFlipX(i % 2 === 0)
-                    .setDepth(sf.row + 1 + 0.5);
-                this.tweens.add({
-                    targets: sheep,
-                    y: sy - 1.5,
-                    duration: 1600 + i * 350, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-                });
-            });
-        }
-        // Стог сена в углу загона
-        if (this.textures.exists('deco_haystack')) {
-            this.add.image(penCols[penCols.length - 1] * ts + ts / 2, rowY - 8, 'deco_haystack')
-                .setScale(0.7)
-                .setDepth(sf.row + 1 + 0.45);
-        }
+        // Раунд 63 (п.1): ОВЧАРНЯ УДАЛЕНА — загон, овцы и стог сняты;
+        // на этом месте стоит жилой дом Степана (см. BUILDINGS).
     }
 
     /**
@@ -971,26 +918,42 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
-     * РАУНД 61 (п.4 приказа «КРИВО СДЕЛАНЫ ВОРОТА — ПЕРЕДЕЛАТЬ!»): постановка
-     * НОВОЙ воротни (текстура village_gate_r57, 232×336 — чистая симметричная
-     * композиция, см. BootScene.createGateTexture). РАУНД 61 (QA-диагноз
-     * «кривые ворота»): раньше текстура ЦЕНТРИРОВАЛАСЬ на кромке карты, и
-     * правая треть воротни (со половиной южной башни) ОТРЕЗАЛАСЬ краем мира —
-     * ворота выглядели скошенными. Теперь воротня сдвинута влево так, что
-     * ЦЕЛИКОМ лежит на карте, а проезд остаётся на линии главной улицы.
-     * Глубина ВЫШЕ окрестных деревьев; игрок честно отсортирован: севернее
-     * башен — за воротами, южнее — перед ними, в проезде — «за» порогом.
+     * РАУНД 63 (пп.3,4,5 приказа): постановка НОВОЙ воротни village_gate_r63
+     * (48×300 — узкая полоса ровно в колонке ворот).
+     * Что изменилось против r61/r57:
+     *  - МАЛЫЕ БАШЕНКИ: сторожевые будки ~1×1 тайла над/под дорогой —
+     *    прежние башни-исполины по 5 тайлов накрывали лавку и избу сапожника;
+     *  - «ПОВОРОТ НА 90°»: кровли теперь с коньком ВДОЛЬ улицы (запад-восток),
+     *    как у всех домов деревни (раньше щипцы смотрели поперёк — башни
+     *    выглядели домами, повёрнутыми боком);
+     *  - ПЕРЕКРЫТИЙ НЕТ: воротня не выступает на запад от колонки ворот,
+     *    а конёк южной башенки заканчивается выше избы сапожника;
+     *  - линия частокола (ряды 3-4 и 6-9) получила невидимые тела —
+     *    честная коллизия для игрока; для блуждания жителей эти тайлы
+     *    исключены (gateFenceTiles → NpcWander.blockedTiles).
+     * Проезд остаётся на линии главной улицы; глубина ВЫШЕ окрестных
+     * деревьев; игрок в проезде отсортирован честно (тайл проезда прозрачен).
      */
     drawVillageGate(gx, gy, ts) {
-        const depth = 8.6;
-        if (!this.textures.exists('village_gate_r57')) return;
-        // Текстура рисована под тайл 48: центр дороги в ней на y=170/336.
-        // Сдвиг: правый край текстуры НЕ выходит за кромку карты (было: центр
-        // на gx — 92px текстуры оказывались за правым краем мира).
-        const img = this.add.image(gx - 92, gy, 'village_gate_r57');
+        if (!this.textures.exists('village_gate_r63')) return;
+        // Текстура рисована под тайл 48: лента дороги в ней на y 90..138.
+        // Ставим полосу ровно в колонку ворот: центр X — ось колонки,
+        // верх текстуры — на 114px (2.375 тайла) выше центра дороги.
+        const img = this.add.image(gx, gy - ts * 2.375, 'village_gate_r63');
         img.setScale(ts / 48);
-        img.setOrigin(0.5, 170 / 336);
-        img.setDepth(depth);
+        img.setOrigin(0.5, 0);
+        img.setDepth(8.6);
+        // Невидимые тела вдоль линии частокола (не проезда!):
+        // игрок не пройдёт «сквозь тын», но проезд и двор свободны.
+        if (this.solids) {
+            [3, 4, 6, 7, 8, 9].forEach(row => {
+                const sx = (MAP_W - 1) * ts + ts / 2;
+                const sy = row * ts + ts / 2;
+                const body = this.solids.create(sx, sy, 'tile_fence_h');
+                body.setScale(ts / 32).refreshBody();
+                body.setVisible(false);
+            });
+        }
     }
 
     /**
@@ -1284,16 +1247,24 @@ export class VillageScene extends Phaser.Scene {
             const entry = { id, spr, label, hint, wander: null };
             // Раунд 37 (пп.13,15): осмысленное блуждание по проходимым тайлам
             // с анимацией ходьбы (никаких «дёрганий» и пробежек сквозь дома)
+            // РАУНД 63 (пп.6,7): «жители не должны бегать так быстро и бесцельно»
+            //  - скорость ХОДЬБЫ ещё ниже: 920→1500 мс/тайл (взрослые),
+            //    640→1150 (дети); минимум 480→900 мс (см. NpcWander);
+            //  - МЕНЬШЕ СУЕТЫ: дольше стоят на месте (idle 3.8–8.6 с),
+            //    радиус блуждания ужат, после паузы житель нередко
+            //    продолжает стоять (wanderChance) — движение стало редким
+            //    и спокойным, а не суетливым марафоном.
             entry.wander = attachNpcWander(this, {
                 spr,
                 anchorX: x, anchorY: y,
-                radius: kid ? 3 : 2,
+                radius: kid ? 2 : 2,
                 map: this.map, ts,
                 label, hint,
-                idleMin: kid ? 900 : 1800,
-                idleMax: kid ? 2600 : 5200,
-                // Раунд 55: жители/дети ходят В 2 РАЗА МЕДЛЕННЕЕ (460→920, 320→640 мс/тайл)
-                stepMs: kid ? 640 : 920,
+                blockedTiles: this.gateFenceTiles,
+                idleMin: kid ? 2400 : 3800,
+                idleMax: kid ? 5400 : 8600,
+                stepMs: kid ? 1150 : 1500,
+                wanderChance: kid ? 0.6 : 0.55,
             });
             this.streetNpcs.push(entry);
         });
@@ -1315,7 +1286,8 @@ export class VillageScene extends Phaser.Scene {
             if (this.anims.exists(walkKey)) spr.play(walkKey);
             const targetX = Math.random() < 0.5 ? minX : maxX;
             // Раунд 55: староста тоже прогуливается В 2 РАЗА МЕДЛЕННЕЕ
-            const walkDur = 24000 + Math.random() * 16000;
+            // Раунд 63 (пп.6,7): и ЕЩЁ медленнее — неспешный обход 42–64 с
+            const walkDur = 42000 + Math.random() * 22000;
             this.tweens.add({
                 targets: spr,
                 x: { from: startX, to: targetX },
@@ -1386,7 +1358,9 @@ export class VillageScene extends Phaser.Scene {
             potter1: { x: 17.5, y: 4.4 },       // за домом гончара (сушит горшки)
             potter_wife: { x: 16.5, y: 4.4 },   // у двора гончара
             weaver1: { x: 16.5, y: 14.4 },      // у дома ткачихи
-            shepherd_boy: { x: 23.5, y: 13.4 }, // у овчарни (22–24 × 11–12)
+            shepherd_boy: { x: 15.5, y: 14.4 }, // при матери-ткачихе (овчарня снята, р.63)
+            peasant2: { x: 23.5, y: 14.4 },     // у своего нового дома (р.63, п.1)
+            peasant2_wife: { x: 20.5, y: 10.4 }, // по воду (южная улица)
             fisher_wife: { x: 11.5, y: 14.4 },  // у дома рыбака
             guard: { x: 24.4, y: 5.4 },         // у ворот (25,5)
             tavernkeeper: { x: 8.5, y: 4.4 },   // у постоялого двора
@@ -1601,29 +1575,8 @@ export class VillageScene extends Phaser.Scene {
             else if (h < 8) dark = (8 - h) / 3;      // 5→1 … 8→0
             this.windowGlows.forEach(g => g.setAlpha(dark * 0.38));
 
-            // Бабочки — на дне (светло), светлячки — ночью (темно)
-            if (this.butterflies) {
-                const day = 1 - dark;
-                this.butterflies.forEach(b => {
-                    b.setVisible(day > 0.25);
-                    b.setAlpha(day);
-                });
-            }
-            if (this.fireflies) {
-                const now = this.time.now;
-                this.fireflies.forEach(f => {
-                    if (dark <= 0.35) {
-                        f.setVisible(false);
-                        return;
-                    }
-                    f.setVisible(true);
-                    // Пульс: гаснут и разгораются вразнобой, параллельно лёгкий дрейф
-                    const pulse = 0.35 + 0.55 * Math.sin(now * f.pulseSpeed + f.phase);
-                    f.setAlpha(dark * Math.max(0, pulse));
-                    f.x = f.homeX + Math.sin(now * 0.0011 + f.phase) * 26;
-                    f.y = f.homeY + Math.cos(now * 0.0009 + f.phase * 1.7) * 18;
-                });
-            }
+            // Раунд 63 (п.8): бабочки/светлячки удалены — «летающих призм»
+            // в деревне больше нет. Осталась живая живность:
 
             // Домашняя живность (куры/коровы) на ночь прячется по домам
             if (this.farmAnimals) {
@@ -1851,76 +1804,8 @@ export class VillageScene extends Phaser.Scene {
         }
     }
 
-    /**
-     * Живность деревни: бабочки днём, светлячки ночью.
-     * Видимость переключается в updateHUD() по «dark»-коэффициенту времени суток.
-     */
-    createAmbientCritters(ts) {
-        // --- Текстура бабочки (крохотные крылышки, 10×8) ---
-        if (!this.textures.exists('critter_butterfly')) {
-            const g = this.add.graphics();
-            g.fillStyle(0xffffff, 1);
-            g.fillTriangle(0, 4, 5, 0, 5, 8);      // левое крыло
-            g.fillTriangle(10, 4, 5, 0, 5, 8);     // правое крыло
-            g.generateTexture('critter_butterfly', 10, 8);
-            g.destroy();
-        }
-
-        // --- Бабочки (5 шт): порхают над травой и грядками днём ---
-        this.butterflies = [];
-        const tints = [0xf6e7a8, 0xe8c9e0, 0xd8e6c8];
-        for (let i = 0; i < 5; i++) {
-            const bx = Phaser.Math.Between(3, (MAP_W - 3)) * ts;
-            const by = Phaser.Math.Between(4, (MAP_H - 4)) * ts;
-            const b = this.add.image(bx, by, 'critter_butterfly')
-                .setTint(tints[i % tints.length])
-                .setAlpha(1)
-                .setDepth(15)
-                .setScale(1.2);
-            // Порхание: «восьмёрка» — плавный дрейф + взмахи крыльев (flipX мигание)
-            this.tweens.add({
-                targets: b,
-                x: bx + Phaser.Math.Between(-70, 70),
-                y: by + Phaser.Math.Between(-50, 50),
-                duration: Phaser.Math.Between(2200, 3800),
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut',
-            });
-            this.tweens.add({
-                targets: b,
-                scaleX: { from: 1.2, to: 0.55 },   // «взмах» крыльев
-                duration: 160,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut',
-            });
-            this.butterflies.push(b);
-        }
-
-        // --- Светлячки (10 шт): зелёные искры над травой, пульсируют ночью ---
-        // Пульс считаем в updateHUD() по синусоиде фазы — без отдельных твинов.
-        this.fireflies = [];
-        if (this.textures.exists('particle')) {
-            for (let i = 0; i < 10; i++) {
-                const fx = Phaser.Math.Between(2, (MAP_W - 2)) * ts;
-                const fy = Phaser.Math.Between(3, (MAP_H - 3)) * ts;
-                const f = this.add.image(fx, fy, 'particle')
-                    .setTint(0xc8e86a)
-                    .setBlendMode(Phaser.BlendModes.ADD)
-                    .setAlpha(0)
-                    .setDepth(15)
-                    .setScale(0.6);
-                f.phase = Math.random() * Math.PI * 2;      // фаза пульса
-                f.pulseSpeed = 0.0025 + Math.random() * 0.003; // индивидуальная скорость
-                f.driftAngle = Math.random() * Math.PI * 2;   // случайный дрейф
-                f.homeX = fx;
-                f.homeY = fy;
-                f.setVisible(false);
-                this.fireflies.push(f);
-            }
-        }
-    }
+    // Раунд 63 (п.8): createAmbientCritters (бабочки + светлячки) УДАЛЕНЫ —
+    // ромбовидные «летающие призмы» больше не порхают над деревней.
 
     /**
      * Клуб дыма из трубы: медленно всплывает, расширяется и тает.

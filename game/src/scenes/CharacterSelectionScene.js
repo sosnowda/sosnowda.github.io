@@ -318,7 +318,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
 
         // Характеристики
         const statsY = inputY + (compact ? 38 : 50);
-        this.add.text(left, statsY, 'Характеристики:', {
+        this.add.text(left, statsY, t('Характеристики:'), {
             fontSize: compact ? '13px' : '16px', color: '#C9A961', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5).setDepth(202);
@@ -345,7 +345,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         // Навыки по категориям (при нехватке места — краткая справка,
         // полный список всегда доступен в свитке персонажа в игре)
         const skillsY = derivY + (compact ? 22 : 30);
-        this.add.text(left, skillsY, 'Навыки:', {
+        this.add.text(left, skillsY, t('Навыки:'), {
             fontSize: compact ? '13px' : '16px', color: '#C9A961', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5).setDepth(202);
@@ -392,7 +392,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
 
         // Кнопки "Начать игру" и "Отмена"
         const btnGap = panelW < 520 ? 100 : 120;
-        createButton(this, width / 2 - btnGap, height / 2 + panelH / 2 - 40, 'Начать игру', () => {
+        createButton(this, width / 2 - btnGap, height / 2 + panelH / 2 - 40, t('Начать игру'), () => {
             const customName = this._nameInput.value.trim() || hero.name;
             hero.name = customName;
             this.cleanupPreview();

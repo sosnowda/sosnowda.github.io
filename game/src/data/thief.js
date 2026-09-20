@@ -300,6 +300,8 @@ const WITNESS_POOL = [
     'elder_wife', 'shepherd1', 'shepherd2', 'carpenter1', 'carpenter_wife',
     'potter1', 'potter_wife', 'weaver1', 'fisher_wife', 'grocer',
     'butcher', 'peddler', 'shoemaker', 'shoemaker_wife', 'woodcutter',
+    // Раунд 63 (п.1): новая семья восточной улицы — тоже свидетели
+    'peasant2', 'peasant2_wife',
 ];
 
 /** Список свидетелей (ленивая инициализация — для старых сейвов тоже работает). */

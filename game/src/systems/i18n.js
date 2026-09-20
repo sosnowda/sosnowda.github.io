@@ -309,6 +309,13 @@ const EN = {
     'Генерация случайного героя': 'Random hero generation',
     'Выберите паттерн генерации:': 'Choose a generation pattern:',
     'Отмена': 'Cancel',
+    'Характеристики:': 'Attributes:',
+    'Навыки:': 'Skills:',
+    'Начать игру': 'Start Game',
+    'Оружие:': 'Weapon:',
+    'Доспех:': 'Armor:',
+    'Бонус урона:': 'Damage bonus:',
+    'Броня:': 'Armor value:',
 
     // --- Деньги (Character.formatMoney) ---
     'д.': 'd.',
@@ -1222,11 +1229,24 @@ const EN = {
     'Потап, мясник': 'Potap the butcher',
     'Пахнет дымом и свежим мясом: при доме у Потапа своя столешня. Колбасы и окорока подвешены под потолком, на разделочном столе — ряды нарезки, у печи сушится медвежья шкура.':
         'It smells of smoke and fresh meat: Potap keeps his own slaughtering shed by the house. Sausages and hams hang from the ceiling; rows of cuts lie on the block, and hides dry by the stove.',
-    'Лавка ремесленника': 'Artisan\'s Shop',
-    'Торгарь Аверьян': 'Averyan the peddler',
-    'Тесная лавка, полная всякого добра: витрины с ожерельями, связки ножей, верёвки, кремни, свечи восковые да обереги от сглазу. Хозяин знал бы толк каждой вещице.':
-        'A cramped shop full of all manner of goods: showcases with necklaces, bundles of knives, ropes, flints, wax candles and charms against the evil eye. The master would know the worth of every thing.',
-    'Лавка ремесленника — товар': 'Artisan\'s Shop — goods',
+    'Дом ремесленника': 'Craftsman\'s House',
+    'Ремесленник Аверьян': 'Averyan the craftsman',
+    'Дом ремесленника: у стены — верстак со стругами, под потолком — связки ложек, лучины и мочал. На прилавке у окна — ножи, верёвки, кремни, свечи восковые да обереги от сглазу. Хозяин и мастер, и торгаш в одном.':
+        'The craftsman\'s house: a workbench with planes by the wall, bundles of spoons, splints and washcloths under the ceiling. On the counter by the window — knives, ropes, flints, wax candles and charms against the evil eye. The master is both maker and seller in one.',
+    'Дом ремесленника — товар': 'Craftsman\'s House — goods',
+    // --- Раунд 63 (п.1): дом Степана на месте овчарни ---
+    'Дом Степана': 'Stepan\'s House',
+    'Крестьянин Степан': 'Stepan the peasant',
+    'Арина, жена Степана': 'Arina, Stepan\'s wife',
+    'Крепкая изба в два окна: на шестке чугун, у красного угла — образа с рушником, под лавкой — кувадка с прялкой Арины. У крыльца сушатся сбруя и рукавицы, в сенцах пахнет хлебом и скотиной.':
+        'A sturdy izba with two windows: a cast-iron pot on the stove ledge, icons with an embroidered towel in the red corner, Arina\'s spinning wheel under the bench. Harness and mittens dry by the porch; the entry hall smells of bread and livestock.',
+    'Про стадо расскажи.': 'Tell me about the flock.',
+    'Про новый дом расскажи.': 'Tell me about the new house.',
+    'Куда все овцы делись?': 'Where did all the sheep go?',
+    'Про жизнь расскажи.': 'Tell me about your life.',
+    'Про новый дом спросить': 'Ask about the new house',
+    'Спасибо, Степан.': 'Thank you, Stepan.',
+    'Спасибо, Арина.': 'Thank you, Arina.',
     'Дом сапожника': 'Shoemaker\'s House',
     'Сапожник Нефёд': 'Nefyod the shoemaker',
     'В горнице пахнет кожей и дёгтем: на лавке — сапоги всех размеров, колодки, шило и суровые нитки. Хозяин сшивает голенище, не отрываясь от дела.':
@@ -1922,7 +1942,8 @@ const EN_KEYS = {
         '  Chests hold small loot — once a day each.\n' +
         '  The campfire restores Health and Will (1 hour).\n' +
         '  Fishing — at the River on the map (best in the rain).\n' +
-        '  At night windows glow and fireflies come out.\n' +
+        '  Stepan\'s new house — at the east end of the southern street.\n' +
+        '  At night the windows glow warm.\n' +
         '  F1 — this help. ESC — main menu.',
 
     // --- Раунд 44: возраст персонажа (15..50) и правила BRP SRD ---

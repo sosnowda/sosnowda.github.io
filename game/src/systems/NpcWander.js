@@ -25,11 +25,13 @@ export function isPassableTile(map, x, y) {
 
 /**
  * BFS-путь между тайлами (короткий, для радиусов ≤ 4 смысла не теряет).
+ * @param {Function} [isFree] — дополнительный фильтр проходимости (р.63: частокол)
  * @returns {Array<[number,number]>|null} список шагов (без стартового тайла) или null
  */
-export function findTilePath(map, sx, sy, tx, ty, maxLen = 20) {
+export function findTilePath(map, sx, sy, tx, ty, maxLen = 20, isFree = null) {
+    const free = isFree || ((x, y) => isPassableTile(map, x, y));
     if (sx === tx && sy === ty) return [];
-    if (!isPassableTile(map, tx, ty)) return null;
+    if (!free(tx, ty)) return null;
     const key = (x, y) => `${x},${y}`;
     const prev = new Map([[key(sx, sy), null]]);
     const queue = [[sx, sy]];
@@ -40,7 +42,7 @@ export function findTilePath(map, sx, sy, tx, ty, maxLen = 20) {
             const nx = x + dx, ny = y + dy;
             const k = key(nx, ny);
             if (prev.has(k)) continue;
-            if (!isPassableTile(map, nx, ny)) continue;
+            if (!free(nx, ny)) continue;
             prev.set(k, [x, y]);
             if (nx === tx && ny === ty) {
                 // восстановить путь
@@ -71,8 +73,19 @@ export function attachNpcWander(scene, cfg) {
         spr, anchorX, anchorY, radius = 2, map, ts,
         label = null, hint = null,
         idleMin = 1400, idleMax = 4200, stepMs = 840, // раунд 55: жители ходят В 2 РАЗА МЕДЛЕННЕЕ (420 → 840 мс/тайл)
+        // Раунд 63 (пп.6,7): жители ходят ещё медленнее и РЕЖЕ —
+        // после паузы часто продолжают стоять (wanderChance), а часть
+        // тайлов можно исключить из блуждания (blockedTiles — частокол у ворот).
+        wanderChance = 1,
+        blockedTiles = null,
     } = cfg;
     if (!spr || !map) return { stop() {} };
+
+    const isFreeTile = (x, y) => {
+        if (!isPassableTile(map, x, y)) return false;
+        if (blockedTiles && blockedTiles.has(`${x},${y}`)) return false;
+        return true;
+    };
 
     let stopped = false;
     let idleTimer = null;
@@ -117,8 +130,8 @@ export function attachNpcWander(scene, cfg) {
             const dy = Phaser.Math.Between(-r, r);
             const tx = anchorTile.x + dx;
             const ty = anchorTile.y + dy;
-            if (!isPassableTile(map, tx, ty)) continue;
-            const path = findTilePath(map, anchorTile.x, anchorTile.y, tx, ty, 4 + r * 2);
+            if (!isFreeTile(tx, ty)) continue;
+            const path = findTilePath(map, anchorTile.x, anchorTile.y, tx, ty, 4 + r * 2, isFreeTile);
             if (path && path.length) return { path, dir0: dirOf(path[0][0] - anchorTile.x, path[0][1] - anchorTile.y) };
         }
         return null;
@@ -139,7 +152,8 @@ export function attachNpcWander(scene, cfg) {
         walkTween = scene.tweens.add({
             targets: spr,
             x: nx, y: ny,
-            duration: Math.max(480, stepMs), // раунд 55: минимум тоже ×2 (240 → 480)
+            // Раунд 63: минимум тоже выше (480 → 900) — никто не «семенит»
+            duration: Math.max(900, stepMs),
             ease: 'Linear',
             onComplete: () => {
                 walkTween = null;
@@ -163,6 +177,9 @@ export function attachNpcWander(scene, cfg) {
         const wait = Phaser.Math.Between(idleMin, idleMax);
         idleTimer = scene.time.delayedCall(wait, () => {
             if (stopped) return;
+            // Раунд 63 (пп.6,7): не после каждой паузы — житель нередко
+            // ПРОДОЛЖАЕТ СТОЯТЬ (занят делом), блуждание стало реже и спокойнее.
+            if (Math.random() > wanderChance) { playIdle(); scheduleIdle(); return; }
             const target = pickTarget();
             if (target) walkPath(target.path);
             else scheduleIdle();

@@ -1838,18 +1838,19 @@ export const DIALOGUES = {
         },
     },
 
-    // ИВАШКА — пастушок-подросток при овчарне
+    // ИВАШКА — пастушок-подросток (стадо — на выпасе за околицей;
+    // раунд 63: овчарня в селе разобрана, на её месте дом Степана)
     shepherd_boy: {
         start: 'a',
         nodes: {
             a: {
                 speaker: 'парень',
-                text: 'Ивашка я, при овцах. Мать на стане с утра до ночи, а я — за частоколом. Овец у нас семь да баран Рыжий — тот самый, что думает, будто он человек. А ты не местный? Иди сюда, овцы не кусаются. Почти не кусаются.',
-                en: 'I am Ivashka, I mind the sheep. My mother weaves from morning till night, and I am out here by the stockade. We have seven ewes and the ram Red — the one who thinks he is a person. You are not from here, are you? Come closer, the sheep do not bite. They almost never bite.',
+                text: 'Ивашка я, при овцах. Мать на стане с утра до ночи, а я — на выпас, за околицу. Овец у нас семь да баран Рыжий — тот самый, что думает, будто он человек. А ты не местный? Иди сюда, овцы не кусаются. Почти не кусаются.',
+                en: 'I am Ivashka, I mind the sheep. My mother weaves from morning till night, and I am out on the pasture, beyond the outskirts. We have seven ewes and the ram Red — the one who thinks he is a person. You are not from here, are you? Come closer, the sheep do not bite. They almost never bite.',
                 action: (scene) => {
                     DIALOGUES.shepherd_boy.nodes.a.choices = withAskThief(scene, 'shepherd_boy', [
                         { text: t('Что за баран у тебя?'), next: 'ram' },
-                        { text: t('Про овчарню расскажи.'), next: 'fold' },
+                        { text: t('Про стадо расскажи.'), next: 'fold' },
                         { text: t('Береги себя, детка.'), end: true },
                     ], 1);
                 },
@@ -1865,8 +1866,8 @@ export const DIALOGUES = {
             },
             fold: {
                 speaker: 'парень',
-                text: 'Частокол батя ещё поставил, до своей смерти. Овец держать — дело верное: шерсть — матери на стан, молоко да мясо — на постоялый двор, навоз — на грядки. Овца, она всё отдаёт, только корми да счесть не забывай!',
-                en: 'Father built the stockade before he died. Keeping sheep is a sure thing: wool for Mother\'s loom, milk and meat for the lodging-yard, manure for the garden beds. A sheep gives everything — you only have to feed her and never miscount!',
+                text: 'Стадо теперь на выпасе, за околицей — там трава вольная. Загон в селе разобрали — на том месте дом Степанов поставили, высокий, с трубой. Овец держать — дело верное: шерсть — матери на стан, молоко да мясо — на постоялый двор, навоз — на грядки. Овца, она всё отдаёт, только корми да счесть не забывай!',
+                en: 'The flock is on the pasture now, beyond the outskirts — the grass is free there. The pen in the village was taken apart — Stepan\'s house stands on that spot, tall, with a chimney. Keeping sheep is a sure thing: wool for Mother\'s loom, milk and meat for the lodging-yard, manure for the garden beds. A sheep gives everything — you only have to feed her and never miscount!',
                 choices: [
                     { text: t('(продолжить)'), next: 'a' },
                 ],
@@ -2366,9 +2367,9 @@ export const DIALOGUES = {
         start: 'a',
         nodes: {
             a: {
-                speaker: 'Торгарь Аверьян',
-                text: 'Ага, гость! Аверьян я, торгарь. В лавке моей — всякая вещица к делу: нож, что бриту родня, верёвка — семь вёрст тянет, кремень — искру из-под дождя достанет. А обереги — от бабки-знахарки заговорённые. Бери — не прогадаешь!',
-                en: 'Ah, a guest! I am Averyan, the peddler. In my stall every trinket is good for something: a knife that is kin to a razor, a rope that stretches seven versts, a flint that strikes a spark even in rain. And the amulets are charmed by the healer granny. Take one — you will not regret it!',
+                speaker: 'Ремесленник Аверьян',
+                text: 'Ага, гость! Аверьян я, ремесленник. В доме моём — всякая вещица к делу: ложки резные, нож, что бриту родня, верёвка — семь вёрст тянет, кремень — искру из-под дождя достанет. А обереги — от бабки-знахарки заговорённые. Бери — не прогадаешь!',
+                en: 'Ah, a guest! I am Averyan, the craftsman. In my house every trinket is good for something: carved spoons, a knife that is kin to a razor, a rope that stretches seven versts, a flint that strikes a spark even in rain. And the amulets are charmed by the healer granny. Take one — you will not regret it!',
                 variants: [
                     { text: 'Снова ты! Ну, раз пришел — гляди: вот ложки резные, вот иглы, вот бусы.', en: 'You again! Well, since you are here — look: carved spoons, needles, beads.' },
                     { text: 'Выручку считал, отвлек. Что надо-то, путник: дело или праздничное любопытство?', en: 'I was counting my takings, and you distracted me. What do you want, traveller: business or festive curiosity?' },
@@ -2384,7 +2385,7 @@ export const DIALOGUES = {
                 choices: [],
             },
             origin: {
-                speaker: 'Торгарь Аверьян',
+                speaker: 'Ремесленник Аверьян',
                 text: 'По трактам хожу, с возами торгаши вожу — вот и присматриваю, что народу надобно. Ножи — у кузнеца выторговал, свечи — от церковного воска, обереги — знахарка Февронья плетёт да наговаривает. Всё по-честному, каждая вещь — с историей!',
                 en: 'I walk the roads, drive carts with merchants — and I watch what folk need. The knives I traded from the smith, the candles are from church wax, the amulets the healer Fevronia weaves and charms. All honestly made, every item with a story!',
                 choices: [
@@ -2392,7 +2393,7 @@ export const DIALOGUES = {
                 ],
             },
             news: {
-                speaker: 'Торгарь Аверьян',
+                speaker: 'Ремесленник Аверьян',
                 text: 'Народ гуторит разное: где барыш, там и сплетня. Слыхал я, будто по ночам у околицы огонёк ходит — то ли путник заблудный, то ли худой человек лазит. Ты в ноги не кланяйся, а глаз держи востро!',
                 en: 'Folk talk all manner of things: where there is profit, there is gossip. I have heard that at night a small fire wanders by the village edge — be it a lost traveller or a wicked man creeping about. Do not bow too deep, but keep a sharp eye!',
                 choices: [
@@ -2400,10 +2401,10 @@ export const DIALOGUES = {
                 ],
             },
             ask_thief: {
-                speaker: 'Торгарь Аверьян',
+                speaker: 'Ремесленник Аверьян',
                 text: '...',
                 action: (scene) => {
-                    const r = askNPC(scene.registry, 'peddler', 'Торгарь Аверьян');
+                    const r = askNPC(scene.registry, 'peddler', 'Ремесленник Аверьян');
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -2411,10 +2412,10 @@ export const DIALOGUES = {
                 ],
             },
             ask_money: {
-                speaker: 'Торгарь Аверьян',
+                speaker: 'Ремесленник Аверьян',
                 text: '...',
                 action: (scene) => {
-                    const r = askMoneyForHelp(scene.registry, 'peddler', 'Торгарь Аверьян');
+                    const r = askMoneyForHelp(scene.registry, 'peddler', 'Ремесленник Аверьян');
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -2422,7 +2423,7 @@ export const DIALOGUES = {
                 ],
             },
             ask_result: {
-                speaker: 'Торгарь Аверьян',
+                speaker: 'Ремесленник Аверьян',
                 text: '...',
                 choices: [
                     { text: t('Спасибо, торгарь.'), end: true },
@@ -2636,6 +2637,134 @@ export const DIALOGUES = {
                 text: '...',
                 choices: [
                     { text: t('Спасибо, Горазд.'), end: true },
+                ],
+            },
+        },
+    },
+
+    // ===== РАУНД 63 (п.1): СТЕПАН ДА АРИНА — новая семья восточной улицы =====
+    // (дом стоит на месте бывшей овчарни; овцы — на выпасе за околицей)
+    peasant2: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Крестьянин Степан',
+                text: 'Степан я. Дом наш — что надобно сказать — новый: поставили вскладчину всем миром, а овчарню с той стороны разобрали — не к чему она в селе стала. Живём с Ариной ладно: рожь, огород да куры. Заходи, коли чем помочь — у меня всегда дело есть.',
+                en: 'I am Stepan. Our house — mind you — is a new one: the whole village raised it together, and the sheepfold on that side was taken apart — the village has no more use for it. Arina and I live in accord: rye, a garden, and chickens. Come in — if you seek work, there is always some about me.',
+                variants: [
+                    { text: 'О, добрый человек! Гляди: телега-то моя как раз подмазана — прокатиться бы...', en: 'Oh, good man! Look: my cart has just been greased — it wants a ride...' },
+                    { text: 'Куры нынче несутся на диво — Арина ужо пироги затеяла.', en: 'The hens lay wonders this year — Arina has already set to making pies.' },
+                ],
+                action: (scene) => {
+                    DIALOGUES.peasant2.nodes.a.choices = withAskThief(scene, 'peasant2', [
+                        { text: t('Про новый дом расскажи.'), next: 'house' },
+                        { text: t('Куда все овцы делись?'), next: 'sheep' },
+                        { text: t('Попросить денег'), next: 'ask_money' },
+                        { text: t('До свидания.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            house: {
+                speaker: 'Крестьянин Степан',
+                text: 'Дом как дом: сруб ладный, печь бьёт жарко, в красном углу — образа. Староста место отвёл, дровосек брёвна подвёз, плотник за три дня ладно срубил. А раньше здесь овчарня стояла — загон да стог. Теперь улица ровная пошла: дом к дому.',
+                en: 'A house like any house: a fair log frame, a stove that beats with heat, icons in the red corner. The elder granted the spot, the woodcutter brought the logs, the carpenter raised the frame fairly in three days. And before, the sheepfold stood here — a pen and a haystack. Now the street runs even: house next to house.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            sheep: {
+                speaker: 'Крестьянин Степан',
+                text: 'Овцы? Отара теперь при пастухах на выпасе — за околицей трава вольная, не то что в загоне топтаться. Сила да Настасья за ними ходят, а Ивашка помогает. Шерсть осенью — всем по коже, а молоко да мясо — на постоялый двор. Всё по-старому, только овцам привольнее.',
+                en: 'The sheep? The flock now keeps with the shepherds on the pasture — beyond the outskirts the grass is free, not like trampling in a pen. Sila and Nastasya mind them, and Ivashka helps. Wool in autumn — a skin for all, and milk and meat — to the lodging-yard. Everything as before, only the sheep fare freer now.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Крестьянин Степан',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'peasant2', 'Крестьянин Степан');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_money: {
+                speaker: 'Крестьянин Степан',
+                text: '...',
+                action: (scene) => {
+                    const r = askMoneyForHelp(scene.registry, 'peasant2', 'Крестьянин Степан');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Крестьянин Степан',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо, Степан.'), end: true },
+                ],
+            },
+        },
+    },
+
+    peasant2_wife: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Арина',
+                text: 'Арина я, Степанова жена. Ты, верно, ото всюду слухи носишь — а я тебе и своя есть: куры несутся, огород уродился, а рушник к празднику вот-вот дошью. В горнице у нас чисто, хлеб — как пух. Присядь, коли устал, — щей хлебнешь.',
+                en: 'I am Arina, Stepan\'s wife. You, I suppose, carry news from everywhere — and I have some of my own: the hens lay, the garden has come up well, and the embroidered towel for the feast is nearly done. Our chamber is clean, the bread is like down. Sit if you are weary — you shall have a bowl of shchi.',
+                variants: [
+                    { text: 'Ох, и тянет же меня вон из избы — а у тебя тут тепло...', en: 'Ah, how it pulls me out of the house — yet here you are, warm and cozy...' },
+                    { text: 'Пироги Арина затеяла — по деревне дух ходит!', en: 'Arina has set to the pies — the smell goes all through the village!' },
+                ],
+                action: (scene) => {
+                    DIALOGUES.peasant2_wife.nodes.a.choices = withAskThief(scene, 'peasant2_wife', [
+                        { text: t('Про жизнь расскажи.'), next: 'life' },
+                        { text: t('Про новый дом спросить'), next: 'house' },
+                        { text: t('До свидания.'), end: true },
+                    ], 1);
+                },
+                choices: [],
+            },
+            life: {
+                speaker: 'Арина',
+                text: 'Жизнь — она прялка: покуда крутится — лад. Утром куры, потом огород, после — прялка да стряпня. Степан мой хозяин добрый: и сбрую чинит, и соседям помогает — за то его вся улица любит. А я по дому — дом без хозяйки, что колодец без воды.',
+                en: 'Life is a spinning wheel: while it turns — all is well. In the morning the hens, then the garden, after — the distaff and the cooking. My Stepan is a good master: he mends the harness and helps the neighbours — that is why the whole street loves him. And I keep the house — a house without a mistress is like a well without water.',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            house: {
+                speaker: 'Арина',
+                text: 'Дом-то? Господь привёл: место старое, изба новая. Я как узнала, что овчарню разбирать станут, так и говорю: там избе быть! И правда — поставили. У меня теперь горница светлая, а не овечий смрад под боком. Благодать!',
+                en: 'The house? God has granted it: the spot is old, the izba is new. When I heard they would take the sheepfold apart, I said: an izba belongs there! And so it was — they raised it. Now I have a bright chamber, not the stink of sheep at my side. A blessing!',
+                choices: [
+                    { text: t('(продолжить)'), next: 'a' },
+                ],
+            },
+            ask_thief: {
+                speaker: 'Арина',
+                text: '...',
+                action: (scene) => {
+                    const r = askNPC(scene.registry, 'peasant2_wife', 'Арина');
+                    scene._lastAskResult = r;
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
+            },
+            ask_result: {
+                speaker: 'Арина',
+                text: '...',
+                choices: [
+                    { text: t('Спасибо, Арина.'), end: true },
                 ],
             },
         },

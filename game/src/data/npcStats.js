@@ -210,6 +210,18 @@ export const NPC_STAT_BLOCKS = {
         stats: S(70, 60, 60, 50, 45, 45, 35, 40),
         skills: { brawl: 55, intimidate: 40, survival: 45, spot: 40, listen: 45 },
     },
+    // Раунд 63 (п.1): Степан — крестьянин нового дома на месте овчарни.
+    peasant2: {
+        name: 'Степан',
+        stats: S(60, 60, 55, 45, 45, 50, 45, 40),
+        skills: { brawl: 40, persuade: 35, survival: 45, spot: 35, listen: 40 },
+    },
+    // Арина, жена Степана: хозяйка при скотине и огороде.
+    peasant2_wife: {
+        name: 'Арина',
+        stats: S(40, 50, 45, 45, 50, 55, 50, 50),
+        skills: homemakerSkills(40),
+    },
 
     // === ДЕТИ (п.6 заявки раунда 44: с 6 лет) — слабые, но верткие ===
     kid1: { stats: S(30, 35, 30, 55, 50, 50, 45, 50), skills: kidSkills(20) },

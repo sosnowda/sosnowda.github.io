@@ -78,6 +78,8 @@ export const PROFESSIONS_BY_GENDER = {
         { id: 'butcher',    name: 'мясник',     femaleName: 'мясница' },
         { id: 'shoemaker',  name: 'сапожник',   femaleName: 'сапожница' },
         { id: 'woodcutter', name: 'дровосек',   femaleName: null },
+        // Раунд 63 (п.2): Аверьян — теперь ремесленник при своём доме
+        { id: 'craftsman',  name: 'ремесленник', femaleName: 'ремесленница' },
     ],
     female: [
         { id: 'peasant',    name: 'селянка',    maleName: 'селянин' },
@@ -96,6 +98,8 @@ export const PROFESSIONS_BY_GENDER = {
         { id: 'peddler',    name: 'торгарка',   maleName: 'торгарь' },
         { id: 'shoemaker',  name: 'сапожница',  maleName: 'сапожник' },
         { id: 'woodcutter', name: 'дровосечка', maleName: 'дровосек' },
+        // Раунд 63 (п.2): женская ипостась ремесленника
+        { id: 'craftsman',  name: 'ремесленница', maleName: 'ремесленник' },
     ],
 };
 
@@ -268,10 +272,14 @@ export function initNpcNames(registry) {
         // лавки узнаваемы от игры к игре).
         { id: 'grocer',       gender: 'female', age: 44, professionId: 'grocer',   sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'grocer_house', name: 'Прасковья' },
         { id: 'butcher',      gender: 'male',   age: 48, professionId: 'butcher',   sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'butcher_house', name: 'Потап' },
-        { id: 'peddler',      gender: 'male',   age: 37, professionId: 'merchant',   sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'shop_tools', name: 'Аверьян' },
+        { id: 'peddler',      gender: 'male',   age: 37, professionId: 'craftsman',  sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'shop_tools', name: 'Аверьян' },
         { id: 'shoemaker',    gender: 'male',   age: 43, professionId: 'shoemaker',  sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'shoemaker_house', name: 'Нефёд', married: true }, // женат на Агафье
         { id: 'shoemaker_wife', gender: 'female', age: 39, professionId: 'homemaker', sprite: 'npc_elder',   portrait: 'portrait_villager_f', interiorId: 'shoemaker_house', name: 'Агафья', married: true },
         { id: 'woodcutter',   gender: 'male',   age: 31, professionId: 'woodcutter', sprite: 'npc_soldier',  portrait: 'portrait_peasant',    interiorId: 'woodcutter_house', name: 'Горазд' },
+        // Раунд 63 (п.1): овчарня удалена — на её месте жилой дом Степана
+        // да Арины (новая крестьянская семья восточной улицы).
+        { id: 'peasant2',     gender: 'male',   age: 42, professionId: 'peasant',    sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_3', name: 'Степан', married: true }, // женат на Арине
+        { id: 'peasant2_wife', gender: 'female', age: 39, professionId: 'homemaker', sprite: 'npc_elder',    portrait: 'portrait_villager_f', interiorId: 'villager_house_3', name: 'Арина', married: true },
     ];
 
     // Раунд 27: зерно для детерминированной системы присутствия (npcPresence.js)
