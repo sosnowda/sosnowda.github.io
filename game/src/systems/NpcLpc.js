@@ -18,11 +18,10 @@
 //      (карие/синие/серые/зелёные);
 //   7) все случайные цвета (одежда/волосы/глаза) свои на КАЖДЫЙ СТАРТ ИГРЫ
 //      (п.8 — зерно npcSeed создаётся заново при initNpcNames).
-// РАУНД 61 (пп.3,7,10 приказа владельца): ОБЛИК ГЕРОЯ БОЛЬШЕ НЕ СОБИРАЕТСЯ
-// ИЗ СЛОЁВ — удалены прессеты «Пауль»/«Баэнора» (HERO_PRESETS/getHeroPreset/
-// composePlayerTexture). У героя снова СТАРАЯ ГОТОВАЯ МОДЕЛЬ ('player' у
-// мужчин, 'npc_merchant' у женщин), без какой-либо кастомизации. Этот модуль
-// отныне обслуживает ТОЛЬКО жителей (НПЦ).
+// РАУНД 61 (пп.3,7,10 приказа владельца): облик героя собирался из готовых
+// моделей ('player'/'npc_merchant'), прессеты были удалены.
+// РАУНД 62 (п.1 приказа владельца): прессеты «Баэнор» (♂)/«Пауль» (♀)
+// ВЕРНУЛИСЬ — см. HERO_PRESETS/getHeroPreset/composePlayerTexture ниже.
 
 import { composeCharacterTexture, createCustomCharacterAnimations } from './CharacterAppearance.js';
 
@@ -167,11 +166,98 @@ export function rollLpcAppearance(registry, npc) {
 }
 
 /**
- * РАУНД 61 (пп.3,7,10 приказа владельца): внешность ИГРОКА больше не
- * собирается из слоёв LPC. Удалены rollPlayerAppearance (раунд 59) и
- * прессеты «Пауль»/«Баэнора» (раунд 60) — у героя старая готовая модель
- * ('player' / 'npc_merchant'), см. Character.js.
+ * ============================================================
+ * РАУНД 62 (п.1 приказа владельца): ГОТОВЫЕ ПРЕССЕТЫ ГЕРОЯ ВЕРНУЛИСЬ.
+ * «прессеты „Пауль"/«Баэнора" (LPC-композиты) удалены…» — ВЕРНУТЬ ОБРАТНО,
+ * причём ПРЕССЕТ «Пауль» — ДЛЯ ЖЕНСКОГО ПЕРСОНАЖА, а «Баэнор» — ДЛЯ
+ * МУЖСКОГО (перекрёстно к раунду 60, где было наоборот). Выбор
+ * АВТОМАТИЧЕСКИЙ, без меню; кастомизации по-прежнему НЕТ (пп.7,10 р.61).
+ *
+ * Прессеты собираются из LPC-слоёв ЕДИНЫМ ШАБЛОНОМ (как у жителей,
+ * composeCharacterTexture), цвета/причёска/одежда ФИКСИРОВАННЫЕ.
+ * Тело и оверлей груди — всегда по полу героя (иначе спрайт «чужого»
+ * тела); возрастные правила единого шаблона сохранены: борода у мужчин
+ * 25+ цвета волос, седина у 50+.
+ * ============================================================
  */
+// Верхняя граница возраста игрока (AgeRules.AGE_MAX = 50 — без циклического импорта)
+const AGE_MAX_PLAYER = 50;
+
+export const HERO_PRESETS = {
+    male: {
+        name: 'Баэнор',
+        // «странник с тёмными волосами»: светлая кожа, зелёные глаза,
+        // длинные тёмные волосы, бордовая рубаха, коричневые штаны
+        appearance: {
+            body: 'male_light',
+            eyes: 'human_adult_green',
+            hair: 'loose_dark_brown',
+            torso: 'longsleeve_longsleeve_maroon',
+            legs: 'male_brown',
+            feet: 'boots_tan',
+        },
+    },
+    female: {
+        name: 'Пауль',
+        // «молотобойка с короткой стрижкой»: смуглая кожа, карие глаза,
+        // каштановая стрижка «моп», серая рубаха, тёмные штаны
+        appearance: {
+            body: 'female_tan',
+            eyes: 'human_adult_brown',
+            hair: 'mop_chestnut',
+            torso: 'longsleeve_longsleeve_charcoal',
+            legs: 'pants_charcoal',
+            feet: 'boots_charcoal',
+        },
+    },
+};
+
+/**
+ * Раунд 62 (п.1): готовый прессет героя ПО ПОЛУ — «Баэнор» (муж.)
+ * или «Пауль» (жен.). Возрастные правила единого шаблона применяются
+ * к прессету: у мужчин 25+ — борода цвета волос; у 50+ — седые волосы.
+ * @param {string} gender — 'male' | 'female'
+ * @param {number} age — возраст героя (15..50)
+ * @returns {{ name: string, appearance: Object }}
+ */
+export function getHeroPreset(gender, age) {
+    const preset = HERO_PRESETS[gender === 'female' ? 'female' : 'male'];
+    const a = Math.max(15, Math.min(AGE_MAX_PLAYER, Number(age) || 25));
+    const appearance = { ...preset.appearance };
+
+    // Форма и цвет волос разбираются честно: «loose_dark_brown» →
+    // форма «loose», цвет «dark_brown» (цвет может быть из двух слов).
+    const [shape, ...colorParts] = appearance.hair.split('_');
+    const hairColor = colorParts.join('_') || 'brown';
+
+    // Седина у 50+ (п.6 раунда 59) — белые волосы (и борода ниже)
+    if (a >= 50) {
+        appearance.hair = `${shape}_white`;
+    }
+    // Борода у мужчин 25+ (п.3 раунда 59) — единственная окладистая
+    if (gender !== 'female' && a >= 25) {
+        appearance.beards = `beard_medium_${a >= 50 ? 'white' : hairColor}`;
+    }
+    // Женский силуэт — оверлей груди (тело всегда «своего» пола)
+    if (gender === 'female') appearance.chest = 'female';
+
+    return { name: preset.name, appearance };
+}
+
+/**
+ * Собрать текстуру ИГРОКА 'player_composite' (LPC-композит, 9×4 кадра)
+ * и создать анимации walk/idle. Все слои уже предзагружены в BootScene.
+ * Анимации создаются ОДИН РАЗ (повторная сборка той же текстуры обновляет
+ * кадры на месте — анимации остаются валидными).
+ * @returns {boolean} true — текстура собрана
+ */
+export function composePlayerTexture(scene, appearance, textureKey = 'player_composite') {
+    const ok = composeCharacterTexture(scene, appearance, textureKey);
+    if (ok && !scene.anims.exists(`${textureKey}_walk_down`)) {
+        createCustomCharacterAnimations(scene, textureKey, textureKey);
+    }
+    return ok;
+}
 
 /** Ключ LPC-текстуры жителя */
 export function npcLpcKey(npcId) {

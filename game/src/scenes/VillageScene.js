@@ -186,53 +186,45 @@ export class VillageScene extends Phaser.Scene {
         // больше не появляются на карте деревни, рыбалка переехала на Реку) -----
 
         // ----- Подсветка дверей и ворот -----
-        // Спрайты домов. РАУНД 61 (п.5 приказа владельца «ПЕРЕДЕЛАТЬ ДОМА ПО
-        // ТИПУ И ВНЕШНЕМУ ВИДУ КАК У ДОМА СТАРОСТЫ»): ВСЕ жилые дома — теперь
-        // ЦЕЛЬНЫЕ ИЗБЫ того же типа, что дом старосты (wood_house_08): сруб,
-        // целая двускатная/вальмовая крыша со свесами, крыльцо/наличники.
-        // Плоские процедурные фасады phouse_* (раунд 60) УДАЛЕНЫ из обихода —
-        // они читались «наклейками» на фоне объёмных домов. Каждый дом —
-        // настоящий ассет из того же арт-пака, что дом старосты;
-        // разнообразие — зеркалированием (FLIP_HOUSES).
-        // Сохранены по прежним приказам: постоялый двор (wood_house_02, р.55),
-        // дом старосты (wood_house_08), кузница (house3d_blacksmith), церковь,
-        // мясник (rurald_house_1), рыбак/сапожник (rural_house_0), лавка (rural_shop_1).
+        // Спрайты домов. РАУНД 62 (пп.2–5 приказа владельца): ВСЯ ДЕРЕВНЯ
+        // ПЕРЕСОБРАНА ЗАНОВО в ЕДИНОМ СТИЛЕ — все дома/строения вырезаны
+        // ПОЛНОСТЬЮ (стены, крыши со свесами, трубы — ничего не обрезано)
+        // из пакета владельца «Деревянные дома и строения»
+        // (Rural_TileB/C/D, Google Drive). Разнообразие — зеркалированием.
+        // Постоялый двор — единственное ДВУХЭТАЖНОЕ строение (п.6 —
+        // разрешено только ему).
         const HOUSE_SPRITE_BY_ID = {
-            elder_house: 'wood_house_08',        // ЭТАЛОН: большой дом с крыльцом и ступенями
-            tavern: 'wood_house_02',             // длинный трактир с каменной трубой (целый)
-            blacksmith: 'house3d_blacksmith',    // кузница с навесом и горном (сохранена)
-            potter_house: 'wood_house_07',       // Р61: целая изба с клумбой и резной дверью (был phouse)
-            villager_house_1: 'rural_house_1',   // Р61: высокая изба с каменной трубой (был phouse)
-            villager_house_2: 'wood_house_09',   // Р61: изба под соломой с каменным арочным дверцом (был phouse)
-            beekeeper_house: 'wood_house_07',    // Р61: целая изба с клумбой, зеркально (был phouse)
-            healer_house: 'rurald_house_0',      // Р61: побелённая изба под соломой, цветы (был phouse)
-            carpenter_house: 'wood_house_09',    // Р61: целая изба, зеркально (был phouse)
-            fisher_house: 'rural_house_0',       // дом рыбака с навесом-сетями (целый, зеркально)
-            weaver_house: 'rural_house_1',       // Р61: высокая изба, зеркально (был phouse)
-            // Восточная слобода (раунд 51): лавка ремесленника — палатка.
-            // РАУНД 53: лавки снеди/мясная удалены владельцем — на их месте
-            // ЖИЛЫЕ ДОМА Прасковьи и Потапа.
-            shop_tools: 'rural_shop_1',          // лавка со светлым тентом — ремесленник
-            grocer_house: 'rurald_house_0',      // Р61: побелённая изба под соломой (был phouse)
-            butcher_house: 'rurald_house_1',     // дом с каменной кладкой — мясник (целый)
-            shoemaker_house: 'rural_house_0',    // дом с резными воротами — сапожник (целый)
-            woodcutter_house: 'rural_house_1',   // Р61: лесная изба с трубой (был phouse)
+            elder_house: 'vh_manor',             // ЭТАЛОН: большой сруб с каменным крыльцом (TileB)
+            tavern: 'vh_inn',                    // ПОСТОЯЛЫЙ ДВОР: двухэтажный (разрешено, п.6)
+            blacksmith: 'vh_logroof',            // изба с фонарём на коньке и ставчатым окном (TileC)
+            potter_house: 'vh_flowers',          // приземистая изба с подсолнухами у окон (TileC)
+            villager_house_1: 'vh_loghouse',     // высокая изба с башенкой и железной дверью (TileB)
+            villager_house_2: 'vh_flowers',      // как дом гончара, ЗЕРКАЛЬНО
+            beekeeper_house: 'vh_redflowers',    // изба под крутой кровлей, ЗЕРКАЛЬНО
+            healer_house: 'vh_cottage_right',    // белая изба под соломой с трубой слева (TileD)
+            carpenter_house: 'vh_cottage_mid',   // изба с каменной трубой, ЗЕРКАЛЬНО (TileD)
+            fisher_house: 'vh_logroof',          // как кузница, ЗЕРКАЛЬНО
+            weaver_house: 'vh_redflowers',       // изба с красными цветами под кровлей (TileC)
+            shop_tools: 'vh_stall',              // лавка ремесленника с полосатым тентом (TileB)
+            grocer_house: 'vh_cottage_mid',      // белая изба с каменной трубой (TileD)
+            butcher_house: 'vh_cottage_mid',     // как дом Прасковьи, ЗЕРКАЛЬНО
+            shoemaker_house: 'vh_loghouse',      // как дом Авдея (железная дверь)
+            woodcutter_house: 'vh_loghouse',     // лесная изба, ЗЕРКАЛЬНО
+            church: 'vh_chapel',                 // часовня: звонница с колоколом, шатёр и крест (TileD)
         };
-        // Дома, рисуемые ЗЕРКАЛЬНО (разнообразие фасадов: одинаковые избы
-        // соседей читаются по-разному)
-        const FLIP_HOUSES = new Set(['fisher_house', 'villager_house_2', 'beekeeper_house', 'healer_house', 'weaver_house']);
-        // Спрайты с собственными трубами (дым у них запечён в крышу — рисуем
-        // дым именно над трубой, а не по центру). Раунд 61: у новых из
-        // wood_house_07 / wood_house_09 / rural_house_1 / rurald_house_0
-        // труба на левом/правом крае крыши (точные доли — в CHIMNEY_FRACTION_X).
-        const CHIMNEY_SPRITES = new Set(['house3d_blacksmith', 'wood_house_02', 'wood_house_07', 'wood_house_09', 'rural_house_1', 'rurald_house_0']);
-        // Раунд 61: доля ширины ТЕКСТУРЫ, где стоит труба (для точного дыма).
-        // 0.5 — центр; направление учитывает зеркалирование дома.
+        // Дома, рисуемые ЗЕРКАЛЬНО (разнообразие фасадов; зеркала разнесены
+        // так, чтобы одинаковые избы не стояли рядом)
+        const FLIP_HOUSES = new Set(['villager_house_2', 'beekeeper_house', 'butcher_house',
+            'carpenter_house', 'fisher_house', 'woodcutter_house']);
+        // Спрайты с СОБСТВЕННЫМИ каменными трубами (дым рисуется точно над
+        // трубой; у остальных труб нет — и дыма нет). Доли ширины текстуры
+        // сняты с вырезов программно (скан серой каменной кладки, раунд 62).
+        const CHIMNEY_SPRITES = new Set(['vh_loghouse', 'vh_redflowers', 'vh_cottage_mid', 'vh_cottage_right']);
         const CHIMNEY_FRACTION_X = {
-            wood_house_07: 0.86,   // каменная труба на правом крае крыши
-            wood_house_09: 0.10,   // каменная труба на левом крае крыши
-            rural_house_1: 0.22,   // труба слева от конька
-            rurald_house_0: 0.12,  // труба на левом крае соломенной крыши
+            vh_loghouse: 0.88,      // каменная труба на правом крае крыши
+            vh_redflowers: 0.85,    // труба на правом скате крутой кровли
+            vh_cottage_mid: 0.92,   // массивная труба у правого края соломенной крыши
+            vh_cottage_right: 0.08, // труба на левом крае
         };
         this.doors = [];
         BUILDINGS.forEach(b => {
@@ -246,9 +238,7 @@ export class VillageScene extends Phaser.Scene {
             // наведении (showBuildingTooltip — уже работает по pointermove).
 
             // ----- Дом спрайтом + тень (псевдо-2.5D: Y-сортировка) -----
-            const sprKey = b.interiorId === 'church'
-                ? 'deco_church_building'
-                : HOUSE_SPRITE_BY_ID[b.interiorId];
+            const sprKey = HOUSE_SPRITE_BY_ID[b.interiorId];
             const cx = b.col * ts + b.w * ts / 2;
             const cy = b.row * ts + b.h * ts / 2;
             const bottomRow = b.row + b.h;                 // строка под домом
@@ -328,18 +318,15 @@ export class VillageScene extends Phaser.Scene {
         this.smokeBuildings = BUILDINGS
             .filter(b => {
                 if (b.interiorId.indexOf('shop_') === 0) return false; // палатки
-                const key = b.interiorId === 'church' ? 'deco_church_building' : HOUSE_SPRITE_BY_ID[b.interiorId];
-                if (b.interiorId === 'church') return false; // у церкви купол, не труба
+                if (b.interiorId === 'church') return false; // у часовни крест, не труба
+                const key = HOUSE_SPRITE_BY_ID[b.interiorId];
                 return CHIMNEY_SPRITES.has(key);
             })
             .map(b => {
                 const key = HOUSE_SPRITE_BY_ID[b.interiorId];
-                // Раунд 55: у фасада постоялого двора (wood_house_02) труба у ПРАВОГО края
-                // Раунд 61: точная доля трубы — по CHIMNEY_FRACTION_X, с учётом зеркала
+                // Раунд 62: точная доля трубы — по CHIMNEY_FRACTION_X, с учётом зеркала
                 let dx = ts * 0.42;
-                if (key === 'wood_house_02') {
-                    dx = ts * 1.0;
-                } else if (CHIMNEY_FRACTION_X[key] != null) {
+                if (CHIMNEY_FRACTION_X[key] != null) {
                     // Считаем по фактической ширине спрайта на карте (fit по меньшей
                     // стороне — как при отрисовке дома) и не забываем про FLIP
                     const tex = this.textures.get(key);
@@ -650,20 +637,16 @@ export class VillageScene extends Phaser.Scene {
     /**
      * П.7: Уникальные детали для каждого здания.
      * usedSprite — дом отрисован спрайтом: пропускаем графику, дублирующую спрайт
-     * (купол церкви уже «запечён» в deco_church_building).
+     * (крест на звоннице уже «запечён» в vh_chapel).
      */
     addBuildingDetails(b, ts, usedSprite = false, sprKey = null) {
-        const is3d = !!(sprKey && sprKey.indexOf('house3d_') === 0); // 3D-спрайт: трубы уже запечены
         const cx = b.col * ts + b.w * ts / 2;
         const topY = b.row * ts;
 
         if (b.interiorId === 'church') {
             if (usedSprite) {
-                // Спрайт уже с золотым куполом — только крест над ним
-                this.add.text(cx, topY - 6, '✝', {
-                    fontSize: '20px', color: '#c9a14a',
-                    stroke: '#000', strokeThickness: 2,
-                }).setOrigin(0.5).setDepth(9);
+                // РАУНД 62: деревянная часовня vh_chapel — крест уже стоит
+                // на звоннице в самой текстуре, лишний крест не рисуем.
                 return;
             }
             // Fallback (без спрайта): купол-луковка + крест + звонница
@@ -705,26 +688,16 @@ export class VillageScene extends Phaser.Scene {
             this.add.text(cx, topY - ts * 0.4, '🍺', {
                 fontSize: '18px',
             }).setOrigin(0.5).setDepth(9);
-            // Дымоход (для 3D-спрайта труба уже в текстуре — не рисуем)
-            if (!is3d) {
-                const chimney = this.add.graphics();
-                chimney.fillStyle(0x5a4030, 1);
-                chimney.fillRect(cx + ts * 0.6, topY - ts * 0.5, ts * 0.25, ts * 0.5);
-                chimney.setDepth(8);
-            }
+            // Дымоход: РАУНД 62 УДАЛЁН — у целого фасада постоялого двора
+            // (vh_inn) труба поверх крыши больше не рисуется.
 
         } else if (b.interiorId === 'blacksmith') {
             // Кузница: молот + наковальня (эмблема)
             this.add.text(cx, topY - ts * 0.4, '🔨', {
                 fontSize: '18px',
             }).setOrigin(0.5).setDepth(9);
-            // Труба кузницы (для 3D-спрайта труба уже в текстуре — не рисуем)
-            if (!is3d) {
-                const chimney = this.add.graphics();
-                chimney.fillStyle(0x4a3a25, 1);
-                chimney.fillRect(cx - ts * 0.8, topY - ts * 0.5, ts * 0.3, ts * 0.6);
-                chimney.setDepth(8);
-            }
+            // Труба: РАУНД 62 УДАЛЕНА — у кузнечного сарая (vh_logroof)
+            // трубы нет; дым из горна больше не рисуется над целой кровлей.
 
         } else if (b.interiorId === 'elder_house') {
             // Дом старосты: флаг/вымпел

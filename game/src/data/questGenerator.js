@@ -67,6 +67,12 @@ export function tickQuestTime(registry, minutes) {
             // применяется к репутации заказчика (лёгкое −3, среднее −8, тяжёлое −15).
             const failPenalty = applyQuestFailurePenalty(registry, quest.npcId, quest.difficulty);
             ActionLog.add(registry, tf(t('Репутация у {0} упала на {1} за просроченное поручение.'), quest.npcName, Math.abs(failPenalty)));
+            // РАУНД 62 (п.7): если просрочено поручение с мечом старосты —
+            // обещание «отпускается»: староста ещё раз может сулить меч
+            // за новое тяжёлое дело (уникальность — по ВЫДАЧЕ, elderSwordGiven).
+            if (quest.rewards && quest.rewards.some(r => r.id === 'sword' && r.uniqueFromElder)) {
+                q.elderSwordPromised = false;
+            }
         }
     });
     if (changed) registry.set('quest', q);
@@ -281,7 +287,10 @@ const QUEST_TEMPLATES = {
         // РАУНД 61 (п.1): срок — реалистичный. Выследить и избить шайку —
         // дело не одного часа: сутки (24 ч). 1 действие = 15 минут.
         timeLimitHours: 24,
-        difficulty: 'medium',
+        // РАУНД 62 (п.7 приказа): разбойничье дело — САМОЕ ТЯЖЁЛОЕ в деревне
+        // (difficulty: 'hard'). Только за такое дело кузнец выдаёт ДОСПЕХ,
+        // а староста — свой ЕДИНСТВЕННЫЙ МЕЧ (см. generateRewards).
+        difficulty: 'hard',
     },
     [QUEST_TYPES.WOLF]: {
         title: 'Волк задрал скот',
@@ -425,7 +434,9 @@ const QUEST_TEMPLATES = {
         title: 'Сопроводить путника',
         descriptions: [
             'Купцу нужно дойти до соседнего села. Проводи его по тракту, там неспокойно.',
-            'Старушка идёт в монастырь, боится одна. Проводи её по тракту.',
+            // РАУНД 62 (п.8): монастыря НЕТ на карте местности — бабушку
+            // провожают к родне в соседнее село (по тракту, как и было).
+            'Старушка просится к дочери в соседнее село, боится одна идти. Проводи её по тракту.',
         ],
         objective: 'Сопроводить путника по тракту',
         location: 'road',
@@ -499,12 +510,15 @@ const QUEST_TEMPLATES = {
 // порядка 1–3 денег в день; деньга — мелкое серебро. Поэтому:
 //   • лёгкое дело (грибы, травы, свеча) — 2–8 д. (небольшой приработок);
 //   • среднее (проводник, поиски человека, стража) — ×1.5;
-//   • тяжёлое (разбойники, шайка) — ×2.5, плюс заказчик-кузнец может
-//     добавить изделие своей руки (нож/топор — за лёгкое дело, копьё —
-//     за среднее, меч/сабля — только за тяжёлое: МЕЧ = 30 д., за дрова
-//     его раньше отдавали — несообразно).
+//   • тяжёлое (разбойники, шайка) — ×2.5.
+// РАУНД 62 (п.7 приказа владельца) — ВООРУЖЕНИЕ И ДОСПЕХИ:
+//   • ДОСПЕХ выдаёт ТОЛЬКО КУЗНЕЦ и ТОЛЬКО ЗА САМЫЕ ТЯЖЁЛЫЕ ЗАДАНИЯ
+//     (разбойничье дело): кожаная броня или кольчуга его руки;
+//   • МЕЧ — ВООБЩЕ НЕ ПРОДАЁТСЯ И НЕ КУЁТСЯ НА ЗАКАЗ: это УНИКАЛЬНАЯ
+//     НАГРАДА ОТ СТАРОСТЫ (одна на игру, тоже за разбойничье дело);
+//     сабля/стальной меч из оборота кузнеца убраны по той же причине.
 // Возвращает массив наград: [{ type, id, name, count, ... }]
-function generateRewards(npcId, questType, scale) {
+function generateRewards(npcId, questType, scale, registry) {
     const pool = NPC_QUEST_POOLS[npcId];
     if (!pool) return [];
     
@@ -512,6 +526,7 @@ function generateRewards(npcId, questType, scale) {
     const rewardTypes = pool.rewardTypes;
     const difficulty = QUEST_TEMPLATES[questType]?.difficulty || 'easy';
     const difficultyMult = difficulty === 'hard' ? 2.5 : (difficulty === 'medium' ? 1.5 : 1.0);
+    const q = (registry && registry.get('quest')) || {};
 
     // Деньги (если NPC может давать деньги): база 3–8 д. (было 5–19 —
     // крестьянин платил за грибы полумесячный заработок)
@@ -545,16 +560,17 @@ function generateRewards(npcId, questType, scale) {
         rewards.push({ type: 'item', id: 'icon', name: t('Чудотворная икона'), count: 1, quest: true });
     }
 
-    // Оружие (кузнец может выковать) — РАУНД 61: ПО СЛОЖНОСТИ ДЕЛА.
-    // Было: любой из sword/spear/axe/sabre даже за дрова. Теперь:
+    // Оружие (кузнец может выковать) — РАУНД 62 (п.7): БЕЗ МЕЧЕЙ.
     //   easy   → нож (3 д.) / дубина (2 д.) — мелочь от щедрот;
     //   medium → боевой топор (25 д.) / копьё (8 д.);
-    //   hard   → меч (30 д.) / сабля (60 д.) — честная плата за кровь.
+    //   hard   → топор/копьё — лучшее из деревенской работы.
+    // Меч (и сабля со стальным мечом) из выдачи УБРАНЫ: меч — уникальная
+    // награда старосты (см. ниже).
     if (rewardTypes.includes('weapon')) {
         const weaponPoolByDiff = {
             easy: ['knife', 'club'],
             medium: ['axe', 'spear'],
-            hard: ['sword', 'sabre'],
+            hard: ['axe', 'spear'],
         };
         const weaponPool = weaponPoolByDiff[difficulty] || weaponPoolByDiff.easy;
         const weaponId = weaponPool[Math.floor(Math.random() * weaponPool.length)];
@@ -564,15 +580,27 @@ function generateRewards(npcId, questType, scale) {
         }
     }
 
-    // Доспех (кузнец может выковать) — только за среднее/тяжёлое дело
-    // (тегиляй/кожа за дрова — было несообразно)
-    if (rewardTypes.includes('armor') && difficulty !== 'easy' && Math.random() < 0.5) {
-        const armorPool = ['padded', 'leather'];
+    // Доспех (кузнец куёт) — РАУНД 62 (п.7): ТОЛЬКО КУЗНЕЦ и ТОЛЬКО ЗА
+    // САМЫЕ ТЯЖЁЛЫЕ задания (разбойники). Кожаная броня (25 д.) или
+    // кольчуга (80 д.) — честная плата за кровь; тегиляй за среднее дело
+    // больше не выдают.
+    if (rewardTypes.includes('armor') && difficulty === 'hard' && Math.random() < 0.5) {
+        const armorPool = ['leather', 'chain'];
         const armorId = armorPool[Math.floor(Math.random() * armorPool.length)];
         const armor = ARMORS[armorId];
         if (armor) {
             rewards.push({ type: 'item', id: armorId, name: armor.name, count: 1, armor: true });
         }
+    }
+
+    // МЕЧ — УНИКАЛЬНАЯ НАГРАДА ОТ СТАРОСТЫ (раунд 62, п.7): одна на игру,
+    // только за самое тяжёлое дело (разбойники, difficulty hard). Кузнец
+    // мечи не куёт и не продаёт — только староста отдаёт свой.
+    if (npcId === 'elder' && difficulty === 'hard'
+        && !q.elderSwordGiven && !q.elderSwordPromised
+        && Math.random() < 0.35) {
+        const sword = WEAPONS.sword;
+        rewards.push({ type: 'item', id: 'sword', name: sword.name, count: 1, weapon: true, uniqueFromElder: true });
     }
 
     return rewards;
@@ -617,8 +645,16 @@ export function generateQuest(npcId, registry) {
     // Случайное описание
     const description = template.descriptions[Math.floor(Math.random() * template.descriptions.length)];
 
-    // Награды
-    const rewards = generateRewards(npcId, questType, pool.rewardScale);
+    // Награды (реестр передаётся: меч старосты — уникальная награда,
+    // обещание держим в quest-реестре, раунд 62 п.7)
+    const rewards = generateRewards(npcId, questType, pool.rewardScale, registry);
+
+    // РАУНД 62 (п.7): если староста обещал свой меч — запоминаем, пока
+    // поручение не выполнено (или не провалено), второй он не сулит.
+    if (rewards.some(r => r.id === 'sword' && r.uniqueFromElder)) {
+        q.elderSwordPromised = true;
+        registry.set('quest', q);
+    }
 
     // Время на выполнение — РАУНД 61 (п.1): СРОКИ РЕАЛИСТИЧНЫ.
     // У каждого шаблона свой разумный срок в ЧАСАХ (timeLimitHours):
@@ -769,6 +805,9 @@ export function grantQuestRewards(registry, quest) {
                     type: reward.weapon ? 'weapon' : (reward.armor ? 'armor' : 'consumable'),
                     heal: reward.heal,
                     mpHeal: reward.mpHeal,
+                    // РАУНД 62 (п.7): меч старосты — уникальный дар, продаже
+                    // кузнецу не подлежит (флаг проверяется во вкладке «Продать»)
+                    uniqueFromElder: reward.uniqueFromElder || false,
                 });
             }
             grantedRewards.push(`${reward.name} ×${reward.count}`);
@@ -778,6 +817,13 @@ export function grantQuestRewards(registry, quest) {
             grantedRewards.push(t('Благословение (полное восстановление)'));
         }
     });
+
+    // РАУНД 62 (п.7): меч старосты ВЫДАН — уникальность отработана;
+    // второй раз староста меча не обещает.
+    if (quest.rewards.some(r => r.id === 'sword' && r.uniqueFromElder)) {
+        q.elderSwordGiven = true;
+        q.elderSwordPromised = false;
+    }
 
     registry.set('player', player);
     registry.set('quest', q);

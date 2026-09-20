@@ -315,7 +315,9 @@ export const BUILDINGS = [
     // грунтовая 'S' — ряд 10. Ворота — на восточном краю (25,5).
     // Северный ряд:
     { interiorId: 'elder_house', col: 2, row: 1, w: 3, h: 3, label: t('Староста') },
-    { interiorId: 'tavern', col: 6, row: 1, w: 3, h: 3, label: t('Постоялый двор') },
+    // РАУНД 62 (п.6): постоялый двор — ЕДИНСТВЕННОЕ двухэтажное строение
+    // (4×3 клетки) — ему одному разрешена высота, фасад vh_inn крупнее прочих.
+    { interiorId: 'tavern', col: 6, row: 1, w: 4, h: 3, label: t('Постоялый двор') },
     { interiorId: 'blacksmith', col: 10, row: 1, w: 3, h: 3, label: t('Кузница') },
     { interiorId: 'potter_house', col: 14, row: 1, w: 3, h: 3, label: t('Дом гончара') },
     { interiorId: 'grocer_house', col: 18, row: 1, w: 3, h: 3, label: t('Дом Прасковьи') },

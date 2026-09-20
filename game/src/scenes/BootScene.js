@@ -161,14 +161,16 @@ export class BootScene extends Phaser.Scene {
             this.load.image(`int_bg_${id}`, `assets/interiors/int_bg_${id}.jpg`);
         });
 
-        // ----- РАУНД 51/53: ДЕРЕВЯННЫЕ ДОМА И ЛАВКА (пак Rural_TileB/C/D) =====
-        // Палатка лавки ремесленника, бревенчатые дома слободы. Раунд 53:
-        // палатки снеди/мясной убраны — вместо них дома Rural_TileD.
-        const ruralKeys = ['rural_shop_1', 'rural_house_0', 'rurald_house_1',
-            // РАУНД 61 (п.5): цельные избы вернулись в строй — все дома
-            // «по типу и внешнему виду как у дома старосты»
-            'rural_house_1', 'rurald_house_0'];
-        ruralKeys.forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
+        // ----- РАУНД 62: НОВЫЙ ЕДИНЫЙ НАБОР ДОМОВ «ДЕРЕВЯННЫЕ ДОМА И
+        // СТРОЕНИЯ» (vh_* — вырезы из Rural_TileB/C/D по приказу владельца:
+        // дома НЕ ОБРЕЗАНЫ по стенам, крышам и трубам; вся деревня в одном
+        // стиле). Каждый вырез проверен попиксельно и визуально; постоялый
+        // двор (vh_inn) достроен зеркальным торцом, часовня (vh_chapel)
+        // собрана из башни, каменного шатра и креста. Старые ключи
+        // rural_*/wood_house_*/house3d_blacksmith из загрузки УБРАНЫ.
+        const vhHouseKeys = ['vh_manor', 'vh_inn', 'vh_chapel', 'vh_loghouse', 'vh_logroof',
+            'vh_flowers', 'vh_redflowers', 'vh_cottage_mid', 'vh_cottage_right', 'vh_stall'];
+        vhHouseKeys.forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
 
         // ----- РАУНД 51/53: ТАЙЛОВЫЕ ФОНЫ ИНТЕРЬЕРОВ СЛОБОДЫ =====
         const round51BgIds = ['grocer_house', 'butcher_house', 'shop_tools', 'shoemaker_house', 'woodcutter_house'];
@@ -260,26 +262,18 @@ export class BootScene extends Phaser.Scene {
         this.load.image('deco_cow', 'assets/sprites/deco_cow.png');
         this.load.image('deco_goat', 'assets/sprites/deco_goat.png');
         this.load.image('deco_horse', 'assets/sprites/deco_horse.png');
-        this.load.image('deco_church_building', 'assets/sprites/deco_church_building.png');
+        // РАУНД 62: deco_church_building из загрузки убран — церковь теперь
+        // деревянная часовня vh_chapel (единый стиль со всей деревней).
         for (let v = 0; v < 4; v++) this.load.image(`deco_house_${v}`, `assets/sprites/deco_house_${v}.png`);
         // Раунд 38 (этап 2 Варианта Б): дома, сконвертированные из 3D-моделей
         // (Google Drive glb → орто-рендер с UV-текстурами → квантование палитры + контур)
-        // РАУНД 52: СТАРЫЕ 3D-ДОМА УДАЛЕНЫ (файлы house3d_elder/tavern/potter/
-        // villager1/villager2/ploughman/healer/carpenter/fisher/weaver удалены из репо).
-        // Осталась ТОЛЬКО кузница (house3d_blacksmith) — владелец велел церковь и
-        // кузню сохранить (копии в assets/reserve/). Все жилые дома — новые
-        // бревенчатые фасады wood_house_* из пакета владельца «Деревянные дома
-        // и торговые лавки» (Rural_TileB/C/D, см. tools раунда 52).
-        const house3dKeys = ['blacksmith'];
-        house3dKeys.forEach(k => this.load.image(`house3d_${k}`, `assets/sprites/house3d_${k}.png`));
+        // РАУНД 62: 3D-кузница (house3d_blacksmith) из загрузки УБРАНА —
+        // кузница теперь бревенчатая vh_logroof в едином стиле деревни.
+        // (Файлы старых домов оставлены в assets/reserve/.)
 
         // ----- РАУНД 52 (пп.1,4): ДЕРЕВЯННЫЕ ДОМА — ЖИЛЫЕ ДОМА ДЕРЕВНИ -----
-        // РАУНД 61 (п.5 приказа владельца): все дома — ЦЕЛЬНЫЕ ИЗБЫ того же
-        // типа, что дом старосты (wood_house_08). В строй вернулись вырезки
-        // wood_house_07/wood_house_09 (проверены попиксельно — целые: полная
-        // крыша со свесами, трубы, стены без обрезов); phouse_* (раунд 60)
-        // больше не используются и не генерируются.
-        ['wood_house_02', 'wood_house_08', 'wood_house_07', 'wood_house_09'].forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
+        // РАУНД 62: фасады wood_house_* из загрузки убраны — вся деревня
+        // переведена на новый полный набор vh_* (без обрезов).
 
         // ===== НОВЫЕ АССЕТЫ (п.1-5 ТЗ) =====
 

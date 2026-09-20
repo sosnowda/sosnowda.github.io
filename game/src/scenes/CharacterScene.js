@@ -37,8 +37,10 @@ export class CharacterScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5);
 
-        // Имя и архетип (+ возраст — раунд 44)
-        this.add.text(width / 2, 65, `${p.name} — ${p.archetype} (${p.gender === 'female' ? '♀' : '♂'}${p.age != null ? `, ${p.age} ${ageUnitWord(p.age)}` : ''})`, {
+        // Имя и архетип (+ возраст — раунд 44; + облик-прессет — раунд 62)
+        this.add.text(width / 2, 65, `${p.name} — ${p.archetype}` +
+            (p.presetName ? ` · ${t('Облик')} «${p.presetName}»` : '') +
+            ` (${p.gender === 'female' ? '♀' : '♂'}${p.age != null ? `, ${p.age} ${ageUnitWord(p.age)}` : ''})`, {
             fontSize: '18px', color: RUS.textDim,
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);

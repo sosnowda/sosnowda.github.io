@@ -19,9 +19,10 @@ import { initReputation } from '../data/reputation.js';
 import AudioManager from '../systems/AudioManager.js';
 import { t } from '../systems/i18n.js';
 import { ageUnitWord } from '../systems/AgeRules.js';
-// РАУНД 61 (пп.3,7,10 приказа владельца): меню «🎨 Свой облик» и LPC-кастомизация
-// героя УДАЛЕНЫ — у героя снова СТАРАЯ ГОТОВАЯ МОДЕЛЬ (спрайт прегена:
-// 'player' у мужчин / 'npc_merchant' у женщин), как до раунда 59.
+// РАУНД 62 (п.1): готовые прессеты героя «Баэнор» (♂)/«Пауль» (♀)
+// возвращены — LPC-композит собирается здесь, автоматом по полу.
+// (Кастомизация по-прежнему отсутствует — пп.7,10 раунда 61.)
+import { getHeroPreset, composePlayerTexture } from '../systems/NpcLpc.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
     constructor() {
@@ -480,9 +481,20 @@ export class CharacterSelectionScene extends Phaser.Scene {
             // AD-месяц = (month+8)%12+1; для января–августа (индексы 4..11) AD-год = start+1.
             `Дата: ${startDate.day}.${((startDate.month + 8) % 12) + 1}.${startDate.yearFromChrist + (startDate.month >= 4 ? 1 : 0)} от Р.Х.`
         );
-        // П.11 (раунд 61): кастомизация внешности УДАЛЕНА — герой выходит в
-        // деревню со СТАРОЙ ГОТОВОЙ МОДЕЛЬЮ (hero.sprite: 'player' у мужчин,
-        // 'npc_merchant' у женщин), как до раунда 59.
+        // РАУНД 62 (п.1 приказа владельца): ГОТОВЫЕ ПРЕССЕТЫ «Баэнор»/«Пауль»
+        // ВЕРНУЛИСЬ — LPC-композиты применяются АВТОМАТИЧЕСКИ ПО ПОЛУ:
+        // «Баэнор» — мужскому герою, «Пауль» — женскому (перекрёстно к р.60,
+        // как велел владелец). Меню облика нет, кастомизации нет (пп.7,10 р.61);
+        // старая готовая модель ('player'/'npc_merchant') остаётся ЗАПАСНОЙ —
+        // если композит собрать не удастся, сцены откатятся на неё сами.
+        const preset = getHeroPreset(hero.gender, hero.age);
+        const composed = composePlayerTexture(this, preset.appearance, 'player_composite');
+        hero.useComposite = composed;
+        hero.lpcAppearance = preset.appearance;
+        hero.presetName = preset.name;
+        if (composed) hero.sprite = 'player_composite';
+        ActionLog.add(this.registry,
+            `Облик героя: прессет «${preset.name}» выбран автоматически по полу (раунд 62).`);
         this.scene.start('Village');
     }
 }

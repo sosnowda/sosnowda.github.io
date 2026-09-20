@@ -1325,14 +1325,25 @@ const EN = {
     'Цвета одежды, волос и глаз выбираются случайным образом\nпри каждом старте игры (раунд 59). Кнопка «Другой облик» — переброс.':
         'Clothes, hair and eye colors are chosen at random\nwith every game start (round 59). The "Another look" button rerolls them.',
     'Единый шаблон жителя, случайная расцветка': 'One villager template, random coloring',
-    // Раунд 60 (пп.1,4): готовые прессеты «Пауль»/«Баэнора» вместо случайных цветов
+    // Раунд 60 (пп.1,4): готовые прессеты; РАУНД 62 (п.1): ПРЕССЕТЫ ВЕРНУЛИСЬ
+    // ПЕРЕКРЁСТНО — «Пауль» теперь для ЖЕНСКИХ, «Баэнор» для МУЖСКИХ.
     'Облик героя (автоматически по полу):': 'Hero\'s look (automatic by gender):',
-    '«Пауль» — модель для мужских персонажей': '"Paul" — the model for male characters',
-    '«Баэнора» — модель для женских персонажей': '"Baenora" — the model for female characters',
+    '«Пауль» — модель для мужских персонажей': '"Paul" — the model for male characters (before round 62)',
+    '«Баэнора» — модель для женских персонажей': '"Baenora" — the model for female characters (before round 62)',
     'Имя, класс, возраст, пол — облик выбирается автоматически по полу: «Пауль» ♂ / «Баэнора» ♀.':
         'Name, class, age, gender — the look is picked automatically by gender: "Paul" ♂ / "Baenora" ♀.',
+    // Раунд 62 (п.1): перекрёстное сопоставление прессетов по полу
+    'Облик героя: прессет «{0}» выбран автоматически по полу (раунд 62).':
+        'Hero\'s look: the "{0}" preset was picked automatically by gender (round 62).',
+    'Облик': 'Look',
     'Пауль': 'Paul',
+    'Баэнор': 'Baenor',
     'Баэнора': 'Baenora',
+    // Раунд 62 (пп.7,8): экономика наград и описание проводов
+    'Мечи не продаются: меч — награда старосты. Доспех кузнец выдаёт только за самые тяжёлые поручения.':
+        'No swords for sale: the sword is the elder\'s reward. Armor is given by the smith only for the hardest deeds.',
+    'Старушка просится к дочери в соседнее село, боится одна идти. Проводи её по тракту.':
+        'An old woman asks to be walked to her daughter in the neighboring village — she fears the road alone. Escort her along the highway.',
     '🎨 Создание персонажа': '🎨 Character Creation',
     'Имя:': 'Name:',
     'Класс:': 'Class:',

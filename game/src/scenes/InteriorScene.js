@@ -1692,7 +1692,9 @@ export class InteriorScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setDepth(202);
 
-        // Переключатель вкладок
+        // Переключатель вкладок. РАУНД 62 (п.7): вкладка «Доспехи» УДАЛЕНА —
+        // доспехи кузнец НЕ продаёт, а ВЫДАЁТ только за самые тяжёлые
+        // поручения (см. questGenerator.generateRewards).
         const mkTab = (x, label, key) => createButton(this, x, height / 2 - panelH / 2 + 100, t(label), () => {
             closeMenu();
             this.showBlacksmithShop(key);
@@ -1702,9 +1704,8 @@ export class InteriorScene extends Phaser.Scene {
             textColor: RUS.text, fontSize: 14,
             padding: { left: 14, right: 14, top: 6, bottom: 6 },
         }).setDepth(202);
-        mkTab(width / 2 - 150, 'Оружие', 'weapon');
-        mkTab(width / 2, 'Доспехи', 'armor');
-        mkTab(width / 2 + 150, 'Продать', 'sell');  // метки через t(label) в mkTab
+        mkTab(width / 2 - 75, 'Оружие', 'weapon');
+        mkTab(width / 2 + 75, 'Продать', 'sell');  // метки через t(label) в mkTab
 
         // Список товаров
         const startY = height / 2 - panelH / 2 + 150;
@@ -1715,9 +1716,12 @@ export class InteriorScene extends Phaser.Scene {
             // ===== ВКЛАДКА «ПРОДАТЬ» (раунд 45, п.7э) =====
             // Урок Судебника о честной торговле: кузнец берёт снаряжение
             // за полцены — перекупкой герою не нажиться.
+            // РАУНД 62 (п.7): МЕЧ СТАРОСТЫ (uniqueFromElder) НЕ ПРОДАЁТСЯ —
+            // это уникальный дар за самое тяжёлое дело, не товар.
             const sellables = (player.inventory || []).filter(it =>
                 it && (it.type === 'weapon' || it.type === 'armor') && (it.count || 0) > 0
-                && it.id !== player.weaponId && it.id !== player.armorId);
+                && it.id !== player.weaponId && it.id !== player.armorId
+                && !it.uniqueFromElder);
             this.add.text(width / 2, startY - 20, t('Продать можно лишь то, что не надето на тебя (полцены):'), {
                 fontSize: '12px', color: RUS.textDim,
             }).setOrigin(0.5).setDepth(202);
@@ -1751,9 +1755,24 @@ export class InteriorScene extends Phaser.Scene {
                 }).setDepth(202);
             });
         } else {
+            // РАУНД 62 (п.7 приказа владельца) — ЧТО КУЗНЕЦ ПРОДАЁТ:
+            // только простое оружие своей работы (нож/дубина/копьё/топор/лук).
+            // МЕЧ (а также сабля и стальной меч) НЕ ПРОДАЁТСЯ — меч есть
+            // УНИКАЛЬНАЯ НАГРАДА ОТ СТАРОСТЫ за самое тяжёлое дело.
+            // ДОСПЕХИ не продаются вовсе — выдаются за тяжёлые поручения.
+            // Старые сейвы, пришедшие с вкладкой 'armor', попадают в «Оружие».
+            if (tab === 'armor') tab = 'weapon';
+            const SMITH_SALE_WEAPONS = ['club', 'knife', 'spear', 'axe', 'bow'];
             const items = tab === 'weapon'
-                ? Object.values(WEAPONS).filter(w => w.id !== 'fists')
-                : Object.values(ARMORS).filter(a => a.id !== 'none');
+                ? Object.values(WEAPONS).filter(w => SMITH_SALE_WEAPONS.includes(w.id))
+                : [];
+
+            if (tab === 'weapon') {
+                this.add.text(width / 2, height / 2 + panelH / 2 - 58,
+                    t('Мечи не продаются: меч — награда старосты. Доспех кузнец выдаёт только за самые тяжёлые поручения.'), {
+                    fontSize: '11px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
+                }).setOrigin(0.5).setDepth(202);
+            }
 
             items.forEach((item, i) => {
                 const y = startY + i * 42;
