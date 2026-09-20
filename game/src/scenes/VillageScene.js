@@ -127,11 +127,9 @@ export class VillageScene extends Phaser.Scene {
                     if ((t === 'H' || t === 'R' || t === 'D') && coveredTiles.has(`${x},${y}`)) {
                         texKey = `tile_grass_${(x * 7 + y * 13) % 4}`;
                     }
-                    // Раунд 64 (пп.3,4): тайл 'G' снова ПЕСЧАНАЯ ДОРОГА —
-                    // старое переопределение на траву (r39/r63) снято: проезд
-                    // воротни-арки village_gate_r64 прозрачен, дорога должна
-                    // быть видна СКВОЗЬ арку (в r63 дорогу рисовала сама
-                    // текстура воротни — теперь у арки проезд честно пустой).
+                    // Раунд 64 (пп.3,4) → 65: тайл 'G' — ПЕСЧАНАЯ ДОРОГА;
+                    // проезд воротни-профиля village_gate_r65 прозрачен, дорога
+                    // должна быть видна СКВОЗЬ створ (пронёс через ворота на восток).
                 }
                 // Проверяем существование текстуры, fallback на траву
                 const safeTex = this.textures.exists(texKey) ? texKey : 'tile_grass_0';
@@ -158,7 +156,8 @@ export class VillageScene extends Phaser.Scene {
                         img.setTexture(`tile_forest_${(x * 3 + y * 5) % 2}`);
                         img.setDepth(y + 0.4);
                     }
-                } else if (t === '#' || t === 'W' || t === 'X') {
+                } else if (t === '#' || t === 'W' || t === 'X' || t === 'L') {
+                    // Раунд 65 (п.8): частокол 'L' — как камень/колодец, с Y-сортировкой
                     img.setDepth(y + 0.4);
                 } else {
                     img.setDepth(0);
@@ -189,30 +188,37 @@ export class VillageScene extends Phaser.Scene {
         // высоту), каменный цоколь, наличники/ставни/цветники — ничего не
         // обрезано. Двухэтажный только постоялый двор (hp_inn, п.6 прежних
         // приказов); часовня — цельный вырез vh_chapel.
+        // ----- Спрайты домов. РАУНД 65 (п.10 прежнего приказа, вариант Б):
+        // ГОТОВЫЕ ДЕРЕВЯННЫЕ ДОМА из пакета владельца «Fantastic Buildings -
+        // Medieval» (Celianna) — 12 цельных фасадов вместо 8 процедурных.
+        // В ЦЕНТРЕ — деревянная церковь fb_church (звонница с колоколом) и
+        // широкая усадьба старосты fb_elder; ПО КРАЯМ — каменная кузница
+        // fb_smithy с горном; у каждого дома свой фасад (или зеркальная пара,
+        // разнесённая по разным рядам). Двухэтажный только постоялый двор.
         const HOUSE_SPRITE_BY_ID = {
-            elder_house: 'hp_log_wood_a',        // дом старосты: тёс-дранка, труба
-            tavern: 'hp_inn',                    // ПОСТОЯЛЫЙ ДВОР: двухэтажный (разрешено, п.6)
-            blacksmith: 'hp_plank_wood_a',       // кузница: тёс под тёмной дранкой
-            potter_house: 'hp_log_thatch_a',     // изба-сруб под соломой, труба
-            villager_house_1: 'hp_log_thatch_b', // сруб с цветниками у окон
-            villager_house_2: 'hp_log_thatch_a', // как дом гончара, ЗЕРКАЛЬНО
-            beekeeper_house: 'hp_plank_thatch_a',// тёс под соломой
-            healer_house: 'hp_plaster_thatch_a', // беленая изба под соломой, труба
-            carpenter_house: 'hp_log_wood_a',    // сруб под дранкой, труба слева
-            fisher_house: 'hp_log_thatch_b',     // как дом Авдея, ЗЕРКАЛЬНО
-            weaver_house: 'hp_plank_thatch_a',   // тёс под соломой, ЗЕРКАЛЬНО
-            shop_tools: 'hp_narrow_thatch',      // узкий дом ремесленника (2×3)
-            grocer_house: 'hp_plaster_wood_a',   // беленая изба под дранкой
-            butcher_house: 'hp_narrow_wood',     // узкий дом мясника, ЗЕРКАЛЬНО
-            shoemaker_house: 'hp_log_thatch_b',  // сруб с цветниками
-            woodcutter_house: 'hp_log_wood_b',   // лесная изба под дранкой
-            villager_house_3: 'hp_log_thatch_a', // дом Степана (на месте овчарни)
-            church: 'vh_chapel',                 // часовня: звонница, шатёр и крест
+            elder_house: 'fb_elder',             // староста: широкая усадьба под соломой
+            tavern: 'fb_inn',                    // ПОСТОЯЛЫЙ ДВОР: двухэтажный (разрешено)
+            blacksmith: 'fb_smithy',             // кузница: каменный корпус с горном
+            potter_house: 'fb_log_flowers',      // гончар: изба с цветниками
+            villager_house_1: 'fb_log_thatch',   // Авдей: изба под тесовой кровлей
+            villager_house_2: 'fb_manor',        // Марфа: дом со слуховым окном
+            beekeeper_house: 'fb_log_big',       // пахарь: большая изба с крутым кровом
+            healer_house: 'fb_tudor_sm',         // знахарка: узкий дом, ЗЕРКАЛЬНО
+            carpenter_house: 'fb_log_thatch',    // плотник: как дом Авдея, ЗЕРКАЛЬНО
+            fisher_house: 'fb_thatch_small',     // рыбак: малая изба под соломой
+            weaver_house: 'fb_manor',            // ткачиха: как дом Марфы, ЗЕРКАЛЬНО
+            shop_tools: 'fb_tudor_sm',           // ремесленник: узкий высокий дом
+            grocer_house: 'fb_thatch_big',       // Прасковья: белёная изба с красными окнами
+            butcher_house: 'fb_thatch_small',    // мясник: как дом рыбака, ЗЕРКАЛЬНО
+            shoemaker_house: 'fb_log_big',       // сапожник: как дом пахаря, ЗЕРКАЛЬНО
+            woodcutter_house: 'fb_tudor_fl',     // дровосек: фахверк с цветниками
+            villager_house_3: 'fb_thatch_big',   // Степан: как дом Прасковьи, ЗЕРКАЛЬНО
+            church: 'fb_church',                 // ХРАМ: деревянная церковь с звонницей
         };
-        // Дома, рисуемые ЗЕРКАЛЬНО (разнообразие фасадов; зеркала разнесены
-        // так, чтобы одинаковые избы не стояли рядом)
-        const FLIP_HOUSES = new Set(['villager_house_2', 'beekeeper_house', 'butcher_house',
-            'carpenter_house', 'fisher_house', 'woodcutter_house']);
+        // Дома, рисуемые ЗЕРКАЛЬНО (зеркала разнесены по разным рядам —
+        // одинаковые фасады не стоят рядом и не смотрят в одну сторону)
+        const FLIP_HOUSES = new Set(['healer_house', 'carpenter_house', 'weaver_house',
+            'butcher_house', 'shoemaker_house', 'villager_house_3']);
         // Раунд 64 (п.6): ДЫМ ИЗ ТРУБ УДАЛЁН (отображался неправильно) —
         // ни CHIMNEY_SPRITES, ни smokeBuildings больше нет.
         this.doors = [];
@@ -339,9 +345,8 @@ export class VillageScene extends Phaser.Scene {
         this.scatterFlowers(ts);
         this.spawnChests(ts);
 
-        // ----- Раунд 12: костёр и лампада креста (пруд удалён в раунде 36) -----
-        this.createCampfire(ts);
-        this.createCrossGlow(ts);
+        // ----- Раунд 12 → 65: костёр и лампада креста УДАЛЕНЫ из деревни
+        // (пп.5,6 приказа): отдых у костра — на Опушке леса, молитва — в церкви.
 
         // Раунд 64 (п.7): стога, поленница и телега удалены (drawYardProps
         // упразднён; «кроме домов и ворот» — хозяйственных построек больше нет).
@@ -355,15 +360,15 @@ export class VillageScene extends Phaser.Scene {
         this.rebuildStreetNpcs();
 
         // ----- Ворота (п.20 заявки раунда 39): ворота на ВОСТОЧНОЙ околице.
-        // РАУНД 64 (пп.3,4): воротня-АРКА village_gate_r64 — широкая и
-        // ВИДНАЯ, БЕЗ башенок (п.4) и без частокола (п.1); дом ремесленника
-        // сдвинут на колонку 21, так что арке ничего не мешает. Надпись
-        // «ВЫХОД ▶» осталась — указывает на проезд.
+        // РАУНД 65 (п.7): воротня village_gate_r65 — КОМПАКТНАЯ (104×118 вместо
+        // 156×184) и развёрнута ПРОЁМОМ К ВЫХОДУ: вид сбоку, ближний столб
+        // слева-снизу, дальний справа-сверху, верёвка с вымпелами, фонарь.
+        // Частокол (п.8) подходит к воротам с севера и юга.
         const gatePx = (MAP_W - 1) * ts + ts / 2;
         const gatePy = VILLAGE_GATE.row * ts + ts / 2;
         this.drawVillageGate(ts);
-        const gateLabel = this.add.text(gatePx - ts * 2.6, gatePy - ts * 0.4, t('ВЫХОД ▶'), {
-            fontSize: '16px', color: '#ff8060', backgroundColor: '#00000088',
+        const gateLabel = this.add.text(gatePx - ts * 2.2, gatePy - ts * 1.1, t('ВЫХОД ▶'), {
+            fontSize: '15px', color: '#ff8060', backgroundColor: '#00000088',
             padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(20);
@@ -438,8 +443,8 @@ export class VillageScene extends Phaser.Scene {
                     'Управление: WASD/стрелки — движение, E/пробел — действие, M — обзор деревни, ESC — меню.\n\n' +
                     '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
                     '🔒 Закрытые избы: хозяин ушёл — подскажут, где искать.\n' +
-                    '✝ Крест — молитва. 🎣 Рыбалка — на Реке (по карте). 🚪 Новый дом Степана — на востоке южной улицы.\n' +
-                    '🐺 За воротами, в Тёмном лесу, водятся волки — там же грибы и ягоды.\n' +
+                    '⛪ Молитва — только в церкви. 🎣 Рыбалка — на Реке (по карте).\n' +
+                    '🌲 За воротами, в Тёмном лесу, водятся волки — там же грибы, ягоды и костёр с отдыхом.\n' +
                     '🚪 Выход за околицу (по карте) занимает ровно 1 игровой час.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
                 { singletonKey: 'village-help' });
@@ -703,23 +708,20 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
-     * РАУНД 64 (пп.3,4 приказа): воротня-АРКА village_gate_r64 (132×184,
-     * готовый PNG из tools/make_houses_r64.py) — широкая фронтальная арка
-     * БЕЗ башенок (п.4) и без частокольных крыльев (п.1): два массивных
-     * столба на каменных основаниях, несущая балка с подкосами, вальмовая
-     * кровля «как у домов», фонарь в проезде. Проезд прозрачен — дорога
-     * видна сквозь арку. Арка стоит правее дома ремесленника (дом сдвинут
-     * на колонку 21) и выше избы сапожника — НИЧТО НЕ ПЕРЕКРЫТО.
-     * Глубина 5.0: игрок на улице (глубина ~5.5) проходит ПЕРЕД столбами,
-     * подошедший с севера/юга честно уходит ЗА ворота.
+     * РАУНД 65 (п.7 приказа): воротня village_gate_r65 (104×118) — КОМПАКТНАЯ
+     * и развёрнута ПРОЁМОМ В СТОРОНУ ВЫХОДА: профильный вид с юго-запада —
+     * ближний (южный) столб на каменном основании, дальний (северный) под
+     * кровелькой, между ними натянута верёвка с вымпелами и подвесной доской;
+     * фонарь у ближнего столба. Проезд прозрачен — дорога видна насквозь.
+     * Основание — на южной кромке дороги (ряд 6), глубина 6.0: игрок на улице
+     * (глубина ~5.5) проходит СКВОЗЬ ворота ЗА ближним столбом — как и положено
+     * в 2.5D (южные предметы рисуются поверх северных).
      */
     drawVillageGate(ts) {
-        if (!this.textures.exists('village_gate_r64')) return;
-        // Правая кромка арки — в 4px от восточного края карты (не режется
-        // границей), основание — на нижней кромке дороги (ряд 5.75).
-        const img = this.add.image(MAP_W * ts - 70, VILLAGE_GATE.row * ts + ts * 0.75, 'village_gate_r64');
+        if (!this.textures.exists('village_gate_r65')) return;
+        const img = this.add.image(MAP_W * ts - 44, (VILLAGE_GATE.row + 1) * ts, 'village_gate_r65');
         img.setOrigin(0.5, 1);          // якорь: низ по центру
-        img.setDepth(5.0);
+        img.setDepth(6.0);
     }
 
     /**
@@ -909,13 +911,15 @@ export class VillageScene extends Phaser.Scene {
             } else {
                 dir = vx < 0 ? 'left' : 'right';
             }
-            if (dir !== this.lastDir || !this.playerObj.anims.isPlaying) {
-                // П.22 (раунд 37): анимация ходьбы у обоих типов текстуры
-                // (LPC-композит 'player_composite_*' и legacy 'player_*')
-                const walkKey = `${this.playerTexKey}_walk_${dir}`;
-                if (this.anims.exists(walkKey)) this.playerObj.play(walkKey, true);
-                this.lastDir = dir;
-            }
+            // РАУНД 65 (п.2 приказа «НЕ ВИДНО АНИМАЦИИ ХОДЬБЫ»): анимация ходьбы
+            // запускается КАЖДЫЙ кадр движения (play с ignoreIfPlaying=true не
+            // перезапускает уже идущую). Прежняя проверка «dir !== lastDir ||
+            // !isPlaying» упиралась в idle-анимацию: после остановки движение в
+            // ту же сторону начиналось со СТОЯЩЕГО кадра и могло так и не
+            // переключиться на ходьбу.
+            const walkKey = `${this.playerTexKey}_walk_${dir}`;
+            if (this.anims.exists(walkKey)) this.playerObj.play(walkKey, true);
+            this.lastDir = dir;
             const now = this.time.now;
             if (now - this.lastStepTime > this.stepInterval) {
                 this.audioManager.playStep();
@@ -1042,7 +1046,7 @@ export class VillageScene extends Phaser.Scene {
             const npcData = findNpc(this.registry, 'elder');
             const displayName = npcData ? getNpcDisplayName(this.registry, 'elder') : 'Староста';
             const spriteKey = getNpcSpriteKey(this, this.registry, 'elder');
-            const y = 9.5 * ts; // главная улица (ряд 8-9)
+            const y = 5.5 * ts; // ГЛАВНАЯ улица (ряд 5): староста обходит деревню
             const minX = 3 * ts;
             const maxX = 21 * ts;
             const startX = minX + Math.random() * (maxX - minX);
@@ -1103,42 +1107,40 @@ export class VillageScene extends Phaser.Scene {
 
     /**
      * Точка на улице для жителя (в тайлах). Возле своего двора/колодца/ворот.
-     * Раунд 37: координаты пересчитаны под карту 26×21 (вторая улица) и
-     * добавлены жители новых дворов (знахарка, плотник, гончар, ткачиха,
-     * жена рыбака, пастушок, дети).
+     * РАУНД 65 (п.10): координаты пересчитаны под НОВУЮ планировку деревни
+     * (храм и староста в центре, кузня на северо-востоке, ремёсла по краям;
+     * улицы: ряд 5 — главная, ряд 9 — средняя, ряд 13 — задняя).
      */
     streetSpotFor(id) {
-        // Раунд 52: все точки пересчитаны под компактную деревню 26×15
-        // (дома в трёх рядах; улица B — ряд 5, южная 'S' — ряд 10).
         const SPOTS = {
-            peasant1: { x: 4.5, y: 9.4 },       // у дома Авдея (средний ряд)
-            widow: { x: 8.5, y: 9.4 },          // у дома Марфы
-            beekeeper1: { x: 12.5, y: 9.4 },    // у дома пахаря
-            beekeeper_wife: { x: 10.5, y: 10.4 }, // у колодца (9,9), со стороны южной улицы
-            elder_wife: { x: 8.5, y: 10.4 },    // у колодца
-            blacksmith: { x: 12.5, y: 4.4 },    // у кузницы (северный ряд)
-            healer: { x: 4.5, y: 14.4 },        // у дома знахарки (южный ряд)
-            hunter: { x: 16.5, y: 14.4 },       // у южного двора
-            fisherman: { x: 12.5, y: 14.4 },    // у дома рыбака
-            carpenter1: { x: 8.5, y: 14.4 },    // у дома плотника
-            carpenter_wife: { x: 6.5, y: 10.4 }, // по воду
-            potter1: { x: 17.5, y: 4.4 },       // за домом гончара (сушит горшки)
-            potter_wife: { x: 16.5, y: 4.4 },   // у двора гончара
-            weaver1: { x: 16.5, y: 14.4 },      // у дома ткачихи
-            shepherd_boy: { x: 15.5, y: 14.4 }, // при матери-ткачихе (овчарня снята, р.63)
-            peasant2: { x: 23.5, y: 14.4 },     // у своего нового дома (р.63, п.1)
-            peasant2_wife: { x: 20.5, y: 10.4 }, // по воду (южная улица)
-            fisher_wife: { x: 11.5, y: 14.4 },  // у дома рыбака
-            guard: { x: 24.4, y: 5.4 },         // у ворот (25,5)
-            tavernkeeper: { x: 8.5, y: 4.4 },   // у постоялого двора
-            priest: null,                       // батюшка не гуляет — он в церкви
-            // Детские площадки — у колодца, улицы и дворов
-            kid1: { x: 8.2, y: 10.4 }, kid2: { x: 12.6, y: 10.4 },
-            kid3: { x: 16.8, y: 10.4 }, kid4: { x: 5.5, y: 13.4 },
-            kid5: { x: 19.5, y: 14.4 }, kid6: { x: 13.5, y: 14.4 },
-            kid7: { x: 7.5, y: 5.4 },
-            kid8: { x: 17.5, y: 5.4 },          // дочка гончара — у дома
-            kid9: { x: 3.5, y: 14.4 },          // внучка знахарки — у дома
+            peasant1: { x: 17.5, y: 4.4 },       // Авдей — у своего дома (северный ряд)
+            widow: { x: 3.5, y: 9.4 },           // Марфа — у дома (средний ряд)
+            beekeeper1: { x: 7.5, y: 9.4 },      // Тарас — у дома
+            beekeeper_wife: { x: 20.5, y: 9.4 }, // у колодца (22,7), со стороны средней улицы
+            elder_wife: { x: 23.5, y: 9.4 },     // у колодца
+            blacksmith: { x: 22.5, y: 4.4 },     // у кузницы (северо-восточный угол)
+            healer: { x: 24.5, y: 9.4 },         // у дома знахарки
+            hunter: { x: 13.5, y: 9.4 },         // на средней улице
+            fisherman: { x: 19.5, y: 9.4 },      // у дома рыбака
+            carpenter1: { x: 3.5, y: 13.4 },     // у дома плотника (южный ряд)
+            carpenter_wife: { x: 5.5, y: 9.4 },  // по воду (переулок у средней улицы)
+            potter1: { x: 8.5, y: 4.4 },         // у дома гончара (сушит горшки)
+            potter_wife: { x: 7.5, y: 4.4 },     // у двора гончара
+            weaver1: { x: 7.5, y: 13.4 },        // у дома ткачихи
+            shepherd_boy: { x: 9.5, y: 13.4 },   // при матери-ткачихе
+            peasant2: { x: 11.5, y: 13.4 },      // у дома Степана
+            peasant2_wife: { x: 13.5, y: 13.4 }, // по воду (задняя улица)
+            fisher_wife: { x: 18.5, y: 9.4 },    // у дома рыбака
+            guard: { x: 23.5, y: 5.4 },          // у ворот (25,5), чуть западнее проезда
+            tavernkeeper: { x: 4.5, y: 4.4 },    // у постоялого двора
+            priest: null,                        // батюшка не гуляет — он в церкви
+            // Детские площадки — у колодца, улиц и дворов
+            kid1: { x: 5.5, y: 10.4 }, kid2: { x: 9.5, y: 10.4 },
+            kid3: { x: 17.5, y: 10.4 }, kid4: { x: 5.5, y: 13.4 },
+            kid5: { x: 21.5, y: 13.4 }, kid6: { x: 12.5, y: 13.4 },
+            kid7: { x: 1.5, y: 4.4 },
+            kid8: { x: 9.5, y: 4.4 },            // дочка гончара — у дома
+            kid9: { x: 2.5, y: 13.4 },           // внучка знахарки — южная улица
         };
         return SPOTS[id] || { x: 12.5, y: 5.4 };
     }
@@ -1217,23 +1219,8 @@ export class VillageScene extends Phaser.Scene {
                         nearest = { type: 'gate', label: t('Выйти из деревни') };
                     }
                 }
-
-                // ----- Раунд 12: костёр, каменный крест (рыбалка — на Реке) -----
-                const tile = (this.map[cy] && this.map[cy][cx] !== undefined) ? this.map[cy][cx] : null;
-                if (tile === 'F') {
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        nearest = { type: 'campfire', label: t('Отдохнуть у костра (1 час)') };
-                    }
-                }
-                if (tile === 'X') {
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        nearest = { type: 'cross', label: t('Помолиться у креста (1 час)') };
-                    }
-                }
+                // РАУНД 65 (пп.5,6): костёр и каменный крест УДАЛЕНЫ из деревни —
+                // отдых у костра переехал на Опушку леса, молитва — только в церкви.
             }
         }
 
@@ -1345,16 +1332,8 @@ export class VillageScene extends Phaser.Scene {
             // Раунд 64 (пп.2,5): живности в деревне больше нет — куры,
             // корова и воробьиные стайки удалены по приказу владельца.
 
-            // Раунд 12: костёр — тёплый свет с живым мерцанием
-            if (this.campfireGlow) {
-                const nowGlow = this.time.now;
-                const flick = 0.85 + 0.15 * Math.sin(nowGlow * 0.011) * Math.sin(nowGlow * 0.007);
-                this.campfireGlow.setAlpha((0.10 + dark * 0.24) * flick);
-            }
-            // Раунд 12: лампада у каменного креста — тихий свет ночью
-            if (this.crossGlow) {
-                this.crossGlow.setAlpha(dark * 0.22);
-            }
+            // РАУНД 65 (пп.5,6): костёр и лампада креста удалены вместе
+            // с их светом (объектов больше нет на карте деревни).
             // Раунд 36: зимний лёд/камыш убраны вместе с прудом
         }
         
@@ -1392,11 +1371,9 @@ export class VillageScene extends Phaser.Scene {
             // entry {data, img, marker} из this.chests
             const entry = (this.chests || []).find(e => e.data.id === this.nearestInteractable.chest.id);
             this.openChest(entry);
-        } else if (this.nearestInteractable.type === 'campfire') {
-            this.restAtCampfire();
-        } else if (this.nearestInteractable.type === 'cross') {
-            this.prayAtCross();
         }
+        // РАУНД 65 (пп.5,6): ветки «отдых у костра» и «молитва у креста»
+        // удалены из деревни — молитва только в церкви, костёр — в лесу.
     }
 
     // П.16,23: Подойти к двери и войти (упрощённо — телепорт + вход)
@@ -1855,63 +1832,11 @@ export class VillageScene extends Phaser.Scene {
     }
 
     // ================================================================
-    // РАУНД 12: костёр и каменный крест (пруд/рыбалка удалены — раунд 36)
+    // РАУНД 65 (пп.5,6 приказа): КОСТЁР И КРЕСТ УДАЛЕНЫ ИЗ ДЕРЕВНИ.
+    // Методы createCampfire/createCrossGlow/restAtCampfire/prayAtCross
+    // удалены целиком. Отдых у костра теперь на ОПУШКЕ ЛЕСА (ForestScene,
+    // тайл 'F'), молитва — ТОЛЬКО в церкви (InteriorScene).
     // ================================================================
-
-    /**
-     * Костёр у таверны (тайл 'F'): анимированное пламя из 3 кадров, тёплый
-     * свет с мерцанием (updateHUD), редкий дымок. Отдых — через tryInteract.
-     */
-    createCampfire(ts) {
-        // Раунд 37 (п.14 заявки): костёр у постоялого двора УДАЛЁН — тайлов 'F'
-        // на карте больше нет, метод оставлен на случай возврата костра.
-        if (!this.map || !this.map.some(row => row.includes('F'))) return;
-        const col = 12, row = 7;
-        const cx = col * ts + ts / 2;
-        const cy = row * ts + ts / 2;
-
-        // Мягкая тень под камнями
-        this.add.ellipse(cx, cy + 10, 42, 12, 0x000000, 0.22).setDepth(row + 0.3);
-        // Основание: каменное кольцо + поленья (тайл 'F' уже нарисовал траву)
-        this.add.image(cx, cy + 4, 'campfire_base').setScale(1.5).setDepth(row + 0.4);
-
-        // Пламя — 3 кадра поверх основания, ADD-режим для жара
-        this.campfireFlame = this.add.image(cx, cy - 6, 'campfire_flame_0')
-            .setScale(1.4)
-            .setBlendMode(Phaser.BlendModes.ADD)
-            .setDepth(row + 0.5);
-        let flameFrame = 0;
-        this.time.addEvent({
-            delay: 180,
-            loop: true,
-            callback: () => {
-                flameFrame = (flameFrame + 1) % 3;
-                if (this.campfireFlame && this.textures.exists(`campfire_flame_${flameFrame}`)) {
-                    this.campfireFlame.setTexture(`campfire_flame_${flameFrame}`);
-                }
-            },
-        });
-
-        // Тёплый свет на земле — яркость задаётся в updateHUD (день/ночь + мерцание)
-        this.campfireGlow = this.add.ellipse(cx, cy + 6, 100, 54, 0xff9a3a, 0)
-            .setBlendMode(Phaser.BlendModes.ADD)
-            .setDepth(row + 0.35);
-
-        // Раунд 64 (п.6): дым над костром тоже убран — тот же механизм
-        // puffs, что и у труб (владельцу не нравился).
-    }
-
-    /**
-     * Каменный крест (3,12): «лампада» — мягкое золотое свечение у подножия
-     * ночью (альфа задаётся в updateHUD по dark-коэффициенту).
-     */
-    createCrossGlow(ts) {
-        const cx = 3 * ts + ts / 2;
-        const cy = 12 * ts + ts / 2;
-        this.crossGlow = this.add.ellipse(cx, cy + 8, 46, 18, 0xffc866, 0)
-            .setBlendMode(Phaser.BlendModes.ADD)
-            .setDepth(12 + 0.35);
-    }
 
     /** Непроходим ли тайл (для блуждания живности). Вне карты — непроходим. */
     isSolidTile(col, row) {
@@ -1920,96 +1845,11 @@ export class VillageScene extends Phaser.Scene {
     }
 
     /**
-     * Раунд 12: отдых у костра — 1 час, HP и Воля до максимума (§5.4 роадмапа).
-     * Если силы полны — время не тратится.
-     */
-    restAtCampfire() {
-        if (this.busyDialog) return;
-        const player = this.registry.get('player');
-        if (!player) return;
-        const hpMax = player.HPmax || player.HP;
-        const mpMax = player.MPmax || player.MP;
-        if (player.HP >= hpMax && player.MP >= mpMax) {
-            this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Ты полон сил', '#b8a88a');
-            ActionLog.add(this.registry, t('Погрелся у костра — силы и так полны.'));
-            return;
-        }
-        this.busyDialog = true;
-        const close = () => { this.busyDialog = false; };
-        createDialog(this, t('🔥 Костёр'),
-            'Тёплый огонь разгоняет усталость. Присесть на минутку — а очнёшься через час крепкого сна.\n\nОтдохнуть у костра? (1 час — здоровье и Воля восстановятся полностью.)',
-            [
-                { text: t('Присесть у огня'), callback: () => {
-                    close();
-                    this.cameras.main.fadeOut(700, 0, 0, 0);
-                    this.time.delayedCall(750, () => {
-                        tickTime(this.registry, 60);
-                        player.HP = hpMax;
-                        player.MP = mpMax;
-                        this.registry.set('player', player);
-                        this.updateHUD();
-                        this.audioManager.playSound('sfx_heal');
-                        ActionLog.add(this.registry, t('Отдохнул у костра — час крепкого сна, силы восстановились.'));
-                        this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Силы восстановились', '#8fdc7a');
-                        this.cameras.main.fadeIn(700, 0, 0, 0);
-                    });
-                } },
-                { text: 'Не сейчас', callback: close },
-            ]);
-    }
-
-    /**
      * Раунд 36: рыбалка переехала из деревни на РЕКУ (локация карты,
      * LocationScene.goFishing) — пруд с причалом удалён из деревни
      * по заявке владельца («убрать тайлы воды из деревни»).
+     * РАУНД 65 (п.6): и молитва у креста удалена — молиться ТОЛЬКО В ЦЕРКВИ.
      */
-
-    /**
-     * Раунд 12: молитва у каменного креста — 1 час, +2..5 Воли, раз в день
-     * (тихая альтернатива церковной молитве, §5.1 роадмапа).
-     */
-    prayAtCross() {
-        if (this.busyDialog) return;
-        const player = this.registry.get('player');
-        if (!player) return;
-        const q = this.registry.get('quest') || {};
-        const today = dayKeyOf(getTime(this.registry));
-        if (isOpenedToday(q, 'cross_prayer', today)) {
-            this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Душа уже очистилась сегодня', '#b8a88a');
-            ActionLog.add(this.registry, t('Помолился у креста (уже молился сегодня).'));
-            return;
-        }
-        this.busyDialog = true;
-        const close = () => { this.busyDialog = false; };
-        this.cameras.main.fadeOut(500, 0, 0, 0);
-        this.time.delayedCall(550, () => {
-            tickTime(this.registry, 60);
-            markOpened(q, 'cross_prayer', today);
-            this.registry.set('quest', q);
-            const gain = Phaser.Math.Between(2, 5);
-            player.MP = Math.min(player.MPmax || player.MP + gain, player.MP + gain);
-            this.registry.set('player', player);
-            this.updateHUD();
-            this.audioManager.playSound('sfx_level_up');
-            // Золотые искры у подножия креста
-            const cx = 3 * this.tileSize + this.tileSize / 2;
-            const cy = 12 * this.tileSize + this.tileSize / 2;
-            const burst = this.add.particles(cx, cy, 'particle_spark', {
-                speed: { min: 18, max: 52 },
-                lifespan: 900,
-                scale: { start: 0.5, end: 0 },
-                tint: 0xffd700,
-                emitting: false,
-            }).setDepth(150);
-            burst.explode(10);
-            this.time.delayedCall(1300, () => burst.destroy());
-            this.cameras.main.fadeIn(500, 0, 0, 0);
-            ActionLog.add(this.registry, `Помолился у каменного креста — Воля +${gain}.`);
-            createDialog(this, '🕯 Молитва у креста',
-                `Древний крест у околицы помнит ещё прадедов. Ты кладёшь ладонь на тёплый камень, и тревога отпускает.\n\nВоля восстановлена: +${gain}.`,
-                [{ text: 'Поклониться кресту', callback: close }]);
-        });
-    }
 
     /**
      * Раунд 11: всплывающий текст над точкой (для лута и подсказок).

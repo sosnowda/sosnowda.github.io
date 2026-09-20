@@ -161,17 +161,21 @@ export class BootScene extends Phaser.Scene {
             this.load.image(`int_bg_${id}`, `assets/interiors/int_bg_${id}.jpg`);
         });
 
-        // ----- РАУНД 64 (пп.8,9 приказа владельца): ДОМА СОБРАНЫ ИЗ ЧАСТЕЙ —
-        // «СТЕН И КРЫШ» (вариант 9 из приказа; генератор tools/make_houses_r64.py,
-        // тайлы деревни wall_log/wall_plank/plaster + roof_thatch/roof_wood).
-        // У каждого дома ЧЕСТНЫЕ БОКОВЫЕ СТЕНЫ (угловые столбы-замки во всю
-        // высоту), каменный цоколь, наличники/ставни — НИЧЕГО НЕ ОБРЕЗАНО.
-        // Двухэтажный только постоялый двор (hp_inn); часовня — vh_chapel.
-        // Старые вырезы vh_* (кроме часовни) из загрузки УБРАНЫ.
-        const hpHouseKeys = ['hp_log_thatch_a', 'hp_log_thatch_b', 'hp_log_wood_a', 'hp_log_wood_b',
-            'hp_plank_thatch_a', 'hp_plank_wood_a', 'hp_plaster_thatch_a', 'hp_plaster_wood_a',
-            'hp_narrow_thatch', 'hp_narrow_wood', 'hp_inn', 'village_gate_r64', 'vh_chapel'];
-        hpHouseKeys.forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
+        // ----- РАУНД 65 (п.10 прежнего приказа, вариант Б): ГОТОВЫЕ ДЕРЕВЯННЫЕ
+        // ДОМА из пакета владельца «Fantastic Buildings - Medieval» (Celianna):
+        // tools/make_houses_r65.py вырезает цельные здания из тайлсетов пакета
+        // (Rural_TileB/C/D/E, City_TileB) — деревянная церковь с звонницей,
+        // двухэтажный постоялый двор (только ему разрешена высота), каменная
+        // кузница с горном, бревенчатые и соломенные избы. Ни одна стена не
+        // обрезана — каждый дом вырезан ЦЕЛИКОМ из фирменного листа.
+        // Процедурные hp_* (р.64) из загрузки убраны.
+        const fbHouseKeys = ['fb_church', 'fb_inn', 'fb_smithy', 'fb_elder', 'fb_manor',
+            'fb_thatch_big', 'fb_thatch_small', 'fb_log_flowers', 'fb_log_thatch',
+            'fb_log_big', 'fb_tudor_fl', 'fb_tudor_sm',
+            'village_gate_r65'];
+        fbHouseKeys.forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
+        // Раунд 65 (п.8): тайл ЧАСТОКОЛА — кольцо брёвен вокруг деревни
+        this.load.image('tile_palisade', 'assets/tiles/palisade_0.png');
 
         // ----- РАУНД 51/53: ТАЙЛОВЫЕ ФОНЫ ИНТЕРЬЕРОВ СЛОБОДЫ =====
         const round51BgIds = ['grocer_house', 'butcher_house', 'shop_tools', 'shoemaker_house', 'woodcutter_house'];
@@ -361,8 +365,8 @@ export class BootScene extends Phaser.Scene {
         // ----- Процедурные текстуры хозяйственных построек — раунд 17 -----
         this.createVillageYardTextures();
 
-        // ----- РАУНД 64: воротня village_gate_r64 — ГОТОВЫЙ PNG из
-        // tools/make_houses_r64.py (фронтальная арка без башенок).
+        // ----- РАУНД 65: воротня village_gate_r65 — ГОТОВЫЙ PNG из
+        // tools/make_houses_r65.py (профильный створ, проёмом к выходу).
         // Процедурный createGateTexture (r57–r63) удалён вместе с методом.
 
         // ----- АУДИО -----

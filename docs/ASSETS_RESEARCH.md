@@ -109,6 +109,13 @@
 - **Стиль:** pixelart top-down, мягкие цвета
 - **Совместимость:** **Средняя.** Полезен как «демо-набор» для быстрого старта; 32×32 → ×1.5 → 48×48.
 
+### 1.10 Celianna — Fantastic Buildings - Medieval (раунд 65, дома деревни)
+- **Источник:** пакет, предоставленный владельцем игры (архив «Fantastic Buildings - Medieval.zip», 2017-09-28; тайлсеты Rural_TileB/C/D/E, City_TileB/C/D/E, 768×768).
+- **Лицензия:** EULA Celianna / KOMODO Co., Ltd. (RPG Maker Resource Pack).
+- **Условия EULA (важно):** материалы созданы «for use in game development… using the RPG Maker series» и требуют: (а) что владельцем пакета является легитимный пользователь; (б) указания в документации игры строки «[Copyright](C) Celianna»; (в) запрета на перераспространение самих материалов отдельно от игры. Использование вне движков RPG Maker формально EULA не покрыто — решение об использовании принял владелец игры, предоставивший пакет; ответственный за лицензионную чистоту — владелец.
+- **Использовано в игре:** 12 цельных фасадов зданий (fb_church, fb_inn, fb_smithy, fb_elder, fb_manor, fb_thatch_big/small, fb_log_flowers/thatch/big, fb_tudor_fl/sm), вырезанных генератором game/tools/make_houses_r65.py из листов Rural_TileB/C/D/E и City_TileB (обрезка по альфа-каналу, стирание чужих фрагментов).
+- **Атрибуция в игре:** «[Copyright](C) Celianna — Fantastic Buildings - Medieval».
+
 ### 1.9 Quaternius — Medieval Village MegaKit
 - **Источник:** https://quaternius.itch.io/medieval-village-megakit (также https://quaternius.com/packs/medievalvillage.html)
 - **Лицензия:** **CC0**

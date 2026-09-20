@@ -232,14 +232,32 @@ export class ForestScene extends Phaser.Scene {
         const camp = campfirePos();
         const stash = stashPos();
 
-        // Кострище брошенного лагеря
+        // Кострище брошенного лагеря — РАУНД 65 (п.5 приказа): в деревне костра
+        // больше нет, отдых у костра переехал СЮДА, в лес: пламя горит,
+        // тёплый свет тлеет — подойти и отдохнуть (1 час, полный сон).
         const cx = camp.col * TS + TS / 2;
         const cy = camp.row * TS + TS / 2;
         if (this.textures.exists('campfire_base')) {
             this.add.image(cx, cy + 6, 'campfire_base').setScale(TS / 32).setDepth(0.25);
         }
-        // Угли ещё тлеют ночью (тёплый отсвет)
-        this.campGlow = this.add.ellipse(cx, cy + 8, 44, 18, 0xff7a30, 0.16)
+        // Живое пламя (3 кадра, ADD) — костёр в лагере разожжён
+        if (this.textures.exists('campfire_flame_0')) {
+            this.campfireFlame = this.add.image(cx, cy - 4, 'campfire_flame_0')
+                .setScale(TS / 32 * 1.3)
+                .setBlendMode(Phaser.BlendModes.ADD).setDepth(0.35);
+            let flameFrame = 0;
+            this.time.addEvent({
+                delay: 180, loop: true,
+                callback: () => {
+                    flameFrame = (flameFrame + 1) % 3;
+                    if (this.campfireFlame && this.textures.exists(`campfire_flame_${flameFrame}`)) {
+                        this.campfireFlame.setTexture(`campfire_flame_${flameFrame}`);
+                    }
+                },
+            });
+        }
+        // Угли тлеют, тёплый отсвет качается
+        this.campGlow = this.add.ellipse(cx, cy + 8, 64, 26, 0xff7a30, 0.22)
             .setBlendMode(Phaser.BlendModes.ADD).setDepth(0.26);
 
         // Тайник под корягой
@@ -648,6 +666,13 @@ export class ForestScene extends Phaser.Scene {
                     nearest = { type: 'stash', label: t('Обыскать тайник разбойников') };
                     continue;
                 }
+                // РАУНД 65 (п.5): отдых у костра — ТОЛЬКО в лесу (из деревни удалён)
+                const camp = campfirePos();
+                if (cx === camp.col && cy === camp.row) {
+                    bestDist = dist;
+                    nearest = { type: 'campfire', label: t('Отдохнуть у костра (1 час)') };
+                    continue;
+                }
                 if (cx === FOREST_EXIT.col && cy === FOREST_EXIT.row) {
                     bestDist = dist;
                     nearest = { type: 'exit', label: t('Вернуться к околице') };
@@ -669,7 +694,48 @@ export class ForestScene extends Phaser.Scene {
         ActionLog.add(this.registry, tf(t('Тёмный лес: взаимодействие — {0}.'), n.label));
         if (n.type === 'gather') this.gatherResource(n.entry);
         else if (n.type === 'stash') this.openStash();
+        else if (n.type === 'campfire') this.restAtCampfire();
         else if (n.type === 'exit') this.leaveForest();
+    }
+
+    /**
+     * РАУНД 65 (п.5 приказа): отдых у костра — механика переехала из деревни
+     * в лес (кострище брошенного лагеря). 1 игровой час, HP и Воля — до максимума.
+     * Если силы полны — время не тратится.
+     */
+    restAtCampfire() {
+        if (this.busyDialog) return;
+        const player = this.player || this.registry.get('player');
+        if (!player) return;
+        const hpMax = player.HPmax || player.HP;
+        const mpMax = player.MPmax || player.MP;
+        if (player.HP >= hpMax && player.MP >= mpMax) {
+            this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Ты полон сил', '#b8a88a');
+            ActionLog.add(this.registry, t('Погрелся у костра — силы и так полны.'));
+            return;
+        }
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+        createDialog(this, t('🔥 Костёр в лесу'),
+            t('Тёплый огонь разгоняет лесную мглу. Присесть на минутку — а очнёшься через час крепкого сна.\n\nОтдохнуть у костра? (1 час — здоровье и Воля восстановятся полностью.)'),
+            [
+                { text: t('Присесть у огня'), callback: () => {
+                    close();
+                    this.cameras.main.fadeOut(700, 0, 0, 0);
+                    this.time.delayedCall(750, () => {
+                        tickTime(this.registry, 60);
+                        player.HP = hpMax;
+                        player.MP = mpMax;
+                        this.registry.set('player', player);
+                        this.updateHUD();
+                        if (this.audioManager) this.audioManager.playHeal();
+                        ActionLog.add(this.registry, t('Отдохнул у костра в лесу — час крепкого сна, силы восстановились.'));
+                        this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, t('Силы восстановились'), '#8fdc7a');
+                        this.cameras.main.fadeIn(700, 0, 0, 0);
+                    });
+                } },
+                { text: t('Не сейчас'), callback: close },
+            ]);
     }
 
     // ================= МЕХАНИКИ =================

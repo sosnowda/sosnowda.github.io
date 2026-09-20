@@ -729,8 +729,8 @@ const EN = {
     '⏳ Время прошло': '⏳ Time has passed',
     'Ты провёл за столом в горнице {0}. Сейчас {1}, {2}.':
         'You spent {0} at the table in the common room. It is now {1}, {2}.',
-    'Сил это не вернуло — для лечения есть платный «Отдых» (1 ч / 8 ч) и костёр во дворе.':
-        'It did not restore your strength — for healing there is the paid "Rest" (1 h / 8 h) and the campfire in the yard.',
+    'Сил это не вернуло — для лечения есть платный «Отдых» (1 ч / 8 ч) и костёр в лесу, у брошенного лагеря.':
+        'It did not restore your strength — for healing there is the paid "Rest" (1 h / 8 h) and the campfire in the forest, by the abandoned camp.',
     'Провёл время на постоялом дворе ({0}).': 'Spent time at the inn ({0}).',
     'Ты посидел за столом у Фёдора... но пока время шло, вор успел скрыться из вида!':
         "You sat at Fyodor's table for hours... but while the time was passing, the thief managed to vanish from sight!",
@@ -1938,11 +1938,12 @@ const EN_KEYS = {
     'village.help.body': '🏠 DVINSKAYA SLOBODA\n' +
         '\n' +
         '  WASD / arrows — movement\n' +
-        '  E — interact: doors, chests, campfire, the stone cross\n' +
-        '  Chests hold small loot — once a day each.\n' +
-        '  The campfire restores Health and Will (1 hour).\n' +
+        '  E — interact: doors of the houses, the gate\n' +
+        '  The church is in the centre, the forge — at the north-east edge.\n' +
+        '  Prayer — only in the church.\n' +
+        '  A campfire with rest (1 h) burns in the Dark Forest, by the abandoned camp.\n' +
         '  Fishing — at the River on the map (best in the rain).\n' +
-        '  Stepan\'s new house — at the east end of the southern street.\n' +
+        '  A palisade rings the whole village — the east gate is the only way out.\n' +
         '  At night the windows glow warm.\n' +
         '  F1 — this help. ESC — main menu.',
 

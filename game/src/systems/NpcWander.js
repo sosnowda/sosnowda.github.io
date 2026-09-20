@@ -90,7 +90,14 @@ export function attachNpcWander(scene, cfg) {
     let stopped = false;
     let idleTimer = null;
     let walkTween = null;
-    const anchorTile = { x: Math.round(anchorX / ts), y: Math.round(anchorY / ts) };
+    // РАУНД 65 (п.1 приказа «НПЦ ИДУТ ВБОК СПИНОЙ К ИГРОКУ»): тайл спрайта
+    // вычисляется через Math.floor(x/ts), а НЕ Math.round: спрайт стоит в ЦЕНТРЕ
+    // тайла (col*ts + ts/2), поэтому x/ts = col + 0.5, и Math.round ВСЕГДА давал
+    // col+1 — якорь и направление шага считались от соседнего тайла. Из-за этого
+    // при боковых шагах часто играла анимация «спиной» (up) или «лицом» (down)
+    // вместо профиля left/right. Math.floor(col + 0.5) = col — точно.
+    const tileOf = (px) => Math.floor(px / ts);
+    const anchorTile = { x: tileOf(anchorX), y: tileOf(anchorY) };
 
     const syncFollowers = () => {
         if (label) {
@@ -145,7 +152,9 @@ export function attachNpcWander(scene, cfg) {
     const walkPath = (path) => {
         if (stopped) return;
         const [tx, ty] = path[0];
-        const dir = dirOf(tx - Math.round(spr.x / ts), ty - Math.round(spr.y / ts));
+        // Раунд 65: направление — от ФАКТИЧЕСКОГО тайла спрайта (tileOf),
+        // а не от округлённого (см. комментарий к anchorTile выше)
+        const dir = dirOf(tx - tileOf(spr.x), ty - tileOf(spr.y));
         playDir(dir);
         const nx = tx * ts + ts / 2;
         const ny = ty * ts + ts / 2;
