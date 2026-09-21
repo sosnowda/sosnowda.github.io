@@ -150,7 +150,7 @@ console.log('\n[5] САЙТ: 10-й скриншот кузницы удалён 
     ok(!en.includes('10-blacksmith'), 'en/index.html не ссылается на 10-blacksmith');
     ok(!existsSync(join(root, 'assets/screenshots/10-blacksmith.webp')), 'файл assets/screenshots/10-blacksmith.webp удалён');
     ok(ru.includes('09-thief-encounter.webp') && en.includes('09-thief-encounter.webp'), 'галерея сохраняет кадры 01–09');
-    ok(read('../sw.js').includes("CACHE_NAME = 'chronicles-ruthenia-v64'"), 'SW забамплен до v64 (сайт-кеш инвалидируется)');
+    ok(/CACHE_NAME = 'chronicles-ruthenia-v(6[4-9]|[7-9]\d)/.test(read('../sw.js')), 'SW версии не ниже v64 (сайт-кеш инвалидируется при изменениях сайта)');
 }
 
 console.log('\n[6] РЕПОЗИТОРИЙ: worklog.md в репо (п.1)');

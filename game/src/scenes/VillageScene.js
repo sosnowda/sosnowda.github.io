@@ -1357,6 +1357,8 @@ export class VillageScene extends Phaser.Scene {
                 return;
             }
             // Пункт 8: интерьер открывается отдельным окном поверх деревни
+            // Раунд 66.6: дверь открывается СО ЗВУКОМ (приказ: «звуки дверей»)
+            this.audioManager.playRealDoorOpen();
             this.scene.pause();
             this.scene.launch('Interior', { interiorId: this.nearestInteractable.interiorId, from: 'Village' });
         } else if (this.nearestInteractable.type === 'gate') {
@@ -1390,6 +1392,8 @@ export class VillageScene extends Phaser.Scene {
         this.playerObj.y = (ty + 1) * ts + ts / 2;  // на тайл ниже двери
         if (this.playerObj.body) this.playerObj.body.reset(this.playerObj.x, this.playerObj.y);
         ActionLog.add(this.registry, t('Игрок вошёл в здание.'));
+        // Раунд 66.6: звук двери при входе кликом (выход — в InteriorScene)
+        this.audioManager.playRealDoorOpen();
         this.scene.pause();
         this.scene.launch('Interior', { interiorId: interiorId, from: 'Village' });
     }

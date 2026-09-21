@@ -862,32 +862,97 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
     border-top: 1px solid rgba(201, 169, 97, 0.15);
 }
 
-/* Lightbox для скриншотов */
+/* ============================================================
+   ЛАЙТБОКС ГАЛЕРЕИ СО СТРЕЛКАМИ (раунд 66.6)
+   ============================================================ */
 .screenshot-lightbox {
     display: none;
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.95);
+    background: rgba(12, 9, 7, 0.96);
     z-index: 9999;
     align-items: center;
     justify-content: center;
     cursor: zoom-out;
-    padding: 2rem;
+    padding: 2rem 4.5rem;
 }
 .screenshot-lightbox.open { display: flex; }
 .screenshot-lightbox img {
-    max-width: 95%;
-    max-height: 95%;
+    max-width: 100%;
+    max-height: 86vh;
     border-radius: 8px;
+    border: 1px solid rgba(201, 169, 97, 0.35);
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
+    display: block;
+    margin: 0 auto;
+    animation: slb-fade-in 0.25s ease;
 }
-.screenshot-lightbox-close {
-    position: absolute;
-    top: 1rem; right: 2rem;
+@keyframes slb-fade-in {
+    from { opacity: 0; transform: scale(0.965); }
+    to   { opacity: 1; transform: scale(1); }
+}
+.slb-figure {
+    margin: 0;
+    max-width: min(1180px, 100%);
+    text-align: center;
+}
+.slb-caption {
+    margin-top: 0.8rem;
     color: #c9a961;
-    font-size: 2rem;
+    font-family: 'PT Serif', serif;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+}
+.slb-counter {
+    position: absolute;
+    bottom: 1.1rem; left: 50%;
+    transform: translateX(-50%);
+    color: #a89878;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    background: rgba(26, 20, 16, 0.75);
+    border: 1px solid rgba(201, 169, 97, 0.25);
+    border-radius: 999px;
+    padding: 0.25rem 0.9rem;
+}
+.slb-btn {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: 1px solid rgba(201, 169, 97, 0.45);
+    background: rgba(26, 20, 16, 0.85);
+    color: #c9a961;
+    font-size: 2.1rem;
+    font-family: Georgia, serif;
+    line-height: 1;
     cursor: pointer;
+    user-select: none;
+    transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+.slb-btn:hover,
+.slb-btn:focus-visible {
+    background: rgba(51, 39, 26, 0.95);
+    border-color: #c9a961;
+    transform: scale(1.08);
+    outline: none;
+}
+.slb-btn:active { transform: scale(0.96); }
+.slb-close { top: 1.1rem; right: 1.4rem; font-size: 1.9rem; }
+.slb-prev { left: 1.2rem; top: 50%; margin-top: -26px; }
+.slb-next { right: 1.2rem; top: 50%; margin-top: -26px; }
+
+/* Мобильная версия лайтбокса: кнопки меньше, отступы узкие */
+@media (max-width: 640px) {
+    .screenshot-lightbox { padding: 1rem 0.9rem 3.4rem; }
+    .slb-btn { width: 44px; height: 44px; font-size: 1.7rem; }
+    .slb-prev { left: 0.55rem; }
+    .slb-next { right: 0.55rem; }
+    .slb-close { top: 0.7rem; right: 0.7rem; }
+    .slb-caption { font-size: 0.85rem; }
 }
 
 /* Гамбургер-меню */

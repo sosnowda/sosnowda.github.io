@@ -36,6 +36,12 @@ import { addMorningFog, addSeasonalGround } from '../systems/AmbientFX.js';
 // Раунд 68 (п.5): коллизия воды — ни НПЦ, ни персонаж не входят в воду на
 // локациях «Река» и «Озеро» (споты/следы/стадо выталкиваются на берег)
 import { isWaterAt, clampOutOfWater } from '../systems/WaterBounds.js';
+// Раунд 66.6: ШУМ РЕКИ/ОЗЕРА (WebAudio, без ассетов) + плеск при рыбалке;
+// СЕЗОННЫЕ РАБОТЫ поля (пахота/посев/сенокос/жатва) — приказ владельца
+import { attachRiverAmbience, playWaterSplash, RIVER_VOLUME_BY_LOCATION } from '../systems/RiverAmbience.js';
+import { getSeasonalWork, seasonalWorkerLine, fieldPhaseOf } from '../systems/SeasonalWork.js';
+import { showBellToast } from '../systems/ChurchBells.js';
+import { ensureNpcLpcTexture } from '../systems/NpcLpc.js';
 
 // Раунд 27 (п.1): прозрачные деревья без фона вместо квадратных тайлов
 const TREE_KEYS = ['deco_tree_0', 'deco_tree_1', 'deco_tree_2', 'deco_tree_3', 'deco_tree_4', 'deco_pine_0', 'deco_pine_1'];
@@ -99,6 +105,9 @@ export class LocationScene extends Phaser.Scene {
         // открыт разговор (диалог) — стоят
         attachWorldClock(this);
         attachChurchBells(this, { volume: this.bellVolume() });
+        // Раунд 66.6: шум воды на «водяных» локациях — река громче всех,
+        // озеро тише, у мельницы слышно водяное колесо. WebAudio, без ассетов.
+        attachRiverAmbience(this, { volume: RIVER_VOLUME_BY_LOCATION[this.locationId] || 0 });
         // Раунд 32 (пп.14,15): F1 — «Информация по игре» и на локациях
         this.input.keyboard.on('keydown-F1', () => {
             if (this.busyDialog) return;
@@ -341,6 +350,14 @@ export class LocationScene extends Phaser.Scene {
         // Авдей на мельнице, Марфа с травами на озере/реке/в лесу и т.д.
         this.drawLocationNpcs(width, height);
 
+        // ----- Раунд 66.6: СЕЗОННЫЕ РАБОТЫ на Поле — статисты-крестьяне
+        // (пахарь/сеятель/косарь/жнец) + плашка «Сенокосная пора…» -----
+        if (this.locationId === 'field') {
+            this.spawnSeasonalWorkers(width, height);
+            const work66 = getSeasonalWork(getTime(this.registry));
+            showBellToast(this, work66.toast);
+        }
+
         // ----- Раунд 30 (пп.3–6): ВИДИМЫЕ СЛЕДЫ ВОРА — рисуем поверх фона,
         // клик по следу — отдельная проверка (единожды на след) -----
         if (hasFootprints) {
@@ -365,6 +382,8 @@ export class LocationScene extends Phaser.Scene {
         const winter = timeState ? getSeason(timeState.month) === 'winter' : false;
         const caught = isOpenedToday(q, 'fish_daily', today);
         const title = winter ? t('🎣 Лунка во льду') : t('🎣 Рыбалка');
+        // Раунд 66.6: плеск воды — заброс/лунка озвучены всегда
+        playWaterSplash(this, winter ? 0.5 : 0.7);
 
         if (!caught) {
             tickTime(this.registry, 60);
@@ -550,6 +569,76 @@ export class LocationScene extends Phaser.Scene {
         spr.setInteractive({ useHandCursor: true });
         spr.on('pointerdown', (pointer) => {
             if (pointer.leftButtonDown() && !this.busyDialog) this.talkToLocationNpc(npcId);
+        });
+    }
+
+    /**
+     * РАУНД 66.6 (приказ: «сезонные работы (посев/жатва/сенокос)»):
+     * статисты-крестьяне на Поле — состав по фазе года (пахарь/сеятель/
+     * косарь+гребенщик/жнец+жница/крестьяне у скирд). LPC-композиты
+     * собираются на лету из палитры (виртуальные npc-объекты, детерминизм
+     * по id). Клик по работнику — реплика по текущей работе.
+     */
+    spawnSeasonalWorkers(width, height) {
+        const ts66 = getTime(this.registry);
+        const phase = fieldPhaseOf(ts66);
+        // Зимой на поле никого нет; в залежь выйдут разве что двое у межи
+        if (phase === 'snow') return;
+        // Имена-роли и персоналии статистов по фазе
+        const ROLE = {
+            plow:      [{ id: 'fieldhand_a', gender: 'male',   age: 44, name: t('Пахарь') }, { id: 'fieldhand_b', gender: 'male', age: 17, name: t('Пахарный работник') }],
+            sowing:    [{ id: 'fieldhand_a', gender: 'male',   age: 44, name: t('Сеятель') }, { id: 'fieldhand_c', gender: 'female', age: 33, name: t('Сеятельница') }],
+            haymaking: [{ id: 'fieldhand_a', gender: 'male',   age: 38, name: t('Косарь') }, { id: 'fieldhand_c', gender: 'female', age: 33, name: t('Гребёт сено') }],
+            harvest:   [{ id: 'fieldhand_a', gender: 'male',   age: 38, name: t('Жнец') }, { id: 'fieldhand_c', gender: 'female', age: 29, name: t('Жница') }, { id: 'fieldhand_d', gender: 'male', age: 12, name: t('Вяжет снопы') }],
+            stubble:   [{ id: 'fieldhand_a', gender: 'male',   age: 44, name: t('Крестьянин') }, { id: 'fieldhand_b', gender: 'male', age: 17, name: t('Отрок') }],
+            fallow:    [{ id: 'fieldhand_a', gender: 'male',   age: 44, name: t('Крестьянин') }],
+        };
+        const roster = ROLE[phase] || null;
+        if (!roster) return;
+        // Места: внутри жёлтого квадрата поля (см. drawLocationBackground)
+        const fieldX = width / 6, fieldY = 120;
+        const fieldW = (width * 2) / 3, fieldH = height - 200;
+        const SPOTS = [
+            { x: fieldX + fieldW * 0.42, y: fieldY + fieldH * 0.55 },
+            { x: fieldX + fieldW * 0.62, y: fieldY + fieldH * 0.72 },
+            { x: fieldX + fieldW * 0.5,  y: fieldY + fieldH * 0.42 },
+        ];
+        roster.slice(0, SPOTS.length).forEach((worker, i) => {
+            const spot = SPOTS[i];
+            const scale = (worker.age || 30) <= 13 ? 1.5 : 2.3;
+            // виртуальный npc — LPC-композит детерминирован по id + npcSeed
+            const texKey = ensureNpcLpcTexture(this, this.registry, worker)
+                || (worker.gender === 'female' ? 'npc_villager_f' : 'npc_elder');
+            const spr = this.add.sprite(spot.x, spot.y, this.textures.exists(texKey) ? texKey : 'npc_elder')
+                .setScale(scale).setDepth(50);
+            const animKey = `${spr.texture.key}_idle_down`;
+            if (this.anims.exists(animKey)) spr.play(animKey);
+            // лёгкий «трудовой» покачивающийся твин
+            this.tweens.add({
+                targets: spr,
+                angle: { from: -2.2, to: 2.2 },
+                duration: 1100 + i * 260, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+            this.add.text(spot.x, spot.y + 42, worker.name, {
+                fontSize: '13px', color: RUS.text,
+                backgroundColor: '#000000aa', padding: { x: 5, y: 2 },
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(50);
+            this.add.text(spot.x, spot.y - 46, t('💬 Нажми, чтобы поговорить'), {
+                fontSize: '10px', color: '#c9a14a',
+                backgroundColor: '#00000088', padding: { x: 4, y: 2 },
+            }).setOrigin(0.5).setDepth(50);
+            spr.setInteractive({ useHandCursor: true });
+            spr.on('pointerdown', (pointer) => {
+                if (pointer.leftButtonDown() && !this.busyDialog) {
+                    this.busyDialog = true;
+                    ActionLog.add(this.registry, tf(t('Игрок разговорился с работником поля: {0}.'), worker.name));
+                    createDialog(this, worker.name,
+                        seasonalWorkerLine(phase),
+                        [{ text: t('Хорошего труда!'), callback: () => { this.busyDialog = false; } }],
+                        { singleton: false });
+                }
+            });
         });
     }
 
@@ -1402,39 +1491,139 @@ export class LocationScene extends Phaser.Scene {
                 });
             }
         } else if (locId === 'field') {
-            // П.14: Поле — жёлтая высокая трава по центру на 2/3 площади
+            // П.14 + РАУНД 66.6: поле меняет ВИД по сезону — пахота/посев/
+            // сенокос/жатва/жнивьё/залежь/снег (календарь: месяц 0 = сентябрь).
+            const ts66 = getTime(this.registry);
+            const phase66 = fieldPhaseOf(ts66);
             // Фон — обычная зелёная трава
             gfx.fillStyle(0x4a7c3a, 1);
             gfx.fillRect(0, 80, width, height - 80);
             gfx.setDepth(0);
-            // П.14: Жёлтая высокая трава в центре на 2/3 площади
             const fieldX = width / 6;
             const fieldY = 120;
             const fieldW = (width * 2) / 3;
             const fieldH = height - 200;
-            gfx.fillStyle(0xc8a838, 1);  // жёлтый
-            gfx.fillRect(fieldX, fieldY, fieldW, fieldH);
             gfx.setDepth(1);
-            // Высокая трава — вертикальные стебли
-            gfx.fillStyle(0xe8c858, 0.8);
-            for (let i = 0; i < 200; i++) {
-                const x = fieldX + Math.random() * fieldW;
-                const y = fieldY + Math.random() * fieldH;
-                gfx.fillRect(x, y, 2, 12);
+            const fillField = (color, alpha = 1) => {
+                gfx.fillStyle(color, alpha);
+                gfx.fillRect(fieldX, fieldY, fieldW, fieldH);
+            };
+            switch (phase66) {
+                case 'plow':
+                    // ПАХОТА: тёмная пашня, свежие борозды на всю ширину
+                    fillField(0x5a4632);
+                    for (let i = 0; i < 10; i++) {
+                        const y = fieldY + (i + 0.5) * (fieldH / 10);
+                        gfx.fillStyle(0x453424, 0.9);
+                        gfx.fillRect(fieldX + 6, y - 3, fieldW - 12, 6);
+                        gfx.fillStyle(0x6b5238, 0.65);
+                        gfx.fillRect(fieldX + 6, y + 4, fieldW - 12, 3);
+                    }
+                    // редкие камешки
+                    gfx.fillStyle(0x8a8070, 0.8);
+                    for (let i = 0; i < 14; i++) {
+                        gfx.fillRect(fieldX + 10 + Math.random() * (fieldW - 20),
+                            fieldY + 10 + Math.random() * (fieldH - 20), 4, 3);
+                    }
+                    break;
+                case 'sowing':
+                    // ПОСЕВ: пашня со всходами — борозды + зелёные ростки
+                    fillField(0x54422e);
+                    for (let i = 0; i < 10; i++) {
+                        const y = fieldY + (i + 0.5) * (fieldH / 10);
+                        gfx.fillStyle(0x43321f, 0.8);
+                        gfx.fillRect(fieldX + 6, y - 3, fieldW - 12, 6);
+                        gfx.fillStyle(0x7ab04a, 0.95);
+                        for (let k = 0; k < fieldW / 26; k++) {
+                            const x = fieldX + 10 + k * 26 + (i % 2) * 12;
+                            gfx.fillRect(x, y - 8, 2, 8);
+                            gfx.fillRect(x - 2, y - 5, 6, 2);
+                        }
+                    }
+                    break;
+                case 'haymaking':
+                    // СЕНОКОС: трава в полный рост, сочная зелень
+                    fillField(0x8fae3c);
+                    gfx.fillStyle(0xa8c354, 0.9);
+                    for (let i = 0; i < 230; i++) {
+                        gfx.fillRect(fieldX + Math.random() * fieldW,
+                            fieldY + Math.random() * fieldH, 2, 14);
+                    }
+                    // копны — прибрано к краям
+                    gfx.fillStyle(0xc8b04a, 0.95);
+                    gfx.fillEllipse(fieldX + fieldW * 0.14, fieldY + fieldH * 0.2, 44, 26);
+                    gfx.fillEllipse(fieldX + fieldW * 0.86, fieldY + fieldH * 0.74, 44, 26);
+                    gfx.fillStyle(0xa8903a, 0.8);
+                    gfx.fillEllipse(fieldX + fieldW * 0.14, fieldY + fieldH * 0.24, 36, 16);
+                    gfx.fillEllipse(fieldX + fieldW * 0.86, fieldY + fieldH * 0.78, 36, 16);
+                    break;
+                case 'harvest':
+                    // ЖАТВА: золотые колосья (прежний вид поля)
+                    fillField(0xc8a838);
+                    gfx.fillStyle(0xe8c858, 0.8);
+                    for (let i = 0; i < 200; i++) {
+                        gfx.fillRect(fieldX + Math.random() * fieldW,
+                            fieldY + Math.random() * fieldH, 2, 12);
+                    }
+                    // несрезанные пятна колосьев гуще
+                    gfx.fillStyle(0xd8b848, 0.7);
+                    for (let i = 0; i < 40; i++) {
+                        gfx.fillRect(fieldX + Math.random() * fieldW,
+                            fieldY + Math.random() * fieldH, 5, 10);
+                    }
+                    break;
+                case 'stubble':
+                    // ЖНИВЬЁ: сжатое поле, короткие стерни, снопы
+                    fillField(0xb8a878);
+                    gfx.fillStyle(0x98885c, 0.9);
+                    for (let i = 0; i < 260; i++) {
+                        gfx.fillRect(fieldX + Math.random() * fieldW,
+                            fieldY + Math.random() * fieldH, 2, 4);
+                    }
+                    gfx.fillStyle(0xc8b06a, 0.95);
+                    for (let i = 0; i < 5; i++) {
+                        const bx = fieldX + fieldW * (0.1 + 0.2 * i);
+                        const by = fieldY + fieldH * (i % 2 ? 0.3 : 0.7);
+                        gfx.fillEllipse(bx, by, 30, 20);
+                        gfx.fillStyle(0x8a7448, 0.7);
+                        gfx.fillRect(bx - 2, by + 8, 4, 8);
+                        gfx.fillStyle(0xc8b06a, 0.95);
+                    }
+                    break;
+                case 'fallow':
+                    // ЗАЛЕЖЬ: бурая земля с сухой травой (поздняя осень/ранняя весна)
+                    fillField(0x6a5a42);
+                    gfx.fillStyle(0x8a7a5c, 0.8);
+                    for (let i = 0; i < 90; i++) {
+                        gfx.fillRect(fieldX + Math.random() * fieldW,
+                            fieldY + Math.random() * fieldH, 2, 7);
+                    }
+                    break;
+                default:
+                    // СНЕГ: поле спит под снежным покровом
+                    fillField(0xdde4ea);
+                    gfx.fillStyle(0xc8d2da, 0.8);
+                    for (let i = 0; i < 50; i++) {
+                        gfx.fillEllipse(fieldX + Math.random() * fieldW,
+                            fieldY + Math.random() * fieldH, 14 + Math.random() * 22, 5 + Math.random() * 5);
+                    }
+                    break;
             }
-            // Колышущиеся стебли (анимация наклона).
-            // Раунд 28: прозрачные кочки вместо квадратных тайлов с фоном
-            const stemTexF = this.textures.exists('deco_grass_tuft') ? 'deco_grass_tuft' : 'tile_grass_0';
-            for (let i = 0; i < 25; i++) {
-                const x = fieldX + Math.random() * fieldW;
-                const y = fieldY + Math.random() * fieldH;
-                const stem = this.add.image(x, y, stemTexF).setScale(2.6).setTint(0xc8a838).setDepth(3);
-                this.tweens.add({
-                    targets: stem,
-                    angle: { from: -8, to: 8 },
-                    duration: 1500 + Math.random() * 1500,
-                    yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-                });
+            gfx.setDepth(1);
+            // Колышущиеся кочки — только на растущих фазах (трава в рост)
+            if (phase66 === 'haymaking' || phase66 === 'harvest') {
+                const stemTexF = this.textures.exists('deco_grass_tuft') ? 'deco_grass_tuft' : 'tile_grass_0';
+                for (let i = 0; i < 25; i++) {
+                    const x = fieldX + Math.random() * fieldW;
+                    const y = fieldY + Math.random() * fieldH;
+                    const stem = this.add.image(x, y, stemTexF).setScale(2.6).setTint(phase66 === 'harvest' ? 0xc8a838 : 0x8fae3c).setDepth(3);
+                    this.tweens.add({
+                        targets: stem,
+                        angle: { from: -8, to: 8 },
+                        duration: 1500 + Math.random() * 1500,
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                }
             }
             // Деревья по краям поля (раунд 27: прозрачные + взаимные коллизии)
             const placedFieldTrees = [];

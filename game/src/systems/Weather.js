@@ -1,11 +1,17 @@
-// Погодная система (раунд 14).
+// Погодная система (раунд 14; раунд 66.6 — ПЛАВНЫЕ ПЕРЕХОДЫ).
 // Погода детерминирована датой (year-month-day): все сцены в один игровой день
 // видят одинаковую погоду — без рассинхрона между деревней, лесом и развилкой.
 // Типы: ясно / пасмурно / дождь / гроза; зимой дождь заменяется снегом.
 // Геймплейные хуки:
-//  - в дождь/грозу рыба клюёт лучше (+1 ❤ к улову в VillageScene.goFishing);
+//  - в дождь/грозу рыба клюёт лучше (+1 ❤ к улову);
 //  - в дождь/грозу волки слышат хуже (радиус агро −35% в ForestScene);
 //  - гроза — редкие вспышки молний.
+//
+// РАУНД 66.6: погодные эффекты больше не «выскакивают» мгновенно:
+//  1) при входе в сцену затемнение и осадки ПЛАВНО проявляются (~2.2 с);
+//  2) сцены, живущие дольше дня (деревня, локации), САМИ плавно переключаются
+//     на погоду нового дня: старое затемнение/осадки растворяются, новые
+//     проявляются (crossfade ~1.6 с) — без перезапуска сцены.
 
 import { getTime, getSeason } from './TimeSystem.js';
 import { t as tI18n } from './i18n.js';
@@ -60,29 +66,50 @@ export function isPrecip(w) {
     return isRainy(w) || (!!w && w.id === 'snow');
 }
 
-/**
- * Применить погодную графику к сцене (вызывается один раз в create()).
- * Возвращает { weather, tint, emitter, flash }.
- *  - tint: MULTIPLY-затемнение неба (экранные координаты, scrollFactor 0);
- *  - emitter: дождь/снег в экранных координатах;
- *  - flash: прямоугольник молний (только гроза).
- * depth-соглашение: day/night overlay 95, HUD 100+ → затемнение 94, осадки 98.
- */
-export function applyWeatherVisuals(scene, { tintDepth = 94, precipDepth = 98 } = {}) {
-    const weather = getWeather(scene.registry);
-    scene.weather = weather;
-    const { width, height } = scene.scale;
-    const out = { weather, tint: null, emitter: null, flash: null };
+// ============================================================
+//  РАУНД 66.6: ПЛАВНЫЕ ПОГОДНЫЕ ПЕРЕХОДЫ
+// ============================================================
 
-    if (weather.id === 'cloudy' || isPrecip(weather)) {
-        const color = weather.id === 'cloudy' ? 0x707a84 : 0x4a545e;
-        const alpha = weather.id === 'cloudy' ? 0.16 : (weather.id === 'snow' ? 0.20 : 0.30);
-        out.tint = scene.add.rectangle(0, 0, width, height, color, alpha)
-            .setOrigin(0)
-            .setScrollFactor(0)
-            .setDepth(tintDepth)
-            .setBlendMode(Phaser.BlendModes.MULTIPLY);
+/** День-ключ погоды: «год-месяц-день» (смена → crossfade). */
+function weatherDayKey(registry) {
+    const t = getTime(registry);
+    if (!t) return null;
+    return `${t.yearFromChrist}-${t.month}-${t.day}`;
+}
+
+/** Безопасно установить alpha частицам (ParticleEmitter — GameObject в 3.60+). */
+function setEmitterAlpha(emitter, value) {
+    try {
+        if (emitter && typeof emitter.setAlpha === 'function') emitter.setAlpha(value);
+    } catch (e) { /* старые версии Phaser — просто без fade осадков */ }
+}
+
+/**
+ * Создать затемняющий прямоугольник погоды (MULTIPLY), плавно проявить.
+ */
+function makeTint(scene, weather, tintDepth, fadeIn) {
+    const { width, height } = scene.scale;
+    const color = weather.id === 'cloudy' ? 0x707a84 : 0x4a545e;
+    const targetAlpha = weather.id === 'cloudy' ? 0.16 : (weather.id === 'snow' ? 0.20 : 0.30);
+    const tint = scene.add.rectangle(0, 0, width, height, color, targetAlpha)
+        .setOrigin(0)
+        .setScrollFactor(0)
+        .setDepth(tintDepth)
+        .setBlendMode(Phaser.BlendModes.MULTIPLY);
+    if (fadeIn) {
+        tint.alpha = 0;
+        scene.tweens.add({ targets: tint, alpha: targetAlpha, duration: 2200, ease: 'Sine.easeOut' });
     }
+    return tint;
+}
+
+/**
+ * Создать осадки (дождь/снег) в экранных координатах, плавно проявить.
+ * Возвращает { emitter, flash, flashEvents } (молнии — только гроза).
+ */
+function makePrecip(scene, weather, precipDepth, fadeIn) {
+    const { width, height } = scene.scale;
+    const out = { emitter: null, flash: null, flashEvents: [] };
 
     if (isRainy(weather)) {
         const heavy = weather.id === 'storm';
@@ -98,9 +125,16 @@ export function applyWeatherVisuals(scene, { tintDepth = 94, precipDepth = 98 } 
             frequency: heavy ? 26 : 46,
         });
         out.emitter.setScrollFactor(0).setDepth(precipDepth);
+        if (fadeIn) {
+            setEmitterAlpha(out.emitter, 0);
+            scene.tweens.add({ targets: out.emitter, alpha: 1, duration: 2200, ease: 'Sine.easeOut' });
+        }
 
         if (heavy) {
-            // Молния: короткая вспышка экрана по редкому расписанию
+            // Молния: короткая вспышка экрана по редкому расписанию.
+            // Раунд 66.6: TimerEvents хранятся в списке flashEvents — при
+            // crossfade старую грозу можно корректно снять (раньше
+            // рекурсивный delayedCall жил вечно и бил по уничтоженной сцене).
             const flash = scene.add.rectangle(0, 0, width, height, 0xf4f0ff, 1)
                 .setOrigin(0).setScrollFactor(0).setDepth(precipDepth - 1).setAlpha(0);
             const strike = () => {
@@ -113,14 +147,8 @@ export function applyWeatherVisuals(scene, { tintDepth = 94, precipDepth = 98 } 
                     ease: 'Quad.easeOut',
                 });
             };
-            const schedule = () => {
-                scene.time.delayedCall(Phaser.Math.Between(7000, 16000), () => {
-                    strike();
-                    schedule();
-                });
-            };
-            schedule();
             out.flash = flash;
+            scheduleStrikes(scene, strike, out.flashEvents);
         }
     } else if (weather.id === 'snow') {
         out.emitter = scene.add.particles(0, 0, 'weather_snow', {
@@ -135,7 +163,165 @@ export function applyWeatherVisuals(scene, { tintDepth = 94, precipDepth = 98 } 
             frequency: 90,
         });
         out.emitter.setScrollFactor(0).setDepth(precipDepth);
+        if (fadeIn) {
+            setEmitterAlpha(out.emitter, 0);
+            scene.tweens.add({ targets: out.emitter, alpha: 1, duration: 2200, ease: 'Sine.easeOut' });
+        }
     }
 
     return out;
+}
+
+/**
+ * Рекурсивное расписание молний: каждое событие добавляет следующее в общий
+ * список flashEvents — так crossfade/выключение сцены снимает всю цепочку.
+ */
+function scheduleStrikes(scene, strike, flashEvents) {
+    let ev = null;
+    ev = scene.time.addEvent({
+        delay: Phaser.Math.Between(7000, 16000),
+        loop: false,
+        callback: () => {
+            if (!scene.sys || !scene.sys.isActive()) return;
+            strike();
+            scheduleStrikes(scene, strike, flashEvents);
+        },
+    });
+    flashEvents.push(ev);
+}
+
+/** Снять цепочку молний и вспышку (crossfade/выключение сцены). */
+function disposeFlash(scene, wv) {
+    if (!wv) return;
+    (wv.flashEvents || []).forEach((ev) => {
+        try { ev.remove(false); } catch (e) { /* ок */ }
+    });
+    wv.flashEvents = [];
+    if (wv.flash) {
+        try { wv.flash.destroy(); } catch (e) { /* ок */ }
+        wv.flash = null;
+    }
+}
+
+/** Плавно убрать старое затемнение/осадки и уничтожить их. */
+function fadeOutWeatherView(scene, wv) {
+    if (!wv) return;
+    disposeFlash(scene, wv);
+    if (wv.tint) {
+        const tint = wv.tint;
+        scene.tweens.add({
+            targets: tint, alpha: 0, duration: 1600, ease: 'Sine.easeIn',
+            onComplete: () => { try { tint.destroy(); } catch (e) { /* ок */ } },
+        });
+    }
+    if (wv.emitter) {
+        const emitter = wv.emitter;
+        scene.tweens.add({
+            targets: emitter, alpha: 0, duration: 1400, ease: 'Sine.easeIn',
+            onComplete: () => {
+                try { emitter.stop(); emitter.destroy(); } catch (e) { /* ок */ }
+            },
+        });
+    }
+}
+
+/**
+ * Построить погодный вид сцены заново (с fade-in).
+ * @returns объект вида { weather, tint, emitter, flash, flashEvent, dayKey }
+ */
+function buildWeatherView(scene, depths, fadeIn) {
+    const weather = getWeather(scene.registry);
+    scene.weather = weather;
+    const wv = { weather, tint: null, emitter: null, flash: null, flashEvents: [] };
+    wv.dayKey = weatherDayKey(scene.registry);
+    if (weather.id === 'cloudy' || isPrecip(weather)) {
+        wv.tint = makeTint(scene, weather, depths.tintDepth, fadeIn);
+    }
+    if (isPrecip(weather)) {
+        const p = makePrecip(scene, weather, depths.precipDepth, fadeIn);
+        wv.emitter = p.emitter;
+        wv.flash = p.flash;
+        wv.flashEvents = p.flashEvents;
+    }
+    return wv;
+}
+
+/**
+ * Плавно переключить сцену на погоду нового дня (crossfade без рестарта).
+ */
+function crossfadeWeather(scene, wv, depths) {
+    fadeOutWeatherView(scene, wv);
+    const next = buildWeatherView(scene, depths, true);
+    // переносим накопленные поля в прежний объект (сцены держат ссылку на него)
+    Object.keys(wv).forEach(k => delete wv[k]);
+    Object.assign(wv, next);
+    // тост о смене погоды — тихий, пергаментный (стиль колокольных плашек)
+    try {
+        const icon = wv.weather.icon || '';
+        const name = wv.weather.name || '';
+        showWeatherToast(scene, `${icon} ${tI18n('Погода меняется')}: ${name}`);
+    } catch (e) { /* ок */ }
+}
+
+/** Пергаментная плашка смены погоды (в стиле колокольных тостов). */
+let _weatherToast = null;
+function showWeatherToast(scene, text) {
+    if (!scene || !scene.add) return;
+    const { width } = scene.scale;
+    if (_weatherToast) {
+        try { _weatherToast.forEach(o => o.destroy()); } catch (e) { /* ок */ }
+        _weatherToast = null;
+    }
+    const y = 124; // ниже колокольной плашки (86), чтобы не мешали друг другу
+    const w = Math.min(480, width - 40);
+    const bg = scene.add.rectangle(width / 2, y, w, 30, 0x241B15, 0.9)
+        .setStrokeStyle(1, 0x7d6a45).setScrollFactor(0).setDepth(151);
+    const txt = scene.add.text(width / 2, y, text, {
+        fontSize: '14px', color: '#CFC3A6',
+        fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 1,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(152);
+    [bg, txt].forEach(o => o.setAlpha(0));
+    scene.tweens.add({ targets: [bg, txt], alpha: 1, duration: 400 });
+    scene.tweens.add({
+        targets: [bg, txt], alpha: 0, delay: 3400, duration: 600,
+        onComplete: () => { try { bg.destroy(); txt.destroy(); } catch (e) { /* ок */ } },
+    });
+    _weatherToast = [bg, txt];
+}
+
+/**
+ * Применить погодную графику к сцене (вызывается один раз в create()).
+ * РАУНД 66.6: эффекты проявляются ПЛАВНО и сцена сама следит за сменой дня —
+ * при смене погоды выполняется crossfade (старое тает, новое проявляется).
+ * Возвращает { weather, tint, emitter, flash, flashEvents } (живой объект:
+ * поля обновляются при crossfade — можно читать scene.weather).
+ * depth-соглашение: day/night overlay 95, HUD 100+ → затемнение 94, осадки 98.
+ */
+export function applyWeatherVisuals(scene, { tintDepth = 94, precipDepth = 98 } = {}) {
+    const depths = { tintDepth, precipDepth };
+    const wv = buildWeatherView(scene, depths, true);
+
+    // Автомонитор смены дня: опрос раз в 4 реальные секунды. 1 игровой час =
+    // 2 реальные минуты, значит в полдень сцена гарантированно увидит новую
+    // дату в течение 4 с после её наступления.
+    try {
+        if (scene.time && typeof scene.time.addEvent === 'function') {
+            scene.time.addEvent({
+                delay: 4000, loop: true,
+                callback: () => {
+                    if (!scene.sys || !scene.sys.isActive()) return;
+                    if (scene.busyDialog) return; // в диалоге погода «ждёт»
+                    const key = weatherDayKey(scene.registry);
+                    if (key && key !== wv.dayKey) crossfadeWeather(scene, wv, depths);
+                },
+            });
+        }
+    } catch (e) { /* headless-песочница: без монитора */ }
+
+    // при закрытии сцены — снять цепочку молний (безопасность)
+    if (scene.events && typeof scene.events.once === 'function') {
+        scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => disposeFlash(scene, wv));
+    }
+
+    return wv;
 }

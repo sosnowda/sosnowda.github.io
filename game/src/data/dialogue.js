@@ -9,6 +9,8 @@
 //   постоялый двор — 2 деньги с человека за ночь.
 
 import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, checkGameEnd, chaseTicksLeft, inheritThiefKnowledge } from './thief.js';
+// Раунд 66.6: слухи-наводки на постоялом дворе (приказ владельца)
+import { tavernRumorLine } from './rumors.js';
 import { ActionLog } from './actionLog.js';
 import { tickTime, getTime } from '../systems/TimeSystem.js';
 import { t, tf } from '../systems/i18n.js';
@@ -265,6 +267,7 @@ export const DIALOGUES = {
                         { text: t('🍲 Заказать еду (2 д.)'), next: 'meal' },
                         { text: t('🎒 Купить рацион на день дороги (2 д.)'), next: 'ration' },
                         { text: t('Что нового в деревне?'), next: 'b' },
+                        { text: t('🗣 Что слыхал нового? (слухи)'), next: 'rumor' },
                         { text: t('Попросить денег'), next: 'ask_money' },
                         { text: t('Спасибо, я пойду.'), end: true },
                     ]);
@@ -342,6 +345,21 @@ export const DIALOGUES = {
                     ]);
                 },
                 choices: [],
+            },
+            // Раунд 66.6: СЛУХИ-НАВОДКИ — до 3 в день, каждый визит — новый
+            // слух; наводки собираются по состоянию мира (вор, стадо, погода,
+            // сезонная работа), плюс вести хроники XV века.
+            rumor: {
+                speaker: 'Тавернщик Фёдор',
+                text: '...',
+                action: (scene) => {
+                    const line = tavernRumorLine(scene.registry);
+                    ActionLog.add(scene.registry, t('Выслушал слухи на постоялом дворе.'));
+                    scene._lastAskResult = { message: line };
+                },
+                choices: [
+                    { text: t('(продолжить)'), next: 'ask_result' },
+                ],
             },
             ask_thief: {
                 speaker: 'Тавернщик Фёдор',
