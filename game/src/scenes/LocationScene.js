@@ -33,6 +33,9 @@ import { getNpcsAtPlace, NPC_DIALOGUE, pickOutdoorLine } from '../data/npcPresen
 import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
 import { addMorningFog, addSeasonalGround } from '../systems/AmbientFX.js';
+// Раунд 68 (п.5): коллизия воды — ни НПЦ, ни персонаж не входят в воду на
+// локациях «Река» и «Озеро» (споты/следы/стадо выталкиваются на берег)
+import { isWaterAt, clampOutOfWater } from '../systems/WaterBounds.js';
 
 // Раунд 27 (п.1): прозрачные деревья без фона вместо квадратных тайлов
 const TREE_KEYS = ['deco_tree_0', 'deco_tree_1', 'deco_tree_2', 'deco_tree_3', 'deco_tree_4', 'deco_pine_0', 'deco_pine_1'];
@@ -207,12 +210,15 @@ export class LocationScene extends Phaser.Scene {
         const useComposite50 = !!(regPlayer50.useComposite && this.textures.exists('player_composite'));
         const locPlayerTex = useComposite50 ? 'player_composite'
             : ((regPlayer50.sprite && this.textures.exists(regPlayer50.sprite)) ? regPlayer50.sprite : 'player');
-        this.playerSprite = this.add.sprite(width * 0.2, height * 0.6, locPlayerTex, 0).setScale(2.5).setDepth(40);
+        // Раунд 68 (п.5): спавн игрока вне воды — на Реке точка (0.2w, 0.6h)
+        // попадала в полосу воды; clamp выталкивает её на ближайший берег.
+        const spawnPt68 = clampOutOfWater(this.locationId, width, height, width * 0.2, height * 0.6, 30);
+        this.playerSprite = this.add.sprite(spawnPt68.x, spawnPt68.y, locPlayerTex, 0).setScale(2.5).setDepth(40);
         const locIdle = useComposite50 ? 'player_composite_idle_right' : `${locPlayerTex}_idle_right`;
         this.playerSprite.play(this.anims.exists(locIdle) ? locIdle : 'player_idle_right');
         this.tweens.add({
             targets: this.playerSprite,
-            y: { from: height * 0.6, to: height * 0.6 - 3 },
+            y: { from: spawnPt68.y, to: spawnPt68.y - 3 },
             duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         });
 
@@ -436,10 +442,20 @@ export class LocationScene extends Phaser.Scene {
      * дети пахаря видны на своих локациях (п.1) — до 4 штук, меньшего роста.
      */
     drawLocationNpcs(width, height) {
+        // Раунд 68 (п.5): споты Реки/Озера вынесены из воды по построению
+        // (раньше (0.5w+120, 0.5h+30) на Реке и (0.5w+60, 0.5h+30) на Озере
+        // попадали ПРЯМО В ВОДУ); clamp в drawLocationNpc страхует каждую
+        // нарисованную фигуру. Озеро: восточный берег за кольцом кустов
+        // (радиус кустов r+15..r+55 → берём r+84). Река: северный берег
+        // восточнее дороги к мосту (стадо/следы — на юге и на дороге).
+        const lakeR68 = Math.min(width, height) / 3.5;
         const SPOTS = {
             mill:   { x: width * 0.5 - 100, y: height * 0.5 + 55 },
-            lake:   { x: width * 0.5 + 60, y: height * 0.5 + 30 },
-            river:  { x: width * 0.5 + 120, y: height * 0.5 + 30 },
+            // Озеро: восточный берег; +120 даёт запас под полуширину спрайта
+            // (37px у взрослого 2.3×) и кольцо кустов; на узких экранах спот
+            // прижимается к краю, а clamp выталкивает его за кромку воды.
+            lake:   { x: Math.min(width * 0.5 + lakeR68 + 120, width - 70), y: height * 0.5 + 30 },
+            river:  { x: width * 0.5 + 150, y: height * 0.45 - 80 },
             forest: { x: width * 0.42, y: height * 0.62 },
             field:  { x: width / 6 + (width * 2 / 3) * 0.28, y: height * 0.58 },
             pasture: { x: width * 0.55, y: height * 0.62 },   // раунд 28: дети на выпасе
@@ -471,15 +487,23 @@ export class LocationScene extends Phaser.Scene {
 
     /** Раунд 31 (п.2): где стоят пастухи у стада на этой локации. */
     herdShepherdSpots(width, height) {
+        // Раунд 68 (п.5): каждая точка пастуха прогоняется через clamp воды
+        const safe = ({ x, y }) => clampOutOfWater(this.locationId, width, height, x, y, 30);
         switch (this.locationId) {
             case 'pasture':
                 return { s1: { x: width * 0.42, y: height * 0.56 }, s2: { x: width * 0.66, y: height * 0.68 } };
             case 'river':
                 // южный берег, у дороги к мосту — там, где стадо пьёт
-                return { s1: { x: width / 2 + 84, y: height * 0.74 }, s2: { x: width / 2 - 96, y: height * 0.70 } };
+                return {
+                    s1: safe({ x: width / 2 + 84, y: height * 0.74 }),
+                    s2: safe({ x: width / 2 - 96, y: height * 0.70 }),
+                };
             case 'lake': {
                 const lakeR = Math.min(width, height) / 3.5;
-                return { s1: { x: width / 2 + lakeR * 0.75, y: height / 2 + 30 + lakeR * 0.62 }, s2: { x: width / 2 - lakeR * 0.7, y: height / 2 + 30 + lakeR * 0.72 } };
+                return {
+                    s1: safe({ x: width / 2 + lakeR * 0.75, y: height / 2 + 30 + lakeR * 0.62 }),
+                    s2: safe({ x: width / 2 - lakeR * 0.7, y: height / 2 + 30 + lakeR * 0.72 }),
+                };
             }
             default:
                 return null;
@@ -488,6 +512,9 @@ export class LocationScene extends Phaser.Scene {
 
     /** Один NPC на локации: спрайт (LPC), имя, подсказка, клик-диалог */
     drawLocationNpc(npcId, x, y, scale, i = 0, kid = false) {
+        // Раунд 68 (п.5): страховочный clamp — фигура не может оказаться в воде
+        const safe68 = clampOutOfWater(this.locationId, this.scale.width, this.scale.height, x, y, 26);
+        x = safe68.x; y = safe68.y;
         const npcData = findNpc(this.registry, npcId);
         const displayName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
         const spriteKey = getNpcSpriteKey(this, this.registry, npcId);
@@ -805,12 +832,15 @@ export class LocationScene extends Phaser.Scene {
             case 'river': {
                 // П.3: ДО моста (север, дальний верх) или ЗА мостом (юг, дальний низ),
                 // на дороге к мосту; цепочка следов тянется вдоль дороги
+                // (раунд 68: clamp страхует — дорога/мост вне воды по построению)
                 const before = traceSide ? traceSide === 'before' : (h1 % 2 === 0);
                 const x = bridgeX + jig(16);
                 const y = before
                     ? 120 + (h1 % 46) + idx * 34            // перед мостом — дальняя часть у верха
                     : height - 190 + (h1 % 46) + idx * 34;  // за мостом — дальняя часть у низа
-                return { x, y: Phaser.Math.Clamp(y, 110, height - 70) };
+                const raw68 = { x, y: Phaser.Math.Clamp(y, 110, height - 70) };
+                const safe68 = clampOutOfWater('river', width, height, raw68.x, raw68.y, 12);
+                return { x: safe68.x, y: safe68.y };
             }
             case 'forest':
                 // Чаща: среди деревьев верхней (дальней) трети
@@ -824,9 +854,13 @@ export class LocationScene extends Phaser.Scene {
             case 'field':
                 // Поле: в высокой ржи (центральные 2/3)
                 return { x: width / 6 + (h1 % Math.max(60, (width * 2) / 3)), y: 150 + ((h1 >> 5) % Math.max(40, height - 300)) + idx * 22 };
-            case 'lake':
-                // Озеро: дальний берег
-                return { x: 80 + (h1 % Math.max(80, width - 160)), y: height / 2 - Math.min(width, height) / 3.5 - 20 + ((h1 >> 5) % 40) + idx * 20 };
+            case 'lake': {
+                // Озеро: дальний берег (раунд 68: clamp — след не в воде;
+                // у центра озера прежняя формула опускалась в круг воды)
+                const raw68 = { x: 80 + (h1 % Math.max(80, width - 160)), y: height / 2 - Math.min(width, height) / 3.5 - 20 + ((h1 >> 5) % 40) + idx * 20 };
+                const safe68 = clampOutOfWater('lake', width, height, raw68.x, raw68.y, 24);
+                return { x: safe68.x, y: safe68.y };
+            }
             case 'road_south':
                 // Тракт: на гравийной ленте
                 return { x: 60 + (h1 % Math.max(80, width - 120)), y: height * 0.5 + jig(30) + idx * 6 };
@@ -1346,6 +1380,7 @@ export class LocationScene extends Phaser.Scene {
             }
             // Раунд 31 (п.2): утром и вечером пастухи приводят стадо на водопой —
             // коровы и лошадь стоят у южного берега, при дороге к мосту, и пьют
+            // (раунд 68: берег bankY уже вне полосы воды — clamp для однообразия)
             const herdR = getHerdState(this.registry);
             if (herdR.place === 'river') {
                 const bankY = riverY + riverH + 24;
@@ -1355,8 +1390,10 @@ export class LocationScene extends Phaser.Scene {
                 ];
                 herdAnimals.forEach((a, i) => {
                     if (!this.textures.exists(a.key)) return;
-                    const ay = bankY + (i % 2) * 18;
-                    const animal = this.add.image(bridgeX + a.dx, ay, a.key)
+                    const ay0 = bankY + (i % 2) * 18;
+                    const safe68 = clampOutOfWater('river', width, height, bridgeX + a.dx, ay0, 18);
+                    const ax = safe68.x, ay = safe68.y;
+                    const animal = this.add.image(ax, ay, a.key)
                         .setScale(2).setDepth(3).setFlipX(i % 2 === 1);
                     this.tweens.add({
                         targets: animal, y: ay - 2,
@@ -1487,14 +1524,16 @@ export class LocationScene extends Phaser.Scene {
             }
             // Раунд 31 (п.2): утром и вечером стадо поят у Озера —
             // коровы и лошадь стоят у южной кромки воды
+            // (раунд 68: каждая животная точка — вне воды через clamp)
             const herdL = getHerdState(this.registry);
             if (herdL.place === 'lake') {
                 for (let i = 0; i < 3; i++) {
                     const key = i === 2 ? 'deco_horse' : 'deco_cow';
                     if (!this.textures.exists(key)) continue;
                     const ang = Math.PI * (0.3 + i * 0.2); // южная дуга берега
-                    const ax = lakeCX + Math.cos(ang) * (lakeR + 14);
-                    const ay = lakeCY + Math.sin(ang) * (lakeR + 14);
+                    const raw68 = { x: lakeCX + Math.cos(ang) * (lakeR + 14), y: lakeCY + Math.sin(ang) * (lakeR + 14) };
+                    const safe68 = clampOutOfWater('lake', width, height, raw68.x, raw68.y, 28);
+                    const ax = safe68.x, ay = safe68.y;
                     const animal = this.add.image(ax, ay, key).setScale(2).setDepth(3);
                     this.tweens.add({
                         targets: animal, y: ay - 2,
