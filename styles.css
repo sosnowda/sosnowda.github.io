@@ -875,7 +875,7 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
     align-items: center;
     justify-content: center;
     cursor: zoom-out;
-    padding: 2rem 4.5rem;
+    padding: 2rem 4.5rem 4.6rem;
 }
 .screenshot-lightbox.open { display: flex; }
 .screenshot-lightbox img {
@@ -947,12 +947,13 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
 
 /* Мобильная версия лайтбокса: кнопки меньше, отступы узкие */
 @media (max-width: 640px) {
-    .screenshot-lightbox { padding: 1rem 0.9rem 3.4rem; }
+    .screenshot-lightbox { padding: 1rem 0.9rem 3.9rem; }
     .slb-btn { width: 44px; height: 44px; font-size: 1.7rem; }
     .slb-prev { left: 0.55rem; }
     .slb-next { right: 0.55rem; }
     .slb-close { top: 0.7rem; right: 0.7rem; }
     .slb-caption { font-size: 0.85rem; }
+    .slb-counter { bottom: 0.6rem; font-size: 0.78rem; }
 }
 
 /* Гамбургер-меню */
