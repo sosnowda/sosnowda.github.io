@@ -324,37 +324,42 @@ export const INTERIORS = {
 };
 
 // Координаты зданий в деревне (col, row — верхний-левый угол; w×h в тайлах).
-// РАУНД 65 (п.10 приказа владельца): ДЕРЕВНЯ СГЕНЕРИРОВАНА ЗАНОВО:
-//   - В ЦЕНТРЕ — ЦЕРКОВЬ (храм) и ДОМ СТАРОСТЫ (средний ряд, колонки 10–17);
-//   - ПО КРАЯМ — КУЗНИЦА (северо-восточный угол) и дома ремесленников
-//     (гончар/прасковья/ремесленник — север, плотник/ткачиха/сапожник/
-//     дровосек/мясник — южный ряд);
+// РАУНД 66 (п.6 приказа владельца): ДОМА ПЕРЕУСТАНОВЛЕНЫ ЗАНОВО, дорожная
+// сеть перерисована (world.buildMap): «дороги должны вести от дверей домов
+// на улицу, а улица должна связывать дома единой сетью и вести к выходу»,
+// лишних дорожек-переулков больше НЕТ.
+//   - В ЦЕНТРЕ — ЦЕРКОВЬ (10–12) и ДОМ СТАРОСТЫ (14–17), средний ряд;
+//   - ПО КРАЯМ — КУЗНИЦА (северо-восток, 23–24) и дома ремесленников
+//     (гончар — северо-запад, прасковья/ремесленник — север,
+//     ткачиха/сапожник/дровосек/мясник — южный ряд);
 //   - между любыми двумя домами ЗАЗОР ≥1 тайл (п.3 — дома не срастаются);
-//   - дорожки от каждой двери автоматически доводятся до улиц в world.buildMap.
+//   - двери средних/южных рядов выходят прямо на улицу (ряд 9 / ряд 13),
+//     двери северного ряда — 1 тайл дорожки до главной улицы (ряд 5).
 // Карта 26×15: ряд 0 и 14, колонки 0 и 25 — частокол (п.8); главная улица
-// 'B' — ряд 5, средняя 'S' — ряд 9, задняя 'S' — ряд 13; ворота (25,5).
+// 'B' — ряд 5, средняя 'S' — ряд 9, задняя 'S' — ряд 13; западный и
+// восточный проезды (колонки 1 и 24) связывают три улицы; ворота (25,5).
 export const BUILDINGS = [
     // Северный ряд (ряды 1–3, двери на 3): постоялый двор, избы, кузница у края
-    { interiorId: 'tavern', col: 2, row: 1, w: 5, h: 3, label: t('Постоялый двор') },
-    { interiorId: 'potter_house', col: 8, row: 1, w: 3, h: 3, label: t('Дом гончара') },
-    { interiorId: 'grocer_house', col: 12, row: 1, w: 3, h: 3, label: t('Дом Прасковьи') },
-    { interiorId: 'villager_house_1', col: 16, row: 1, w: 3, h: 3, label: t('Дом Авдея') },
-    { interiorId: 'shop_tools', col: 20, row: 1, w: 2, h: 3, label: t('Дом ремесленника') },
-    // Кузница — ПО КРАЮ (северо-восточный угол, п.10)
+    { interiorId: 'potter_house', col: 1, row: 1, w: 3, h: 3, label: t('Дом гончара') },
+    { interiorId: 'tavern', col: 5, row: 1, w: 5, h: 3, label: t('Постоялый двор') },
+    { interiorId: 'villager_house_1', col: 11, row: 1, w: 3, h: 3, label: t('Дом Авдея') },
+    { interiorId: 'grocer_house', col: 15, row: 1, w: 3, h: 3, label: t('Дом Прасковьи') },
+    { interiorId: 'shop_tools', col: 19, row: 1, w: 2, h: 3, label: t('Дом ремесленника') },
+    // Кузница — ПО КРАЮ (северо-восточный угол, п.10 прежнего приказа)
     { interiorId: 'blacksmith', col: 23, row: 1, w: 2, h: 3, label: t('Кузница') },
     // Средний ряд (ряды 6–8, двери на 8): ХРАМ И ДОМ СТАРОСТЫ — В ЦЕНТРЕ
-    { interiorId: 'villager_house_2', col: 2, row: 6, w: 3, h: 3, label: t('Дом Марфы') },
-    { interiorId: 'beekeeper_house', col: 6, row: 6, w: 3, h: 3, label: t('Дом пахаря') },
+    { interiorId: 'carpenter_house', col: 2, row: 6, w: 3, h: 3, label: t('Дом плотника') },
+    { interiorId: 'villager_house_2', col: 6, row: 6, w: 3, h: 3, label: t('Дом Марфы') },
     { interiorId: 'church', col: 10, row: 6, w: 3, h: 3, label: t('Церковь') },
     { interiorId: 'elder_house', col: 14, row: 6, w: 4, h: 3, label: t('Староста') },
-    { interiorId: 'fisher_house', col: 19, row: 6, w: 3, h: 3, label: t('Дом рыбака') },
+    { interiorId: 'beekeeper_house', col: 19, row: 6, w: 3, h: 3, label: t('Дом пахаря') },
     { interiorId: 'healer_house', col: 23, row: 6, w: 2, h: 3, label: t('Дом знахарки') },
     // Южный ряд (ряды 10–12, двери на 12): ремёсла по краям деревни
-    { interiorId: 'carpenter_house', col: 2, row: 10, w: 3, h: 3, label: t('Дом плотника') },
-    { interiorId: 'weaver_house', col: 6, row: 10, w: 3, h: 3, label: t('Дом ткачихи') },
-    { interiorId: 'villager_house_3', col: 10, row: 10, w: 3, h: 3, label: t('Дом Степана') },
-    { interiorId: 'shoemaker_house', col: 14, row: 10, w: 3, h: 3, label: t('Дом сапожника') },
-    { interiorId: 'woodcutter_house', col: 18, row: 10, w: 3, h: 3, label: t('Изба дровосека') },
+    { interiorId: 'weaver_house', col: 2, row: 10, w: 3, h: 3, label: t('Дом ткачихи') },
+    { interiorId: 'villager_house_3', col: 6, row: 10, w: 3, h: 3, label: t('Дом Степана') },
+    { interiorId: 'shoemaker_house', col: 10, row: 10, w: 3, h: 3, label: t('Дом сапожника') },
+    { interiorId: 'woodcutter_house', col: 14, row: 10, w: 3, h: 3, label: t('Изба дровосека') },
+    { interiorId: 'fisher_house', col: 18, row: 10, w: 3, h: 3, label: t('Дом рыбака') },
     { interiorId: 'butcher_house', col: 22, row: 10, w: 2, h: 3, label: t('Дом Потапа') },
 ];
 

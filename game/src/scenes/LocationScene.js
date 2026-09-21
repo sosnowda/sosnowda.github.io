@@ -35,7 +35,7 @@ import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
 import { addMorningFog, addSeasonalGround } from '../systems/AmbientFX.js';
 
 // Раунд 27 (п.1): прозрачные деревья без фона вместо квадратных тайлов
-const TREE_KEYS = ['deco_tree_0', 'deco_tree_1', 'deco_tree_2', 'deco_pine_0', 'deco_pine_1'];
+const TREE_KEYS = ['deco_tree_0', 'deco_tree_1', 'deco_tree_2', 'deco_tree_3', 'deco_tree_4', 'deco_pine_0', 'deco_pine_1'];
 
 const LOCATION_BG = {
     forest: 0x1a2a1a,
@@ -526,6 +526,76 @@ export class LocationScene extends Phaser.Scene {
         });
     }
 
+    /**
+     * РАУНД 66 (п.2 приказа): КОСТЁР ПАСТУХОВ НА ВЫПАСЕ.
+     * Стоянка у стада: сложенные поленья, живое пламя (3 кадра, ADD),
+     * тёплый отсвет. Клик по костру — присесть (restAtCampfire: +1 час
+     * времени БЕЗ лечения — п.1 того же приказа).
+     */
+    spawnPastureCampfire(width, height) {
+        const cx = Math.round(width * 0.34);
+        const cy = Math.round(height * 0.72);   // на переднем плане, рядом с пастухом (0.42w, 0.56h)
+        if (this.textures.exists('campfire_base')) {
+            const base = this.add.image(cx, cy, 'campfire_base').setScale(2).setDepth(6);
+            base.setInteractive({ useHandCursor: true });
+            base.on('pointerdown', (pointer) => {
+                if (pointer.leftButtonDown() && !this.busyDialog) this.restAtCampfire();
+            });
+        }
+        if (this.textures.exists('campfire_flame_0')) {
+            const flame = this.add.image(cx, cy - 12, 'campfire_flame_0')
+                .setScale(2.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(6.1);
+            let frame = 0;
+            this.time.addEvent({
+                delay: 180, loop: true,
+                callback: () => {
+                    frame = (frame + 1) % 3;
+                    if (flame.scene && this.textures.exists(`campfire_flame_${frame}`)) {
+                        flame.setTexture(`campfire_flame_${frame}`);
+                    }
+                },
+            });
+        }
+        // Тёплый отсвет на траве
+        const glow = this.add.ellipse(cx, cy + 10, 96, 34, 0xff7a30, 0.22)
+            .setBlendMode(Phaser.BlendModes.ADD).setDepth(5.9);
+        this.tweens.add({
+            targets: glow, alpha: { from: 0.16, to: 0.3 },
+            duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        });
+        // Подсказка
+        const hint = this.add.text(cx, cy - 52, t('🔥 Костёр пастухов — присесть (1 час)'), {
+            fontSize: '12px', color: '#E8DCC4', backgroundColor: '#00000088',
+            padding: { x: 6, y: 3 }, stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(6.2);
+        this.tweens.add({ targets: hint, alpha: { from: 1, to: 0.55 }, duration: 1200, yoyo: true, repeat: -1 });
+    }
+
+    /**
+     * РАУНД 66 (пп.1,2 приказа): отдых у костра (Выпас) — ТОЛЬКО промотка
+     * времени на 1 игровой час. Здоровье и Воля у костра НЕ восстанавливаются
+     * (полное лечение — ночлег на постоялом дворе и молебен в церкви).
+     */
+    restAtCampfire() {
+        if (this.busyDialog) return;
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+        createDialog(this, t('🔥 Костёр пастухов'),
+            t('Пастухи сложили костёр у стада. У огня можно только пересидеть час — раны он не лечит, только время идёт мимо.\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)'),
+            [
+                { text: t('Присесть у огня (1 час)'), callback: () => {
+                    close();
+                    this.cameras.main.fadeOut(600, 0, 0, 0);
+                    this.time.delayedCall(650, () => {
+                        tickTime(this.registry, 60);
+                        ActionLog.add(this.registry, t('Пересидел час у костра на выпасе — время шло мимо.'));
+                        this.cameras.main.fadeIn(600, 0, 0, 0);
+                    });
+                } },
+                { text: t('Не сейчас'), callback: close },
+            ]);
+    }
+
     /** Разговор с жителем на локации (раунд 27; раунд 30: + расспрос о воре) */
     talkToLocationNpc(npcId) {
         this.busyDialog = true;
@@ -847,7 +917,7 @@ export class LocationScene extends Phaser.Scene {
                     if (!hasTreeCollision(x, y, 58)) {
                         const tex = TREE_KEYS[i % TREE_KEYS.length];
                         this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
-                            .setScale(2.6).setOrigin(0.5, 0.88).setDepth(2 + (y % 7) * 0.1);
+                            .setScale(1.5).setOrigin(0.5, 0.88).setDepth(2 + (y % 7) * 0.1);
                         placedTrees.push({ x, y });
                         break;
                     }
@@ -896,7 +966,7 @@ export class LocationScene extends Phaser.Scene {
                     if (!clash) {
                         const tex = TREE_KEYS[i % TREE_KEYS.length];
                         this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
-                            .setScale(2.8).setOrigin(0.5, 0.88).setDepth(3);
+                            .setScale(1.6).setOrigin(0.5, 0.88).setDepth(3);
                         placedEdgeTrees.push({ x, y });
                         break;
                     }
@@ -909,7 +979,7 @@ export class LocationScene extends Phaser.Scene {
                 const y = height * 0.52 + Math.random() * 60;
                 const tex = TREE_KEYS[(i + 2) % TREE_KEYS.length];
                 this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
-                    .setScale(2.5).setOrigin(0.5, 0.88).setDepth(3.5);
+                    .setScale(1.4).setOrigin(0.5, 0.88).setDepth(3.5);
             }
             // Птицы на опушке (живность, не монстры)
             if (this.textures.exists('deco_bird')) {
@@ -996,7 +1066,7 @@ export class LocationScene extends Phaser.Scene {
                     if (!inClearing && !clash) {
                         const tex = TREE_KEYS[i % TREE_KEYS.length];
                         this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
-                            .setScale(2.9).setOrigin(0.5, 0.88).setDepth(4);
+                            .setScale(1.65).setOrigin(0.5, 0.88).setDepth(4);
                         placedGladeTrees.push({ x, y });
                         break;
                     }
@@ -1113,7 +1183,7 @@ export class LocationScene extends Phaser.Scene {
                     if (!isOnRoad(y) && !hasCollision(x, y, 60)) {
                         const tex = TREE_KEYS[i % TREE_KEYS.length];
                         this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
-                            .setScale(2.8).setOrigin(0.5, 0.88).setDepth(3);
+                            .setScale(1.6).setOrigin(0.5, 0.88).setDepth(3);
                         placedPositions.push({ x, y });
                         break;
                     }
@@ -1267,7 +1337,7 @@ export class LocationScene extends Phaser.Scene {
                     if (!isOnRiver(y) && !isOnBridgeRoad(x) && !hasTreeCollision(x, y, 52)) {
                         const tex = TREE_KEYS[i % TREE_KEYS.length];
                         this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
-                            .setScale(2.8).setOrigin(0.5, 0.88).setDepth(4);
+                            .setScale(1.6).setOrigin(0.5, 0.88).setDepth(4);
                         placedTrees.push({ x, y });
                         break;
                     }
@@ -1340,7 +1410,7 @@ export class LocationScene extends Phaser.Scene {
                     if (!clash) {
                         const tex = TREE_KEYS[i % TREE_KEYS.length];
                         this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
-                            .setScale(2.8).setOrigin(0.5, 0.88).setDepth(4);
+                            .setScale(1.6).setOrigin(0.5, 0.88).setDepth(4);
                         placedFieldTrees.push({ x, y });
                         break;
                     }
@@ -1408,7 +1478,7 @@ export class LocationScene extends Phaser.Scene {
                     if (!clash) {
                         const tex = TREE_KEYS[i % TREE_KEYS.length];
                         this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
-                            .setScale(2.8).setOrigin(0.5, 0.88).setDepth(4);
+                            .setScale(1.6).setOrigin(0.5, 0.88).setDepth(4);
                         placedLakeTrees.push({ x, y });
                         break;
                     }
@@ -1680,8 +1750,14 @@ export class LocationScene extends Phaser.Scene {
                     // Не на дорожке и нет коллизии с могилами
                     const onPath = Math.abs(x - width / 2) < 40;
                     if (!onPath && !hasTreeCollision(x, y, 60) && !hasGraveCollision(x, y, 60)) {
-                        this.add.image(x, y, `tile_forest_${i % 2}`).setScale(2.5).setOrigin(0.5, 0.7).setDepth(2);
-                        placedTrees.push({ x, y });
+                        // Раунд 66 (п.10): кладбищенские деревья — новые спрайты
+                        const pgTex = (i % 4 === 0)
+                            ? `deco_pine_${i % 2}`
+                            : `deco_tree_${i % 5}`;
+                        const pgImg = this.textures.exists(pgTex)
+                            ? this.add.image(x, y, pgTex).setScale(1.3).setOrigin(0.5, 0.9).setDepth(2)
+                            : this.add.image(x, y, `tile_forest_${i % 2}`).setScale(2.5).setOrigin(0.5, 0.7).setDepth(2);
+                        placedTrees.push({ x, y, img: pgImg });
                         break;
                     }
                     attempts++;
@@ -1876,6 +1952,10 @@ export class LocationScene extends Phaser.Scene {
                     this.add.image(x + 24, height - 30, 'tile_fence_h').setScale(1.5).setDepth(2);
                 }
             }
+            // РАУНД 66 (п.2 приказа): КОСТЁР НА ПАСТБИЩЕ ДЛЯ ПАСТУХОВ —
+            // у стоянки пастухов горит живое пламя; можно присесть
+            // (1 час времени, без лечения — п.1).
+            this.spawnPastureCampfire(width, height);
         } else if (locId === 'mill') {
             // П.5,13: Мельница — большая мельница в центре, дорога, много деревьев.
             // Раунд 27 (п.4): мельница — ВЕТРЯНАЯ! Ручей, анимированная вода,
@@ -2093,7 +2173,7 @@ export class LocationScene extends Phaser.Scene {
                     if (!isOnMill(x, y) && !isOnRoad(y) && !hasTreeCollision(x, y, 60)) {
                         const tex = TREE_KEYS[i % TREE_KEYS.length];
                         this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
-                            .setScale(2.8).setOrigin(0.5, 0.88).setDepth(3);
+                            .setScale(1.6).setOrigin(0.5, 0.88).setDepth(3);
                         placedTrees.push({ x, y });
                         break;
                     }

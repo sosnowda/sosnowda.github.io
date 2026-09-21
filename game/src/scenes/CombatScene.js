@@ -96,12 +96,17 @@ export class CombatScene extends Phaser.Scene {
         this.drawCombatBackground(width, height);
         onSceneResize(this, (w, h) => this.drawCombatBackground(w, h));
 
-        // Деревья на фоне (декоративные)
+        // Деревья на фоне (декоративные) — раунд 66 (п.10): новые спрайты
         for (let i = 0; i < 8; i++) {
             const x = (i + 0.5) * (width / 8) + (Math.random() - 0.5) * 40;
             const y = 60 + Math.random() * 30;
-            const tree = this.add.image(x, y, `tile_forest_${i % 2}`).setScale(2.5).setAlpha(0.4);
-            tree.setOrigin(0.5, 0.7);
+            const cbTex = (i % 3 === 0)
+                ? `deco_pine_${i % 2}`
+                : `deco_tree_${i % 5}`;
+            const tree = this.textures.exists(cbTex)
+                ? this.add.image(x, y, cbTex).setScale(1.4).setAlpha(0.55)
+                : this.add.image(x, y, `tile_forest_${i % 2}`).setScale(2.5).setAlpha(0.4);
+            tree.setOrigin(0.5, 0.9);
             tree.setDepth(0);
         }
 

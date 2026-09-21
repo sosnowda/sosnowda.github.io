@@ -47,22 +47,26 @@ const hpKeys = ['hp_log_thatch_a', 'hp_log_thatch_b', 'hp_log_wood_a', 'hp_log_w
 hpKeys.forEach(k => ok(existsSync(join(root, `assets/sprites/${k}.png`)), `спрайт ${k}.png существует`));
 ok(existsSync(join(root, 'assets/sprites/vh_chapel.png')), 'часовня vh_chapel сохранена');
 const boot = readFileSync(join(root, 'src/scenes/BootScene.js'), 'utf8');
-ok(boot.includes("'hp_log_thatch_a'") && boot.includes("'village_gate_r64'"), 'BootScene загружает hp_* и воротню');
+// Раунды 65–66: hp_* заменены fb_* (пак Celianna), воротня — r66
+ok(boot.includes("'fb_church'") && boot.includes("'village_gate_r66'"), 'BootScene загружает дома fb_* и воротню актуального поколения');
 ok(!boot.includes("'vh_manor'") && !boot.includes("'vh_stall'"), 'старые вырезы vh_* из загрузки убраны');
 ok(!village.includes("'vh_manor'") && !village.includes("'vh_loghouse'"), 'VillageScene не ссылается на старые вырезы');
-ok(village.includes("'hp_inn'"), 'постоялый двор двухэтажный hp_inn (единственный)');
+ok(village.includes("'fb_inn'"), 'постоялый двор — двухэтажный fb_inn (единственный, r65+)');
 
 console.log('— П.3,4: воротня-арка без башенок —');
 ok(!boot.includes('this.createGateTexture'), 'процедурный createGateTexture удалён');
-ok(village.includes("village_gate_r64"), 'VillageScene ставит village_gate_r64');
+ok(village.includes("village_gate_r66"), 'VillageScene ставит воротню актуального поколения (r66)');
 const W = MAP_W, H = MAP_H, ts = 48;
 const grid = buildMap();
 const valid = validateMap(grid);
 ok(valid.problems.length === 0, `BFS: все двери и ворота достижимы (${valid.problems.length || '0'} проблем)`);
 ok(grid[VILLAGE_GATE.row][MAP_W - 1] === 'G', 'ворота на восточной границе на месте');
-// Ни один спрайт дома не пересекает прямоугольник воротни
-const GW = 132, GH = 184;
-const gx = MAP_W * ts - 70, gy = VILLAGE_GATE.row * ts + ts * 0.75;
+// Ни один спрайт дома не пересекает ОПАКУЮ зону воротни.
+// Раунды 65–66: воротня-профиль 104×118, якорь (низ) на южной кромке ряда
+// ворот; её верхняя треть прозрачна (там были вымпелы — сняты в r66), поэтому
+// проверяем нижнюю непрозрачную часть (столбы + проезд): y от gb-90 до gb.
+const GW = 104, GH = 90;
+const gx = MAP_W * ts - 44, gy = (VILLAGE_GATE.row + 1) * ts;
 const gl = gx - GW / 2, gr = gx + GW / 2, gt = gy - GH, gb = gy;
 let overlap = null;
 BUILDINGS.forEach(b => {
@@ -75,7 +79,9 @@ BUILDINGS.forEach(b => {
 });
 ok(!overlap, `ни один спрайт не перекрыт воротней${overlap ? ' (НАРУШЕНИЕ: ' + overlap + ')' : ''}`);
 const st = BUILDINGS.find(b => b.interiorId === 'shop_tools');
-ok(st.col === 21, 'дом ремесленника сдвинут на колонку 21 (место арке)');
+// Раунд 66: подход к воротам — ряд 5 (главная улица), дома не должны его занимать
+const passageFree = BUILDINGS.every(b => b.row + b.h <= 5 || b.row >= 6);
+ok(passageFree, 'подход к воротне (ряд 5) свободен от домов (планировка r66)');
 ok(valid.reachable.has(`${st.col + 1},${st.row + st.h - 1}`), 'дверь дома ремесленника достижима');
 let orphan = 0;
 for (let y = 0; y < H; y++) for (let x = 0; x < W; x++)

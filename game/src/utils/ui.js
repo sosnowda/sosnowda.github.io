@@ -697,12 +697,15 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     }).setOrigin(0.5, 0);
 
     // Контент (текст реплики)
+    // РАУНД 66 (п.5): реплики КРУПНЕЕ — 21px (было 18px); фактическая ширина
+    // переноса строк считается в layout() от ширины панели (ниже) — текст
+    // гарантированно внутри пергамента и кнопок на любом экране.
     const contentStyle = {
-        fontSize: '18px',
+        fontSize: '21px',
         color: inkColor,
         fontFamily: 'Georgia, serif',
         align: 'left',
-        wordWrap: { width: portraitKey ? 380 : DIALOG_STYLES.content.wrapWidth }
+        wordWrap: { width: portraitKey ? 400 : DIALOG_STYLES.content.wrapWidth }
     };
     if (hasParchment) {
         contentStyle.stroke = '#1d1208';
@@ -862,10 +865,15 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             const s = (raw > maxRowWClamp && raw > 0) ? maxRowWClamp / raw : 1;
             if (typeof btn.setScale === 'function') btn.setScale(s, s);
         });
+        // РАУНД 66 (п.5): перенос строк — от ФАКТИЧЕСКОЙ ширины панели
+        // (с портретом — минус портрет): текст не вылезает за рамки на
+        // узких экранах, где dialogWidth < 440.
+        contentStyle.wordWrap.width = Math.max(180,
+            dialogWidth - pad.left - pad.right - (portraitImg ? 106 : 0));
         const titleH = titleText.height || 30;
         const availH = Math.max(280, cam.height * 0.9);
 
-        // Подбор шрифта: 18 → 16 → 14 → 12, пока панель не влезет
+        // Подбор шрифта: 21 → 19 → 17 → 15 → 13 → 12, пока панель не влезет
         const computeTotal = () => {
             const contentH = contentText.height || 60;
             let th = pad.top + titleH + pad.title + contentH + pad.content;
@@ -876,7 +884,7 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             th += pad.bottom;
             return th;
         };
-        let fontPx = 18;
+        let fontPx = 21;
         contentText.setStyle({ ...contentStyle, fontSize: fontPx + 'px' });
         let naturalH = computeTotal();
         while (naturalH > availH && fontPx > 12) {

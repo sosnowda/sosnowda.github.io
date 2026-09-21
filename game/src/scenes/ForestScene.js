@@ -152,16 +152,41 @@ export class ForestScene extends Phaser.Scene {
 
                 // --- Высокие объекты (Y-сортировка) ---
                 if (t === 'T') {
-                    // Густое дерево: канопа выше тайла, лёгкий джиттер для органичности
+                    // РАУНД 66 (пп.10,11): Густой лес — деревья из пака
+                    // Medieval_Expansion_Trees (преобладают ели/пихты, местами
+                    // лиственные); коллизия — только тайл ствола, сквозь
+                    // крону игрок проходит (Y-сортировка).
                     const jx = ((x * 37 + y * 61) % 13) - 6;
-                    const canopy = this.add.image(px + jx, py + 9 + jx * 0.4, `tile_forest_dense_${(x + y) % 2}`);
-                    canopy.setScale(TS / 32 * 1.45);
-                    canopy.setDepth(y + 0.6);
+                    const deepIdx = (x * 5 + y * 11);
+                    const treeTex = (deepIdx % 3 === 0)
+                        ? `deco_tree_${deepIdx % 5}`
+                        : `deco_pine_${deepIdx % 2}`;
+                    if (this.textures.exists(treeTex)) {
+                        const tree = this.add.image(px + jx, py + 12 + jx * 0.4, treeTex)
+                            .setScale(1.5).setOrigin(0.5, 0.92);
+                        tree.setDepth(y + 0.6);
+                    } else {
+                        // Страховка: старый тайл-канопа
+                        const canopy = this.add.image(px + jx, py + 9 + jx * 0.4, `tile_forest_dense_${(x + y) % 2}`);
+                        canopy.setScale(TS / 32 * 1.45);
+                        canopy.setDepth(y + 0.6);
+                    }
                 } else if (t === 't') {
+                    // Редкое/молодое дерево — новый спрайт поменьше
                     const jx = ((x * 53 + y * 29) % 11) - 5;
-                    const canopy = this.add.image(px + jx, py + 3, `tile_forest_${(x * 3 + y) % 2}`);
-                    canopy.setScale(TS / 32 * 1.15);
-                    canopy.setDepth(y + 0.55);
+                    const liteIdx = (x * 3 + y * 7);
+                    const liteTex = (liteIdx % 3 === 0)
+                        ? `deco_tree_${liteIdx % 5}`
+                        : `deco_pine_${liteIdx % 2}`;
+                    if (this.textures.exists(liteTex)) {
+                        const sap = this.add.image(px + jx, py + 6, liteTex)
+                            .setScale(1.05).setOrigin(0.5, 0.92);
+                        sap.setDepth(y + 0.55);
+                    } else {
+                        const canopy = this.add.image(px + jx, py + 3, `tile_forest_${(x * 3 + y) % 2}`);
+                        canopy.setScale(TS / 32 * 1.15);
+                        canopy.setDepth(y + 0.55);
+                    }
                 } else if (t === 'r') {
                     const rock = this.add.image(px, py + 6, this.textures.exists('tile_rock_0') ? 'tile_rock_0' : groundTex);
                     rock.setScale(TS / 32 * 1.1).setDepth(y + 0.5);
@@ -232,9 +257,9 @@ export class ForestScene extends Phaser.Scene {
         const camp = campfirePos();
         const stash = stashPos();
 
-        // Кострище брошенного лагеря — РАУНД 65 (п.5 приказа): в деревне костра
-        // больше нет, отдых у костра переехал СЮДА, в лес: пламя горит,
-        // тёплый свет тлеет — подойти и отдохнуть (1 час, полный сон).
+        // Кострище брошенного лагеря — РАУНД 65 (п.5): в деревне костра нет,
+        // отдых переехал СЮДА. РАУНД 66 (п.1): отдых = ТОЛЬКО промотка
+        // времени на 1 час, без лечения (пламя горит, свет тлеет).
         const cx = camp.col * TS + TS / 2;
         const cy = camp.row * TS + TS / 2;
         if (this.textures.exists('campfire_base')) {
@@ -700,37 +725,32 @@ export class ForestScene extends Phaser.Scene {
 
     /**
      * РАУНД 65 (п.5 приказа): отдых у костра — механика переехала из деревни
-     * в лес (кострище брошенного лагеря). 1 игровой час, HP и Воля — до максимума.
-     * Если силы полны — время не тратится.
+     * в лес (кострище брошенного лагеря).
+     * РАУНД 66 (п.1 приказа): «ОТДЫХ У КОСТРА МОЖЕТ ТОЛЬКО ПРОМОТАТЬ ВРЕМЯ
+     * НА 1 ЧАС» — здоровье и Воля у костра БОЛЬШЕ НЕ ВОССТАНАВЛИВАЮТСЯ,
+     * никакой моментальной лечения: присел — час миновал (можно переждать
+     * ночь/до утра/до срока). Полное лечение — только ночлег на постоялом
+     * дворе и молебен в церкви.
      */
     restAtCampfire() {
         if (this.busyDialog) return;
         const player = this.player || this.registry.get('player');
         if (!player) return;
-        const hpMax = player.HPmax || player.HP;
-        const mpMax = player.MPmax || player.MP;
-        if (player.HP >= hpMax && player.MP >= mpMax) {
-            this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, 'Ты полон сил', '#b8a88a');
-            ActionLog.add(this.registry, t('Погрелся у костра — силы и так полны.'));
-            return;
-        }
         this.busyDialog = true;
         const close = () => { this.busyDialog = false; };
         createDialog(this, t('🔥 Костёр в лесу'),
-            t('Тёплый огонь разгоняет лесную мглу. Присесть на минутку — а очнёшься через час крепкого сна.\n\nОтдохнуть у костра? (1 час — здоровье и Воля восстановятся полностью.)'),
+            t('Тёплый огонь разгоняет лесную мглу. У костра можно только пересидеть час — раны он не лечит, только время идёт мимо.\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)'),
             [
-                { text: t('Присесть у огня'), callback: () => {
+                { text: t('Присесть у огня (1 час)'), callback: () => {
                     close();
                     this.cameras.main.fadeOut(700, 0, 0, 0);
                     this.time.delayedCall(750, () => {
+                        // п.1 раунда 66: ТОЛЬКО промотка времени на 1 час
                         tickTime(this.registry, 60);
-                        player.HP = hpMax;
-                        player.MP = mpMax;
                         this.registry.set('player', player);
                         this.updateHUD();
-                        if (this.audioManager) this.audioManager.playHeal();
-                        ActionLog.add(this.registry, t('Отдохнул у костра в лесу — час крепкого сна, силы восстановились.'));
-                        this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, t('Силы восстановились'), '#8fdc7a');
+                        ActionLog.add(this.registry, t('Пересидел час у костра в лесу — время шло мимо.'));
+                        this.showFloatingText(this.playerObj.x, this.playerObj.y - 44, t('Час у костра миновал'), '#b8a88a');
                         this.cameras.main.fadeIn(700, 0, 0, 0);
                     });
                 } },

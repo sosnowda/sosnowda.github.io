@@ -269,15 +269,34 @@ export class ApiaryScene extends Phaser.Scene {
 
                 // --- Высокие объекты (Y-сортировка) ---
                 if (tile === 'T') {
+                    // Раунд 66 (п.10): пасека — деревья из пака владельца
                     const jx = ((x * 37 + y * 61) % 13) - 6;
-                    const canopy = this.add.image(px + jx, py + 9 + jx * 0.4, `tile_forest_dense_${(x + y) % 2}`);
-                    canopy.setScale(TS / 32 * 1.5);
-                    canopy.setDepth(y + 0.6);
+                    const apIdx = (x * 5 + y * 11);
+                    const apTex = (apIdx % 3 === 0)
+                        ? `deco_tree_${apIdx % 5}`
+                        : `deco_pine_${apIdx % 2}`;
+                    if (this.textures.exists(apTex)) {
+                        this.add.image(px + jx, py + 12 + jx * 0.4, apTex)
+                            .setScale(1.5).setOrigin(0.5, 0.92).setDepth(y + 0.6);
+                    } else {
+                        const canopy = this.add.image(px + jx, py + 9 + jx * 0.4, `tile_forest_dense_${(x + y) % 2}`);
+                        canopy.setScale(TS / 32 * 1.5);
+                        canopy.setDepth(y + 0.6);
+                    }
                 } else if (tile === 't') {
                     const jx = ((x * 53 + y * 29) % 11) - 5;
-                    const canopy = this.add.image(px + jx, py + 3, `tile_forest_${(x * 3 + y) % 2}`);
-                    canopy.setScale(TS / 32 * 1.2);
-                    canopy.setDepth(y + 0.55);
+                    const ap2Idx = (x * 3 + y * 7);
+                    const ap2Tex = (ap2Idx % 3 === 0)
+                        ? `deco_tree_${ap2Idx % 5}`
+                        : `deco_pine_${ap2Idx % 2}`;
+                    if (this.textures.exists(ap2Tex)) {
+                        this.add.image(px + jx, py + 6, ap2Tex)
+                            .setScale(1.05).setOrigin(0.5, 0.92).setDepth(y + 0.55);
+                    } else {
+                        const canopy = this.add.image(px + jx, py + 3, `tile_forest_${(x * 3 + y) % 2}`);
+                        canopy.setScale(TS / 32 * 1.2);
+                        canopy.setDepth(y + 0.55);
+                    }
                 } else if (tile === 'r') {
                     const rock = this.add.image(px, py + 6, this.textures.exists('tile_rock_0') ? 'tile_rock_0' : groundTex);
                     rock.setScale(TS / 32 * 1.1).setDepth(y + 0.5);

@@ -141,18 +141,20 @@ export class VillageScene extends Phaser.Scene {
                 // прозрачный спрайт дерева (deco_tree_*/deco_pine_*) с Y-сортировкой:
                 // больше нет квадратной «плашки» с фоном вокруг кроны.
                 if (t === 'T') {
+                    // РАУНД 66 (пп.10,11): деревья из пака владельца
+                    // Medieval_Expansion_Trees (tree_0..4 — лиственные, включая
+                    // берёзу и осенний; pine_0/1 — ели). Крона нависает над
+                    // крышами/дорогой, но СКВОЗЬ НЕЁ МОЖНО ПРОЙТИ (п.11):
+                    // коллизия — только тайл ствола, спрайт с Y-сортировкой.
                     img.setDepth(0);
-                    const edge = x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1;
                     const idx = (x * 7 + y * 13) % 5;
-                    const treeTex = edge
-                        ? `deco_pine_${(x + y) % 2}`
-                        : `deco_tree_${idx % 3}`;
+                    const treeTex = `deco_tree_${idx}`;
                     if (this.textures.exists(treeTex)) {
                         const tree = this.add.image(px, py + 10, treeTex)
-                            .setScale(1.5).setOrigin(0.5, 0.9);
+                            .setScale(1.3).setOrigin(0.5, 0.9);
                         tree.setDepth(y + 0.4);
                     } else {
-                        // Страховка: нет процедурных деревьев — старый тайл с фоном
+                        // Страховка: нет спрайтов — старый тайл с фоном
                         img.setTexture(`tile_forest_${(x * 3 + y * 5) % 2}`);
                         img.setDepth(y + 0.4);
                     }
@@ -360,9 +362,8 @@ export class VillageScene extends Phaser.Scene {
         this.rebuildStreetNpcs();
 
         // ----- Ворота (п.20 заявки раунда 39): ворота на ВОСТОЧНОЙ околице.
-        // РАУНД 65 (п.7): воротня village_gate_r65 — КОМПАКТНАЯ (104×118 вместо
-        // 156×184) и развёрнута ПРОЁМОМ К ВЫХОДУ: вид сбоку, ближний столб
-        // слева-снизу, дальний справа-сверху, верёвка с вымпелами, фонарь.
+        // РАУНД 66 (п.3): воротня village_gate_r66 — как r65 (компактная,
+        // проёмом к выходу), но БЕЗ верёвки с вымпелами и подвесной доски.
         // Частокол (п.8) подходит к воротам с севера и юга.
         const gatePx = (MAP_W - 1) * ts + ts / 2;
         const gatePy = VILLAGE_GATE.row * ts + ts / 2;
@@ -575,151 +576,30 @@ export class VillageScene extends Phaser.Scene {
      * (крест на звоннице уже «запечён» в vh_chapel).
      */
     addBuildingDetails(b, ts, usedSprite = false, sprKey = null) {
-        const cx = b.col * ts + b.w * ts / 2;
-        const topY = b.row * ts;
-
-        if (b.interiorId === 'church') {
-            if (usedSprite) {
-                // РАУНД 62: деревянная часовня vh_chapel — крест уже стоит
-                // на звоннице в самой текстуре, лишний крест не рисуем.
-                return;
-            }
-            // Fallback (без спрайта): купол-луковка + крест + звонница
-            const domeY = topY - ts * 0.6;
-            const dome = this.add.graphics();
-            dome.fillStyle(0x8b7355, 1);
-            dome.fillCircle(cx, domeY, ts * 0.4);
-            dome.fillStyle(0x6b5535, 1);
-            dome.fillTriangle(cx - ts * 0.3, domeY, cx + ts * 0.3, domeY, cx, domeY - ts * 0.5);
-            dome.lineStyle(2, 0x4a3a25, 1);
-            dome.strokeCircle(cx, domeY, ts * 0.4);
-            dome.setDepth(8);
-
-            // Крест на куполе
-            this.add.text(cx, domeY - ts * 0.7, '✝', {
-                fontSize: '20px', color: '#c9a14a',
-                stroke: '#000', strokeThickness: 2,
-            }).setOrigin(0.5).setDepth(9);
-
-            // Звонница — справа от церкви
-            const bellX = cx + b.w * ts / 2 - ts * 0.3;
-            const bellY = topY - ts * 0.3;
-            const bell = this.add.graphics();
-            bell.fillStyle(0x7a5a3a, 1);
-            bell.fillRect(bellX - ts * 0.15, bellY - ts * 0.5, ts * 0.3, ts * 0.8);
-            bell.lineStyle(2, 0x4a3a25, 1);
-            bell.strokeRect(bellX - ts * 0.15, bellY - ts * 0.5, ts * 0.3, ts * 0.8);
-            // Колокол
-            bell.fillStyle(0xc9a14a, 1);
-            bell.fillCircle(bellX, bellY, ts * 0.1);
-            bell.setDepth(8);
-            // Крест на звоннице
-            this.add.text(bellX, bellY - ts * 0.7, '✝', {
-                fontSize: '14px', color: '#c9a14a',
-            }).setOrigin(0.5).setDepth(9);
-
-        } else if (b.interiorId === 'tavern') {
-            // Таверна: вывеска с кружкой
-            this.add.text(cx, topY - ts * 0.4, '🍺', {
-                fontSize: '18px',
-            }).setOrigin(0.5).setDepth(9);
-            // Дымоход: РАУНД 62 УДАЛЁН — у целого фасада постоялого двора
-            // (vh_inn) труба поверх крыши больше не рисуется.
-
-        } else if (b.interiorId === 'blacksmith') {
-            // Кузница: молот + наковальня (эмблема)
-            this.add.text(cx, topY - ts * 0.4, '🔨', {
-                fontSize: '18px',
-            }).setOrigin(0.5).setDepth(9);
-            // Труба: РАУНД 62 УДАЛЕНА — у кузнечного сарая (vh_logroof)
-            // трубы нет; дым из горна больше не рисуется над целой кровлей.
-
-        } else if (b.interiorId === 'elder_house') {
-            // Дом старосты: флаг/вымпел
-            const flag = this.add.graphics();
-            flag.fillStyle(0x8b2c1a, 1);
-            flag.fillTriangle(cx, topY - ts * 0.8, cx + ts * 0.5, topY - ts * 0.6, cx, topY - ts * 0.4);
-            flag.fillRect(cx - ts * 0.05, topY - ts * 0.8, ts * 0.1, ts * 0.8);
-            flag.setDepth(8);
-
-        } else if (b.interiorId === 'villager_house_1') {
-            // Дом Авдея: сено на крыше
-            this.add.text(cx, topY - ts * 0.3, '🌾', {
-                fontSize: '14px',
-            }).setOrigin(0.5).setDepth(9);
-
-        } else if (b.interiorId === 'villager_house_2') {
-            // Дом Марфы: прялка у окна (эмблема)
-            this.add.text(cx, topY - ts * 0.3, '🧶', {
-                fontSize: '14px',
-            }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'potter_house') {
-            // Раунд 37: гончар — горшок (эмблема)
-            this.add.text(cx, topY - ts * 0.3, '🏺', {
-                fontSize: '14px',
-            }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'healer_house') {
-            // Раунд 37: знахарка — пучок трав (эмблема)
-            this.add.text(cx, topY - ts * 0.3, '🌿', {
-                fontSize: '14px',
-            }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'fisher_house') {
-            // Раунд 37: рыбак — уды (эмблема)
-            this.add.text(cx, topY - ts * 0.3, '🎣', {
-                fontSize: '14px',
-            }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'carpenter_house') {
-            // Раунд 37: плотник — топор (эмблема)
-            this.add.text(cx, topY - ts * 0.3, '🪓', {
-                fontSize: '14px',
-            }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'weaver_house') {
-            // Раунд 37: ткачиха — нити (эмблема)
-            this.add.text(cx, topY - ts * 0.3, '🧵', {
-                fontSize: '14px',
-            }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'grocer_house') {
-            // Раунд 53: дом снедницы — каравай (эмблема)
-            this.add.text(cx, topY - ts * 0.35, '🥖', {
-                fontSize: '16px',
-            }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'butcher_house') {
-            // Раунд 53: дом мясника — окорок (эмблема)
-            this.add.text(cx, topY - ts * 0.35, '🍖', {
-                fontSize: '16px',
-            }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'shop_tools') {
-            // Раунд 63 (п.2): лавка стала ДОМОМ ремесленника — эмблема весов снята
-            // (у жилых домов эмблем ремесла не ставят; труба с дымом теперь есть).
-        } else if (b.interiorId === 'villager_house_3') {
-            // Раунд 64 (п.5): эмблема «🐔» снята вместе со всей живностью —
-            // кур в деревне больше нет (и у дома Степана тоже).
-        } else if (b.interiorId === 'shoemaker_house') {
-            // Раунд 51: сапожник — сапог (эмблема)
-            this.add.text(cx, topY - ts * 0.3, '🥾', {
-                fontSize: '14px',
-            }).setOrigin(0.5).setDepth(9);
-        } else if (b.interiorId === 'woodcutter_house') {
-            // Раунд 51: дровосек — ель (эмблема; 🪓 уже у плотника)
-            this.add.text(cx, topY - ts * 0.3, '🌲', {
-                fontSize: '14px',
-            }).setOrigin(0.5).setDepth(9);
-        }
+        // РАУНД 66 (п.7 приказа): «НЕУЖНЫЕ ЗНАЧКИ НАД ДОМАМИ» УДАЛЕНЫ.
+        // Раньше над каждым домом висела эмодзи-эмблема ремесла
+        // (пиво/молот/сноп/прялка/горшок/травы/уды/топор/нити/каравай/окорок/
+        // сапог/ель и флаг над усадьбой старосты). У домов честные фасады из
+        // пакета Celianna, здание подписано поп-апом при наведении —
+        // плавающие значки больше не нужны.
+        // (usedSprite/sprKey оставлены в сигнатуре — вызов из цикла не менялся.)
+        return;
     }
 
     /**
-     * РАУНД 65 (п.7 приказа): воротня village_gate_r65 (104×118) — КОМПАКТНАЯ
-     * и развёрнута ПРОЁМОМ В СТОРОНУ ВЫХОДА: профильный вид с юго-запада —
-     * ближний (южный) столб на каменном основании, дальний (северный) под
-     * кровелькой, между ними натянута верёвка с вымпелами и подвесной доской;
-     * фонарь у ближнего столба. Проезд прозрачен — дорога видна насквозь.
+     * РАУНД 66 (п.3 приказа): воротня village_gate_r66 — как r65 (компактная,
+     * профиль, проёмом к выходу), но БЕЗ верёвки с вымпелами и подвесной
+     * доски («УДАЛИТЬ ВЕРЕВКУ С ВЫМПЕЛАМИ С ВОРОТ»): столбы с остриями,
+     * кровелька, фонарь. Проезд прозрачен — дорога видна насквозь.
      * Основание — на южной кромке дороги (ряд 6), глубина 6.0: игрок на улице
      * (глубина ~5.5) проходит СКВОЗЬ ворота ЗА ближним столбом — как и положено
      * в 2.5D (южные предметы рисуются поверх северных).
      */
     drawVillageGate(ts) {
-        if (!this.textures.exists('village_gate_r65')) return;
-        const img = this.add.image(MAP_W * ts - 44, (VILLAGE_GATE.row + 1) * ts, 'village_gate_r65');
+        const gateKey = this.textures.exists('village_gate_r66') ? 'village_gate_r66'
+            : (this.textures.exists('village_gate_r65') ? 'village_gate_r65' : null);
+        if (!gateKey) return;
+        const img = this.add.image(MAP_W * ts - 44, (VILLAGE_GATE.row + 1) * ts, gateKey);
         img.setOrigin(0.5, 1);          // якорь: низ по центру
         img.setDepth(6.0);
     }
@@ -1107,36 +987,41 @@ export class VillageScene extends Phaser.Scene {
 
     /**
      * Точка на улице для жителя (в тайлах). Возле своего двора/колодца/ворот.
-     * РАУНД 65 (п.10): координаты пересчитаны под НОВУЮ планировку деревни
+     * РАУНД 66 (п.6): координаты пересчитаны под НОВЕЙШУЮ планировку деревни
      * (храм и староста в центре, кузня на северо-востоке, ремёсла по краям;
      * улицы: ряд 5 — главная, ряд 9 — средняя, ряд 13 — задняя).
      */
     streetSpotFor(id) {
+        // РАУНД 66 (п.6): точки ПЕРЕСЧИТАНЫ под новую расстановку домов
+        // (гончар — СЗ, постоялый двор — север, плотник переехал в средний
+        // ряд, пахарь — к востоку среднего ряда, рыбак — в южный ряд,
+        // колодец теперь (18,7)); все точки — на улицах/проездах или своих
+        // дворах, ни одна не на тайле дерева/дома.
         const SPOTS = {
-            peasant1: { x: 17.5, y: 4.4 },       // Авдей — у своего дома (северный ряд)
-            widow: { x: 3.5, y: 9.4 },           // Марфа — у дома (средний ряд)
-            beekeeper1: { x: 7.5, y: 9.4 },      // Тарас — у дома
-            beekeeper_wife: { x: 20.5, y: 9.4 }, // у колодца (22,7), со стороны средней улицы
-            elder_wife: { x: 23.5, y: 9.4 },     // у колодца
-            blacksmith: { x: 22.5, y: 4.4 },     // у кузницы (северо-восточный угол)
-            healer: { x: 24.5, y: 9.4 },         // у дома знахарки
-            hunter: { x: 13.5, y: 9.4 },         // на средней улице
-            fisherman: { x: 19.5, y: 9.4 },      // у дома рыбака
-            carpenter1: { x: 3.5, y: 13.4 },     // у дома плотника (южный ряд)
-            carpenter_wife: { x: 5.5, y: 9.4 },  // по воду (переулок у средней улицы)
-            potter1: { x: 8.5, y: 4.4 },         // у дома гончара (сушит горшки)
-            potter_wife: { x: 7.5, y: 4.4 },     // у двора гончара
-            weaver1: { x: 7.5, y: 13.4 },        // у дома ткачихи
-            shepherd_boy: { x: 9.5, y: 13.4 },   // при матери-ткачихе
-            peasant2: { x: 11.5, y: 13.4 },      // у дома Степана
-            peasant2_wife: { x: 13.5, y: 13.4 }, // по воду (задняя улица)
-            fisher_wife: { x: 18.5, y: 9.4 },    // у дома рыбака
+            peasant1: { x: 12.5, y: 4.4 },       // Авдей — у своего дома (дверь 12,3)
+            widow: { x: 7.5, y: 9.4 },           // Марфа — у дома (дверь 7,8)
+            beekeeper1: { x: 20.5, y: 9.4 },     // Тарас — у дома (дверь 20,8)
+            beekeeper_wife: { x: 18.5, y: 9.4 }, // у колодца (18,7)
+            elder_wife: { x: 17.5, y: 9.4 },     // у колодца, со стороны старосты
+            blacksmith: { x: 23.5, y: 4.4 },     // у кузницы (дверь 24,3)
+            healer: { x: 23.5, y: 9.4 },         // у дома знахарки (дверь 24,8)
+            hunter: { x: 10.5, y: 9.4 },         // на средней улице, у церкви
+            fisherman: { x: 19.5, y: 13.4 },     // у дома рыбака (дверь 19,12)
+            carpenter1: { x: 3.5, y: 9.4 },      // у дома плотника (дверь 3,8)
+            carpenter_wife: { x: 2.5, y: 9.4 },  // по воду, у западного проезда
+            potter1: { x: 2.5, y: 4.4 },         // у дома гончара (сушит горшки)
+            potter_wife: { x: 3.5, y: 4.4 },     // у двора гончара
+            weaver1: { x: 3.5, y: 13.4 },        // у дома ткачихи (дверь 3,12)
+            shepherd_boy: { x: 5.5, y: 13.4 },   // при матери-ткачихе
+            peasant2: { x: 7.5, y: 13.4 },       // у дома Степана (дверь 7,12)
+            peasant2_wife: { x: 9.5, y: 13.4 },  // по воду (задняя улица)
+            fisher_wife: { x: 18.5, y: 13.4 },   // у дома рыбака
             guard: { x: 23.5, y: 5.4 },          // у ворот (25,5), чуть западнее проезда
-            tavernkeeper: { x: 4.5, y: 4.4 },    // у постоялого двора
+            tavernkeeper: { x: 7.5, y: 4.4 },    // у постоялого двора (дверь 7,3)
             priest: null,                        // батюшка не гуляет — он в церкви
             // Детские площадки — у колодца, улиц и дворов
-            kid1: { x: 5.5, y: 10.4 }, kid2: { x: 9.5, y: 10.4 },
-            kid3: { x: 17.5, y: 10.4 }, kid4: { x: 5.5, y: 13.4 },
+            kid1: { x: 5.5, y: 12.4 }, kid2: { x: 9.5, y: 10.4 },
+            kid3: { x: 17.5, y: 10.4 }, kid4: { x: 4.5, y: 13.4 },
             kid5: { x: 21.5, y: 13.4 }, kid6: { x: 12.5, y: 13.4 },
             kid7: { x: 1.5, y: 4.4 },
             kid8: { x: 9.5, y: 4.4 },            // дочка гончара — у дома

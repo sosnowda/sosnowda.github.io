@@ -112,7 +112,11 @@ export class BootScene extends Phaser.Scene {
         // graphics-ом в пустоту (0 непрозрачных пикселей) — деревья не были видны
         // ни в лесу, ни на опушке/поляне, ни в деревне. Ключи прежние —
         // все сцены (Village/Location/Forest) подхватывают фикс автоматически.
-        for (let v = 0; v < 3; v++) this.load.image(`deco_tree_${v}`, `assets/sprites/tree_${v}.png`);
+        // РАУНД 66 (пп.9,10): ИСХОДНИКИ ПЕРЕЗАПИСАНЫ деревьями из пака
+        // владельца «Medieval_Expansion_Trees» (tools/make_assets_r66.py):
+        // tree_0..2 — дуб/берёза/липа, tree_3 (НОВЫЙ) — осенний клён,
+        // tree_4 (НОВЫЙ) — тёмный вяз, pine_0/1 — ель и пихта.
+        for (let v = 0; v < 5; v++) this.load.image(`deco_tree_${v}`, `assets/sprites/tree_${v}.png`);
         for (let v = 0; v < 2; v++) this.load.image(`deco_pine_${v}`, `assets/sprites/pine_${v}.png`);
         // Камень
         for (let v = 0; v < 2; v++) this.load.image(`tile_rock_${v}`, `assets/tiles/rock_${v}.png`);
@@ -172,9 +176,10 @@ export class BootScene extends Phaser.Scene {
         const fbHouseKeys = ['fb_church', 'fb_inn', 'fb_smithy', 'fb_elder', 'fb_manor',
             'fb_thatch_big', 'fb_thatch_small', 'fb_log_flowers', 'fb_log_thatch',
             'fb_log_big', 'fb_tudor_fl', 'fb_tudor_sm',
-            'village_gate_r65'];
+            'village_gate_r65', 'village_gate_r66'];
         fbHouseKeys.forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
-        // Раунд 65 (п.8): тайл ЧАСТОКОЛА — кольцо брёвен вокруг деревни
+        // Раунд 65 (п.8) → 66 (п.8): тайл ЧАСТОКОЛА — ПЕРЕДЕЛАН: один ряд
+        // круглых брёвен с ЯВНЫМ остриём (tools/make_assets_r66.py)
         this.load.image('tile_palisade', 'assets/tiles/palisade_0.png');
 
         // ----- РАУНД 51/53: ТАЙЛОВЫЕ ФОНЫ ИНТЕРЬЕРОВ СЛОБОДЫ =====

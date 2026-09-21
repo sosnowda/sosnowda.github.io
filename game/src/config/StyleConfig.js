@@ -128,25 +128,29 @@ export const BUTTON_STYLES = {
 // ============================================
 export const DIALOG_STYLES = {
     // Базовые размеры
-    width: 400,
+    // РАУНД 66 (п.5): ширина 440 — под крупный шрифт реплик
+    width: 440,
     cornerRadius: 20,
     strokeWidth: 3,
-    
+
     // Стиль заголовка
     title: {
         fontSize: '24px',
         fontWeight: 'bold'
     },
-    
+
     // Стиль содержимого
+    // РАУНД 66 (п.5 приказа): реплики КРУПНЕЕ (21px вместо 18px); перенос
+    // строк в createDialog считается от фактической ширины панели — текст
+    // НЕ вылезает за рамки окна и кнопок ни на десктопе, ни на мобайле.
     content: {
-        fontSize: '18px',
-        wrapWidth: 340
+        fontSize: '21px',
+        wrapWidth: 400
     },
-    
+
     // Стиль кнопок
     button: {
-        fontSize: 18,
+        fontSize: 20,
         cornerRadius: 10
     },
     

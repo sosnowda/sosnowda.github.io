@@ -52,12 +52,22 @@ export class ForkScene extends Phaser.Scene {
         });
 
         // ----- Фон: дорога с указателем -----
+        // Раунд 66 (п.10): деревья по краям развилки — НОВЫЕ спрайты из пака
+        // владельца Medieval_Expansion_Trees (deco_tree_*/deco_pine_*),
+        // вместо старых квадратных тайлов tile_forest_*.
         this.add.rectangle(0, 0, width, height, 0x3a2a1a).setOrigin(0);
         this.add.rectangle(width / 2, 0, 200, height, 0x6a4020).setOrigin(0.5, 0);
         for (let i = 0; i < 6; i++) {
             const x = (i % 2 === 0) ? 40 + Math.random() * 200 : width - 40 - Math.random() * 200;
             const y = 50 + i * 100;
-            this.add.image(x, y, `tile_forest_${i % 2}`).setScale(3).setOrigin(0.5, 0.7);
+            const forkTex = (i % 3 === 0)
+                ? `deco_pine_${i % 2}`
+                : `deco_tree_${i % 5}`;
+            if (this.textures.exists(forkTex)) {
+                this.add.image(x, y, forkTex).setScale(1.4).setOrigin(0.5, 0.9);
+            } else {
+                this.add.image(x, y, `tile_forest_${i % 2}`).setScale(3).setOrigin(0.5, 0.7);
+            }
         }
 
         // ----- Заголовок -----
