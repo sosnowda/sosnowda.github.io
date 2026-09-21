@@ -19,7 +19,7 @@ import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/TimeSystem.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
-import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear, MONTH_NAMES, MONTH_NAMES_GEN } from '../systems/RusTime.js';
+import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear, monthNameNom, monthNameGen } from '../systems/RusTime.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
@@ -34,6 +34,8 @@ import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
 import { attachNpcWander } from '../systems/NpcWander.js';
 import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
+// Патч 66.3: честные окна и трубы фасадов fb_* (свечение ночью + дымок из труб)
+import { HOUSES_FX } from '../data/housesFX.js';
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -223,6 +225,9 @@ export class VillageScene extends Phaser.Scene {
             'butcher_house', 'shoemaker_house', 'villager_house_3']);
         // Раунд 64 (п.6): ДЫМ ИЗ ТРУБ УДАЛЁН (отображался неправильно) —
         // ни CHIMNEY_SPRITES, ни smokeBuildings больше нет.
+        // ПАТЧ 66.3: дымок ВЕРНУЛСЯ — но теперь он привязан к честным жерлам
+        // труб (метаданные housesFX.js, снятые с текстур) и сделан
+        // полупрозрачным, очень слабым и еле видимым (просьба владельца).
         this.doors = [];
         BUILDINGS.forEach(b => {
             const doorX = b.col + Math.floor(b.w / 2);
@@ -324,16 +329,85 @@ export class VillageScene extends Phaser.Scene {
         });
 
         // ----- Ночное свечение окон (тёплый свет в темноте) -----
+        // ПАТЧ 66.3: у фасадов fb_* светятся ИМЕННО ОКНА — позиции и размеры
+        // стеклянной части сняты с текстур (data/housesFX.js), у каждого окна
+        // стеклянный блик + мягкий тёплый ореол с лёгким мерцанием («блики»).
+        // Здания без метаданных (фолбэк-тайлы) светятся как раньше — двумя
+        // прямоугольниками у стены.
         this.windowGlows = [];
+        this._ensureSoftTextures();
         BUILDINGS.forEach(b => {
             const bottomRow = b.row + b.h;
             const cx = b.col * ts + b.w * ts / 2;
-            const wallY = (bottomRow - 1.5) * ts;      // зона стены спрайта
-            [-0.75, 0.75].forEach(dx => {
-                const glow = this.add.rectangle(cx + dx * ts, wallY, 12, 15, 0xffc866, 0)
+            const cy = b.row * ts + b.h * ts / 2;
+            const depth = bottomRow - 0.4;      // над спрайтом дома, под прохожими
+            const sprKey = HOUSE_SPRITE_BY_ID[b.interiorId];
+            const fx = (sprKey && this.textures.exists(sprKey)) ? HOUSES_FX[sprKey] : null;
+            if (!fx) {
+                // Фолбэк: два абстрактных окна у стены (как до 66.3)
+                const wallY = (bottomRow - 1.5) * ts;
+                [-0.75, 0.75].forEach(dx => {
+                    // ФИКС 66.3: раньше add.rectangle(..., alpha 0) задавал fillAlpha=0 —
+                    // свечение оставалось невидимым при любой object-alpha
+                    const glow = this.add.rectangle(cx + dx * ts, wallY, 12, 15, 0xffc866)
+                        .setBlendMode(Phaser.BlendModes.ADD)
+                        .setAlpha(0)
+                        .setDepth(depth);
+                    glow.__k = 0.38;
+                    this.windowGlows.push(glow);
+                });
+                return;
+            }
+            const src = this.textures.get(sprKey).getSourceImage();
+            const tw = src.width, thh = src.height;
+            // Тот же масштаб, что у houseImg: fit по меньшей стороне (раунд 39)
+            const fitS = Math.min((b.w * ts + 8) / tw, (b.h * ts + 6) / thh);
+            const flip = FLIP_HOUSES.has(b.interiorId) ? -1 : 1;
+            (fx.windows || []).forEach((w, wi) => {
+                const [wx, wy, ww, wh] = w;
+                const k = (w[4] != null) ? w[4] : 1;
+                const gx = cx + flip * (wx - tw / 2) * fitS;
+                const gy = cy + (wy - thh / 2) * fitS;
+                const gw = Math.max(6, ww * fitS);
+                const gh = Math.max(6, wh * fitS);
+                // Стеклянный блик: тёплый прямоугольник точно по стеклу.
+                // ФИКС 66.3: fillAlpha должен быть 1, яркость управляет setAlpha()
+                const pane = this.add.rectangle(gx, gy, gw, gh, 0xffc873)
                     .setBlendMode(Phaser.BlendModes.ADD)
-                    .setDepth(bottomRow - 0.4);
-                this.windowGlows.push(glow);
+                    .setAlpha(0)
+                    .setDepth(depth);
+                pane.__k = 0.5 * k;
+                this.windowGlows.push(pane);
+                // Мягкий ореол вокруг окна (слабое «свечение» на стену) + мерцание
+                const halo = this.add.image(gx, gy, 'glow_soft')
+                    .setDisplaySize(gw * 3.2, gh * 3.2)
+                    .setTint(0xffb54a)
+                    .setBlendMode(Phaser.BlendModes.ADD)
+                    .setAlpha(0)
+                    .setDepth(depth - 0.01);
+                halo.__k = 0.3 * k;
+                halo.__flicker = true;
+                halo.__fs = 0.5 + Math.random() * 0.8;   // скорость мерцания
+                halo.__ph = Math.random() * Math.PI * 2;  // фаза
+                this.windowGlows.push(halo);
+            });
+            // Дымок из труб (патч 66.3): полупрозрачный, очень слабый,
+            // еле видимый — мягкие клубы поднимаются от ЖЕРЛА трубы
+            (fx.chimneys || []).forEach((ch) => {
+                const [chx, chy] = ch;
+                const sx = cx + flip * (chx - tw / 2) * fitS;
+                const sy = cy + (chy - thh / 2) * fitS;
+                const em = this.add.particles(sx, sy, 'smoke_puff', {
+                    speedY: { min: -13, max: -8 },     // медленный подъём
+                    speedX: { min: 2, max: 7 },        // лёгкий ветерок вправо
+                    lifespan: 7000,
+                    frequency: 1700,                    // редкие клубы
+                    quantity: 1,
+                    scale: { start: 0.13, end: 0.58 },  // растёт и тает
+                    alpha: { start: 0.13, end: 0 },     // ОЧЕНЬ слабый (полупрозрачный)
+                    tint: 0xcfc8bd,                     // тёпло-серый дым
+                });
+                em.setDepth(depth + 0.05);
             });
         });
 
@@ -529,8 +603,9 @@ export class VillageScene extends Phaser.Scene {
 
         // Название деревни — справа, НИЖЕ строки кнопок меню (баг раунда 11:
         // при y=6 длинные названия вроде «Двинская слобода» наезжали на «Инвентарь»)
+        // Патч 66.3: имя собственное — в EN транслитерацией (t())
         const villageName = getVillageName();
-        this.add.text(this.scale.width - 8, 34, villageName, {
+        this.add.text(this.scale.width - 8, 34, t(villageName), {
             fontSize: '16px', color: RUS.textDim, backgroundColor: '#000000cc', padding: { x: 8, y: 4 },
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
@@ -584,6 +659,35 @@ export class VillageScene extends Phaser.Scene {
         // плавающие значки больше не нужны.
         // (usedSprite/sprKey оставлены в сигнатуре — вызов из цикла не менялся.)
         return;
+    }
+
+    /**
+     * ПАТЧ 66.3: мягкие процедурные текстуры для свечения и дыма
+     * (создаются один раз; дальше переиспользуются всеми сценами-инстансами).
+     */
+    _ensureSoftTextures() {
+        if (!this.textures.exists('glow_soft')) {
+            const tex = this.textures.createCanvas('glow_soft', 64, 64);
+            const ctx = tex.getContext();
+            const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            g.addColorStop(0, 'rgba(255,255,255,1)');
+            g.addColorStop(0.35, 'rgba(255,255,255,0.5)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, 64, 64);
+            tex.refresh();
+        }
+        if (!this.textures.exists('smoke_puff')) {
+            const tex = this.textures.createCanvas('smoke_puff', 48, 48);
+            const ctx = tex.getContext();
+            const g = ctx.createRadialGradient(24, 24, 0, 24, 24, 24);
+            g.addColorStop(0, 'rgba(255,255,255,0.9)');
+            g.addColorStop(0.5, 'rgba(255,255,255,0.35)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, 48, 48);
+            tex.refresh();
+        }
     }
 
     /**
@@ -1174,10 +1278,11 @@ export class VillageScene extends Phaser.Scene {
                 // 1) без народного ориентира (« · заутреня отошла»)
                 `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${formatDateRus(timeState)}${icon}` +
                 `  🕐${slavonicHourLine(timeState)}${act}${rep}`,
-                // 2) без дня недели и года от Р.Х.
-                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${timeState.day}-й ${MONTH_NAMES_GEN[timeState.month] || ''}, лето ${eraYear(timeState)}-е${icon}${act}${rep}`,
+                // 2) без дня недели и года от Р.Х. (66.3: месяц через t() —
+                //    в EN транслитерация народного месяца)
+                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${timeState.day}-й ${monthNameGen(timeState.month)}, лето ${eraYear(timeState)}-е${icon}${act}${rep}`,
                 // 3) дата в одну строку без часов
-                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${timeState.day} ${MONTH_NAMES[timeState.month] || ''}, лето ${eraYear(timeState)}-е${icon}${act}${rep}`,
+                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${timeState.day} ${monthNameNom(timeState.month)}, лето ${eraYear(timeState)}-е${icon}${act}${rep}`,
             ];
             let chosen = null;
             for (const cand of candidates) {
@@ -1205,14 +1310,23 @@ export class VillageScene extends Phaser.Scene {
             }
         }
 
-        // Ночное свечение окон: чем темнее, тем ярче тёплый свет в окнах
+        // Ночное свечение окон: чем темнее, тем ярче тёплый свет в окнах.
+        // ПАТЧ 66.3: у каждого свечения своя яркость (__k: стекло/ореол/фолбэк),
+        // ореолы едва заметно мерцают (свет свечи/лучины).
         if (this.windowGlows && timeState) {
             const h = timeState.hour;
             let dark = 0;
             if (h >= 21 || h < 5) dark = 1;
             else if (h >= 18) dark = (h - 18) / 3;   // 18→0 … 21→1
             else if (h < 8) dark = (8 - h) / 3;      // 5→1 … 8→0
-            this.windowGlows.forEach(g => g.setAlpha(dark * 0.38));
+            const nowSec = this.time.now / 1000;
+            this.windowGlows.forEach(g => {
+                let a = dark * (g.__k != null ? g.__k : 0.38);
+                if (g.__flicker && a > 0.01) {
+                    a *= 0.82 + 0.18 * Math.sin(nowSec * g.__fs * 2 + g.__ph);
+                }
+                g.setAlpha(a);
+            });
 
             // Раунд 64 (пп.2,5): живности в деревне больше нет — куры,
             // корова и воробьиные стайки удалены по приказу владельца.
