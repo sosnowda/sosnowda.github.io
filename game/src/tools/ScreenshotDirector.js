@@ -2,20 +2,22 @@
 // скриншотов сайта (?shot=<name> в адресной строке game/index.html).
 // В обычной игре параметр не указывается — модуль ничего не делает.
 //
-// Сценарии (9 скриншотов сайта, по 3 в ряд):
-//   menu     — главное меню (Title)
-//   select   — окно выбора персонажа (CharacterSelection)
-//   custom   — окно генерации случайного героя (CharacterSelection)
-//   village  — локация «Деревня»
-//   map      — карта местности (Fork + showMap)
-//   interior — интерьер дома старосты (Interior elder_house)
-//   priest   — начальный диалог со священником (Interior church)
-//   thief    — локация с вором и персонажем игрока (до боя)
-//   combat   — окно сцены боя с вором
+// Сценарии (10 скриншотов сайта, по 3 в ряд + 1):
+//   menu       — главное меню (Title)
+//   select     — окно выбора персонажа (CharacterSelection)
+//   custom     — лист готового героя (превью Следопыта Гаврилы, как по клику
+//                на карточку; раунд 66.4 — раньше здесь был генератор)
+//   village    — локация «Деревня»
+//   map        — карта местности (Fork + showMap)
+//   interior   — интерьер дома старосты (Interior elder_house)
+//   priest     — начальный диалог со священником (Interior church)
+//   thief      — локация с вором и персонажем игрока (до боя)
+//   combat     — окно сцены боя с вором
+//   blacksmith — интерьер кузницы: горн, наковальня, торговля (раунд 66.4)
 //
 // Модуль подключается из game/index.html после создания Phaser.Game.
 
-import { createPresetHero } from '../systems/Character.js';
+import { createPresetHero, PRESET_HEROES } from '../systems/Character.js';
 import { getWeather } from '../systems/Weather.js';
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -75,11 +77,13 @@ async function stageThiefAtRiver() {
 const SCENARIOS = {
     menu: async () => { await waitScene('Title', 15000); },
     select: async () => { await waitScene('Title', 15000); window.game.scene.start('CharacterSelection'); },
-    custom: async () => { // раунд 61: окна кастомизации больше нет — снимаем генератор случайного героя
+    custom: async () => { // раунд 66.4: лист готового героя — превью Следопыта Гаврилы
+        // (как при клике на карточку в выборе персонажа; соответствует alt на сайте)
         await waitScene('Title', 15000); window.game.scene.start('CharacterSelection');
         await sleep(400);
         const sel = window.game.scene.getScene('CharacterSelection');
-        if (sel) sel.showRandomGenerator();
+        if (sel) sel.selectHero(PRESET_HEROES[0], false);
+        await sleep(500);
     },
     village: async () => { await startRun(); window.game.scene.start('Village'); },
     map: async () => {
@@ -108,6 +112,12 @@ const SCENARIOS = {
         window.game.scene.start('Combat', { enemyKeys: ['thief'], npcId: 'thief', fromLocation: 'river' });
         await waitScene('Combat');
         await sleep(1200);
+    },
+    blacksmith: async () => { // раунд 66.4: кузница — горн с живым огнём, наковальня, торговля
+        await startRun();
+        window.game.scene.start('Interior', { interiorId: 'blacksmith', from: 'Village' });
+        await waitScene('Interior');
+        await sleep(600);
     },
 };
 
