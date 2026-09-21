@@ -120,10 +120,11 @@ export function getAgeGroupName(age, gender) {
 export function ageUnitWord(age) {
     const n = Math.abs(Math.floor(Number(age) || 0)) % 100;
     const n1 = n % 10;
-    if (n > 10 && n < 20) return 'лет';
-    if (n1 > 1 && n1 < 5) return 'года';
-    if (n1 === 1) return 'год';
-    return 'лет';
+    // Патч 66.2: в EN-режиме все три формы дают «y.o.» (ключи в i18n)
+    if (n > 10 && n < 20) return t('лет');
+    if (n1 > 1 && n1 < 5) return t('года');
+    if (n1 === 1) return t('год');
+    return t('лет');
 }
 
 /**

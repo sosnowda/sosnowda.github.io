@@ -282,7 +282,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
 
         // Архетип и пол (+ возраст — раунд 44)
         this.add.text(width / 2, top + 30,
-            `${hero.archetype} (${hero.gender === 'female' ? 'женщина' : 'мужчина'}${hero.age != null ? `, ${hero.age} ${ageUnitWord(hero.age)}` : ''})`, {
+            `${t(hero.archetype)} (${hero.gender === 'female' ? t('женщина') : t('мужчина')}${hero.age != null ? `, ${hero.age} ${ageUnitWord(hero.age)}` : ''})`, {
             fontSize: compact ? '18px' : '24px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
@@ -290,7 +290,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
 
         // Поле ввода имени (через DOM-элемент, т.к. Phaser не имеет встроенного input)
         const inputY = top + (compact ? 62 : 80);
-        this.add.text(width / 2 - (compact ? 130 : 200), inputY, 'Имя:', {
+        this.add.text(width / 2 - (compact ? 130 : 200), inputY, t('Имя:'), {
             fontSize: compact ? '14px' : '18px', color: RUS.text,
         }).setOrigin(1, 0.5).setDepth(202);
 
@@ -323,8 +323,9 @@ export class CharacterSelectionScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5).setDepth(202);
 
-        const statsLine1 = CHARACTER_KEYS.slice(0, 4).map(c => `${c.name}: ${hero[c.key]}`).join('  ');
-        const statsLine2 = CHARACTER_KEYS.slice(4).map(c => `${c.name}: ${hero[c.key]}`).join('  ');
+        // Патч 66.2: названия характеристик через t() (EN-экран выбора героя)
+        const statsLine1 = CHARACTER_KEYS.slice(0, 4).map(c => `${t(c.name)}: ${hero[c.key]}`).join('  ');
+        const statsLine2 = CHARACTER_KEYS.slice(4).map(c => `${t(c.name)}: ${hero[c.key]}`).join('  ');
         this.add.text(left, statsY + (compact ? 18 : 22), statsLine1, {
             fontSize: compact ? '12px' : '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
@@ -336,7 +337,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
 
         // Производные
         const derivY = statsY + (compact ? 58 : 80);
-        const derivText = `HP: ${hero.HPmax}   MP: ${hero.MPmax}   Бонус урона: ${hero.DB.text}   Броня: ${hero.armor ? hero.armor.def : 0}`;
+        const derivText = `HP: ${hero.HPmax}   MP: ${hero.MPmax}   ${t('Бонус урона:')} ${hero.DB.text}   ${t('Броня:')} ${hero.armor ? hero.armor.def : 0}`;
         this.add.text(width / 2, derivY, derivText, {
             fontSize: compact ? '13px' : '15px', color: '#c9a14a',
             stroke: '#000', strokeThickness: 1,
@@ -363,7 +364,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
             let col2Y = skillDisplayY;
             SKILLS.forEach((s, i) => {
                 const val = hero.skills[s.key] || 0;
-                const txt = `${s.name}: ${val}%`;
+                const txt = `${t(s.name)}: ${val}%`;
                 const colObj = SKILL_CATEGORIES[s.category];
                 const color = colObj ? colObj.color : RUS.text;
                 const x = (i % 2 === 0) ? colX1 : colX2;
@@ -380,11 +381,11 @@ export class CharacterSelectionScene extends Phaser.Scene {
             const gearY = col1Y + 20;
             const weapon = WEAPONS[hero.weaponId] || { name: 'Кулаки' };
             const armor = ARMORS[hero.armorId] || { name: 'Без доспеха' };
-            this.add.text(left, gearY, `⚔ Оружие: ${weapon.name}`, {
+            this.add.text(left, gearY, `${t('⚔ Оружие:')} ${t(weapon.name)}`, {
                 fontSize: '14px', color: RUS.text,
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0, 0.5).setDepth(202);
-            this.add.text(left, gearY + 22, `🛡 Доспех: ${armor.name}`, {
+            this.add.text(left, gearY + 22, `${t('🛡 Доспех:')} ${t(armor.name)}`, {
                 fontSize: '14px', color: RUS.text,
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0, 0.5).setDepth(202);
@@ -402,7 +403,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
             fontSize: compact ? 15 : 18, padding: { left: 20, right: 20, top: 10, bottom: 10 },
         }).setDepth(202);
 
-        createButton(this, width / 2 + btnGap, height / 2 + panelH / 2 - 40, 'Отмена', () => {
+        createButton(this, width / 2 + btnGap, height / 2 + panelH / 2 - 40, t('Отмена'), () => {
             this.cleanupPreview();
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,

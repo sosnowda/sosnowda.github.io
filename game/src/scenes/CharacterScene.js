@@ -32,13 +32,13 @@ export class CharacterScene extends Phaser.Scene {
         const q = this.registry.get('quest') || {};
 
         // Заголовок
-        this.add.text(width / 2, 30, '📜 Свиток персонажа', {
+        this.add.text(width / 2, 30, t('📜 Свиток персонажа'), {
             fontFamily: 'Georgia, serif', fontSize: '28px', color: RUS.text, fontStyle: 'bold',
             stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5);
 
         // Имя и архетип (+ возраст — раунд 44; + облик-прессет — раунд 62)
-        this.add.text(width / 2, 65, `${p.name} — ${p.archetype}` +
+        this.add.text(width / 2, 65, `${p.name} — ${t(p.archetype)}` +
             (p.presetName ? ` · ${t('Облик')} «${p.presetName}»` : '') +
             ` (${p.gender === 'female' ? '♀' : '♂'}${p.age != null ? `, ${p.age} ${ageUnitWord(p.age)}` : ''})`, {
             fontSize: '18px', color: RUS.textDim,
@@ -47,7 +47,7 @@ export class CharacterScene extends Phaser.Scene {
 
         // Кнопки вкладок: [Характеристики] [Инвентарь]
         const tabY = 100;
-        createButton(this, width / 2 - 100, tabY, 'Характеристики', () => {
+        createButton(this, width / 2 - 100, tabY, t('Характеристики'), () => {
             this.activeTab = 'stats';
             this.scene.restart({ from: this.from, tab: 'stats' });
         }, {
@@ -56,7 +56,7 @@ export class CharacterScene extends Phaser.Scene {
             textColor: RUS.text, fontSize: 16,
             padding: { left: 20, right: 20, top: 8, bottom: 8 },
         });
-        createButton(this, width / 2 + 100, tabY, 'Инвентарь', () => {
+        createButton(this, width / 2 + 100, tabY, t('Инвентарь'), () => {
             this.activeTab = 'inventory';
             this.scene.restart({ from: this.from, tab: 'inventory' });
         }, {
@@ -73,7 +73,7 @@ export class CharacterScene extends Phaser.Scene {
         }
 
         // Кнопка "Назад"
-        createButton(this, width / 2, height - 40, '◀ Назад', () => {
+        createButton(this, width / 2, height - 40, t('◀ Назад'), () => {
             if (this.scene.isPaused(this.from)) {
                 this.scene.stop();
                 this.scene.resume(this.from);
@@ -93,26 +93,27 @@ export class CharacterScene extends Phaser.Scene {
         const { width } = this.scale;
         // П.13: показываем только текущего персонажа
         if (!p) {
-            this.add.text(width / 2, 200, 'Персонаж не выбран.\nНачните новую игру.', {
+            this.add.text(width / 2, 200, t('Персонаж не выбран.\nНачните новую игру.'), {
                 fontSize: '20px', color: RUS.text, align: 'center',
             }).setOrigin(0.5);
             return;
         }
 
         // Характеристики (2 колонки)
-        const charLines = CHARACTER_KEYS.slice(0, 4).map(c => `${c.name}: ${p[c.key]}`);
-        const charLines2 = CHARACTER_KEYS.slice(4).map(c => `${c.name}: ${p[c.key]}`);
+        // Патч 66.2: названия характеристик через t() (EN-лист героя)
+        const charLines = CHARACTER_KEYS.slice(0, 4).map(c => `${t(c.name)}: ${p[c.key]}`);
+        const charLines2 = CHARACTER_KEYS.slice(4).map(c => `${t(c.name)}: ${p[c.key]}`);
         charLines.push('—');
         charLines.push(`HP: ${p.HP}/${p.HPmax}`);
         charLines.push(`MP: ${p.MP}/${p.MPmax}`);
-        charLines.push(`Бонус урона: ${p.DB.text}`);
+        charLines.push(`${t('Бонус урона:')} ${p.DB.text}`);
 
         const colX = width / 2 - 360;
         const colX2 = width / 2 + 40;
         const top = 160;
 
         // П.12: жёлтые заголовки вместо чёрных
-        this.add.text(colX, top, 'Характеристики (BRP)', {
+        this.add.text(colX, top, t('Характеристики (BRP)'), {
             fontSize: '18px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
@@ -122,7 +123,7 @@ export class CharacterScene extends Phaser.Scene {
         }).setOrigin(0, 0);
 
         // Навыки по категориям
-        this.add.text(colX2, top, 'Навыки', {
+        this.add.text(colX2, top, t('Навыки'), {
             fontSize: '18px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
@@ -131,14 +132,14 @@ export class CharacterScene extends Phaser.Scene {
         Object.entries(SKILL_CATEGORIES).forEach(([catKey, cat]) => {
             const catSkills = SKILLS.filter(s => s.category === catKey);
             if (catSkills.length === 0) return;
-            this.add.text(colX2, skillY, cat.name + ':', {
+            this.add.text(colX2, skillY, t(cat.name) + ':', {
                 fontSize: '13px', color: cat.color, fontStyle: 'bold',
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0, 0);
             skillY += 18;
             catSkills.forEach(s => {
                 const val = p.skills[s.key] || 0;
-                this.add.text(colX2 + 10, skillY, `${s.name}: ${val}%`, {
+                this.add.text(colX2 + 10, skillY, `${t(s.name)}: ${val}%`, {
                     fontSize: '13px', color: RUS.text,
                     stroke: '#000', strokeThickness: 1,
                 }).setOrigin(0, 0);
@@ -150,23 +151,23 @@ export class CharacterScene extends Phaser.Scene {
         // П.11: снаряжение — исправлен текст, не налезает
         // (раунд 16: блок характеристик занимает 7 строк × ~22px ≈ 154px от top+30
         // и заканчивается на ~top+184 — снаряжение опущено ниже, было top+140 → наложение)
-        this.add.text(colX, top + 200, 'Снаряжение:', {
+        this.add.text(colX, top + 200, t('Снаряжение:'), {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
         const weapon = WEAPONS[p.weaponId] || { name: 'Кулаки' };
         const armor = ARMORS[p.armorId] || { name: 'Без доспеха' };
-        this.add.text(colX, top + 224, `⚔ Оружие: ${weapon.name} (урон ${weapon.dice.min}-${weapon.dice.max}+${weapon.bonus || 0})`, {
+        this.add.text(colX, top + 224, `${t('⚔ Оружие:')} ${t(weapon.name)} (${t('урон')} ${weapon.dice.min}-${weapon.dice.max}+${weapon.bonus || 0})`, {
             fontSize: '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
-        this.add.text(colX, top + 246, `🛡 Доспех: ${armor.name} (защита ${armor.def})`, {
+        this.add.text(colX, top + 246, `${t('🛡 Доспех:')} ${t(armor.name)} (${t('защита')} ${armor.def})`, {
             fontSize: '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
 
         // Деньги
-        this.add.text(colX, top + 276, `💰 Денег: ${formatMoney(p.dengas || 0)}`, {
+        this.add.text(colX, top + 276, `${t('💰 Денег:')} ${formatMoney(p.dengas || 0)}`, {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
@@ -180,20 +181,20 @@ export class CharacterScene extends Phaser.Scene {
         const top = 150;
 
         // Текущее снаряжение
-        this.add.text(width / 2, top, 'Снаряжение', {
+        this.add.text(width / 2, top, t('Снаряжение'), {
             fontSize: '20px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
 
         const currentWeapon = WEAPONS[p.weaponId] || { name: 'Кулаки' };
         const currentArmor = ARMORS[p.armorId] || { name: 'Без доспеха' };
-        this.add.text(width / 2, top + 30, `⚔ Оружие: ${currentWeapon.name}   🛡 Доспех: ${currentArmor.name}`, {
+        this.add.text(width / 2, top + 30, `${t('⚔ Оружие:')} ${t(currentWeapon.name)}   ${t('🛡 Доспех:')} ${t(currentArmor.name)}`, {
             fontSize: '15px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
 
         // Оружие для экипировки (список)
-        this.add.text(width / 4, top + 70, 'Оружие (экипировать):', {
+        this.add.text(width / 4, top + 70, t('Оружие (экипировать):'), {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
@@ -205,7 +206,7 @@ export class CharacterScene extends Phaser.Scene {
             if (!hasInInv) return;
             const btnColor = isEquipped ? 0x3a5a3a : 0x4a3520;
             const hoverColor = isEquipped ? 0x4a6a4a : 0x5a4530;
-            createButton(this, width / 4, wY, `${isEquipped ? '✓ ' : ''}${w.name} (${w.dice.min}-${w.dice.max}+${w.bonus || 0})`, () => {
+            createButton(this, width / 4, wY, `${isEquipped ? '✓ ' : ''}${t(w.name)} (${w.dice.min}-${w.dice.max}+${w.bonus || 0})`, () => {
                 if (!isEquipped) {
                     equipWeapon(p, w.id);
                     this.scene.restart({ from: this.from, tab: 'inventory' });
@@ -218,7 +219,7 @@ export class CharacterScene extends Phaser.Scene {
         });
 
         // Доспехи для экипировки
-        this.add.text(width * 3 / 4, top + 70, 'Доспехи (экипировать):', {
+        this.add.text(width * 3 / 4, top + 70, t('Доспехи (экипировать):'), {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
@@ -230,7 +231,7 @@ export class CharacterScene extends Phaser.Scene {
             if (!hasInInv) return;
             const btnColor = isEquipped ? 0x3a5a3a : 0x4a3520;
             const hoverColor = isEquipped ? 0x4a6a4a : 0x5a4530;
-            createButton(this, width * 3 / 4, aY, `${isEquipped ? '✓ ' : ''}${a.name} (защита ${a.def})`, () => {
+            createButton(this, width * 3 / 4, aY, `${isEquipped ? '✓ ' : ''}${t(a.name)} (${t('защита')} ${a.def})`, () => {
                 if (!isEquipped) {
                     equipArmor(p, a.id);
                     this.scene.restart({ from: this.from, tab: 'inventory' });
@@ -244,7 +245,7 @@ export class CharacterScene extends Phaser.Scene {
 
         // Предметы (травы, зелья и т.п.) — раунд 39: блок поднят выше,
         // чтобы сетка и плашки «НАДЕТО» не задевали кнопку «Назад» внизу
-        this.add.text(width / 2, top + 285, 'Предметы:', {
+        this.add.text(width / 2, top + 285, t('Предметы:'), {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
@@ -259,7 +260,7 @@ export class CharacterScene extends Phaser.Scene {
             .find(k => this.textures.exists(k));
         equipped.push({
             id: 'equipped_weapon',
-            name: `${t('В руках')}: ${currentWeapon.name}`,
+            name: `${t('В руках')}: ${t(currentWeapon.name)}`,
             iconKey: wIcon || null,
             emoji: '⚔',
             count: 1,
@@ -267,7 +268,7 @@ export class CharacterScene extends Phaser.Scene {
         });
         equipped.push({
             id: 'equipped_armor',
-            name: `${t('Надето')}: ${currentArmor.name}`,
+            name: `${t('Надето')}: ${t(currentArmor.name)}`,
             iconKey: aIcon || null,
             emoji: '🛡',
             count: 1,
@@ -276,7 +277,7 @@ export class CharacterScene extends Phaser.Scene {
 
         const items = equipped.concat(p.inventory || []);
         if (items.length === 0) {
-            this.add.text(width / 2, top + 320, 'Сумка пуста', {
+            this.add.text(width / 2, top + 320, t('Сумка пуста'), {
                 fontSize: '14px', color: RUS.textDim,
             }).setOrigin(0.5);
         } else {
@@ -315,7 +316,7 @@ export class CharacterScene extends Phaser.Scene {
                 }
                 // Подсказка
                 const hitArea = this.add.zone(ix, iy, 64, 64).setInteractive({ useHandCursor: true });
-                const tooltip = this.add.text(ix, iy - 40, item.name, {
+                const tooltip = this.add.text(ix, iy - 40, t(item.name), {
                     fontSize: '12px', color: RUS.text, backgroundColor: '#000000dd',
                     padding: { x: 6, y: 4 },
                     stroke: '#000', strokeThickness: 1,
@@ -326,7 +327,7 @@ export class CharacterScene extends Phaser.Scene {
         }
 
         // Деньги — под строкой снаряжения (раунд 39: не пересекается с сеткой предметов)
-        this.add.text(width / 2, top + 58, `💰 Денег: ${formatMoney(p.dengas || 0)}`, {
+        this.add.text(width / 2, top + 58, `${t('💰 Денег:')} ${formatMoney(p.dengas || 0)}`, {
             fontSize: '15px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
