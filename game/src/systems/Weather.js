@@ -15,6 +15,8 @@
 
 import { getTime, getSeason } from './TimeSystem.js';
 import { t as tI18n } from './i18n.js';
+// Раунд 66.7: погодные звуки — дождь/гром синтезируются к новой погоде
+import { startRainSound, stopRainSound, playThunder } from './WeatherAudio.js';
 
 export const WEATHER_TYPES = {
     clear:  { id: 'clear',  name: 'Ясно',     icon: '☀️' },
@@ -24,8 +26,8 @@ export const WEATHER_TYPES = {
     snow:   { id: 'snow',   name: 'Снег',     icon: '🌨' },
 };
 
-// FNV-1a — стабильный хеш строки даты
-function hashDateKey(s) {
+// FNV-1a — стабильный хеш строки даты (экспорт для WeatherOmens/тестов)
+export function hashDateKey(s) {
     let h = 2166136261;
     for (let i = 0; i < s.length; i++) {
         h ^= s.charCodeAt(i);
@@ -40,6 +42,17 @@ function hashDateKey(s) {
 export function getWeather(registry) {
     const t = getTime(registry);
     if (!t) return WEATHER_TYPES.clear;
+    // РАУНД 66.7 (п.6): приметы-слухи — если народ наговорил об одном типе
+    // погоды 3+ раза, эта погода приходит ВМЕСТО случайной на день форкаста.
+    try {
+        if (registry && typeof registry.get === 'function') {
+            const fc = registry.get('weatherForecast');
+            if (fc && fc.type && WEATHER_TYPES[fc.type] &&
+                fc.dayKey === `${t.yearFromChrist}-${t.month}-${t.day}`) {
+                return localize(WEATHER_TYPES[fc.type]);
+            }
+        }
+    } catch (e) { /* реестр недоступен — обычный хеш */ }
     const roll = hashDateKey(`${t.yearFromChrist}-${t.month}-${t.day}`) % 100;
     if (getSeason(t.month) === 'winter') {
         if (roll < 42) return localize(WEATHER_TYPES.snow);
@@ -113,6 +126,9 @@ function makePrecip(scene, weather, precipDepth, fadeIn) {
 
     if (isRainy(weather)) {
         const heavy = weather.id === 'storm';
+        // РАУНД 66.7 (п.1): звук дождя — процедурная петля, к новой погоде
+        // стартует вместе с осадками (громче в грозу), без ассетов
+        try { startRainSound(scene, heavy); } catch (e) { /* без аудио */ }
         out.emitter = scene.add.particles(0, 0, 'weather_rain', {
             x: { min: -60, max: width + 60 },
             y: -18,
@@ -137,20 +153,13 @@ function makePrecip(scene, weather, precipDepth, fadeIn) {
             // рекурсивный delayedCall жил вечно и бил по уничтоженной сцене).
             const flash = scene.add.rectangle(0, 0, width, height, 0xf4f0ff, 1)
                 .setOrigin(0).setScrollFactor(0).setDepth(precipDepth - 1).setAlpha(0);
-            const strike = () => {
-                scene.tweens.add({
-                    targets: flash,
-                    alpha: { from: 0, to: 0.32 },
-                    duration: 70,
-                    yoyo: true,
-                    hold: 50,
-                    ease: 'Quad.easeOut',
-                });
-            };
+            const strike = () => strikeWithThunder(scene, flash);
             out.flash = flash;
             scheduleStrikes(scene, strike, out.flashEvents);
         }
     } else if (weather.id === 'snow') {
+        // снег беззвучен (дождевой loop при кроссфейде на снег гасится ниже)
+        try { stopRainSound(scene); } catch (e) { /* без аудио */ }
         out.emitter = scene.add.particles(0, 0, 'weather_snow', {
             x: { min: 0, max: width },
             y: -10,
@@ -190,6 +199,21 @@ function scheduleStrikes(scene, strike, flashEvents) {
     flashEvents.push(ev);
 }
 
+/** Удар молнии: вспышка экрана + ГРОМ (раунд 66.7, п.1). */
+function strikeWithThunder(scene, flash) {
+    try {
+        scene.tweens.add({
+            targets: flash,
+            alpha: { from: 0, to: 0.32 },
+            duration: 70,
+            yoyo: true,
+            hold: 50,
+            ease: 'Quad.easeOut',
+        });
+    } catch (e) { /* ок */ }
+    try { playThunder(scene); } catch (e) { /* без аудио */ }
+}
+
 /** Снять цепочку молний и вспышку (crossfade/выключение сцены). */
 function disposeFlash(scene, wv) {
     if (!wv) return;
@@ -207,6 +231,8 @@ function disposeFlash(scene, wv) {
 function fadeOutWeatherView(scene, wv) {
     if (!wv) return;
     disposeFlash(scene, wv);
+    // РАУНД 66.7: старый дождь уходит вместе с графикой
+    try { stopRainSound(scene); } catch (e) { /* ок */ }
     if (wv.tint) {
         const tint = wv.tint;
         scene.tweens.add({
@@ -318,9 +344,12 @@ export function applyWeatherVisuals(scene, { tintDepth = 94, precipDepth = 98 } 
         }
     } catch (e) { /* headless-песочница: без монитора */ }
 
-    // при закрытии сцены — снять цепочку молний (безопасность)
+    // при закрытии сцены — снять цепочку молний и звук дождя (безопасность)
     if (scene.events && typeof scene.events.once === 'function') {
-        scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => disposeFlash(scene, wv));
+        scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            disposeFlash(scene, wv);
+            try { stopRainSound(scene, true); } catch (e) { /* ок */ }
+        });
     }
 
     return wv;

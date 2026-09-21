@@ -183,10 +183,12 @@ ok(HOUSES_FX.fb_elder.chimneys.length === 2 && HOUSES_FX.fb_inn.chimneys.length 
    HOUSES_FX.fb_thatch_big.chimneys.length === 2 && HOUSES_FX.fb_tudor_fl.chimneys.length === 1 &&
    HOUSES_FX.fb_tudor_sm.chimneys.length === 1,
    'трубы: староста×2, двор×1, пахарь×1, гончар×1, Прасковья×2, дровосек×1, знахарка×1 (дымник)');
-ok(HOUSES_FX.fb_church.chimneys.length === 0 && HOUSES_FX.fb_smithy.chimneys.length === 0 &&
-   HOUSES_FX.fb_manor.chimneys.length === 0 && HOUSES_FX.fb_log_thatch.chimneys.length === 0 &&
-   HOUSES_FX.fb_thatch_small.chimneys.length === 0,
-   'без труб не дымят: церковь/кузница/марфа/авдей/рыбак');
+// РАУНД 66.7 (п.11): трубы у ВСЕХ домов — кузница (труба была в текстуре),
+// марфа/авдей/рыбак (трубы дорисованы). Церковь — без трубы (храм, не изба).
+ok(HOUSES_FX.fb_smithy.chimneys.length === 1 &&
+   HOUSES_FX.fb_manor.chimneys.length === 1 && HOUSES_FX.fb_log_thatch.chimneys.length === 1 &&
+   HOUSES_FX.fb_thatch_small.chimneys.length === 1,
+   'РАУНД 66.7: трубы у кузницы/марфы/авдея/рыбака (все дома дымят)');
 
 console.log('\n— Регрессия: аудит литеральных t()-ключей ↔ EN-словарь —');
 const srcFiles = walkSrc(join(root, 'src'));

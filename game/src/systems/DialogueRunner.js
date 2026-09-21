@@ -8,6 +8,8 @@ import { DIALOGUES } from '../data/dialogue.js';
 import { findNpc, getNpcDisplayName, meetNpc } from '../data/npcNames.js';
 import { pauseWorldClock, resumeWorldClock, chargeTalkTime, TALK_MINUTES } from './WorldClock.js';
 import { isEn, t } from './i18n.js';
+// Раунд 66.7 (п.5): вопрос о погоде — ко всем взрослым НПЦ автоматически
+import { appendWeatherChoice } from '../data/dialogue.js';
 
 export class DialogueRunner {
     constructor(scene) {
@@ -54,7 +56,12 @@ export class DialogueRunner {
             console.error('Ошибка действия узла', nodeId, e);
         }
 
-        const choices = (node.choices || []).map(c => ({
+        // Раунд 66.7 (п.5): в стартовом узле КАЖДОГО взрослого НПЦ — выбор
+        // «☁ Что погода сулит?» (добавляется динамически, перед прощанием)
+        const rawChoices = (nodeId === d.start)
+            ? appendWeatherChoice(this._dialogId, node.choices)
+            : (node.choices || []);
+        const choices = rawChoices.map(c => ({
             text: c.text,
             callback: () => {
                 try {

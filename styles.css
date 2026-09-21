@@ -945,15 +945,25 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
 .slb-prev { left: 1.2rem; top: 50%; margin-top: -26px; }
 .slb-next { right: 1.2rem; top: 50%; margin-top: -26px; }
 
-/* Мобильная версия лайтбокса: кнопки меньше, отступы узкие */
+/* Мобильная версия лайтбокса: кнопки меньше, отступы узкие.
+   РАУНД 66.7 (п.3 приказа): стрелки ВСЕГДА ВИДИМЫ на мобильных —
+   кадр ужимается до calc(100% - 104px), чтобы кнопки ‹ › стояли в
+   свободных полях РЯДОМ с изображением (а не поверх него), фон кнопок
+   усилен до полной непрозрачности; на тач-экранах (hover: none) кнопки
+   никогда не зависят от ховера. */
 @media (max-width: 640px) {
     .screenshot-lightbox { padding: 1rem 0.9rem 3.9rem; }
-    .slb-btn { width: 44px; height: 44px; font-size: 1.7rem; }
+    .slb-btn { width: 44px; height: 44px; font-size: 1.7rem; opacity: 1; }
+    .slb-btn.slb-prev, .slb-btn.slb-next { background: rgba(26, 20, 16, 0.96); }
+    .slb-figure { max-width: calc(100% - 104px); }
     .slb-prev { left: 0.55rem; }
     .slb-next { right: 0.55rem; }
     .slb-close { top: 0.7rem; right: 0.7rem; }
     .slb-caption { font-size: 0.85rem; }
     .slb-counter { bottom: 0.6rem; font-size: 0.78rem; }
+}
+@media (hover: none) {
+    .slb-btn { opacity: 1; }
 }
 
 /* Гамбургер-меню */

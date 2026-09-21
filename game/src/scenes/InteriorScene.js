@@ -2420,11 +2420,10 @@ export class InteriorScene extends Phaser.Scene {
                 if (this.textures.exists('int_deco_table')) {
                     this.add.image(width * 0.5, height * 0.4, 'int_deco_table').setScale(1.5).setDepth(5);
                 }
-                if (this.textures.exists('int_deco_icon_wall')) {
-                    this.add.image(width * 0.25, height * 0.3, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
-                    this.add.image(width * 0.5, height * 0.25, 'int_deco_icon_wall').setScale(1.8).setDepth(5);
-                    this.add.image(width * 0.75, height * 0.3, 'int_deco_icon_wall').setScale(1.5).setDepth(5);
-                }
+                // РАУНД 66.7 (п.12): вместо трёх разрозненных плашек
+                // int_deco_icon_wall — ПОЛНОЦЕННЫЙ ИКОНОСТАС (рама, местный
+                // ряд с Царскими вратами, деисус, ярус праздников, Голгофа)
+                this.drawTileIconostasis(width, height);
                 if (this.textures.exists('int_deco_candle')) {
                     this.add.image(width * 0.42, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
                     this.add.image(width * 0.58, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
@@ -2535,6 +2534,110 @@ export class InteriorScene extends Phaser.Scene {
      * доска-киот, божница, вышитое полотенце (рукавичник) и мерцающая лампада.
      * withNiche — усиленный вариант (дополнительная божница).
      */
+    /**
+     * РАУНД 66.7 (п.12): тайловый вид церкви — ПОЛНОЦЕННЫЙ ИКОНОСТАС
+     * вместо трёх разрозненных плашек. Золотая рама на тёмной стене,
+     * местный ряд с Царскими вратами и 4 иконами, деисус (Спас крупнее),
+     * ярус праздников, Голгофский крест над короной. Правый край не доходит
+     * до сюжетного пустого киота (0.86W) — святыню не перекрываем.
+     */
+    drawTileIconostasis(width, height) {
+        const g = this.add.graphics().setDepth(4);
+        const GOLD = 0xc9a14a, GOLD_D = 0x8c6c2c, DARK = 0x1e150c;
+        const WOOD = 0x4a3420, WOOD_D = 0x33220f, SKIN = 0xd8b088;
+        const ROBES = [0x7a2838, 0x3f5a3a, 0x9a7a3a, 0x5e3460, 0x3c466e, 0x6e4a28];
+        const x0 = width * 0.07, x1 = width * 0.78;
+        const y0 = height * 0.07, y1 = height * 0.47;
+        const iw = x1 - x0, ih = y1 - y0;
+
+        // задняя стена иконостаса + резная рама
+        g.fillStyle(WOOD, 1);
+        g.fillRect(x0, y0, iw, ih);
+        g.lineStyle(4, GOLD, 1);
+        g.strokeRect(x0 + 2, y0 + 2, iw - 4, ih - 4);
+        g.lineStyle(1, GOLD_D, 0.8);
+        g.strokeRect(x0 + 8, y0 + 8, iw - 16, ih - 16);
+
+        // одна иконка: доска, оклад, нимб, фигура
+        const icon = (ix, iy, icoW, icoH, robe) => {
+            g.fillStyle(DARK, 1);
+            g.fillRect(ix, iy, icoW, icoH);
+            g.lineStyle(2, GOLD, 1);
+            g.strokeRect(ix + 1, iy + 1, icoW - 2, icoH - 2);
+            const cx = ix + icoW / 2;
+            const hr = Math.min(icoW, icoH) * 0.17;
+            g.lineStyle(2, GOLD, 0.95);
+            g.strokeCircle(cx, iy + icoH * 0.34, hr);
+            g.fillStyle(robe, 1);
+            g.fillTriangle(ix + icoW * 0.22, iy + icoH - 3, ix + icoW * 0.78, iy + icoH - 3,
+                cx, iy + icoH * 0.42);
+            g.fillStyle(SKIN, 1);
+            g.fillRect(cx - 2, iy + icoH * 0.31, 4, 4);
+        };
+
+        // --- ярус 1 (верх): пророческий — 9 малых икон ---
+        const t1y = y0 + 10, t1h = ih * 0.17;
+        const n1 = 9, step1 = (iw - 24) / n1;
+        for (let i = 0; i < n1; i++) {
+            icon(x0 + 12 + i * step1 + 2, t1y, step1 - 5, t1h, ROBES[i % ROBES.length]);
+        }
+
+        // --- ярус 2: праздничный — 7 икон ---
+        const t2y = t1y + t1h + 8, t2h = ih * 0.2;
+        const n2 = 7, step2 = (iw - 24) / n2;
+        for (let i = 0; i < n2; i++) {
+            icon(x0 + 12 + i * step2 + 3, t2y, step2 - 6, t2h, ROBES[(i + 3) % ROBES.length]);
+        }
+
+        // --- ярус 3: ДЕИСУС — Спас в центре крупнее, Богородица и Иоанн ---
+        const t3y = t2y + t2h + 9, t3h = ih * 0.28;
+        icon(x0 + 12, t3y + 4, iw * 0.16, t3h - 8, ROBES[0]);
+        icon(x0 + 12 + iw * 0.17, t3y, iw * 0.2, t3h, ROBES[1]);
+        icon(x0 + 12 + iw * 0.38, t3y - 5, iw * 0.24, t3h + 10, ROBES[3]);  // Спас
+        icon(x0 + 12 + iw * 0.63, t3y, iw * 0.2, t3h, ROBES[4]);
+        icon(x0 + 12 + iw * 0.84, t3y + 4, iw * 0.15, t3h - 8, ROBES[2]);
+
+        // --- ярус 4 (местный): Царские врата в центре + 4 иконы ---
+        const t4y = t3y + t3h + 9, t4h = y1 - 10 - t4y;
+        const dw = iw * 0.22, dx = x0 + iw / 2 - dw / 2;
+        icon(x0 + 12, t4y, iw * 0.17, t4h, ROBES[5]);
+        icon(x0 + 12 + iw * 0.18, t4y + 2, iw * 0.15, t4h - 4, ROBES[0]);
+        icon(x0 + 12 + iw * 0.66, t4y + 2, iw * 0.15, t4h - 4, ROBES[3]);
+        icon(x0 + 12 + iw * 0.82, t4y, iw * 0.16, t4h, ROBES[1]);
+        // Царские врата: двойные створки с золотой аркой
+        g.fillStyle(WOOD_D, 1);
+        g.fillRect(dx, t4y - 6, dw, t4h + 6);
+        g.lineStyle(3, GOLD, 1);
+        g.strokeRect(dx + 1, t4y - 5, dw - 2, t4h + 4);
+        g.lineStyle(2, GOLD, 1);
+        g.beginPath();
+        g.moveTo(dx + dw / 2, t4y - 5);
+        g.lineTo(dx + dw / 2, t4y + t4h + 1);
+        g.strokePath();
+        // Благовещение в верхних створках: две малые фигуры
+        g.fillStyle(SKIN, 1);
+        g.fillRect(dx + dw * 0.22, t4y + 2, 4, 4);
+        g.fillRect(dx + dw * 0.68, t4y + 2, 4, 4);
+        // евангелисты: 2×2 золотых круга в нижних створках
+        [[0.25, 0.52], [0.7, 0.52], [0.25, 0.78], [0.7, 0.78]].forEach(([ux, uy]) => {
+            g.lineStyle(2, GOLD, 0.95);
+            g.strokeCircle(dx + dw * ux, t4y + t4h * uy, 5);
+            g.fillStyle(SKIN, 1);
+            g.fillRect(dx + dw * ux - 2, t4y + t4h * uy - 2, 4, 4);
+        });
+
+        // --- Голгофа над короной ---
+        const gx = x0 + iw / 2;
+        g.fillStyle(GOLD, 1);
+        g.fillRect(gx - 2, y0 - height * 0.055, 4, height * 0.055);
+        g.fillRect(gx - height * 0.026, y0 - height * 0.04, height * 0.052, 4);
+        g.fillRect(gx - height * 0.015, y0 - height * 0.052, height * 0.03, 3);
+
+        // тень основания на полу
+        g.fillStyle(0x000000, 0.35);
+        g.fillRect(x0 - 4, y1, iw + 8, 6);
+    }
+
     addRedCorner(x, y, withNiche = false) {
         // Доска-киот под иконами
         this.add.rectangle(x, y - 10, 66, 50, 0x4a2f18, 1)

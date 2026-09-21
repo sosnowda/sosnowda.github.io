@@ -2788,3 +2788,110 @@ export const DIALOGUES = {
         },
     },
 };
+
+// ============================================================
+// РАУНД 66.7 (пп.5–7): ВОПРОС О ПОГОДЕ ВЗРОСЛЫМ НПЦ + НАРОДНЫЕ ПРИМЕТЫ.
+// У КАЖДОГО взрослого НПЦ (дети и пастушок — исключены) в стартовом узле
+// появляется выбор «☁ Что погода сулит?» — ответ о погоде В БЛИЖАЙШЕЕ
+// ВРЕМЯ. Реплика строится по ПРИМЕТЕ ДНЯ (WeatherOmens: едина для всей
+// деревни, соответствует сезону) и УЧИТЫВАЕТСЯ в подсчёте слухов:
+// 3+ слуха об одном типе погоды — эта погода придёт завтра вместо
+// случайной (см. Weather.js getWeather → registry 'weatherForecast').
+//
+// Выбор о погоде добавляется ДИНАМИЧЕСКИ при рендере стартового узла
+// (DialogueRunner → appendWeatherChoice) — так он не теряется у тех НПЦ,
+// чьи узлы перестраивают choices при каждом разговоре (староста и др.).
+// ============================================================
+
+import { omenTypeForDay, omenLine, recordWeatherRumor, OMEN_FULFILLED_NOTE, hashStr } from '../systems/WeatherOmens.js';
+
+// Диалоги ДЕТЕЙ (и пастушка) — о погоде не спрашивают по возрасту.
+export const KID_DIALOG_IDS = new Set([
+    'kid1', 'kid2', 'kid3', 'kid4', 'kid5', 'kid6', 'kid7', 'kid8', 'kid9',
+    'shepherd_boy',
+]);
+
+const WEATHER_ASK_TEXT = t('☁ Что погода сулит?');
+
+/**
+ * Узел «о погоде» конкретного диалога. Реплика — по примете дня, вариация
+ * стабильна для пары «НПЦ + день» (кузнец и попадья говорят по-разному, но
+ * об ОДНОЙ примете). Один ответ от одного НПЦ в день идёт в счёт слухов.
+ */
+function buildWeatherTalk(dialogId, startNode) {
+    return {
+        speaker: startNode ? startNode.speaker : '...',
+        text: '...',
+        choices: [],
+        action: (scene) => {
+            const node = DIALOGUES[dialogId] && DIALOGUES[dialogId].nodes.weather_talk;
+            if (!node) return;
+            const reg = scene.registry;
+            const ts = getTime(reg);
+            const dayKey = ts ? `${ts.yearFromChrist}-${ts.month}-${ts.day}` : 'unknown';
+
+            // один ответ о погоде от одного НПЦ в день (без накрутки счётчика)
+            const prev = reg.get('weatherAsked');
+            const asked = (prev && prev.day === dayKey && Array.isArray(prev.ids))
+                ? prev : { day: dayKey, ids: [] };
+            const already = asked.ids.includes(dialogId);
+            if (!already) {
+                asked.ids.push(dialogId);
+                reg.set('weatherAsked', asked);
+            }
+
+            const omen = omenTypeForDay(reg) || 'cloudy';
+            const line = omenLine(omen, hashStr(dialogId + '|' + dayKey));
+            let text;
+            let en;
+            if (already) {
+                text = t('О погоде нынче уже толковали: небо само покажет, чья примета верна.');
+                en = 'We have already talked about the weather today: the sky itself will show whose sign holds true.';
+            } else {
+                text = line.ru;
+                en = line.en;
+                const res = recordWeatherRumor(reg);
+                if (res && res.fulfilled) {
+                    text += `\n\n${t(OMEN_FULFILLED_NOTE.ru)}`;
+                    en += `\n\n${OMEN_FULFILLED_NOTE.en}`;
+                }
+            }
+            node.text = text;
+            node.en = en;
+            node.choices = [{ text: t('Благодарю. Всего доброго.'), end: true }];
+        },
+    };
+}
+
+// Установить узел «о погоде» всем взрослым диалогам (один раз при загрузке).
+(function installWeatherTalk() {
+    Object.keys(DIALOGUES).forEach((id) => {
+        const d = DIALOGUES[id];
+        if (!d || !d.nodes || KID_DIALOG_IDS.has(id)) return;
+        if (d.nodes.weather_talk) return;
+        const startNode = d.nodes[d.start];
+        if (!startNode) return;
+        d.nodes.weather_talk = buildWeatherTalk(id, startNode);
+    });
+})();
+
+/**
+ * Добавить выбор «☁ Что погода сулит?» в список choices стартового узла
+ * (перед прощанием). Вызывается из DialogueRunner при рендере стартового
+ * узла; помечен __weatherAsk, чтобы не дублироваться.
+ * @param {string} dialogId
+ * @param {Array<{text: string}>|undefined} choices
+ * @returns {Array} новый список choices
+ */
+export function appendWeatherChoice(dialogId, choices) {
+    if (KID_DIALOG_IDS.has(dialogId)) return choices || [];
+    const list = Array.isArray(choices) ? choices : [];
+    if (list.some(c => c && c.__weatherAsk)) return list;
+    const out = list.slice();
+    out.splice(Math.max(0, out.length - 1), 0, {
+        text: WEATHER_ASK_TEXT,
+        __weatherAsk: true,
+        next: 'weather_talk',
+    });
+    return out;
+}

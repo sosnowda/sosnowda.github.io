@@ -14,7 +14,7 @@ import { VirtualControls } from '../systems/VirtualControls.js';
 import { ActionLog } from '../data/actionLog.js';
 // Раунд 58 (п.2): chaseHoursLeft — часы до побега вора (тик = 1 игровой час)
 import { checkGameEnd, chaseHoursLeft } from '../data/thief.js';
-import { onLocationVisited } from '../data/questGenerator.js';
+import { onLocationVisited, generateQuest, acceptQuest, NPC_QUEST_POOLS } from '../data/questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/TimeSystem.js';
@@ -36,6 +36,15 @@ import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
 // Патч 66.3: честные окна и трубы фасадов fb_* (свечение ночью + дымок из труб)
 import { HOUSES_FX } from '../data/housesFX.js';
+
+// РАУНД 66.7 (п.2): пул взрослых жителей для ДОСКИ ПОРУЧЕНИЙ у ворот
+// (священник исключён: главный квест — только лично из его уст).
+const BOARD_NPC_POOL = [
+    'elder', 'tavernkeeper', 'blacksmith', 'peasant1', 'widow',
+    'hunter', 'guard', 'fisherman', 'healer', 'carpenter1', 'potter1',
+    'weaver1', 'elder_wife', 'beekeeper_wife', 'carpenter_wife',
+    'potter_wife', 'fisher_wife',
+];
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -253,11 +262,18 @@ export class VillageScene extends Phaser.Scene {
                 // стороне) — раньше setDisplaySize растягивал дом в квадрат,
                 // из-за чего узкие избы выглядели перекошенными, высокие — сплющенными.
                 const houseImg = this.add.image(cx, cy, sprKey);
-                const fitS = Math.min((b.w * ts + 8) / houseImg.width, (b.h * ts + 6) / houseImg.height);
+                // РАУНД 66.7 (п.10): церковь с достроенным шатрём — якорь по НИЗУ
+                // здания и масштаб по ШИРИНЕ: башня уходит ВВЕРХ над рядом,
+                // крест чуть касается улицы (спрайт больше не вписывается в 3×3)
+                const isChurch = b.interiorId === 'church';
+                const fitS = isChurch
+                    ? (b.w * ts + 8) / houseImg.width
+                    : Math.min((b.w * ts + 8) / houseImg.width, (b.h * ts + 6) / houseImg.height);
                 houseImg.setScale(fitS)
                     .setFlipX(FLIP_HOUSES.has(b.interiorId))
                     .setDepth(bottomRow - 0.55);          // Y-сортировка: игрок ниже дома — перед домом;
                                                           // на строке двери (bottomRow-0.5) игрок тоже ПЕРЕД домом (п.15)
+                if (isChurch) houseImg.setOrigin(0.5, 1).setPosition(cx, bottomRow * ts - 4);
             } else {
                 // Fallback: старые тайлы + нарисованная дверь
                 this.add.rectangle(px, py + 4, ts * 0.44, ts * 0.68, 0x3a2417)
@@ -360,14 +376,21 @@ export class VillageScene extends Phaser.Scene {
             }
             const src = this.textures.get(sprKey).getSourceImage();
             const tw = src.width, thh = src.height;
-            // Тот же масштаб, что у houseImg: fit по меньшей стороне (раунд 39)
-            const fitS = Math.min((b.w * ts + 8) / tw, (b.h * ts + 6) / thh);
+            // Тот же масштаб, что у houseImg (раунд 39); РАУНД 66.7: церковь —
+            // масштаб по ширине + вертикальный сдвиг от нижнего якоря башни,
+            // чтобы свечения окон и дым остались на честных местах.
+            const isChurchFx = b.interiorId === 'church';
+            const fitS = isChurchFx
+                ? (b.w * ts + 8) / tw
+                : Math.min((b.w * ts + 8) / tw, (b.h * ts + 6) / thh);
+            const churchDy = isChurchFx
+                ? (bottomRow * ts - 4 - (thh * fitS) / 2) - cy : 0;
             const flip = FLIP_HOUSES.has(b.interiorId) ? -1 : 1;
             (fx.windows || []).forEach((w, wi) => {
                 const [wx, wy, ww, wh] = w;
                 const k = (w[4] != null) ? w[4] : 1;
                 const gx = cx + flip * (wx - tw / 2) * fitS;
-                const gy = cy + (wy - thh / 2) * fitS;
+                const gy = cy + (wy - thh / 2) * fitS + churchDy;
                 const gw = Math.max(6, ww * fitS);
                 const gh = Math.max(6, wh * fitS);
                 // Стеклянный блик: тёплый прямоугольник точно по стеклу.
@@ -396,7 +419,7 @@ export class VillageScene extends Phaser.Scene {
             (fx.chimneys || []).forEach((ch) => {
                 const [chx, chy] = ch;
                 const sx = cx + flip * (chx - tw / 2) * fitS;
-                const sy = cy + (chy - thh / 2) * fitS;
+                const sy = cy + (chy - thh / 2) * fitS + churchDy;
                 const em = this.add.particles(sx, sy, 'smoke_puff', {
                     speedY: { min: -13, max: -8 },     // медленный подъём
                     speedX: { min: 2, max: 7 },        // лёгкий ветерок вправо
@@ -409,6 +432,32 @@ export class VillageScene extends Phaser.Scene {
                 });
                 em.setDepth(depth + 0.05);
             });
+        });
+
+        // ----- РАУНД 66.7 (п.2): ДОСКА ПОРУЧЕНИЙ У ВОРОТ -----
+        // Деревянная доска с тремя бумажными свитками стоит на траве в
+        // одном тайле от ворот (23,4): деревня так объявила бы наёмному
+        // человеку, за что заплатят. Клик — панель с поручениями дня
+        // (3 шт/день, процедурные, из пулов взрослых жителей). Взял —
+        // поручение ушло с доски (registry 'boardOffers').
+        this.ensureQuestBoardTexture();
+        const boardTile = { col: 23, row: 4 };
+        const boardX = boardTile.col * ts + ts / 2;
+        const boardBaseY = (boardTile.row + 1) * ts - 6;
+        this.add.ellipse(boardX, (boardTile.row + 1) * ts - 4, ts * 0.72, 12, 0x000000, 0.22)
+            .setDepth(boardTile.row + 0.35);
+        const boardSpr = this.add.image(boardX, boardBaseY, 'quest_board')
+            .setOrigin(0.5, 1)
+            .setDepth(boardTile.row + 0.4);
+        this.add.text(boardX, boardBaseY - 66, '📜', {
+            fontSize: '15px',
+        }).setOrigin(0.5).setDepth(boardTile.row + 0.5);
+        // ствол доски — не проходим (солид на тайле)
+        const boardSolid = this.solids.create(boardX, boardTile.row * ts + ts / 2, 'quest_board');
+        boardSolid.setScale(0.72, 0.5).refreshBody().setVisible(false);
+        boardSpr.setInteractive({ useHandCursor: true });
+        boardSpr.on('pointerdown', () => {
+            if (!this.busyDialog) this.openQuestBoard();
         });
 
         // Раунд 64 (п.1): ВСЕ ОГРАДЫ УДАЛЕНЫ — ни придомовых заборов,
@@ -1501,6 +1550,127 @@ export class VillageScene extends Phaser.Scene {
     }
 
     // П.5: Поп-ап тултип при наведении курсора на здание
+    // ================================================================
+    // РАУНД 66.7 (п.2): ДОСКА ПОРУЧЕНИЙ У ВОРОТ
+    // ================================================================
+
+    /** Текстура доски: щит на двух столбах с тремя свитками. */
+    ensureQuestBoardTexture() {
+        if (this.textures.exists('quest_board')) return;
+        const W = 46, H = 60;
+        const cv = this.textures.createCanvas('quest_board', W, H);
+        const c = cv.getContext();
+        // столбы
+        c.fillStyle = '#3a2417';
+        c.fillRect(9, 22, 6, 38);
+        c.fillRect(31, 22, 6, 38);
+        c.fillStyle = '#5a3f26';
+        c.fillRect(10, 22, 2, 38);
+        c.fillRect(32, 22, 2, 38);
+        // щит с рамкой
+        c.fillStyle = '#2c1c10';
+        c.fillRect(2, 4, 42, 26);
+        c.fillStyle = '#6a4a2a';
+        c.fillRect(4, 6, 38, 22);
+        c.strokeStyle = '#8a6a42';
+        c.lineWidth = 1;
+        c.strokeRect(4.5, 6.5, 37, 21);
+        // доска-жёрдочка поверх щита
+        c.fillStyle = '#4a3018';
+        c.fillRect(0, 2, 46, 5);
+        // три свитка-«грамоты» (чуть повёрнутые)
+        const papers = [[7, 9, -0.05], [18, 11, 0.04], [29, 9, -0.03]];
+        papers.forEach(([px, py, rot]) => {
+            c.save();
+            c.translate(px + 5, py + 7);
+            c.rotate(rot);
+            c.fillStyle = '#e8e0cc';
+            c.fillRect(-5, -7, 10, 14);
+            c.fillStyle = '#b8ac8c';
+            for (let i = 0; i < 4; i++) c.fillRect(-3.5, -5 + i * 3, 7, 1);
+            c.restore();
+        });
+        cv.refresh();
+    }
+
+    /** Поручения дня: 3 штуки, из пулов взрослых жителей (без священника —
+     * главный квест только лично). Обновляются каждый игровой день. */
+    ensureBoardOffers() {
+        const today = dayKeyOf(getTime(this.registry));
+        let st = this.registry.get('boardOffers');
+        if (st && st.day === today && Array.isArray(st.offers)) return st;
+        const offers = [];
+        const pool = BOARD_NPC_POOL.slice().sort(() => Math.random() - 0.5);
+        for (const npcId of pool) {
+            if (offers.length >= 3) break;
+            if (!NPC_QUEST_POOLS[npcId]) continue;
+            const quest = generateQuest(npcId, this.registry);
+            if (!quest) continue;
+            // уникальные награды (меч старосты) — только лично от старосты:
+            // если генератор «пообещал» меч, отменяем обещание и пропускаем
+            if ((quest.rewards || []).some(r => r.uniqueFromElder)) {
+                const q = this.registry.get('quest') || {};
+                if (q.elderSwordPromised) {
+                    q.elderSwordPromised = false;
+                    this.registry.set('quest', q);
+                }
+                continue;
+            }
+            if (offers.some(o => o.type === quest.type)) continue;
+            offers.push(quest);
+        }
+        st = { day: today, offers };
+        this.registry.set('boardOffers', st);
+        return st;
+    }
+
+    /** Панель доски: список поручений дня + кнопки взятия. */
+    openQuestBoard() {
+        const st = this.ensureBoardOffers();
+        const offers = st.offers || [];
+        let text;
+        if (!offers.length) {
+            text = t('Доска пуста: на нынче все дела разобрали. Загляни завтра — обоз привезёт новые поручения.');
+        } else {
+            text = t('«Кто возьмётся — пусть справится в срок и не позорит деревню». Поручения на день:')
+                + '\n' + offers.map((q, i) => `${i + 1}. ${q.title} — ${q.npcName}`).join('\n');
+        }
+        const buttons = offers.map(q => ({
+            text: tf(t('📜 Взять: {0}'), q.title),
+            callback: () => this.showBoardQuest(q),
+        }));
+        buttons.push({ text: t('Закрыть'), callback: () => {} });
+        createDialog(this, '📜 ' + t('Доска поручений'), text, buttons);
+    }
+
+    /** Подробности поручения с доски + принять/отказаться. */
+    showBoardQuest(quest) {
+        const rewardTexts = (quest.rewards || []).map(r => {
+            if (r.type === 'money') return formatMoney(r.amount);
+            if (r.type === 'item') return `${r.name} ×${r.count}`;
+            return r.name || t('что-то');
+        });
+        const questText = `${quest.description}\n\n`
+            + `${t('От кого:')} ${quest.npcName}\n`
+            + `${t('Цель:')} ${quest.objective}\n`
+            + `${t('Срок:')} ${tf(t('≈{0} ч'), quest.timeLimitHours || Math.round((quest.timeLimit || 10) / 4))}\n`
+            + `${t('Награда:')} ${rewardTexts.join(', ')}`;
+        createDialog(this, `📜 ${quest.title}`, questText, [
+            {
+                text: t('✓ Принять'),
+                callback: () => {
+                    acceptQuest(this.registry, quest);
+                    const st = this.registry.get('boardOffers');
+                    if (st) {
+                        st.offers = (st.offers || []).filter(o => o.id !== quest.id);
+                        this.registry.set('boardOffers', st);
+                    }
+                },
+            },
+            { text: t('✗ Отказаться'), callback: () => {} },
+        ]);
+    }
+
     showBuildingTooltip(building, screenX, screenY) {
         if (!this.buildingTooltip) {
             this.buildingTooltip = this.add.container(0, 0).setScrollFactor(0).setDepth(200);

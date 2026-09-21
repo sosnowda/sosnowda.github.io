@@ -2119,6 +2119,41 @@ const EN_KEYS = {
     'Облик героя: прессет «{0}» выбран автоматически по полу (раунд 62).':
         'Hero look: the "{0}" preset was chosen automatically by gender (round 62).',
 
+    // ===== РАУНД 66.7: доска поручений, погода, рыбалка, приметы =====
+    'Доска поручений': 'Job Board',
+    '📜 Взять: {0}': '📜 Take: {0}',
+    'Доска пуста: на нынче все дела разобрали. Загляни завтра — обоз привезёт новые поручения.':
+        'The board is empty: every task has been taken today. Come back tomorrow — a convoy will bring new jobs.',
+    '«Кто возьмётся — пусть справится в срок и не позорит деревню». Поручения на день:':
+        '“Whoever takes a task shall finish it in time and not shame the village.” Today’s jobs:',
+    'От кого:': 'From:',
+
+    // вопрос о погоде + приметы
+    '☁ Что погода сулит?': '☁ What will the weather bring?',
+    'Благодарю. Всего доброго.': 'Thank you. Farewell.',
+    'О погоде нынче уже толковали: небо само покажет, чья примета верна.':
+        'We have already talked about the weather today: the sky itself will show whose sign holds true.',
+    'К погоде примечай: ': 'Mark the sky: ',
+    'Толкуют об этом всячески — и все, как один, об одном. Видимо, сбудется: к завтрашнему дню погода обернётся.':
+        'Everyone is talking about it — and all of them say the same. It seems it will come true: by tomorrow the weather will turn.',
+
+    // рыбалка: нерест и жор
+    '🎣 Нерест': '🎣 Spawning Season',
+    '🎣 Рыбалка — жор': '🎣 Fishing — Autumn Frenzy',
+    'Рыба у берегов нерестится — удочки убраны до лета.': 'Fish are spawning by the banks — the rods are put away until summer.',
+    'Осенний жор: рыба берёт жадно, наедаясь перед зимой.': 'Autumn frenzy: fish bite eagerly, fattening up before winter.',
+    'Осенний жор — рыба идёт на крючок смело.': 'Autumn frenzy — the fish take the hook boldly.',
+    'Река под льдом — ловля из лунки, налим берёт в стужу.': 'The river is under ice — fishing through a hole, the burbot bites in hard frost.',
+    'Ходил к реке с удочкой — но у берега нерест. Рыбу не ловим, грех.':
+        'Went to the river with a rod — but the fish are spawning by the banks. No fishing now, it is a sin.',
+    'Ты подошёл к воде с удочкой — и остановился. У самого берега, в тёплой мутной воде, рыба трётся: спины и плавники ходят косяком. Нерест.\n\nЛовить в нерест — грех и разорение: убьёшь по паре штук — и осенью в реке рыбы не будет. Старики говорят: «Пропустишь нерест — весь год пропадёт». Удочки убраны до лета.':
+        'You came to the water with your rod — and stopped. Right by the bank, in the warm murky water, fish are spawning: backs and fins moving in a school. The spawning season.\n\nTo fish now is a sin and a ruin: kill a couple today — and there will be no fish in the river by autumn. The elders say: “Miss the spawning, and the whole year is lost.” The rods are put away until summer.',
+    '(Рыбалка закрыта до июня.)': '(Fishing is closed until June.)',
+    'Сберечь рыбу': 'Spare the fish',
+    'Рыба жирует перед зимой и берёт жадно: крючок едва успевает коснуться дна. Корзина полна!':
+        'The fish are fattening before winter and bite greedily: the hook barely touches the bottom before a strike. The basket is full!',
+    '(Осенний жор: +2 ❤ к улову.)': '(Autumn frenzy: +2 ❤ to the catch.)',
+
 };
 
 // ----- Месяцы / дни недели (сентябрьский стиль индексации) -----

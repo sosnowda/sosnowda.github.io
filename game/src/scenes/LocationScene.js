@@ -25,6 +25,8 @@ import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/Wo
 // Раунд 31 (п.2): стадо и пастухи на водопое
 import { getHerdState } from '../data/herd.js';
 import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
+// Раунд 66.7 (п.4): сезонные запреты/бонусы рыбалки (нерест/жор)
+import { fishingSeason } from '../systems/FishingSeasons.js';
 // Раунд 36: рыбалка переехала из деревни (пруд удалён) на Реку
 import { isOpenedToday, markOpened, dayKeyOf } from '../data/chests.js';
 import { t, tf } from '../systems/i18n.js';
@@ -372,6 +374,8 @@ export class LocationScene extends Phaser.Scene {
      * Первый улов за день: свежая рыба +3 ❤, уходит 1 час. Повторно —
      * «не клюёт», уходит 15 минут. В дождь рыба активнее (+4), зимой —
      * лунка во льду (механика переехала из VillageScene без изменений).
+     * РАУНД 66.7 (п.4): СЕЗОННЫЕ ЗАПРЕТЫ/БОНУСЫ — апрель-май НЕРЕСТ
+     * (запрет), сентябрь-октябрь ЖОР (+2), декабрь-февраль лунка.
      */
     goFishing() {
         const player = this.registry.get('player');
@@ -380,8 +384,21 @@ export class LocationScene extends Phaser.Scene {
         const timeState = getTime(this.registry);
         const today = dayKeyOf(timeState);
         const winter = timeState ? getSeason(timeState.month) === 'winter' : false;
+        const season = fishingSeason(timeState ? timeState.month : 9);
+
+        // --- НЕРЕСТ (апрель-май): запрет — рыба метать икру, ловить грех ---
+        if (season.blocked) {
+            tickTime(this.registry, 15);
+            ActionLog.add(this.registry, season.log);
+            createDialog(this, season.title,
+                t('Ты подошёл к воде с удочкой — и остановился. У самого берега, в тёплой мутной воде, рыба трётся: спины и плавники ходят косяком. Нерест.\n\nЛовить в нерест — грех и разорение: убьёшь по паре штук — и осенью в реке рыбы не будет. Старики говорят: «Пропустишь нерест — весь год пропадёт». Удочки убраны до лета.')
+                + `\n\n${t('(Рыбалка закрыта до июня.)')}`,
+                [{ text: t('Сберечь рыбу'), callback: () => {} }]);
+            return;
+        }
+
         const caught = isOpenedToday(q, 'fish_daily', today);
-        const title = winter ? t('🎣 Лунка во льду') : t('🎣 Рыбалка');
+        const title = season.title;
         // Раунд 66.6: плеск воды — заброс/лунка озвучены всегда
         playWaterSplash(this, winter ? 0.5 : 0.7);
 
@@ -389,24 +406,32 @@ export class LocationScene extends Phaser.Scene {
             tickTime(this.registry, 60);
             markOpened(q, 'fish_daily', today);
             this.registry.set('quest', q);
-            // Раунд 14: в дождь рыба активнее — улов заметно богаче (+4 вместо +3)
+            // Раунд 14: в дождь рыба активнее (+4 вместо +3).
+            // Раунд 66.7: осенний жор — ещё +2 (сезонный бонус).
             const weather = getWeather(this.registry);
             const raining = weather && isRainy(weather);
-            const heal = raining ? 4 : 3;
+            const heal = (raining ? 4 : 3) + (season.bonus || 0);
             player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
             this.registry.set('player', player);
+            let catchLine;
+            if (winter) {
+                catchLine = t('Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим. Ужин обеспечен.');
+            } else if (raining) {
+                catchLine = t('Забросил удочку с берега под моросящим дождём... Рыба клюёт одна за другой — вёдра полные!');
+            } else if (season.id === 'autumn_feed') {
+                catchLine = t('Рыба жирует перед зимой и берёт жадно: крючок едва успевает коснуться дна. Корзина полна!');
+            } else {
+                catchLine = t('Забросил удочку с песчаного брода... Через час в корзине пара ершей и лещ. Свежая рыба — это силы.');
+            }
             ActionLog.add(this.registry, winter
                 ? tf(t('Порыбачил через лунку — налим к ужину (+{0} ❤).'), heal)
                 : (raining
                     ? tf(t('Дождь — рыба идёт на крючок смело. Отличный улов (+{0} ❤).'), heal)
                     : tf(t('Наловил рыбы на реке к обеду (+{0} ❤).'), heal)));
             createDialog(this, title,
-                (winter
-                    ? t('Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим. Ужин обеспечен.')
-                    : raining
-                        ? t('Забросил удочку с берега под моросящим дождём... Рыба клюёт одна за другой — вёдра полные!')
-                        : t('Забросил удочку с песчаного брода... Через час в корзине пара ершей и лещ. Свежая рыба — это силы.'))
-                + `\n\n${t('Свежая рыба')}: +${heal} ❤.`,
+                catchLine
+                + `\n\n${t('Свежая рыба')}: +${heal} ❤.`
+                + (season.id === 'autumn_feed' ? `\n${t('(Осенний жор: +2 ❤ к улову.)')}` : ''),
                 [{ text: t('Взять улов'), callback: () => {} }]);
         } else {
             tickTime(this.registry, 15);

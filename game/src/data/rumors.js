@@ -19,7 +19,8 @@
 
 import { t, tf, isEn } from '../systems/i18n.js';
 import { getTime } from '../systems/TimeSystem.js';
-import { getWeather, isRainy } from '../systems/Weather.js';
+// Раунд 66.7: приметы — слухи о погоде влияют на неё (пп.6,7)
+import { omenTypeForDay, omenLine, recordWeatherRumor, OMEN_FULFILLED_NOTE } from '../systems/WeatherOmens.js';
 import { getSeasonalWork } from '../systems/SeasonalWork.js';
 import { getHerdState } from './herd.js';
 import { isThiefAt } from './thief.js';
@@ -102,23 +103,19 @@ export function collectRumors(registry) {
         }
     } catch (e) { /* стадо не заведено — слух просто не даётся */ }
 
-    // --- погода: рыба и дороги ---
+    // --- погода: ПРИМЕТА ДНЯ (раунд 66.7, пп.6,7) ---
+    // Слухи о погоде ВЕДУТСЯ: каждый выслушанный слух звонит в
+    // recordWeatherRumor (см. tavernRumorLine); наберут 3+ об одном типе —
+    // эта погода придёт завтра ВМЕСТО случайной. Примета ЕДИНА для всей
+    // деревни и соответствует сезону (зимой дождя не сулят, летом снега).
     try {
-        const w = getWeather(registry);
-        if (isRainy(w)) {
+        const omen = omenTypeForDay(registry);
+        if (omen) {
+            const line = omenLine(omen, Math.floor(Math.random() * 997));
             list.push({
-                ru: t('Дождь зарядил — но рыба-то его любит! На броду бери удочку: в непогоду клюёт жадно.'),
-                en: 'The rain has set in — but fish love it! Take your rod to the ford: in bad weather they bite eagerly.',
-            });
-        } else if (w && w.id === 'snow') {
-            list.push({
-                ru: t('Снег пошёл. По таким дорогам только на лыжах — да и то к соседу.'),
-                en: 'Snow is falling. Roads like these are only fit for skis — and even then, just to the neighbour’s.',
-            });
-        } else if (w && w.id === 'clear') {
-            list.push({
-                ru: t('Ясина стоит — сушилка для сена, да и для трав зельничных хорошо.'),
-                en: 'A clear day — fine weather for drying hay, and for the healer’s herbs too.',
+                ru: t('К погоде примечай: ') + line.ru,
+                en: 'Mark the sky: ' + line.en,
+                __weatherOmen: true,
             });
         }
     } catch (e) { /* без времени погода не определяется */ }
@@ -165,11 +162,24 @@ export function tavernRumorLine(registry) {
     const rumor = fresh[0];
     used.push(rumor.ru);
     registry.set('rumorsDay', { day: dayKey, used });
+
+    // РАУНД 66.7 (п.6): слух о погоде учтён в приметах — счётчик растёт,
+    // на третьем слухе примета сбылась (форкаст на завтра зафиксирован).
+    let omenNote = '';
+    if (rumor.__weatherOmen) {
+        const res = recordWeatherRumor(registry);
+        if (res && res.fulfilled) {
+            omenNote = isEn()
+                ? '\n\n' + OMEN_FULFILLED_NOTE.en
+                : `\n\n${t(OMEN_FULFILLED_NOTE.ru)}`;
+        }
+    }
+
     const line = isEn() ? rumor.en : rumor.ru;
     const suffix = used.length >= RUMORS_PER_DAY
         ? (isEn()
             ? '\n\n(That is the last rumour for today — nothing but idle talk remains.)'
             : `\n\n${t('(Это последний слух на сегодня — дальше только пересуды.)')}`)
         : '';
-    return `${line}${suffix}`;
+    return `${line}${omenNote}${suffix}`;
 }
