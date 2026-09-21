@@ -38,9 +38,8 @@ export class CharacterScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Имя и архетип (+ возраст — раунд 44; + облик-прессет — раунд 62)
-        // Патч 66.3: имя героя и имя облика — собственные, в EN транслитерацией (t())
-        this.add.text(width / 2, 65, `${t(p.name)} — ${t(p.archetype)}` +
-            (p.presetName ? ` · ${t('Облик')} «${t(p.presetName)}»` : '') +
+        this.add.text(width / 2, 65, `${p.name} — ${t(p.archetype)}` +
+            (p.presetName ? ` · ${t('Облик')} «${p.presetName}»` : '') +
             ` (${p.gender === 'female' ? '♀' : '♂'}${p.age != null ? `, ${p.age} ${ageUnitWord(p.age)}` : ''})`, {
             fontSize: '18px', color: RUS.textDim,
             stroke: '#000', strokeThickness: 2,
@@ -91,7 +90,7 @@ export class CharacterScene extends Phaser.Scene {
      * Вкладка характеристик.
      */
     drawStatsTab(p, q) {
-        const { width, height } = this.scale;
+        const { width } = this.scale;
         // П.13: показываем только текущего персонажа
         if (!p) {
             this.add.text(width / 2, 200, t('Персонаж не выбран.\nНачните новую игру.'), {
@@ -130,40 +129,23 @@ export class CharacterScene extends Phaser.Scene {
         }).setOrigin(0, 0.5);
 
         let skillY = top + 30;
-        // МИНИ-ФИКС 66.3 (пре-существующий): на низких канвасах (<590px)
-        // последняя строка навыков подлезала под кнопку «◀ Назад» (фиксные
-        // шаги 18/16/6 рассчитаны на высоту ≥590). Сжимаем межстрочные
-        // интервалы правой колонки пропорционально доступной высоте; на
-        // высоких канвасах k=1 — раскладка пиксельно прежняя.
-        const backTop = height - 62;                       // верх зоны кнопки «Назад»
-        const availH = backTop - (top + 30);
-        let natH = 0;
-        Object.entries(SKILL_CATEGORIES).forEach(([catKey]) => {
-            const n = SKILLS.filter(s => s.category === catKey).length;
-            if (n) natH += 18 + n * 16 + 6;
-        });
-        const kFit = availH > 0 ? Math.min(1, availH / natH) : 1;
-        const catStep = Math.max(13, 18 * kFit);   // шаг заголовка категории
-        const lineStep = Math.max(10.5, 16 * kFit); // шаг строки навыка
-        const gapStep = Math.max(2, 6 * kFit);      // пауза после категории
-        const skillFont = kFit < 0.8 ? '12px' : '13px';
         Object.entries(SKILL_CATEGORIES).forEach(([catKey, cat]) => {
             const catSkills = SKILLS.filter(s => s.category === catKey);
             if (catSkills.length === 0) return;
             this.add.text(colX2, skillY, t(cat.name) + ':', {
-                fontSize: skillFont, color: cat.color, fontStyle: 'bold',
+                fontSize: '13px', color: cat.color, fontStyle: 'bold',
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0, 0);
-            skillY += catStep;
+            skillY += 18;
             catSkills.forEach(s => {
                 const val = p.skills[s.key] || 0;
                 this.add.text(colX2 + 10, skillY, `${t(s.name)}: ${val}%`, {
-                    fontSize: skillFont, color: RUS.text,
+                    fontSize: '13px', color: RUS.text,
                     stroke: '#000', strokeThickness: 1,
                 }).setOrigin(0, 0);
-                skillY += lineStep;
+                skillY += 16;
             });
-            skillY += gapStep;
+            skillY += 6;
         });
 
         // П.11: снаряжение — исправлен текст, не налезает

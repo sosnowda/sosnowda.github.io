@@ -2004,50 +2004,6 @@ const EN_KEYS = {
     // Товары/награды, попадающие в сумку (InteriorScene — «name через t() при показе»)
     'Хлеб': 'Bread', 'Медовуха': 'Mead',
 
-    // --- Патч 66.3: транслитерация имён собственных + EN месяцев народного календаря ---
-    // МЕРА ПЕРЕВОДА (уточнение владельца): имена собственные НЕ переводятся
-    // и НЕ оставляются кириллицей — пишутся ТРАНСЛИТЕРАЦИЕЙ (Гаврила → Gavrila,
-    // «Раковая слобода» → Rakovaya sloboda). Месяцы народного/церковного
-    // календаря — тоже имена собственные: транслитерация без мягкого знака.
-    // Народные месяцы (номинатив; индексация 0 = сентябрь)
-    'Вересень': 'Veresen', 'Паздерник': 'Pazdernik', 'Грудень': 'Gruden', 'Студень': 'Studen',
-    'Просинец': 'Prosinets', 'Лютень': 'Lyuten', 'Березозол': 'Berezozol', 'Цветень': 'Tsveten',
-    'Травень': 'Traven', 'Кресень': 'Kresen', 'Липень': 'Lipen', 'Серпень': 'Serpen',
-    // Народные месяцы (родительный: «7-й день Вересня»)
-    'Вересня': 'Veresnya', 'Паздерника': 'Pazdernika', 'Грудня': 'Grudnya', 'Студня': 'Studnya',
-    'Просинца': 'Prosintsa', 'Лютня': 'Lyutnya', 'Березозола': 'Berezozola', 'Цветня': 'Tsvetnya',
-    'Травеня': 'Travenya', 'Кресня': 'Kresnya', 'Липня': 'Lipnya', 'Серпня': 'Serpnya',
-    // Запасной «рюенный» ряд (уникальные; остальные совпадают с номинативом)
-    'Рюень': 'Ryuen', 'Листогной': 'Listognoy', 'Сечень': 'Sechen',
-    'Сухень': 'Sukhen', 'Изок': 'Izok', 'Червень': 'Cherven',
-    // Исторические названия деревень (world.HISTORICAL_VILLAGE_NAMES)
-    'Березовец': 'Berezovets', 'Волок Ламский': 'Volok Lamsky',
-    'Городец на Волге': 'Gorodets na Volge', 'Двинская слобода': 'Dvinskaya sloboda',
-    'Елец': 'Yelets', 'Заозерье': 'Zaozerye', 'Кистерма': 'Kisterma',
-    'Лукомлье': 'Lukomlye', 'Медвежья Голова': 'Medvezhya Golova',
-    'Новое Село': 'Novoye Selo', 'Опоки': 'Opoki', 'Пёрмышль': 'Pyormyshl',
-    'Раковая слобода': 'Rakovaya sloboda', 'Старая Руса': 'Staraya Russa',
-    'Торжок-Новый': 'Torzhok-Novy', 'Углич-Поле': 'Uglich-Pole',
-    'Холм Великий': 'Kholm Veliky', 'Царёво Займище': 'Tsaryovo Zaymishche',
-    'Чёрная Грязь': 'Chyornaya Gryaz', 'Шуя Малая': 'Shuya Malaya',
-    'Верхний Млин': 'Verkhniy Mlin', 'Боголюбово': 'Bogolyubovo',
-    'Вятская Поляна': 'Vyatskaya Polyana', 'Деревянница': 'Derevyannitsa',
-    'Клещин городок': 'Kleshchin gorodok', 'Муромское селище': 'Muromskoye selishche',
-    'Плёс на Волге': 'Plyos na Volge', 'Славянское': 'Slavyanskoye',
-    'Тихвинское село': 'Tikhvinskoye selo', 'Великое Село': 'Velikoye Selo',
-    // Имена готовых героев (Character.PRESET_HEROES) и обликов (heroes.js)
-    'Гаврила': 'Gavrila', 'Забава': 'Zabava', 'Добрыня': 'Dobrynya', 'Рогнеда': 'Rogneda',
-    'Ярополк': 'Yaropolk', 'Предслава': 'Predslava', 'Ратибор': 'Ratibor', 'Милонега': 'Milonega',
-    // «Баэнор»/«Пауль» уже в словаре (строка ~1360); здесь — облики heroes.js
-    'Охотница': 'Huntress', 'Найя': 'Naia',
-    // Стартовые строки (деревня/имя подставляются через tf)
-    'Ты беженец в деревне {0}. Найди приют и работу.':
-        'You are a refugee in the village of {0}. Find shelter and work.',
-    'Игра началась. {0} ({1}) — беженец из разорённой врагами деревни. Пришёл в незнакомую деревню {2}. Дата: {3} от Р.Х.':
-        'The game has begun. {0} ({1}) is a refugee from a village ravaged by the enemy. Came to the unfamiliar village of {2}. Date: {3} AD.',
-    'Облик героя: прессет «{0}» выбран автоматически по полу (раунд 62).':
-        'Hero look: the "{0}" preset was chosen automatically by gender (round 62).',
-
 };
 
 // ----- Месяцы / дни недели (сентябрьский стиль индексации) -----

@@ -17,7 +17,7 @@ import { initTime, createRandomStartDate } from '../systems/TimeSystem.js';
 import { initNpcNames } from '../data/npcNames.js';
 import { initReputation } from '../data/reputation.js';
 import AudioManager from '../systems/AudioManager.js';
-import { t, tf } from '../systems/i18n.js';
+import { t } from '../systems/i18n.js';
 import { ageUnitWord } from '../systems/AgeRules.js';
 // РАУНД 62 (п.1): готовые прессеты героя «Баэнор» (♂)/«Пауль» (♀)
 // возвращены — LPC-композит собирается здесь, автоматом по полу.
@@ -126,8 +126,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         container.add(title);
 
         // Имя
-        // Патч 66.3: имя героя — собственное, в EN транслитерацией (t())
-        const name = this.add.text(0, -h / 2 + (compact ? 40 : 55), t(hero.name) + (hero.gender === 'female' ? ' ♀' : ' ♂'), {
+        const name = this.add.text(0, -h / 2 + (compact ? 40 : 55), hero.name + (hero.gender === 'female' ? ' ♀' : ' ♂'), {
             fontSize: compact ? '13px' : '16px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
@@ -448,7 +447,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
             banditDefeated: false,
             hasHerb: true,
             tutorialStep: 0,
-            currentObjective: tf(t('Ты беженец в деревне {0}. Найди приют и работу.'), t(villageName)),
+            currentObjective: `Ты беженец в деревне ${villageName}. Найди приют и работу.`,
             chestsOpened: [],
             hoursPassed: 0,
             moneyAskedFrom: [],
@@ -475,11 +474,13 @@ export class CharacterSelectionScene extends Phaser.Scene {
         initReputation(this.registry);
         
         ActionLog.add(this.registry,
-            // Патч 66.3: имя героя/архетип/деревня — через t() (EN транслитерация)
-            tf(t('Игра началась. {0} ({1}) — беженец из разорённой врагами деревни. Пришёл в незнакомую деревню {2}. Дата: {3} от Р.Х.'),
-                t(hero.name), t(hero.archetype), t(villageName),
-                `${startDate.day}.${((startDate.month + 8) % 12) + 1}.${startDate.yearFromChrist + (startDate.month >= 4 ? 1 : 0)}`
-            )
+            `Игра началась. ${hero.name} (${hero.archetype}) — беженец из разорённой врагами деревни. ` +
+            `Пришёл в незнакомую деревню ${villageName}. ` +
+            // Раунд 35 (QA-фикс P2): раньше печатали month+1 по «январскому» счёту,
+            // хотя календарь игры — сентябрьский (месяц 0 = сентябрь), а год
+            // показывали год начала лета. Теперь AD-месяц и AD-год согласованы:
+            // AD-месяц = (month+8)%12+1; для января–августа (индексы 4..11) AD-год = start+1.
+            `Дата: ${startDate.day}.${((startDate.month + 8) % 12) + 1}.${startDate.yearFromChrist + (startDate.month >= 4 ? 1 : 0)} от Р.Х.`
         );
         // РАУНД 62 (п.1 приказа владельца): ГОТОВЫЕ ПРЕССЕТЫ «Баэнор»/«Пауль»
         // ВЕРНУЛИСЬ — LPC-композиты применяются АВТОМАТИЧЕСКИ ПО ПОЛУ:
@@ -494,7 +495,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         hero.presetName = preset.name;
         if (composed) hero.sprite = 'player_composite';
         ActionLog.add(this.registry,
-            tf(t('Облик героя: прессет «{0}» выбран автоматически по полу (раунд 62).'), t(preset.name)));
+            `Облик героя: прессет «${preset.name}» выбран автоматически по полу (раунд 62).`);
         this.scene.start('Village');
     }
 }

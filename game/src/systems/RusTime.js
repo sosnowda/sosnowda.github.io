@@ -15,15 +15,8 @@
 //   5. Народные названия месяцев (ряд «вересень…» — как в летописном примере).
 // Игровой `hour` остаётся равными часами (математика боёв/погони) — «косой»
 // счёт это слой погружения поверх game-времени или реального времени игрока.
-import { isEn, t, EN_WEEKDAYS, EN_MONTHS } from './i18n.js';
+import { isEn, t, EN_WEEKDAYS } from './i18n.js';
 import { MONTHS, WEEKDAYS, getWeekday } from './TimeSystem.js';
-
-// Патч 66.3: месяцы народного календаря — имена собственные, в EN пишутся
-// ТРАНСЛИТЕРАЦИЕЙ (Вересень → Veresen, Студень → Studen) — словарные ключи
-// в i18n.js (блок «Патч 66.3»). В коде вывода — только через t().
-export const monthNameNom = (m) => t(MONTH_NAMES[m] || '');
-export const monthNameGen = (m) => t(MONTH_NAMES_GEN[m] || MONTH_NAMES[m] || '');
-export const monthNameAlt = (m) => t(MONTH_NAMES_ALT[m] || '');
 
 // ----- Народные названия месяцев -----
 // Индексация совпадает с TimeSystem.MONTHS: 0 = сентябрь (сентябрьский год).
@@ -203,8 +196,7 @@ export function formatDateRus(ts) {
     const era = eraYear(ts);
     const ad = realYearAD(ts);
     if (isEn()) {
-        // Патч 66.3: месяц — транслитерацией (Veresen/Studen), не кириллицей
-        return `${EN_WEEKDAYS[getWeekday(ts)]}, the ${enOrdinal(ts.day)} day of ${monthNameNom(ts.month)}, year ${era} A.M. (${ad})`;
+        return `${EN_WEEKDAYS[getWeekday(ts)]}, the ${enOrdinal(ts.day)} day of ${MONTH_NAMES[ts.month]}, year ${era} A.M. (${ad})`;
     }
     return `${WEEKDAYS[getWeekday(ts)]}, ${ts.day}-й день ${monthGen(ts.month)}, лето ${era}-е (${ad})`;
 }
@@ -223,7 +215,7 @@ export function chronicleDateLine(ts, style) {
     const sc = solarCircle(ts);
     const lc = lunarCircle(ts);
     if (isEn()) {
-        return `The ${enOrdinal(ts.day)} day of ${monthNameNom(ts.month)}, year ${era} from the Creation of the World (${ad} AD), indiction ${ind}, solar circle ${sc}, lunar circle ${lc}`;
+        return `The ${enOrdinal(ts.day)} day of ${MONTH_NAMES[ts.month]}, year ${era} from the Creation of the World (${ad} AD), indiction ${ind}, solar circle ${sc}, lunar circle ${lc}`;
     }
     return `${ts.day}-й день месяца ${MONTH_NAMES[ts.month]}, лето ${era}-е от Сотворения мира (${ad} г. от Р.Х.), индикт ${ind}, круг солнца ${sc}, круг луны ${lc}`;
 }
@@ -280,7 +272,7 @@ export function showChroniclePanel(scene) {
     const lines = [
         `«${chronicleDateLine(ts, style)}»`,
         '',
-        `${isEn() ? 'Month: ' : 'Месяц: '}${monthNameNom(ts.month)} (${isEn() ? 'otherwise ' : 'иначе '}${monthNameAlt(ts.month)}) — ${isEn() ? (EN_MONTHS[ts.month] || '').toLowerCase() : MONTHS[ts.month].nameNominative.toLowerCase()}`,
+        `${isEn() ? 'Month: ' : 'Месяц: '}${MONTH_NAMES[ts.month]} (иначе ${MONTH_NAMES_ALT[ts.month]}) — ${MONTHS[ts.month].nameNominative.toLowerCase()}`,
         `${isEn() ? 'Time of day: ' : 'Сутки: '}${hourParts.text} · ${folk}`,
         slavonicDayNote(ts.month),
         isEn()

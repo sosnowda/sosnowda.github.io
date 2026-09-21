@@ -273,8 +273,7 @@ export class ForkScene extends Phaser.Scene {
         mapGfx.lineStyle(2, 0xc9a14a, 1);
         mapGfx.strokeCircle(cx, cy, 30);
         this.add.text(cx, cy, '🏠', { fontSize: '20px' }).setOrigin(0.5).setDepth(203);
-        // Патч 66.3: имя деревни — собственное, в EN транслитерацией (t())
-        this.add.text(cx, cy + 35, t(getVillageName()), {
+        this.add.text(cx, cy + 35, getVillageName(), {
             fontSize: '12px', color: '#c9a14a',
         }).setOrigin(0.5).setDepth(203);
 
