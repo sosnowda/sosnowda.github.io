@@ -79,6 +79,7 @@ ok(!existsSync(join(repoRoot, '.gitattributes')), '.gitattributes отсутст
 const swSrc = readFileSync(join(repoRoot, 'game', 'src', 'systems', 'i18n.js'), 'utf8'); // прогрев чтения
 let lfsFound = false;
 const { readdirSync, statSync } = await import('node:fs');
+const LFS_NEEDLE = ['filter', 'lfs'].join('='); // игла собрана динамически — тест не ловит сам себя
 const walk = (dir) => {
     for (const name of readdirSync(dir)) {
         if (name === '.git' || name === 'node_modules') continue;
@@ -86,12 +87,12 @@ const walk = (dir) => {
         const st = statSync(p);
         if (st.isDirectory()) walk(p);
         else if ((name.endsWith('.js') || name.endsWith('.mjs') || name.endsWith('.html') || name.endsWith('.json') || name === '.gitattributes')) {
-            try { if (readFileSync(p, 'utf8').includes('filter=lfs')) lfsFound = true; } catch { /* пропускаем бинарные */ }
+            try { if (readFileSync(p, 'utf8').includes(LFS_NEEDLE)) lfsFound = true; } catch { /* пропускаем бинарные */ }
         }
     }
 };
 walk(repoRoot);
-ok(!lfsFound, 'ни один файл репо не содержит filter=lfs');
+ok(!lfsFound, 'ни один файл репо не содержит LFS-атрибут фильтра');
 ok(!boot.includes('lfs') && !village.includes('lfs'), 'код игры не упоминает LFS');
 
 console.log(`\nИтог: ${pass} зелёных, ${fail} проваленных`);
