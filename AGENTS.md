@@ -41,6 +41,8 @@ node game/tools/test_round66.mjs     # 48
 node game/tools/test_round67.mjs     # 42
 node game/tools/test_round68.mjs     # вода/деревья (раунд 66.5)
 node game/tools/test_round69.mjs     # звук/погода/сезоны/слухи/сайт (раунд 66.6) — новые раунды добавляют свои
+node game/tools/test_round70.mjs     # приметы/доска/рыбалка/арт-66.7 (раунд 66.7)
+node game/tools/test_round71.mjs     # план деревни/экспорт летописи/og-demo (раунд 66.8)
 
 # Синтаксис правленых файлов:
 node --check game/src/…/*.js
@@ -63,13 +65,14 @@ git add -A && git commit -m "патч 66.N: …" && git push origin main
 10. **ПРИМЕТЫ О ПОГОДЕ (раунд 66.7)**: `systems/WeatherOmens.js` — примета дня ЕДИНА для всей деревни (детерминирована датой, `hashStr(dayKey)`), счёт слухов в `weatherRumors`, **3+ слуха об одном типе → `weatherForecast` на завтра**, и `Weather.getWeather` отдаёт форкаст ВМЕСТО хеша. Сезонный канон (`seasonWeatherTypes`): зима — snow/cloudy/clear (дождя/грозы не сулить!), летом — без снега; форкаст нормализуется по сезону ЦЕЛЕВОГО дня. Слух о погоде помечается `__weatherOmen` и звонит в `recordWeatherRumor`; вопрос «☁ Что погода сулит?» добавляется ВСЕМ взрослым НПЦ через `appendWeatherChoice` (DialogueRunner, стартовый узел; дети kid1–9 + shepherd_boy — исключены; registry `weatherAsked` — 1 ответ/день/НПЦ). Меняешь канон — синхронизируй test_round70.
 11. **Рыбалка и доска поручений (раунд 66.7)**: сезоны рыбалки — `systems/FishingSeasons.js` (апрель–май НЕРЕСТ = запрет; сентябрь–октябрь ЖОР = +2; зима — лунка); доска поручений у ворот (тайл (23,4), VillageScene `openQuestBoard`): 3 поручения/день из `BOARD_NPC_POOL` (БЕЗ священника; uniqueFromElder откатывается), registry `boardOffers`.
 12. **Фасады fb_* (раунд 66.7)**: у КАЖДОГО дома (кроме церкви) есть труба в `housesFX.js` — дым от честного жерла; у церкви — шатёр с крестом (fb_church 263×340, нижний якорь, масштаб по ширине, окна +52). Частокол — тайл 32×32, ОДИН колж с остриём внутри тайла (НЕ 48px с двумя брёвнами — так стена читалась двухрядной, а острия срезались). Дорожки path_0..3 — песок на всей площади тайла (1 тайл шириной). Арт — `game/tools/make_assets_r67.py` (НЕ идемпотентен для фасадов: перед повторным запуском `git checkout -- ` их!).
-13. **Стилистика кода**: ES-модули, `const`/`let`, комментарии на русском с номером раунда («// Раунд 68 (п.5): …»), никаких тестов в рантайме игры.
+13. **Мини-карта и экспорт летописи (раунд 66.8)**: план деревни — `systems/MiniMap.js` (виджет в правом верхнем углу + панель по клавише P/клику; сетка строится из `world.buildMap()`, цвета клеток/зданий — `cellColor`/`buildingColor`, доска поручений — `QUEST_BOARD_TILE` (23,4)); метка игрока обновляется в `VillageScene.update()`. Экспорт летописи — `RusTime.buildChronicleExport(registry)` (чистая, тестируется в Node) + `exportChronicleFile(scene)` (Blob+a.click, ASCII-имя `letopis-<лето>-<мм>-<дд>.txt`); кнопка «⬇ Экспорт летописи» в панели летописи, запись о выгрузке идёт в actionLog. Отдельный og:image демо — `assets/images/og-demo.jpg` (генератор `game/tools/make_og_demo_r68.py`), ссылки в `game/index.html` (OG/Twitter/JSON-LD).
+14. **Стилистика кода**: ES-модули, `const`/`let`, комментарии на русском с номером раунда («// Раунд 68 (п.5): …»), никаких тестов в рантайме игры.
 
 ## 5. Инструменты и скрипты для агента
 
 - **Скриншоты сайта (10 → сейчас 9 кадров)**: `game/src/tools/ScreenshotDirector.js` — открой `http://localhost:8090/game/?shot=<id>`, id: `menu, select, custom, village, map, interior, priest, thief, combat` (плюс служебный `blacksmith`). Кадр 1280×720 → webp q85 → `assets/screenshots/NN-name.webp` → карточка в `index.html`/`en/index.html`. Снял — обнови alt-тексты под реальное содержимое кадра.
 - **Генераторы ассетов** (`game/tools/*.py`, нужны PIL): `make_assets_r66.py` (деревья Medieval_Expansion), `make_houses_r64/r65.py` (фасады fb_*/hp_*), `make_assets_r67.py` (частокол 32×32/дорожки/шатёр церкви с крестом/трубы ×3/иконостас int_bg_church), `probe_fb_r65*.py` (снятие координат окон/труб → `data/housesFX.js`), `make_thief_sprite.py`.
-- **Юнит-наборы**: `game/tools/test_round64/65/66/67/68/69/70.mjs` (70 — раунд 66.7: приметы/доска/рыбалка/частокол/дорожки/шатёр/трубы/иконостас, встроенный PNG-декодер на zlib).
+- **Юнит-наборы**: `game/tools/test_round64/65/66/67/68/69/70/71.mjs` (70 — раунд 66.7: приметы/доска/рыбалка/частокол/дорожки/шатёр/трубы/иконостас, встроенный PNG-декодер на zlib; 71 — раунд 66.8: план деревни/экспорт летописи/og-demo/SW v67).
 - **Боевой/погонный симуляторы**: `game/tools/battle-sim.mjs`, `chase-sim.mjs` (балансные прогоны в node).
 - **QA-браузер**: `agent-browser` (Chromium headless). Тактики для этой игры (Phaser-canvas):
   - игровой клик = `mouse move/down/up` по координатам; DOM-кликов почти нет;

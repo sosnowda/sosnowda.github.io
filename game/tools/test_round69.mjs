@@ -224,7 +224,7 @@ console.log('\n[6] G-ТЕГИ (п.6)');
     ok(g.includes('property="og:title"') && g.includes('og:description'), 'game/index.html: Open Graph');
     ok(g.includes('name="twitter:card"') && g.includes('summary_large_image'), 'game/index.html: Twitter Card');
     ok(g.includes('application/ld+json') && g.includes('"@type":"VideoGame"'), 'game/index.html: JSON-LD VideoGame');
-    ok(g.includes('og:image" content="https://sosnowda.github.io/assets/images/og-image.jpg"'), 'game/index.html: og:image → существующий файл');
+    ok(g.includes('og:image" content="https://sosnowda.github.io/assets/images/og-demo.jpg"'), 'game/index.html: og:image → og-demo.jpg (отдельный, раунд 66.8)');
     ok(existsSync(join(root, '../assets/images/og-image.jpg')), 'assets/images/og-image.jpg существует (без 404)');
     ok(g.includes('playMode') || g.includes('SinglePlayer'), 'JSON-LD: playMode указан');
     // RU/EN лендинги — OG остаются на месте (регресс)
@@ -250,7 +250,7 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     ok(loc.includes('showBellToast(this, work66.toast)'), 'LocationScene: плашка сезона при входе на поле');
     // SW: v65, ассеты не тронуты
     const sw = read('../sw.js');
-    ok(sw.includes("chronicles-ruthenia-v66"), 'SW: версия сайта v66 (раунд 66.7)');
+    ok(sw.includes("chronicles-ruthenia-v67"), 'SW: версия сайта v67 (раунд 66.8)');
     ok(sw.includes("game-assets-v20"), 'SW: кеш ассетов v20 не тронут (звук WebAudio, без новых файлов)');
     ok(sw.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи

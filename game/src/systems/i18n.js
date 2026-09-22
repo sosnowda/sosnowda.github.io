@@ -2023,6 +2023,7 @@ const EN_KEYS = {
         '\n' +
         '  WASD / arrows — movement\n' +
         '  E — interact: doors of the houses, the gate\n' +
+        '  M — village overview, P — village plan (minimap panel)\n' +
         '  The church is in the centre, the forge — at the north-east edge.\n' +
         '  Prayer — only in the church.\n' +
         '  A campfire with rest (1 h) burns in the Dark Forest, by the abandoned camp.\n' +
@@ -2143,6 +2144,14 @@ const EN_KEYS = {
     'Рыба у берегов нерестится — удочки убраны до лета.': 'Fish are spawning by the banks — the rods are put away until summer.',
     'Осенний жор: рыба берёт жадно, наедаясь перед зимой.': 'Autumn frenzy: fish bite eagerly, fattening up before winter.',
     'Осенний жор — рыба идёт на крючок смело.': 'Autumn frenzy — the fish take the hook boldly.',
+
+    // --- Патч 66.8: план деревни (мини-карта) + экспорт летописи ---
+    'План': 'Plan',
+    '🗺 План деревни': '🗺 Village Plan',
+    'Жилой дом': 'Dwelling house',
+    'Ты': 'You',
+    '⬇ Экспорт летописи': '⬇ Export the chronicle',
+    'Записал летопись в файл.': 'Saved the chronicle to a file.',
     'Река под льдом — ловля из лунки, налим берёт в стужу.': 'The river is under ice — fishing through a hole, the burbot bites in hard frost.',
     'Ходил к реке с удочкой — но у берега нерест. Рыбу не ловим, грех.':
         'Went to the river with a rod — but the fish are spawning by the banks. No fishing now, it is a sin.',

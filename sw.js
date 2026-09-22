@@ -1,6 +1,18 @@
 /* Service Worker — Летописи Руси XV века
    Network-first для HTML/CSS/JS, cache-first для ассетов игры.
 
+v67 — раунд 66.8 (бэклог отчётов 66.6/66.7):
+1) ПЛАН ДЕРЕВНИ (MiniMap.js): виджет-миникарта в правом верхнем углу
+   (клик — разворот), панель с легендой и меткой игрока, клавиша P
+   и кнопка «🗺 План» в статус-баре (VillageScene);
+2) ЭКСПОРТ ЛЕТОПИСИ: кнопка «⬇ Экспорт летописи» в панели летописи —
+   датировка + сведения о месяце/времени + все деяния игрока скачиваются
+   как letopis-<лето>-<мм>-<дд>.txt (RusTime.buildChronicleExport);
+3) ОТДЕЛЬНЫЙ og:image для демо: assets/images/og-demo.jpg 1200×630
+   (кадр деревни + заголовок) в game/index.html (OG/Twitter/JSON-LD).
+SW v67 (site-cache инвалидируется: game/index.html изменён),
+game-assets-v21 не тронут (og-demo.jpg — файл сайта, network-first).
+
 v66 — раунд 66.7 (12 приказов владельца):
 1) ПОГОДНЫЕ ЗВУКИ: дождь и гром — процедурный WebAudio (WeatherAudio.js):
    петля дождя (шипение капель + гул завесы, в грозу плотнее и громче)
@@ -198,7 +210,7 @@ v45 — релиз (раунд 47, 5 пунктов владельца): 1) СВ
  */
 
 
-var CACHE_NAME = 'chronicles-ruthenia-v66';
+var CACHE_NAME = 'chronicles-ruthenia-v67';
 var GAME_ASSETS_CACHE = 'game-assets-v21';
 
 self.addEventListener('install', function (event) {

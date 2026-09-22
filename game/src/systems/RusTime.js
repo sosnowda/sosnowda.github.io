@@ -17,6 +17,8 @@
 // счёт это слой погружения поверх game-времени или реального времени игрока.
 import { isEn, t, EN_WEEKDAYS, EN_MONTHS } from './i18n.js';
 import { MONTHS, WEEKDAYS, getWeekday } from './TimeSystem.js';
+// Раунд 66.8: экспорт летописи пишет запись о выгрузке в деяния (actionLog)
+import { ActionLog } from '../data/actionLog.js';
 
 // Патч 66.3: месяцы народного календаря — имена собственные, в EN пишутся
 // ТРАНСЛИТЕРАЦИЕЙ (Вересень → Veresen, Студень → Studen) — словарные ключи
@@ -252,6 +254,82 @@ export function checkNovoletie(prevMonth, prevDay, nextMonth, nextDay) {
     return null;
 }
 
+// ----- Экспорт летописи (раунд 66.8, бэклог 66.6) -----
+/**
+ * Собирает текст летописи для сохранения в файл: датировка + сведения
+ * о месяце/времени + все деяния игрока (actionLog). Чистая функция —
+ * тестируется в Node (юнит test_round71).
+ * @returns {string|null} текст файла или null (нет gameTime).
+ */
+export function buildChronicleExport(registry) {
+    const ts = registry.get('gameTime');
+    if (!ts) return null;
+    const style = registry.get('newYearStyle') || 'september';
+    const lines = [];
+    if (isEn()) {
+        lines.push('CHRONICLE — Chronicles of Ruthenia');
+        lines.push(`“${chronicleDateLine(ts, style)}”`);
+        lines.push(`Month: ${monthNameNom(ts.month)} (otherwise ${monthNameAlt(ts.month)}) — ${(EN_MONTHS[ts.month] || '').toLowerCase()}`);
+        const hp = slavonicHourParts(ts.hour, ts.month);
+        lines.push(`Time of day: ${hp.text} · ${folkTimeName(ts.hour)}`);
+        lines.push(slavonicDayNote(ts.month));
+        lines.push(style === 'september'
+            ? 'New year: September style — the year begins on 1 September.'
+            : 'New year: March style — the year begins on 1 March.');
+        lines.push('');
+        lines.push('DEEDS:');
+    } else {
+        lines.push('ЛЕТОПИСЬ — «Летописи Руси»');
+        lines.push(`«${chronicleDateLine(ts, style)}»`);
+        lines.push(`Месяц: ${monthNameNom(ts.month)} (иначе ${monthNameAlt(ts.month)}) — ${MONTHS[ts.month].nameNominative.toLowerCase()}`);
+        const hp = slavonicHourParts(ts.hour, ts.month);
+        lines.push(`Сутки: ${hp.text} · ${folkTimeName(ts.hour)}`);
+        lines.push(slavonicDayNote(ts.month));
+        lines.push(style === 'september'
+            ? 'Новолетие: сентябрьское — год начинается 1 сентября.'
+            : 'Новолетие: мартовское — год начинается 1 марта.');
+        lines.push('');
+        lines.push('ДЕЯНИЯ:');
+    }
+    const log = registry.get('actionLog');
+    if (log && typeof log.getFormattedText === 'function') {
+        const rows = log.getFormattedText();
+        if (rows.length) lines.push(...rows);
+        else lines.push(isEn() ? '(nothing is recorded yet)' : '(пока ничего не записано)');
+    }
+    lines.push('');
+    lines.push(isEn()
+        ? 'Compiled in the game “Chronicles of Ruthenia”: sosnowda.github.io/game/'
+        : 'Составлено в игре «Летописи Руси»: sosnowda.github.io/game/');
+    return lines.join('\n');
+}
+
+/**
+ * Скачивает летопись как .txt (Blob + временная ссылка). Имя файла —
+ * ASCII-транслит по игровой дате: letopis-6971-09-07.txt
+ * @returns {string|null} имя файла или null.
+ */
+export function exportChronicleFile(scene) {
+    if (typeof document === 'undefined') return null; // не в браузере
+    const text = buildChronicleExport(scene.registry);
+    if (!text) return null;
+    const ts = scene.registry.get('gameTime');
+    const style = scene.registry.get('newYearStyle') || 'september';
+    const mm = String(ts.month + 1).padStart(2, '0');
+    const dd = String(ts.day).padStart(2, '0');
+    const fname = `letopis-${eraYear(ts, style)}-${mm}-${dd}.txt`;
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    return fname;
+}
+
 // ----- Летописная панель (общая для сцен) -----
 /**
  * Показывает панель «📜 Летопись» поверх сцены (Village/Location).
@@ -312,16 +390,34 @@ export function showChroniclePanel(scene) {
         showChroniclePanel(scene); // перерисовать с новым стилем
     });
 
-    // Кнопка закрытия
-    const closeBg = scene.add.rectangle(width / 2, height / 2 + panelH / 2 - 24, 140, 28, 0x8B2C1A, 1)
+    // Кнопка экспорта летописи (раунд 66.8) + кнопка закрытия — в один ряд
+    const exportBg = scene.add.rectangle(width / 2 - 105, height / 2 + panelH / 2 - 24, 200, 28, 0x2a4a6a, 1)
         .setStrokeStyle(2, 0xC9A961).setInteractive({ useHandCursor: true })
         .setScrollFactor(0).setDepth(202);
-    const closeText = scene.add.text(width / 2, height / 2 + panelH / 2 - 24, t('Закрыть'), {
+    const exportText = scene.add.text(width / 2 - 105, height / 2 + panelH / 2 - 24, t('⬇ Экспорт летописи'), {
+        fontSize: '12px', color: '#E8DCC4', fontFamily: 'Georgia, serif',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(203);
+    exportBg.on('pointerup', () => {
+        const fname = exportChronicleFile(scene);
+        if (fname && scene.registry.get('actionLog')) {
+            ActionLog.add(scene.registry, t('Записал летопись в файл.'), { file: fname });
+        }
+        if (fname && typeof scene.showFloatingText === 'function') {
+            scene.showFloatingText(scene.scale.width / 2, scene.scale.height - 80, fname, '#c9a14a');
+        }
+        showChroniclePanel._fname = fname;
+    });
+
+    // Кнопка закрытия
+    const closeBg = scene.add.rectangle(width / 2 + 105, height / 2 + panelH / 2 - 24, 150, 28, 0x8B2C1A, 1)
+        .setStrokeStyle(2, 0xC9A961).setInteractive({ useHandCursor: true })
+        .setScrollFactor(0).setDepth(202);
+    const closeText = scene.add.text(width / 2 + 105, height / 2 + panelH / 2 - 24, t('Закрыть'), {
         fontSize: '13px', color: '#E8DCC4', fontFamily: 'Georgia, serif',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(203);
 
     const closeAll = () => {
-        [overlay, panel, title, body, btnBg, btnText, closeBg, closeText].forEach(o => o && o.destroy());
+        [overlay, panel, title, body, btnBg, btnText, exportBg, exportText, closeBg, closeText].forEach(o => o && o.destroy());
     };
     overlay.on('pointerup', closeAll);
     closeBg.on('pointerup', closeAll);

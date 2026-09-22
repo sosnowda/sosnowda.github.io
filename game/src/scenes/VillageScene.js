@@ -26,6 +26,8 @@ import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/Wo
 import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep, isNpcKilled } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
+// Раунд 66.8: план деревни — виджет-миникарта в углу + большая панель (клавиша P)
+import { MiniMap } from '../systems/MiniMap.js';
 import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, dayKeyOf } from '../data/chests.js';
 import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
@@ -550,6 +552,8 @@ export class VillageScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
         // Раунд 37 (п.5): обзор всей деревни
         this.input.keyboard.on('keydown-M', () => this.toggleVillageOverview());
+        // Раунд 66.8: план деревни (панель-миникарта с легендой и меткой игрока)
+        this.input.keyboard.on('keydown-P', () => { if (this.miniMap) this.miniMap.toggle(); });
         this.busyDialog = false;
         this.lastDir = 'down';
         this.lastStepTime = 0;
@@ -564,7 +568,7 @@ export class VillageScene extends Phaser.Scene {
             createDialog(this, '❓ ' + t('Инструкция'),
                 timeRatioInfoLine() + '\n\n' +
                 tk('village.help.body',
-                    'Управление: WASD/стрелки — движение, E/пробел — действие, M — обзор деревни, ESC — меню.\n\n' +
+                    'Управление: WASD/стрелки — движение, E/пробел — действие, M — обзор деревни, P — план деревни, ESC — меню.\n\n' +
                     '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
                     '🔒 Закрытые избы: хозяин ушёл — подскажут, где искать.\n' +
                     '⛪ Молитва — только в церкви. 🎣 Рыбалка — на Реке (по карте).\n' +
@@ -688,9 +692,13 @@ export class VillageScene extends Phaser.Scene {
         // ----- Мобильное управление -----
         this.virtualControls = new VirtualControls(this);
 
+        // Раунд 66.8: виджет-план деревни (правый верхний угол; клик/P — панель)
+        this.miniMap = new MiniMap(this);
+
         this.events.once('shutdown', () => {
             if (this.tutorial) this.tutorial.destroyAll();
             if (this.virtualControls) this.virtualControls.destroy();
+            if (this.miniMap) this.miniMap.destroy();
         });
     }
 
@@ -781,6 +789,22 @@ export class VillageScene extends Phaser.Scene {
             ovBtn.on('pointerup', () => { this.toggleVillageOverview(); });
             ovBtn.on('pointerover', () => ovBtn.setFillStyle(0x4a6a4a, 1));
             ovBtn.on('pointerout', () => ovBtn.setFillStyle(0x3a5a3a, 0.95));
+
+            // Раунд 66.8: кнопка "🗺 План" — панель-миникарта (дубль клавиши P
+            // и клика по виджету в углу)
+            const planBtnX = width - 480;
+            const planBtn = this.add.rectangle(planBtnX, btnY, btnW, btnH, 0x3a5a3a, 0.95)
+                .setStrokeStyle(1, 0xC9A961)
+                .setInteractive({ useHandCursor: true })
+                .setScrollFactor(0)
+                .setDepth(101);
+            const planText = this.add.text(planBtnX, btnY, '🗺 ' + t('План'), {
+                fontSize: '10px', color: '#E8DCC4',
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+            planBtn.on('pointerup', () => { if (this.miniMap) this.miniMap.toggle(); });
+            planBtn.on('pointerover', () => planBtn.setFillStyle(0x4a6a4a, 1));
+            planBtn.on('pointerout', () => planBtn.setFillStyle(0x3a5a3a, 0.95));
         }
 
         // Кнопка "Задания" (п.20)
@@ -854,6 +878,9 @@ export class VillageScene extends Phaser.Scene {
     update() {
         // Пока открыт диалог — не перебиваем его концом игры (раунд 21)
         if (this.busyDialog) return;
+
+        // Раунд 66.8: метка игрока на плане деревни (виджет/панель)
+        if (this.miniMap) this.miniMap.update();
 
         // Раунд 27: смена часа — пересчитать, кто где стоит (пп.6-11)
         const tsNow = getTime(this.registry);
