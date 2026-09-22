@@ -4,6 +4,8 @@ import { RUS } from '../config/RusTheme.js';
 import { INTERIORS } from '../data/interiors.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import AudioManager from '../systems/AudioManager.js';
+// Раунд 66.9 (CraftSounds): процедурные звуки ремёсел — молот/прялка/таверна
+import { attachCraftAudio } from '../systems/CraftAudio.js';
 import SaveManager from '../systems/SaveManager.js';
 import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
 import { ActionLog } from '../data/actionLog.js';
@@ -119,6 +121,14 @@ export class InteriorScene extends Phaser.Scene {
             }
         }
         this.interior = interior;
+
+        // Раунд 66.9 (CraftSounds): звуки ремёсел по интерьеру — молот
+        // кузнеца (пустая кузница молчит: громкость 0 без мастера/ученика),
+        // жужжание прялки (ткачиха, вдова Марфы), гул таверны поверх трека.
+        attachCraftAudio(this, this.interiorId, {
+            volume: this.interiorId === 'blacksmith' && !getSmithNpcId(this.registry)
+                ? 0 : undefined,
+        });
 
         // Раунд 21: вход в дом занимает время — вор тоже двигается.
         // До рисования HUD, чтобы дата/время уже были с учётом входа.

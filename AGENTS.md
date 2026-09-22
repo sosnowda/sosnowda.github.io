@@ -43,6 +43,7 @@ node game/tools/test_round68.mjs     # вода/деревья (раунд 66.5)
 node game/tools/test_round69.mjs     # звук/погода/сезоны/слухи/сайт (раунд 66.6) — новые раунды добавляют свои
 node game/tools/test_round70.mjs     # приметы/доска/рыбалка/арт-66.7 (раунд 66.7)
 node game/tools/test_round71.mjs     # план деревни/экспорт летописи/og-demo (раунд 66.8)
+node game/tools/test_round72.mjs     # звуки ремёсел/EN-глубина (раунд 66.9)
 
 # Синтаксис правленых файлов:
 node --check game/src/…/*.js
@@ -67,12 +68,13 @@ git add -A && git commit -m "патч 66.N: …" && git push origin main
 12. **Фасады fb_* (раунд 66.7)**: у КАЖДОГО дома (кроме церкви) есть труба в `housesFX.js` — дым от честного жерла; у церкви — шатёр с крестом (fb_church 263×340, нижний якорь, масштаб по ширине, окна +52). Частокол — тайл 32×32, ОДИН колж с остриём внутри тайла (НЕ 48px с двумя брёвнами — так стена читалась двухрядной, а острия срезались). Дорожки path_0..3 — песок на всей площади тайла (1 тайл шириной). Арт — `game/tools/make_assets_r67.py` (НЕ идемпотентен для фасадов: перед повторным запуском `git checkout -- ` их!).
 13. **Мини-карта и экспорт летописи (раунд 66.8)**: план деревни — `systems/MiniMap.js` (виджет в правом верхнем углу + панель по клавише P/клику; сетка строится из `world.buildMap()`, цвета клеток/зданий — `cellColor`/`buildingColor`, доска поручений — `QUEST_BOARD_TILE` (23,4)); метка игрока обновляется в `VillageScene.update()`. Экспорт летописи — `RusTime.buildChronicleExport(registry)` (чистая, тестируется в Node) + `exportChronicleFile(scene)` (Blob+a.click, ASCII-имя `letopis-<лето>-<мм>-<дд>.txt`); кнопка «⬇ Экспорт летописи» в панели летописи, запись о выгрузке идёт в actionLog. Отдельный og:image демо — `assets/images/og-demo.jpg` (генератор `game/tools/make_og_demo_r68.py`), ссылки в `game/index.html` (OG/Twitter/JSON-LD).
 14. **Стилистика кода**: ES-модули, `const`/`let`, комментарии на русском с номером раунда («// Раунд 68 (п.5): …»), никаких тестов в рантайме игры.
+15. **РЕМЁСЛЕННЫЕ ЗВУКИ (раунд 66.9)**: `systems/CraftAudio.js` — процедурный WebAudio (без ассетов!): молот — blacksmith (серии ударов + шип закалки; ПУСТАЯ кузница молчит — volume 0, когда `getSmithNpcId`=null), прялка — weaver_house/villager_house_2, гул голосов — tavern (поверх трека `ambient_tavern.ogg`). Громкости — `CRAFT_VOLUME_BY_INTERIOR`; мьют SFX/masterVolume уважаются; SHUTDOWN — затухание + снятие таймеров. Новый звук ремесла = правка CraftAudio + test_round72; ассеты не добавляются — SW НЕ бампится.
 
 ## 5. Инструменты и скрипты для агента
 
 - **Скриншоты сайта (10 → сейчас 9 кадров)**: `game/src/tools/ScreenshotDirector.js` — открой `http://localhost:8090/game/?shot=<id>`, id: `menu, select, custom, village, map, interior, priest, thief, combat` (плюс служебный `blacksmith`). Кадр 1280×720 → webp q85 → `assets/screenshots/NN-name.webp` → карточка в `index.html`/`en/index.html`. Снял — обнови alt-тексты под реальное содержимое кадра.
 - **Генераторы ассетов** (`game/tools/*.py`, нужны PIL): `make_assets_r66.py` (деревья Medieval_Expansion), `make_houses_r64/r65.py` (фасады fb_*/hp_*), `make_assets_r67.py` (частокол 32×32/дорожки/шатёр церкви с крестом/трубы ×3/иконостас int_bg_church), `probe_fb_r65*.py` (снятие координат окон/труб → `data/housesFX.js`), `make_thief_sprite.py`.
-- **Юнит-наборы**: `game/tools/test_round64/65/66/67/68/69/70/71.mjs` (70 — раунд 66.7: приметы/доска/рыбалка/частокол/дорожки/шатёр/трубы/иконостас, встроенный PNG-декодер на zlib; 71 — раунд 66.8: план деревни/экспорт летописи/og-demo/SW v67).
+- **Юнит-наборы**: `game/tools/test_round64/65/66/67/68/69/70/71/72.mjs` (70 — раунд 66.7: приметы/доска/рыбалка/частокол/дорожки/шатёр/трубы/иконостас, встроенный PNG-декодер на zlib; 71 — раунд 66.8: план деревни/экспорт летописи/og-demo/SW v67; 72 — раунд 66.9: CraftAudio (молот/прялка/таверна)/усиленный EN-аудит t()+tf()+tk/SW v67).
 - **Боевой/погонный симуляторы**: `game/tools/battle-sim.mjs`, `chase-sim.mjs` (балансные прогоны в node).
 - **QA-браузер**: `agent-browser` (Chromium headless). Тактики для этой игры (Phaser-canvas):
   - игровой клик = `mouse move/down/up` по координатам; DOM-кликов почти нет;
@@ -85,6 +87,7 @@ git add -A && git commit -m "патч 66.N: …" && git push origin main
 ## 6. Деплой и проверка прода
 
 1. Пуш в `main` → GitHub Pages строит сам. Проверка: `curl -s https://sosnowda.github.io/game/ -o /dev/null -w "%{http_code}"`.
+1a. **Видео в Git LFS (раунд 66.9)**: `assets/video/*.mp4|webm` (promo/intro) хранятся в LFS (`.gitattributes`); для клона/пуша нужен git-lfs в среде; GitHub Pages отдаёт LFS автоматически (media-прокси); история НЕ переписывалась — старые коммиты содержат обычные blob'ы, ломать ничего не нужно.
 2. Сверяй хэши прод ↔ локально для правленых файлов (`sha256sum`), для скриншотов — байт-в-байт.
 3. `game/src/` — network-first (видно сразу); `game/assets/` и сайт — кеш: `max-age=600` у GitHub + SW-кеш → при изменении ассетов/сайта бампь версии SW.
 4. Инцидент «404 Site not found» при `build=built` — сбой serving-слоя GitHub (самовосстанавливается), контент не виноват: не откатывай патч, проверь через 15–30 минут. Адреса-двойники: `sosnowda.github.io` — наш сайт; `sosnewda.github.io` — ОПЕЧАТКА (несуществующий пользователь).

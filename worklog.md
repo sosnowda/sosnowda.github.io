@@ -1001,3 +1001,22 @@ Work Log:
 Stage Summary:
 - docs/PROMPT_PROMO_VIDEO.md (44.9 КБ, бриф промо-ролика v1.0 от 09.09.2026) теперь в репо сайта; копия у владельца.
 - Дублей в репо игры больше нет (docs/PROMPT_PROMO_VIDEO.md в игре остаётся источником до решения владельца о вычистке — см. worklog игры, ход 22.09 п.3).
+
+---
+Task ID: 66.9
+Agent: Z.ai Code (main)
+Task: Бэклог (утраченный сеанс + отчёты 66.5/66.7; приказов владельца не поступало): CraftSounds — молот/прялка/таверна, Git LFS для mp4, EN-глубина. Cron-задача webDevReview недоступна в сессии (cron-инструмента нет — создать при первой возможности).
+
+Work Log:
+- п.1 (CraftSounds): НОВЫЙ systems/CraftAudio.js — WebAudio-синтез по канону RiverAmbience/WeatherAudio (без ассетов, SW/game-assets не бампятся): МОЛОТ (blacksmith) — серии ударов по наковальне (негармоничные обертоны 1720/2610/4180 Гц с detune ±6%, шумовой щелчок bandpass 3 кГц; конечный автомат «серия 3–6 ударов (0.38–0.6 с) ↔ передышка 2.2–5.2 с» на такте 120 мс; 30% серий — шип закалки playQuenchHiss 0.9 с); ПРЯЛКА (weaver_house, villager_house_2 — где текстура int_deco_spinning) — жужжание bandpass 850 Гц с LFO-дыханием 0.5 Гц + playWheelTick за оборот (~1.1 с: треск 1650 Гц + деревянный стук 210→140 Гц); ТАВЕРНА — гул голосов (band 420/750 Гц) ПОВЕРХ ambient_tavern.ogg с приливами-«репликами» (такт 2 с) + playMugClink (340→170 Гц, 14%/такт).
+- Пустая кузница МОЛЧИТ: InteriorScene-хук передаёт volume 0, когда getSmithNpcId(registry)=null (мастер и ученик погибли — канон «тишины» р.46). Хук стоит сразу после this.interior = interior (учтены смерть хозяина/вдова). Громкости CRAFT_VOLUME_BY_INTERIOR: blacksmith 0.5, weaver_house/villager_house_2 0.35, tavern 0.3. masterVolumeNode + settings.audio.sfxMuted (такт 2 с), SHUTDOWN — затухание 0.6 с + снятие таймеров + disconnect.
+- п.2 (Git LFS): git-lfs 3.7.0 (linux amd64) развернут в среде; .gitattributes: assets/video/*.mp4, *.webm → filter=lfs; `git lfs install` (локально) + `git add --renormalize assets/video` → promo.mp4 (7.3 МБ), promo.webm (0.4), intro.mp4 (4.1), intro.webm (0.5) стали LFS-указателями; история НЕ переписывалась (без force-push — деплой не рискует). Отдельный коммит после игрового патча (изоляция риска); GitHub Pages отдаёт LFS через media-прокси.
+- п.3 (EN-глубина): три аудит-скрипта (зонд i18n через экспорт EN/EN_KEYS): (а) «тощие» переводы en<0.6×ru при ru≥45 — 0; (б) мягкий порог 0.75 — 0; (в) ПОЛНОЕ покрытие t()/tf()-литералов с конкатенациями и decode \u-эскейпов — 1431/1431, tk() 4/4; whitelist: фрагменты ' (', ')', ' 🔒' (канон 67), 'NPC: {0}' (идентичная метка i18n.js:381), уже-EN литералы rumors.js (двуязычные слухи). Качество подтверждено выборочной сверкой 14 описаний интерьеров (полноценный художественный EN: «It is dim inside; a loom stands by the window…», «Arina's spinning wheel under the bench»), лендинг RU/EN — 816/816 строк, 43/43 секции. Слепая зона аудита-67 (tf()-паттерны не проверялись) закрыта регрессией в test_round72.
+- Юнит: НОВЫЙ test_round72.mjs 34/34 (таблица громкостей/баланс, моки-сцены: null без контекста/locked/volume 0, кузница-автомат «rest», прялка 1 слой+1 таймер, таверна 2 слоя, церковь→null, SHUTDOWN dead-флаг; source-канон: без импорта Phaser, masterVolumeNode, sfxMuted, SHUTDOWN; хук InteriorScene + getSmithNpcId-гвардия + позиция после this.interior; EN-аудит 1423/1423; SW v67) + регрессии 40+64+48+42+54+105+78+70 = 501. Итого 535.
+- node --check: CraftAudio.js, InteriorScene.js — 0 ошибок. Стенд :8090 (agent-browser): Village → Interior blacksmith — сцена жива (Кузнец Данила, горн, наковальня, кнопки), ошибок нет; описание кузницы «Стук молота по наковальне» теперь звучит буквально.
+- AGENTS.md: §3 тесты (+72), §4 правило 15 (ремесленные звуки), §5 (test_round72), §6 (Git LFS для видео). CHANGES.md «Патч 66.9». Отчёт: game/docs/QA_ROUND66_9_CRAFTAUDIO_LFS_EN.md.
+
+Stage Summary:
+- ВСЕ 3 ПУНКТА БЭКЛОГА ЗАКРЫТЫ: кузница стучит молотом (и молчит, когда опустела), прялка жужжит у ткачихи и вдовы Марфы, таверна гудит голосами поверх трека; видео переведены на Git LFS без переписывания истории; EN-глубина подтверждена усиленным аудитом (1431/1431 + 0 «тощих») и закрыта как регрессия.
+- 535 юнит-проверок зелёных; SW v67, game-assets-v21 не тронуты; сейвы совместимы.
+- Бэклог далее: баня/овин §3.1, погодные переходы сцены→сцена, сундуки/тайники (предложения 66.5), cron webDevReview — при появлении cron-инструмента.
