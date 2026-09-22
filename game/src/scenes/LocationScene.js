@@ -28,7 +28,8 @@ import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js'
 // Раунд 66.7 (п.4): сезонные запреты/бонусы рыбалки (нерест/жор)
 import { fishingSeason } from '../systems/FishingSeasons.js';
 // Раунд 36: рыбалка переехала из деревни (пруд удалён) на Реку
-import { isOpenedToday, markOpened, dayKeyOf } from '../data/chests.js';
+// Раунд 66.10: дневные лимиты — из data/daily.js (сундуки/тайники удалены по приказу владельца)
+import { dayKeyOf, isActionDoneToday, markActionDone } from '../data/daily.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcsAtPlace, NPC_DIALOGUE, pickOutdoorLine } from '../data/npcPresence.js';
@@ -397,14 +398,14 @@ export class LocationScene extends Phaser.Scene {
             return;
         }
 
-        const caught = isOpenedToday(q, 'fish_daily', today);
+        const caught = isActionDoneToday(q, 'fish_daily', today);
         const title = season.title;
         // Раунд 66.6: плеск воды — заброс/лунка озвучены всегда
         playWaterSplash(this, winter ? 0.5 : 0.7);
 
         if (!caught) {
             tickTime(this.registry, 60);
-            markOpened(q, 'fish_daily', today);
+            markActionDone(q, 'fish_daily', today);
             this.registry.set('quest', q);
             // Раунд 14: в дождь рыба активнее (+4 вместо +3).
             // Раунд 66.7: осенний жор — ещё +2 (сезонный бонус).

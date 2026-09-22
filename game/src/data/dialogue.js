@@ -1091,7 +1091,7 @@ export const DIALOGUES = {
             },
             games2: {
                 speaker: 'ребёнок',
-                text: 'Я победил, кого ж ещё! А как дождь пойдёт — так и игра: кто раньше до овина добежит. Я раньше всех. Прибежал — а там старший брат батиных снопов навалил... Так я первым и высох!',
+                text: 'Я победил, кого ж ещё! А как дождь пойдёт — так и игра: кто раньше до амбара добежит. Я раньше всех. Прибежал — а там старший брат батиных снопов навалил... Так я первым и высох!', // раунд 66.10: ориентир детской игры — амбар (приказ владельца)
                 en: 'I won, who else! And when the rain starts — a new game: whoever reaches the barn first. I got there first — and found Father\'s elder sons had piled up their sheaves inside. So I was the first to dry out, too!',
                 choices: [
                     { text: t('Ну-ну, ври дальше.'), end: true },
@@ -1219,7 +1219,7 @@ export const DIALOGUES = {
             },
             games: {
                 speaker: 'ребёнок',
-                text: 'А мы в прятки! Я в овин сел — меня до заката не нашли, каша стыла! А ещё я знаю, где белки орехи прячут. Только не скажу. Ну, если махнешь печёной репки — скажу!',
+                text: 'А мы в прятки! Я в амбар залез — меня до заката не нашли, каша стыла! А ещё я знаю, где белки орехи прячут. Только не скажу. Ну, если махнешь печёной репки — скажу!', // раунд 66.10: укрытие для пряток — амбар (приказ владельца)
                 en: 'And we play hide-and-seek! I hid in the barn — they couldn\'t find me till sunset, the porridge went cold! And I know where the squirrels hide their nuts. But I won\'t tell. Well... if you toss me a baked turnip, I will!',
                 choices: [
                     { text: t('Чур, не выдумывай!'), next: 'games2' },
@@ -1633,7 +1633,7 @@ export const DIALOGUES = {
                 en: 'My husband is out at other people\'s yards all day, while I spin and cook. He can hear the wood, but not always me. Yet keeping the hearth alive — that is my craft.',
                 variants: [
                     { text: 'Опять ты, путник? Садись на лавку, я как раз хлеб сажать собралась.', en: 'You again, traveller? Sit on the bench, I am just about to set the bread to rise.' },
-                    { text: 'Микула вон у овина стучит, а я одна. Скажешь — передам, не развею.', en: 'Mikula is hammering by the barn, and I am alone. Say your word — I will pass it on, it will not scatter.' },
+                    { text: 'Микула вон у амбара стучит, а я одна. Скажешь — передам, не развею.', en: 'Mikula is hammering by the barn, and I am alone. Say your word — I will pass it on, it will not scatter.' }, // раунд 66.10: ориентир реплики — амбар (постройка снесена приказом владельца)
                 ],
                 action: (scene) => {
                     DIALOGUES.carpenter_wife.nodes.a.choices = withAskThief(scene, 'carpenter_wife', [

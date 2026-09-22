@@ -12,7 +12,7 @@
 //
 // API:
 //   t(ru)            — статическая строка
-//   tf(pattern, ...) — шаблон с {0} {1}: tf('Открыть: {0}', name)
+//   tf(pattern, ...) — шаблон с {0} {1}: tf('Имя: {0}', name)
 //   tk(key, ru)      — семантический ключ для больших текстов (help.body и т.п.)
 //   getLang() / setLang(lang) / isEn()
 
@@ -145,21 +145,14 @@ const EN = {
     // --- Деревня (VillageScene) ---
     'Нажмите E — {0}': 'Press E — {0}',
     'Войти': 'Enter',
-    'Открыть: {0}': 'Open: {0}',
     'Выйти из деревни': 'Leave the village',
     'Отдохнуть у костра (1 час)': 'Rest by the campfire (1 hour)',
     'Рыбалка': 'Fishing',
     'Помолиться у креста (1 час)': 'Pray at the cross (1 hour)',
     'Двинская слобода': 'Dvinskaya Sloboda',
 
-    // --- Сундуки / тайники ---
-    'Сундук у таверны': 'Chest by the tavern',
-    'Сундук за амбаром': 'Chest behind the barn',
-    'Тюк у колодца': 'Bundle by the well',
-    'Позолоченный ларец': 'Gilded casket',
-    'твой тюк за лавкой': 'your bundle behind the bench',
-    'твой узел в углу амбара': 'your bundle in the barn corner',
-    'Сундук уже открыт сегодня': 'The chest was already opened today',
+    // РАУНД 66.10 (приказ владельца): секция «Сундуки / тайники» удалена —
+    // механика вырезана из игры (chests.js больше не существует).
 
     // --- Здания (интерьеры) ---
     'Староста': 'Elder',
@@ -213,8 +206,6 @@ const EN = {
     'Сети сушатся под потолком, на лавке — плетёные верши и уды. У печи хозяйка потрошит улов.': 'Fishing nets dry from the ceiling; wicker traps and rods lie on the bench. By the stove the mistress of the house is gutting the catch.',
     'Во дворе — брёвна, тесла и скобы. В избе пахнет свежей стружкой: хозяин тешет ложки, жена прядёт у печи.': 'Logs, adzes and clamps lie in the yard. The hut smells of fresh shavings: the master carves spoons while his wife spins by the stove.',
     'Полутьма, у окна — ткацкий стан, на нём — недотянутый холст. Клубки шерсти, прялка, пучки льна. Хозяйка работает, не поднимая глаз.': 'It is dim inside; a loom stands by the window with a half-finished length of linen on it. Balls of wool, a spinning wheel, bundles of flax. The mistress works without raising her eyes.',
-    'твой узел в углу мастерской': 'your bundle in the corner of the workshop',
-    'Узел чабана у овчарни': 'The herdsman\'s bundle by the sheepfold',
     '🔒 Дом закрыт, никого нет': '🔒 The house is shut — nobody is home',
     'Дом закрыт': 'House shut',
     'Хозяин сейчас: {0} · {1}': 'The owner right now: {0} · {1}',
@@ -361,11 +352,7 @@ const EN = {
     'Отец Савватий': 'Father Savvatiy',
     'Работник не показывается': 'Nobody is around',
 
-    // --- Лут ---
-    '+{0} денги': '+{0} dengas',
-    'Яблоко: +2 ❤': 'Apple: +2 ❤',
-    'Медная иконка: +1 ⭐': 'Copper icon: +1 ⭐',
-    'Пусто': 'Nothing',
+    // РАУНД 66.10: секция «Лут» удалена (лут сундуков вырезан по приказу владельца)
 
     // --- Репутация (уровни) ---
     'свой человек': 'one of their own',
@@ -500,8 +487,6 @@ const EN = {
     '🍻 Угостить (20д)': '🍻 Treat everyone (20d)',
     '🛒 Купить еды': '🛒 Buy food',
     '🛒 Купить оружие': '🛒 Buy weapons',
-    '🎒 Мой тюк': '🎒 My bundle',
-    '🎒 Мой узел': '🎒 My bundle',
     '🙏 Помолиться': '🙏 Pray',
     '🕯 Пожертвовать (5д)': '🕯 Donate (5d)',
     '🔍 Осмотреть киот': '🔍 Inspect the icon case',
@@ -888,8 +873,8 @@ const EN = {
     'Поляна': 'Glade',
     '🗺 Околица — карта местности: выбирай локацию и в путь.\nКаждый переход по карте занимает ровно 1 игровой час.\nСледы вора живут от 12 до 24 часов — а дождь и снег смывают их и раньше.':
         '🗺 The outskirts — a map of the area: pick a location and set out.\nEvery crossing on the map takes exactly 1 game hour.\nThe thief\'s tracks last 12 to 24 hours — and rain or snow washes them away even sooner.',
-    '🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n📦 Сундуки и тайники открываются раз в игровой день.\n◀ Выход — кнопка внизу.':
-        '🏠 Talking to a host takes 1 game hour —\nchoose whom and what to speak about.\n📦 Chests and hiding places open once per game day.\n◀ Leave by the button below.',
+    '🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n◀ Выход — кнопка внизу.':
+        '🏠 Talking to a host takes 1 game hour —\nchoose whom and what to speak about.\n◀ Leave by the button below.',
     '💬 Поговорить': '💬 Talk',
     '💰 Просить денег': '💰 Ask for money',
     '📜 Задание': '📜 Quest',
@@ -900,14 +885,13 @@ const EN = {
     '🍻 Угостить (20д)': '🍻 Treat (20 d.)',
     '🛒 Купить еды': '🛒 Buy food',
     '🛏 Отдых': '🛏 Rest',
-    '🎒 Мой тюк': '🎒 My bundle',
     '🛒 Купить оружие': '🛒 Buy weapons',
     '🙏 Помолиться': '🙏 Pray',
     '🕯 Пожертвовать (5д)': '🕯 Donate (5 d.)',
     '🔍 Осмотреть киот': '🔍 Examine the shrine',
     '⚒ Работать (1 час)': '⚒ Work (1 hour)',
     '🌾 Осмотреть зерно': '🌾 Inspect the grain',
-    '🎒 Мой узел': '🎒 My pack',
+    // РАУНД 66.10: кнопки домашних тайников (пункт «Мой тюк»/«Мой узел») удалены из словаря
     '🚪 Выйти': '🚪 Leave',
     '📜 Персонаж': '📜 Character',
     '🎒 Инвентарь': '🎒 Inventory',
@@ -1495,8 +1479,8 @@ const EN = {
         '🗺 The outskirts — a map of the land: choose a location and set out.\nEach crossing on the map takes exactly 1 game hour.\nThe thief\'s trails live from 12 to 24 hours — and rain and snow wash them away sooner.',
     'Игрок отправился в локацию «{0}».': 'The player set out for the location "{0}".',
     'Игрок отправился гулять в Тёмный лес.': 'The player set out to stroll in the Dark Forest.',
-    '🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n📦 Сундуки и тайники открываются раз в игровой день.\n◀ Выход — кнопка внизу.':
-        '🏠 Talking to the master of a house takes 1 game hour —\nchoose with whom and about what to speak.\n📦 Chests and stashes open once per game day.\n◀ The exit is the button below.',
+    '🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n◀ Выход — кнопка внизу.':
+        '🏠 Talking to the master of a house takes 1 game hour —\nchoose with whom and about what to speak.\n◀ The exit is the button below.',
     'Ученик кузнеца': 'Blacksmith\'s Apprentice',
     '{0} погиб(ла) от твоей руки.\nДом опустел, вещи прикрыты холстиной.\nДеревня шепчется о кровной вине.':
         '{0} perished at your hand.\nThe house stands empty, the things covered with canvas.\nThe village whispers of blood guilt.',
@@ -1739,8 +1723,6 @@ const EN = {
     'нет': 'none',
     'Сдавать:': 'Deliver to:',
     'тому же NPC': 'the same NPC',
-    'Заглянул в «{0}» — уже обыскан сегодня.': 'Looked into "{0}" — already searched today.',
-    'Обыскал «{0}»: {1}.': 'Searched "{0}": {1}.',
     'Погрелся у костра — силы и так полны.': 'Warmed by the fire — strength is already full.',
     '🔥 Костёр': '🔥 Campfire',
     'Присесть у огня': 'Sit by the fire',

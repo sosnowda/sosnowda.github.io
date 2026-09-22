@@ -220,9 +220,10 @@ export class BootScene extends Phaser.Scene {
         this.load.image('int_wall', 'assets/interiors/wall_wood.png');
         this.load.image('int_window', 'assets/interiors/window.png');
         this.load.image('int_door_back', 'assets/interiors/door_back.png');
-        // Декорации интерьера (базовые + новые)
+        // Декорации интерьера (базовые + новые; 'chest' удалён — раунд 66.10,
+        // приказ владельца: сундуки/тайники не нужны)
         ['table', 'chair', 'candle', 'fireplace', 'anvil', 'bed', 'icon_wall', 'bar', 'barrel',
-         'loom', 'shelf', 'hay', 'firewood', 'analogion', 'bench', 'cradle', 'spinning', 'chest'
+         'loom', 'shelf', 'hay', 'firewood', 'analogion', 'bench', 'cradle', 'spinning'
         ].forEach((d) => {
             this.load.image(`int_deco_${d}`, `assets/interiors/deco_${d}.png`);
         });
@@ -556,6 +557,8 @@ export class BootScene extends Phaser.Scene {
                 hasHerb: false,
                 tutorialStep: 0,
                 currentObjective: 'Поговори со старейшиной',
+                // chestsOpened — ИСТОРИЧЕСКОЕ имя ключа дневных действий
+                // (рыбалка и т.п.; data/daily.js). Имя не менять — совместимость сейвов.
                 chestsOpened: [],
                 hoursPassed: 0,
             });
@@ -565,37 +568,14 @@ export class BootScene extends Phaser.Scene {
     }
 
     /**
-     * Процедурные текстуры декора (раунд 11): сундуки (закрыт/открыт),
-     * полевые цветы 3 цветов и травяные кочки. Рисуются graphics-ом один раз
-     * при загрузке — никаких лишних сетевых запросов.
+     * Процедурные текстуры декора (раунд 11): полевые цветы 3 цветов и
+     * травяные кочки. Рисуются graphics-ом один раз при загрузке — никаких
+     * лишних сетевых запросов.
+     * Раунд 66.10 (приказ владельца): текстуры сундуков (chest_closed/open)
+     * удалены — сундуки/тайники вырезаны из игры.
      */
     createDecoTextures() {
         const g = this.make.graphics({ add: false });
-
-        // ===== Сундук закрытый (24×20): дубовые доски + кованая полоса + замок =====
-        g.clear();
-        g.fillStyle(0x6b4a2a, 1); g.fillRect(2, 8, 20, 10);          // корпус
-        g.fillStyle(0x7d5834, 1); g.fillRect(3, 9, 18, 3);           // светлее сверху
-        g.fillStyle(0x5a3d22, 1); g.fillRect(2, 16, 20, 2);          // тень снизу
-        g.fillStyle(0x4a3018, 1); g.fillRect(1, 6, 22, 4);           // крышка (прикрыта)
-        g.fillStyle(0x8a6438, 1); g.fillRect(2, 7, 20, 1);           // блик крышки
-        g.fillStyle(0x3d3d3d, 1); g.fillRect(10, 6, 4, 12);          // кованая полоса
-        g.fillStyle(0x5a5a5a, 1); g.fillRect(10, 6, 4, 1);           // блик полосы
-        g.fillStyle(0xc9a14a, 1); g.fillRect(11, 10, 2, 3);          // замок (латунь)
-        g.generateTexture('chest_closed', 24, 20);
-
-        // ===== Сундук открытый (24×22): крышка откинута, внутри поблёскивает =====
-        g.clear();
-        g.fillStyle(0x4a3018, 1); g.fillRect(1, 0, 22, 5);           // откинутая крышка
-        g.fillStyle(0x8a6438, 1); g.fillRect(1, 0, 22, 1);           // блик крышки
-        g.fillStyle(0x2a1a0e, 1); g.fillRect(2, 8, 20, 10);          // тёмный нутро
-        g.fillStyle(0x6b4a2a, 1); g.fillRect(2, 16, 20, 3);          // корпус ниже
-        g.fillStyle(0x5a3d22, 1); g.fillRect(2, 18, 20, 1);          // тень корпуса
-        g.fillStyle(0x3d3d3d, 1); g.fillRect(10, 0, 4, 5);           // полоса на крышке
-        g.fillStyle(0xc9a14a, 1); g.fillRect(6, 9, 2, 2);            // блеск монет
-        g.fillStyle(0xe8cc7a, 1); g.fillRect(14, 10, 3, 2);          // ещё блеск
-        g.fillStyle(0xc9a14a, 1); g.fillRect(9, 12, 2, 1);           // и ещё
-        g.generateTexture('chest_open', 24, 22);
 
         // ===== Полевые цветы (10×12): стебель + лепестки вокруг серединки =====
         const flowerColors = [
@@ -1088,94 +1068,9 @@ export class BootScene extends Phaser.Scene {
         g.fillCircle(24, 36, 3); g.fillCircle(88, 36, 2.6);
         g.generateTexture('deco_riga', 112, 72);
 
-        // ===== БАНЯ ПО-БЕЛОМУ (104×62, §3.1 раунд 20): светлый сруб, двускатная
-        // кровля с коньком, каменная труба, тёплое окошко, шайка-ушат у двери =====
-        g.clear();
-        g.fillStyle(0x000000, 0.25); g.fillEllipse(52, 58, 96, 7);      // тень
-        // Сруб — светлее жилых домов (свежая сосна, баню топили вчера)
-        g.fillStyle(0x7a5c3a, 1); g.fillRoundedRect(8, 26, 74, 32, 3);
-        for (let ly = 31; ly < 56; ly += 7) {
-            g.fillStyle(0x8a6a44, 1); g.fillRect(10, ly, 70, 2);
-            g.fillStyle(0x5c4028, 1); g.fillRect(10, ly + 4, 70, 1);
-        }
-        // Торцы брёвен по углам
-        [12, 78].forEach(cx2 => {
-            g.fillStyle(0x9a7a50, 1); g.fillCircle(cx2, 29, 2.6); g.fillCircle(cx2, 55, 2.6);
-        });
-        // Низкая дверь с потёмками
-        g.fillStyle(0x2e2013, 1); g.fillRect(14, 34, 16, 24);
-        g.fillStyle(0x4a3826, 1); g.fillRect(16, 36, 12, 22);
-        g.fillStyle(0x2e2013, 1); g.fillCircle(25, 47, 1.2);
-        // Тёплое окошко — печь горит, баня готова
-        g.fillStyle(0x2e2013, 1); g.fillRect(40, 34, 18, 13);
-        g.fillStyle(0xf0a040, 1); g.fillRect(42, 36, 14, 9);
-        g.fillStyle(0xffd080, 1); g.fillRect(44, 38, 8, 5);
-        g.lineStyle(1, 0x3a2818, 1);
-        g.lineBetween(49, 34, 49, 47); g.lineBetween(40, 40.5, 58, 40.5);
-        // Двускатная кровля с коньком (дранка)
-        g.fillStyle(0x4a3520, 1); g.fillPoints([
-            { x: 2, y: 26 }, { x: 88, y: 26 }, { x: 45, y: 4 },
-        ], true);
-        g.fillStyle(0x6a5034, 1); g.fillPoints([
-            { x: 8, y: 26 }, { x: 82, y: 26 }, { x: 45, y: 8 },
-        ], true);
-        for (let i = 0; i < 4; i++) {
-            const yy = 22 - i * 4;
-            const half = 38 - i * 9;
-            g.fillStyle(0x3a2818, 1);
-            g.fillRect(45 - half, yy, half * 2, 1);
-        }
-        g.fillStyle(0x2e2013, 1); g.fillRect(44, 2, 3, 5);              // конёк
-        // Каменная труба справа (дым рисует VillageScene — smokeBuildings)
-        g.fillStyle(0x6a625a, 1); g.fillRect(80, 8, 12, 20);
-        g.fillStyle(0x847a70, 1); g.fillRect(82, 10, 3, 16);
-        g.fillStyle(0x4a4440, 1); g.fillRect(78, 6, 16, 4);
-        // Шайка-ушат и лавка у входа
-        g.fillStyle(0x5a4028, 1); g.fillRect(34, 52, 12, 8);
-        g.fillStyle(0xc8a838, 1); g.fillEllipse(40, 52, 10, 4);
-        g.fillStyle(0x8a6a42, 1); g.fillRect(58, 54, 16, 3);
-        g.fillStyle(0x5c4028, 1); g.fillRect(59, 57, 2, 3); g.fillRect(71, 57, 2, 3);
-        g.generateTexture('deco_banya', 104, 62);
-
-        // ===== ОВИН (104×58, §3.1 раунд 20): шатёр для сушки снопов —
-        // каменный подовин, бревенчатый шатёр со щелью-вытяжкой, тёплая печка,
-        // дверца с засовом, снопы у стены =====
-        g.clear();
-        g.fillStyle(0x000000, 0.25); g.fillEllipse(52, 54, 98, 7);      // тень
-        // Каменный подовин (низ, где печь-подовое колесо)
-        g.fillStyle(0x6a625a, 1); g.fillRect(6, 40, 92, 14);
-        g.fillStyle(0x544c44, 1);
-        g.fillRect(14, 42, 12, 10); g.fillRect(38, 44, 14, 8); g.fillRect(64, 42, 12, 10); g.fillRect(84, 44, 10, 8);
-        g.fillStyle(0x7c746a, 1);
-        g.fillRect(16, 42, 6, 4); g.fillRect(66, 42, 6, 4);
-        // Бревенчатый шатёр (трапеция вверх)
-        g.fillStyle(0x5a4028, 1); g.fillPoints([
-            { x: 10, y: 40 }, { x: 94, y: 40 }, { x: 78, y: 12 }, { x: 26, y: 12 },
-        ], true);
-        for (let ly = 16; ly < 40; ly += 6) {                            // брёвна шатра
-            const t2 = (ly - 12) / 28;
-            const halfW = 26 + (94 - 78) * 0; // сужение кверху
-            const xL = 26 - (26 - 10) * (1 - t2);
-            const xR = 78 + (94 - 78) * (1 - t2);
-            g.fillStyle(0x6a4c30, 1); g.fillRect(xL + 2, ly, xR - xL - 4, 2);
-            g.fillStyle(0x46301c, 1); g.fillRect(xL + 2, ly + 4, xR - xL - 4, 1);
-        }
-        // Щель-вытяжка по центру шатра — тёплый овинный дух изнутри
-        g.fillStyle(0x1a0e08, 1); g.fillRect(48, 14, 8, 26);
-        g.fillStyle(0xe87830, 0.85); g.fillRect(50, 18, 4, 20);
-        g.fillStyle(0xffc860, 0.9); g.fillRect(51, 24, 2, 10);
-        // Дверца с засовом слева
-        g.fillStyle(0x2e2013, 1); g.fillRect(18, 26, 14, 14);
-        g.fillStyle(0x4a3826, 1); g.fillRect(20, 28, 10, 12);
-        g.fillStyle(0x2e2013, 1); g.fillRect(22, 33, 6, 2);
-        // Снопы у стены справа + на земле
-        g.fillStyle(0xc8a838, 1);
-        g.fillEllipse(88, 46, 10, 12); g.fillEllipse(97, 47, 8, 10);
-        g.fillStyle(0xe0c050, 1);
-        g.fillEllipse(88, 42, 6, 5); g.fillEllipse(97, 44, 5, 4);
-        g.fillStyle(0xb89828, 1);
-        g.fillEllipse(74, 52, 14, 4); g.fillEllipse(30, 53, 12, 3);
-        g.generateTexture('deco_ovin', 104, 58);
+        // РАУНД 66.10 (приказ владельца): генераторы «БАНЯ ПО-БЕЛОМУ» и «ОВИН»
+        // (§3.1 раунда 20) удалены — постройки сняты с бэклога и вырезаны
+        // насовсем; текстуры deco_banya/deco_ovin больше не создаются.
 
         // ===== СТОГ СЕНА (36×28): округлый, с «расчёской»-штрихами =====
         g.clear();

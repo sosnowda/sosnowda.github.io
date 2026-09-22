@@ -24,11 +24,13 @@ import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraY
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
 import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
-import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, changeVillageRep, isNpcKilled } from '../data/reputation.js';
+// Раунд 66.10: changeVillageRep убран из импорта (был нужен только луту сундуков)
+import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, isNpcKilled } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
 // Раунд 66.8: план деревни — виджет-миникарта в углу + большая панель (клавиша P)
 import { MiniMap } from '../systems/MiniMap.js';
-import { CHESTS, chestAt, isOpenedToday, markOpened, rollLoot, lootDisplayName, dayKeyOf } from '../data/chests.js';
+// Раунд 66.10 (приказ владельца): сундуки/тайники удалены из игры; дневной ключ — из data/daily.js
+import { dayKeyOf } from '../data/daily.js';
 import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
 import { getPresence, ALL_NPC_IDS, NPC_DIALOGUE, PLACE_NAMES, pickOutdoorLine } from '../data/npcPresence.js';
@@ -468,9 +470,8 @@ export class VillageScene extends Phaser.Scene {
 
         // Раунд 64 (п.5): живность (куры/коровы/воробьи) удалена из деревни.
 
-        // ----- Полевые цветы/кочки и сундуки с лутом (раунд 11) -----
+        // ----- Полевые цветы/кочки (раунд 11; сундуки удалены — раунд 66.10) -----
         this.scatterFlowers(ts);
-        this.spawnChests(ts);
 
         // ----- Раунд 12 → 65: костёр и лампада креста УДАЛЕНЫ из деревни
         // (пп.5,6 приказа): отдых у костра — на Опушке леса, молитва — в церкви.
@@ -1269,14 +1270,6 @@ export class VillageScene extends Phaser.Scene {
                         nearest = { type: 'door', interiorId, label: b ? b.label : t('Войти') };
                     }
                 }
-                const chestEntry = chestAt(cx, cy);
-                if (chestEntry) {
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        nearest = { type: 'chest', chest: chestEntry, label: tf(t('Открыть: {0}'), t(chestEntry.label)) };
-                    }
-                }
                 if (isGate(cx, cy)) {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < bestDist) {
@@ -1443,12 +1436,8 @@ export class VillageScene extends Phaser.Scene {
             tickTime(this.registry, 60);
             ActionLog.add(this.registry, t('Игрок вышел за околицу.'));
             this.scene.start('Fork');
-        } else if (this.nearestInteractable.type === 'chest') {
-            // nearestInteractable.chest — сырой объект из CHESTS; нужен отрисованный
-            // entry {data, img, marker} из this.chests
-            const entry = (this.chests || []).find(e => e.data.id === this.nearestInteractable.chest.id);
-            this.openChest(entry);
         }
+        // РАУНД 66.10 (приказ владельца): ветка «сундук» удалена — сундуков в деревне нет.
         // РАУНД 65 (пп.5,6): ветки «отдых у костра» и «молитва у креста»
         // удалены из деревни — молитва только в церкви, костёр — в лесу.
     }
@@ -1925,111 +1914,11 @@ export class VillageScene extends Phaser.Scene {
         // Сохранение отключено (одноразовая игра)
     }
 
-    /**
-     * Раунд 11: сундуки с лутом. Отрисовка + восстановление состояния
-     * «открыт сегодня» (из q.chestsOpened). Искра над неоткрытыми.
-     */
-    spawnChests(ts) {
-        const q = this.registry.get('quest') || {};
-        const today = dayKeyOf(getTime(this.registry));
-
-        this.chests = CHESTS.map((chest) => {
-            const px = chest.col * ts + ts / 2;
-            const py = chest.row * ts + ts / 2;
-            const opened = isOpenedToday(q, chest.id, today);
-
-            // Мягкая тень под сундуком
-            this.add.ellipse(px, py + 10, 30, 9, 0x000000, 0.22).setDepth(chest.row + 0.4);
-            const img = this.add.image(px, py, opened ? 'chest_open' : 'chest_closed')
-                .setScale(ts / 24)      // 24px текстура → 48px тайл
-                .setDepth(chest.row + 0.45);
-
-            // Искра над неоткрытым сундуком (у редкого — ярче и крупнее)
-            let marker = null;
-            if (!opened) {
-                marker = this.add.image(px, py - 18, 'particle_spark')
-                    .setTint(chest.rare ? 0xffd700 : 0xc9a14a)
-                    .setDisplaySize(chest.rare ? 18 : 13, chest.rare ? 18 : 13)
-                    .setDepth(chest.row + 0.5);
-                this.tweens.add({
-                    targets: marker,
-                    alpha: { from: 0.55, to: 1 },
-                    y: { from: py - 18, to: py - 22 },
-                    duration: 900 + Math.random() * 300,
-                    yoyo: true,
-                    repeat: -1,
-                    ease: 'Sine.easeInOut',
-                });
-            }
-            return { data: chest, img, marker };
-        });
-    }
-
-    /**
-     * Раунд 11: открытие сундука — раз в игровой день на сундук.
-     * Лут по взвешенной таблице: деньги / яблоко (+2 HP) / медная иконка (+1 репутация).
-     */
-    openChest(entry) {
-        if (!entry || this.busyDialog) return;
-        const chest = entry.data;
-        const player = this.registry.get('player');
-        if (!player) return;
-
-        const q = this.registry.get('quest') || {};
-        const today = dayKeyOf(getTime(this.registry));
-
-        if (isOpenedToday(q, chest.id, today)) {
-            ActionLog.add(this.registry, tf(t('Заглянул в «{0}» — уже обыскан сегодня.'), t(chest.label)));
-            this.showFloatingText(entry.img.x, entry.img.y - 26, 'Уже обыскан', '#b8a88a');
-            return;
-        }
-
-        markOpened(q, chest.id, today);
-        this.registry.set('quest', q);
-
-        // Крышка открывается, искра гаснет
-        entry.img.setTexture('chest_open');
-        if (entry.marker) {
-            entry.marker.destroy();
-            entry.marker = null;
-        }
-
-        // Лут
-        const loot = rollLoot(chest);
-        let msg = 'Пусто...';
-        if (loot.kind === 'money') {
-            const amount = Phaser.Math.Between(loot.min, loot.max);
-            player.dengas = (player.dengas || 0) + amount;
-            msg = lootDisplayName(loot, amount);
-            this.audioManager.playSound('sfx_button_click');
-        } else if (loot.kind === 'apple') {
-            player.HP = Math.min(player.HPmax || player.HP + 2, player.HP + 2);
-            msg = lootDisplayName(loot);
-            this.audioManager.playSound('sfx_heal');
-        } else if (loot.kind === 'icon_scrap') {
-            const res = changeVillageRep(this.registry, 1, 'Медная иконка из ларца');
-            msg = lootDisplayName(loot);
-            this.audioManager.playSound('sfx_level_up');
-            if (res && res.message) ActionLog.add(this.registry, res.message);
-        }
-        this.registry.set('player', player);
-        this.updateHUD();
-
-        // Эффекты: всплывающий текст + вспышка искр
-        this.showFloatingText(entry.img.x, entry.img.y - 26, msg, chest.rare ? '#ffd700' : '#e8cc7a');
-        const burst = this.add.particles(entry.img.x, entry.img.y, 'particle_spark', {
-            speed: { min: 40, max: 90 },
-            lifespan: 700,
-            scale: { start: 0.5, end: 0 },
-            tint: 0xe8cc7a,
-            emitting: false,
-        }).setDepth(150);
-        burst.explode(chest.rare ? 14 : 9);
-        this.time.delayedCall(1200, () => burst.destroy());
-
-        tickTime(this.registry, 5);
-        ActionLog.add(this.registry, tf(t('Обыскал «{0}»: {1}.'), t(chest.label), msg));
-    }
+    // ================================================================
+    // РАУНД 66.10 (приказ владельца «сундуки/тайники НЕ НУЖНО, УДАЛИТЬ!»):
+    // методы spawnChests/openChest удалены целиком. Сундуков/тюков/ларцов
+    // в деревне нет (и у дневных лимитов теперь свой дом — data/daily.js).
+    // ================================================================
 
     // ================================================================
     // РАУНД 65 (пп.5,6 приказа): КОСТЁР И КРЕСТ УДАЛЕНЫ ИЗ ДЕРЕВНИ.
@@ -2078,12 +1967,10 @@ export class VillageScene extends Phaser.Scene {
         const timeState = getTime(this.registry);
         const season = timeState ? getSeason(timeState.month) : 'summer';
         const winter = season === 'winter';
-        const chestTiles = new Set(CHESTS.map(c => `${c.col},${c.row}`));
 
         for (let y = 1; y < MAP_H - 1; y++) {
             for (let x = 1; x < MAP_W - 1; x++) {
                 if (this.map[y][x] !== '.') continue;
-                if (chestTiles.has(`${x},${y}`)) continue;
                 const px = x * ts + ts / 2;
                 const py = y * ts + ts / 2;
 

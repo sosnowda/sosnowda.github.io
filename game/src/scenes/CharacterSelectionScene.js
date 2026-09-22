@@ -449,6 +449,8 @@ export class CharacterSelectionScene extends Phaser.Scene {
             hasHerb: true,
             tutorialStep: 0,
             currentObjective: tf(t('Ты беженец в деревне {0}. Найди приют и работу.'), t(villageName)),
+            // chestsOpened — ИСТОРИЧЕСКОЕ имя ключа дневных действий (data/daily.js);
+            // имя не менять — совместимость сейвов (раунд 66.10)
             chestsOpened: [],
             hoursPassed: 0,
             moneyAskedFrom: [],

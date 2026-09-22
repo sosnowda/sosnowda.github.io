@@ -259,7 +259,7 @@ export const INTERIORS = {
         portrait: 'portrait_tavernkeeper',
         dialogueId: 'peddler',
         description: t('Дом ремесленника: у стены — верстак со стругами, под потолком — связки ложек, лучины и мочал. На прилавке у окна — ножи, верёвки, кремни, свечи восковые да обереги от сглазу. Хозяин и мастер, и торгаш в одном.'),
-        decor: ['shelf', 'chest', 'table'],
+        decor: ['shelf', 'table'], // раунд 66.10: 'chest' удалён (сундуки не нужны)
         market: {
             title: t('Дом ремесленника — товар'),
             items: [

@@ -15,7 +15,7 @@ import { addMorningFog } from '../systems/AmbientFX.js';
 import { checkGameEnd, chaseTicksLeft } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
-import { dayKeyOf } from '../data/chests.js';
+import { dayKeyOf } from '../data/daily.js'; // раунд 66.10: daily вместо удалённого chests.js
 import { createDialog } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
