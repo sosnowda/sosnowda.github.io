@@ -70,10 +70,13 @@ export class ActionLog {
         let isEscaped = false;
         let isHeroDead = false;
         let isRepVictory = false;
+        let isMarriageVictory = false;
         let isExpelled = false;
         let isElderMurdered = false;
         if (finalOutcome === 'victory') isVictory = true;
         else if (finalOutcome === 'victory_reputation') { isVictory = true; isRepVictory = true; }
+        // Раунд 66.11 (приказ владельца): свадьба — ВЫИГРЫШ и конец игры
+        else if (finalOutcome === 'victory_marriage') { isVictory = true; isMarriageVictory = true; }
         else if (finalOutcome === 'defeat_thief_escaped') isEscaped = true;
         else if (finalOutcome === 'defeat_hero_dead') isHeroDead = true;
         // Раунд 45 (п.2): изгнание за дурную славу — отдельный исход
@@ -92,7 +95,20 @@ export class ActionLog {
         let title = '';
         let comment = '';
 
-        if (isVictory && isRepVictory) {
+        if (isVictory && isMarriageVictory) {
+            // Раунд 66.11 (приказ владельца): ЖЕНИТЬБА — ВЫИГРЫШ И КОНЕЦ ИГРЫ.
+            // Оцениваем путь героя, приведший к венцу.
+            if (total <= 20 && failed === 0) {
+                stars = 5; title = 'Свадебный венец';
+                comment = 'Икона возвращена, деревня полюбила — и свадебный звон венчает летопись. Безупречно!';
+            } else if (total <= 34) {
+                stars = 4; title = 'Честь и семья';
+                comment = 'Ты снискал любовь деревни и сердце одного из её жителей. Свадьба — награда за добрые дела.';
+            } else {
+                stars = 3; title = 'Долгая дорога к венцу';
+                comment = 'Путь был долог, но свадебный каравай доехал: теперь у тебя семья и целый приход в родне.';
+            }
+        } else if (isVictory && isRepVictory) {
             // Раунд 36: репутационная победа — оцениваем путь добрых дел
             if (total <= 14 && failed === 0) {
                 stars = 5; title = 'Душа деревни';

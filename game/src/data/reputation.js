@@ -1012,8 +1012,11 @@ export function canMarry(registry, npcId, player) {
  * Выполнить брак.
  * Снимает деньги, отмечает NPC и игрока как состоящих в браке.
  * Повышает деревенскую репутацию.
- * Раунд 47 (п.1 заявки): брак — это СОБЫТИЕ ЖИЗНИ, а не финал:
- * игра продолжается после свадьбы (ни победного флага, ни EndScene).
+ * Раунд 47 (п.1 заявки): брак — событие жизни, а не финал (было раньше).
+ * Раунд 66.11 (приказ владельца): ЖЕНИТЬБА — ВЫИГРЫШ И КОНЕЦ ИГРЫ!
+ * «…с задачей женится ИЛИ получить 100 репутации в деревне — ВЫИГРЫШ И
+ * КОНЕЦ ИГРЫ!» Флаг q.marriageVictory подхватывает checkGameEnd (thief.js)
+ * → сцены уводят игру в EndScene «💍 ПОБЕДА! СВАДЬБА СЫГРАНА».
  */
 export function marry(registry, npcId, player) {
     const check = canMarry(registry, npcId, player);
@@ -1043,6 +1046,12 @@ export function marry(registry, npcId, player) {
     ActionLog.add(registry, tf(t('СВАДЬБА: {0} {1} {2} ({3}). Свадебное торжество обошлось в {4} д. Деревенская репутация выросла.'),
         player.name, marriedVerb, npc.name, npc.profession.name, MARRIAGE_COST)
     );
+
+    // Раунд 66.11 (приказ владельца): свадьба — ВЫИГРЫШ и конец игры.
+    const q = registry.get('quest') || {};
+    q.marriageVictory = true;
+    q.currentObjective = t('💍 Свадьба сыграна — победа! Поход завершён венцом.');
+    registry.set('quest', q);
     
     return { success: true, npcName: npc.name };
 }

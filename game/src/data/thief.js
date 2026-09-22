@@ -65,6 +65,9 @@ import { getNpcShortName, findNpc } from './npcNames.js';
 // наследует ученик; встречные проверки — по параметрам из базы жителей
 import { isNpcKilled } from './reputation.js';
 import { getNpcOpposition } from './npcStats.js';
+// Раунд 66.11 (приказ владельца №2): НПЦ на локации, где пробегал вор,
+// обязателен как свидетель — место берём из системы присутствия жителей
+import { getPresence } from './npcPresence.js';
 
 /**
  * Раунд 41 (QA): говорящий в репликах о воре — ДИНАМИЧЕСКОЕ имя NPC
@@ -324,6 +327,38 @@ export function ensureWitnesses(registry) {
 /** Был ли этот селянин свидетелем вора (случайно, на старте игры). */
 export function isThiefWitness(registry, npcId) {
     return ensureWitnesses(registry).includes(npcId);
+}
+
+/**
+ * Раунд 66.11 (приказ владельца №2): «ЕСЛИ НА ЛОКАЦИИ ГДЕ ПРОБЕГАЛ ВОР,
+ * БЫЛИ ИИ НПЦ, ТО ОНИ ОБЯЗАТЕЛЬНО ПРИ ДИАЛОГЕ И РАСПРОСАХ О ВОРЕ, ДАДУТ
+ * НАВОДКУ НА ЛОКАЦИЮ, КУДА ПОБЕЖАЛ ВОР».
+ *
+ * Проверяет, стоит ли НПЦ сейчас (по расписанию присутствия жителей) на той
+ * самой локации погони, которую вор УЖЕ прошёл или где он ПРЯЧЕТСЯ сейчас.
+ * Локация считается «пройденной вором», если выполняется хотя бы одно:
+ *   • она стоит в его маршруте ПОЗАДИН текущей остановки (он через неё бежал);
+ *   • на ней сохранились его следы (chase.traces[locId]);
+ *   • вор сидит на ней прямо сейчас (изобличён присутствием НПЦ).
+ * Такой НПЦ — ГАРАНТИРОВАННЫЙ очевидец: наводка выдаётся ОБЯЗАТЕЛЬНО,
+ * независимо от случайного списка свидетелей раунда 30.
+ * Дети наводок не выдают (раунд 44, п.6 владельца) — их askNPC отсекает
+ * раньше вызова этой функции.
+ */
+export function isThiefEyewitnessPlace(registry, npcId) {
+    const c = getChase(registry);
+    if (!c || !c.route) return false;
+    let place = null;
+    try {
+        const presence = getPresence(registry, npcId);
+        place = presence ? presence.place : null;
+    } catch (e) { return false; }
+    if (!place) return false;
+    const idx = c.route.indexOf(place);
+    const passed = idx >= 0 && idx < c.stop;
+    const traceAlive = !!(c.traces && c.traces[place]);
+    const thiefHere = isThiefAt(registry, place);
+    return passed || traceAlive || thiefHere;
 }
 
 /**
@@ -994,8 +1029,13 @@ export function askNPC(registry, npcId, npcName) {
     // Раунд 30: видел ли этот селянин вора — решено случайно на старте игры.
     // Раунд 46: ученик кузнеца наследует свидетательство мастера.
     const witness = isThiefWitness(registry, witnessId);
+    // Раунд 66.11 (приказ владельца №2): НПЦ, стоящий на локации, где
+    // пробегал (или прячется) вор, — ОБЯЗАТЕЛЬНЫЙ очевидец: наводка
+    // гарантирована, независито от случайного списка свидетелей.
+    const eyewitnessHere = isThiefEyewitnessPlace(registry, npcId);
+    const isWitness = witness || eyewitnessHere;
 
-    if (witness) {
+    if (isWitness) {
         // Свидетель выдаёт ТЕКУЩЕЕ местоположение вора (п.9)
         gotClue = true;
         const where = thiefWhereabouts(registry);
@@ -1011,15 +1051,22 @@ export function askNPC(registry, npcId, npcName) {
             popupShown: false,
             broken: false,
         };
-        const clueText = loc
-            ? (where.heading
-                ? tf(t('Видел я его, темного человека! Он бежит к «{0}» — поспеши, догонешь!'), loc.name)
-                : tf(t('Видел я его, темного человека! Он сейчас прячется у «{0}» — поспеши!'), loc.name))
-            : t('Видел я вора, да куда он подался — не ведаю.');
+        const clueText = eyewitnessHere
+            ? (loc
+                ? (where.heading
+                    ? tf(t('Он через нашу сторону пробегал, верно тебе говорю! Теперь его видели на дороге к «{0}» — поспеши, догонешь!'), loc.name)
+                    : tf(t('Он через нашу сторону пробегал, верно тебе говорю! Теперь он прячется где-то у «{0}» — поспеши!'), loc.name))
+                : t('Он через нашу сторону пробегал, да куда подался — не ведаю.'))
+            : (loc
+                ? (where.heading
+                    ? tf(t('Видел я его, темного человека! Он бежит к «{0}» — поспеши, догонешь!'), loc.name)
+                    : tf(t('Видел я его, темного человека! Он сейчас прячется у «{0}» — поспеши!'), loc.name))
+                : t('Видел я вора, да куда он подался — не ведаю.'));
         // Раунд 41: в улике храним динамическое имя (панель «Улики от жителей»)
         q.cluesGathered.push({ npcId, npcName: who, clue: clueText, whereClue: true });
         message = `${who}: «${clueText}»`;
-        ActionLog.add(registry, tf(t('Расспрос {0} о воре — СВИДЕТЕЛЬ: {1}.'), who, clueText));
+        ActionLog.add(registry, tf(t('Расспрос {0} о воре — {1}: {2}.'), who,
+            eyewitnessHere ? t('ОЧЕВИДЕЦ С ЛОКАЦИИ, ГДЕ ПРОБЕГАЛ ВОР') : t('СВИДЕТЕЛЬ'), clueText));
     } else {
         // Не все могли видеть вора — этот селянин ничего не знает
         const notSeen = [
@@ -1514,6 +1561,10 @@ export function checkGameEnd(registry) {
     if (q.expelledFromVillage) return 'defeat_expelled';
     if (q.heroDead) return 'defeat_hero_dead';
     if (q.thiefEscaped) return 'defeat_thief_escaped';
+    // Раунд 66.11 (приказ владельца): ЖЕНИТЬБА — ВЫИГРЫШ И КОНЕЦ ИГРЫ
+    // (наравне с +100 репутации; после возврата иконы игра продолжается,
+    // а свадьба завершает поход венцом).
+    if (q.marriageVictory) return 'victory_marriage';
     if (q.runFinished && q.thiefDefeated) return 'victory';
     return null;
 }

@@ -21,7 +21,8 @@ export class EndScene extends Phaser.Scene {
         const quest = this.registry.get('quest') || {};
         // Раунд 36: репутационная победа — тоже победная музыка
         // Раунд 46 (п.2): убийство старосты — Проигрыш, победная музыка исключена
-        const isWin = !quest.elderMurdered && (quest.thiefDefeated || quest.reputationVictory);
+        // Раунд 66.11: свадьба — тоже победа (ЖЕНИТЬБА = ВЫИГРЫШ И КОНЕЦ ИГРЫ)
+        const isWin = !quest.elderMurdered && (quest.thiefDefeated || quest.reputationVictory || quest.marriageVictory);
         // Раунд 24: финальная музыка по исходу (если фоновый прелоадер успел;
         // иначе — обычная менюшная)
         const bgMusicKey = isWin ? 'victory' : 'gameover';
@@ -38,7 +39,9 @@ export class EndScene extends Phaser.Scene {
         // Раунд 46 (п.2): убийство старосты — свой исход Проигрыша
         const finalOutcome = quest.elderMurdered
             ? 'defeat_elder_murdered'
-            : (quest.reputationVictory ? 'victory_reputation' : checkGameEnd(this.registry));
+            : (quest.marriageVictory
+                ? 'victory_marriage'
+                : (quest.reputationVictory ? 'victory_reputation' : checkGameEnd(this.registry)));
         const log = ActionLog.get(this.registry);
         const rating = log ? log.getRating(finalOutcome) : { stars: 0, title: 'Неизвестно', comment: '', stats: {} };
 
@@ -52,6 +55,13 @@ export class EndScene extends Phaser.Scene {
             endType = 'defeat';
             endTitle = t('⚖ УБИЙСТВО СТАРОСТЫ');
             endColor = '#ff4040';
+        } else if (quest.marriageVictory) {
+            // Раунд 66.11 (приказ владельца): ЖЕНИТЬБА — ВЫИГРЫШ И КОНЕЦ ИГРЫ.
+            // Свадьба перебивает титул «ВОР ПОВЕРЖЕН»: поход завершён венцом.
+            endType = 'victory';
+            endTitle = t('💍 ПОБЕДА! СВАДЬБА СЫГРАНА');
+            endColor = '#ff90c8';
+            this.audioManager.playLevelUp();
         } else if (quest.reputationVictory) {
             // Раунд 36: ОТДЕЛЬНАЯ ветка — репутационная победа (доступна только
             // после «обучалки» с поимкой вора и выбора «Продолжить игру»)

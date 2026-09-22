@@ -1,12 +1,13 @@
 // Тёмный лес — ходячая локация за околицей (§5.1 роадмапа, раунд 13).
 // Волки патрулируют у логовищ, на агрессию реагируют погоней; контакт → бой (Combat).
-// Сбор грибов/ягод/зверобоя (раз в игровой день), разбойничий тайник с засадой,
+// Сбор грибов/ягод/зверобоя (раз в игровой день), отдых у старого кострища
+// (раунд 66.11: схрон с засадой вырезан по приказу владельца),
 // выход к околице. Атмосфера: туман, световые столбы, падающая листва, светлячки.
 // Phaser загружен глобально через CDN
 import {
     FOREST_COLS, FOREST_ROWS, FOREST_SPAWN, FOREST_EXIT,
-    WOLF_DENS, WOLF_CFG, FOREST_STASH,
-    forestGatherSpots, stashPos, campfirePos, forestTileAt,
+    WOLF_DENS, WOLF_CFG,
+    forestGatherSpots, campfirePos, forestTileAt,
     validateForestMap,
 } from '../data/forest.js';
 import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
@@ -90,7 +91,7 @@ export class ForestScene extends Phaser.Scene {
 
         this.drawForest();
         this.spawnGatherSpots();
-        this.spawnStashAndCamp();
+        this.spawnCampfire();
         this.drawExitMarker();
         this.spawnPlayer();
         this.spawnWolves();
@@ -117,7 +118,7 @@ export class ForestScene extends Phaser.Scene {
                 'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
                 '🐺 Волки рыщут у логовищ: заметят — погонят. В бою можно драться или сбежать.\n' +
                 '🍄 Грибы, ягоды и зверобой восстанавливают здоровье (раз в игровой день).\n' +
-                '💰 В брошенном лагере разбойников (северо-запад) зарыт тайник — но они возвращаются…\n' +
+                '🔥 У старого кострища (северо-запад) можно пересидеть час — время идёт мимо.\n' +
                 '◀ Выход к околице — на юге у кромки леса.'),
             [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
             { singletonKey: 'forest-help' });
@@ -252,14 +253,15 @@ export class ForestScene extends Phaser.Scene {
         });
     }
 
-    spawnStashAndCamp() {
-        const q = this.registry.get('quest') || {};
+    spawnCampfire() {
         const camp = campfirePos();
-        const stash = stashPos();
 
-        // Кострище брошенного лагеря — РАУНД 65 (п.5): в деревне костра нет,
+        // Старое кострище лесников — РАУНД 65 (п.5): в деревне костра нет,
         // отдых переехал СЮДА. РАУНД 66 (п.1): отдых = ТОЛЬКО промотка
         // времени на 1 час, без лечения (пламя горит, свет тлеет).
+        // РАУНД 66.11 (приказ владельца): схрон под корягой вырезан насовсем —
+        // здесь осталась только нейтральная стоянка лесников с костром,
+        // без всяких чужаков и засад.
         const cx = camp.col * TS + TS / 2;
         const cy = camp.row * TS + TS / 2;
         if (this.textures.exists('campfire_base')) {
@@ -284,26 +286,6 @@ export class ForestScene extends Phaser.Scene {
         // Угли тлеют, тёплый отсвет качается
         this.campGlow = this.add.ellipse(cx, cy + 8, 64, 26, 0xff7a30, 0.22)
             .setBlendMode(Phaser.BlendModes.ADD).setDepth(0.26);
-
-        // Тайник под корягой
-        const sx = stash.col * TS + TS / 2;
-        const sy = stash.row * TS + TS / 2;
-        this.stashImg = this.add.image(sx, sy + 6, 'deco_stash_mound').setScale(TS / 32).setDepth(0.25);
-        this.stashMarker = null;
-        if (!q.forestStashOpened) {
-            this.stashMarker = this.add.image(sx, sy - 14, 'particle_spark')
-                .setScale(0.65).setDepth(0.6).setTint(0xffc040);
-            this.tweens.add({
-                targets: this.stashMarker,
-                y: sy - 22,
-                alpha: { from: 1, to: 0.35 },
-                duration: 850,
-                yoyo: true,
-                repeat: -1,
-            });
-        } else {
-            this.stashImg.setTint(0x8a7a60);
-        }
     }
 
     drawExitMarker() {
@@ -685,12 +667,6 @@ export class ForestScene extends Phaser.Scene {
                     nearest = { type: 'gather', entry: g, label: g.prompt };
                     continue;
                 }
-                const stash = stashPos();
-                if (cx === stash.col && cy === stash.row && this.stashMarker) {
-                    bestDist = dist;
-                    nearest = { type: 'stash', label: t('Обыскать тайник разбойников') };
-                    continue;
-                }
                 // РАУНД 65 (п.5): отдых у костра — ТОЛЬКО в лесу (из деревни удалён)
                 const camp = campfirePos();
                 if (cx === camp.col && cy === camp.row) {
@@ -718,14 +694,14 @@ export class ForestScene extends Phaser.Scene {
         const n = this.nearestInteractable;
         ActionLog.add(this.registry, tf(t('Тёмный лес: взаимодействие — {0}.'), n.label));
         if (n.type === 'gather') this.gatherResource(n.entry);
-        else if (n.type === 'stash') this.openStash();
         else if (n.type === 'campfire') this.restAtCampfire();
         else if (n.type === 'exit') this.leaveForest();
     }
 
     /**
      * РАУНД 65 (п.5 приказа): отдых у костра — механика переехала из деревни
-     * в лес (кострище брошенного лагеря).
+     * в лес (старое кострище лесников; раунд 66.11: схрон/лагерь чужаков
+     * вырезаны, стоянка нейтральная).
      * РАУНД 66 (п.1 приказа): «ОТДЫХ У КОСТРА МОЖЕТ ТОЛЬКО ПРОМОТАТЬ ВРЕМЯ
      * НА 1 ЧАС» — здоровье и Воля у костра БОЛЬШЕ НЕ ВОССТАНАВЛИВАЮТСЯ,
      * никакой моментальной лечения: присел — час миновал (можно переждать
@@ -790,50 +766,6 @@ export class ForestScene extends Phaser.Scene {
         }
         ActionLog.add(this.registry, entry.actionLog);
         tickTime(this.registry, 8);
-        this.updateHUD();
-    }
-
-    openStash() {
-        const q = this.registry.get('quest') || {};
-        if (q.forestStashOpened) {
-            this.showFloatingText(this.stashImg.x, this.stashImg.y - 16, 'Пусто', '#b8a88a');
-            return;
-        }
-        q.forestStashOpened = true;
-        this.registry.set('quest', q);
-
-        const money = Phaser.Math.Between(FOREST_STASH.moneyMin, FOREST_STASH.moneyMax);
-        const p = this.player;
-        p.dengas = (p.dengas || 0) + money;
-        this.registry.set('player', p);
-
-        if (this.stashMarker) { this.stashMarker.destroy(); this.stashMarker = null; }
-        this.stashImg.setTint(0x8a7a60);
-
-        if (this.audioManager) this.audioManager.playLevelUp();
-        this.showFloatingText(this.stashImg.x, this.stashImg.y - 18, `+${money} 💰`, '#e8cc7a');
-        ActionLog.add(this.registry, tf(t('Обыскал разбойничий тайник в лесу: +{0} денег.'), money));
-        tickTime(this.registry, 10);
-
-        // Засада: разбойник вернулся в лагерь
-        if (Math.random() < FOREST_STASH.ambushChance) {
-            this.busyDialog = true;
-            this.time.delayedCall(700, () => {
-                createDialog(this, t('Тёмный лес'), t(FOREST_STASH.ambushText), [{
-                    text: t('Драться!'),
-                    callback: () => {
-                        this.busyDialog = false;
-                        this.registry.set('forestReturnPos', { x: this.playerObj.x, y: this.playerObj.y });
-                        ActionLog.add(this.registry, t('Засада у тайника: бой с разбойником.'));
-                        tickTime(this.registry, 5);
-                        // Раунд 40 (QA-фикс): переход в бой — на следующий кадр
-                        this.time.delayedCall(0, () => {
-                            this.scene.start('Combat', { enemyKeys: ['bandit'], fromScene: 'Forest' });
-                        });
-                    },
-                }], { singletonKey: 'forest-ambush' });
-            });
-        }
         this.updateHUD();
     }
 

@@ -52,7 +52,8 @@ ok(location.includes("from '../data/daily.js'"), 'LocationScene: дневной 
 ok(location.includes("isActionDoneToday(q, 'fish_daily', today)"), "LocationScene: ключ 'fish_daily' жив");
 const forest = read('scenes/ForestScene.js');
 ok(forest.includes("from '../data/daily.js'"), 'ForestScene: dayKeyOf — из daily.js');
-ok(forest.includes('разбойничий тайник'), 'ForestScene: логово вора в сюжете сохранено (не «сундуки»)');
+ok(forest.includes('отдых у старого кострища') || forest.includes('restAtCampfire()'), 'ForestScene: отдых у костра сохранён');
+ok(!forest.includes('разбойничий тайник'), 'ForestScene: разбойничий тайник вырезан (раунд 66.11, приказ владельца)');
 
 console.log('— daily.js: формула дня и дневные лимиты —');
 const ts = { yearFromChrist: 1471, month: 2, day: 14 };

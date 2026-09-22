@@ -802,7 +802,8 @@ export class BootScene extends Phaser.Scene {
 
     /**
      * Процедурные текстуры Тёмного леса (раунд 13): грибы, куст ягод,
-     * зверобой, тайник под корягой, поваленный ствол, клочья тумана.
+     * зверобой, поваленный ствол, клочья тумана.
+     * (раунд 66.11: текстура схрона под корягой удалена вместе с фичей)
      * Всё рисуется кодом — ноль сетевых запросов.
      */
     createForestTextures() {
@@ -846,20 +847,6 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(0xF7E080, 1);
         g.fillCircle(8, 4, 0.8); g.fillCircle(5, 7, 0.6);
         g.generateTexture('deco_herb', 16, 18);
-
-        // ===== Тайник под корягой (30×20): бугор земли + корни + крест-затвор =====
-        g.clear();
-        g.fillStyle(0x4a3a26, 1); g.fillEllipse(15, 14, 28, 12);       // бугор
-        g.fillStyle(0x5a4830, 1); g.fillEllipse(13, 12, 16, 7);        // светлее верх
-        g.fillStyle(0x332619, 1); g.fillEllipse(15, 16, 14, 5);        // тень ямы
-        // Коряга-корни
-        g.fillStyle(0x4d3a22, 1);
-        g.fillRect(2, 8, 3, 8); g.fillRect(25, 7, 3, 9);
-        g.fillRect(4, 6, 8, 3); g.fillRect(20, 5, 8, 3);
-        g.fillStyle(0x6a5232, 1); g.fillRect(5, 6, 6, 1);              // блик коряг
-        // Крест-примета сверху (две перекладины)
-        g.fillStyle(0x2e2013, 1); g.fillRect(14, 4, 2, 9); g.fillRect(11, 7, 8, 2);
-        g.generateTexture('deco_stash_mound', 30, 20);
 
         // ===== Поваленный ствол (44×16): лежачее бревно с мхом =====
         g.clear();

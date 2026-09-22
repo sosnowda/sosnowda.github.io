@@ -250,7 +250,6 @@ const EN = {
     '🐝 У летка дежурит сторожевая пчела — принюхивается к каждому.': '🐝 A guard bee keeps watch at the entrance, sniffing every arrival.',
     '🐝 Восковые соты пахнут мёдом и сухой липой.': '🐝 The wax combs smell of honey and dry linden.',
     '🐝 Две пчелы танцуют на плашке — показывают, где цветы.': '🐝 Two bees dance on the lid board — showing where the flowers are.',
-    'Обыскать тайник разбойников': 'Search the bandits\' stash',
     'Вернуться к околице': 'Return to the outskirts',
     'Грибы': 'Mushrooms',
     'Куст ягод': 'Berry bush',
@@ -1380,7 +1379,15 @@ const EN = {
     'Поиск следов в «{0}» — следов нет.': 'Searching for traces in "{0}" — no trails.',
     'Знание кузнеца не пропало с ним: его ученик видел то же, что и мастер.':
         'The blacksmith\'s knowledge did not die with him: his apprentice saw the same as the master.',
-    'Расспрос {0} о воре — СВИДЕТЕЛЬ: {1}.': 'Questioned {0} about the thief — WITNESS: {1}.',
+    'Расспрос {0} о воре — {1}: {2}.': 'Questioned {0} about the thief — {1}: {2}.',
+    'СВИДЕТЕЛЬ': 'WITNESS',
+    'ОЧЕВИДЕЦ С ЛОКАЦИИ, ГДЕ ПРОБЕГАЛ ВОР': 'EYEWITNESS FROM THE LOCATION WHERE THE THIEF RAN',
+    'Он через нашу сторону пробегал, верно тебе говорю! Теперь его видели на дороге к «{0}» — поспеши, догонешь!':
+        'He ran right through our side, I tell you true! He was just seen on the road to "{0}" — hurry, catch him!',
+    'Он через нашу сторону пробегал, верно тебе говорю! Теперь он прячется где-то у «{0}» — поспеши!':
+        'He ran right through our side, I tell you true! Now he is hiding somewhere near "{0}" — hurry!',
+    'Он через нашу сторону пробегал, да куда подался — не ведаю.':
+        'He ran right through our side, but where he headed — I cannot say.',
     'Расспрос {0} о воре — не свидетель, ничего не знает.': 'Questioned {0} about the thief — no witness, knows nothing.',
     'Просил денег у {0} — КРИТИЧЕСКИЙ успех, получено {1} д. ({2}).': 'Begged money from {0} — CRITICAL success, got {1} d. ({2}).',
     'Просил денег у {0} — успех, получено {1} д. ({2}).': 'Begged money from {0} — success, got {1} d. ({2}).',
@@ -1471,8 +1478,6 @@ const EN = {
     'Лог пуст': 'The log is empty',
     'В меню': 'To menu',
     'Тёмный лес: взаимодействие — {0}.': 'Dark Forest: interaction — {0}.',
-    'Обыскал разбойничий тайник в лесу: +{0} денег.': 'Searched the robbers\' stash in the forest: +{0} dengas.',
-    'Засада у тайника: бой с разбойником.': 'Ambush at the stash: fight with a robber.',
     'Волк напал в Тёмном лесу!': 'A wolf attacked in the Dark Forest!',
     'Вернулся из Тёмного леса к околице.': 'Returned from the Dark Forest to the outskirts.',
     '🗺 Околица — карта местности: выбирай локацию и в путь.\nКаждый переход по карте занимает ровно 1 игровой час.\nСледы вора живут от 12 до 24 часов — а дождь и снег смывают их и раньше.':
@@ -1991,7 +1996,7 @@ const EN_KEYS = {
         '  E — gather mushrooms, berries and herbs (limited per day)\n' +
         '  Wolves patrol the thicket: don\'t get close.\n' +
         '  In rain they hear worse — their aggro radius shrinks.\n' +
-        '  The bandits\' stash may hold coin — but sometimes it\'s an ambush.\n' +
+        '  Rest (1 h) by the old woodcutters\' campfire in the north-west.\n' +
         '  If a wolf is defeated, the pack stays scared for 4 hours.\n' +
         '  F1 — this help. ESC — main menu.',
     'apiary.help.body': '🐝 APIARY — A QUIET STROLL\n' +
@@ -2008,7 +2013,7 @@ const EN_KEYS = {
         '  M — village overview, P — village plan (minimap panel)\n' +
         '  The church is in the centre, the forge — at the north-east edge.\n' +
         '  Prayer — only in the church.\n' +
-        '  A campfire with rest (1 h) burns in the Dark Forest, by the abandoned camp.\n' +
+        '  A campfire with rest (1 h) burns in the Dark Forest, by the old woodcutters\' fire.\n' +
         '  Fishing — at the River on the map (best in the rain).\n' +
         '  A palisade rings the whole village — the east gate is the only way out.\n' +
         '  At night the windows glow warm.\n' +
@@ -2144,6 +2149,24 @@ const EN_KEYS = {
     'Рыба жирует перед зимой и берёт жадно: крючок едва успевает коснуться дна. Корзина полна!':
         'The fish are fattening before winter and bite greedily: the hook barely touches the bottom before a strike. The basket is full!',
     '(Осенний жор: +2 ❤ к улову.)': '(Autumn frenzy: +2 ❤ to the catch.)',
+
+    // --- Раунд 66.11: свадьба = победа и конец игры (приказ владельца) ---
+    '💍 ПОБЕДА! СВАДЬБА СЫГРАНА': '💍 VICTORY! THE WEDDING IS HELD',
+    '🎉 СВАДЬБА — ПОБЕДА!': '🎉 WEDDING — VICTORY!',
+    '📜 Итоги похода': '📜 Chronicle of the journey',
+    '💍 Свадьба сыграна — победа! Поход завершён венцом.':
+        '💍 The wedding is held — victory! The journey is crowned with a wedding bell.',
+    'Это венец твоего похода: свадьба — ПОБЕДА, и летопись завершается свадебным звоном!':
+        'This is the crown of your journey: the wedding is a VICTORY, and the chronicle closes with wedding bells!',
+    'Свадебный венец': 'The wedding crown',
+    'Икона возвращена, деревня полюбила — и свадебный звон венчает летопись. Безупречно!':
+        'The icon is returned, the village loves you — and wedding bells crown the chronicle. Flawless!',
+    'Честь и семья': 'Honour and family',
+    'Ты снискал любовь деревни и сердце одного из её жителей. Свадьба — награда за добрые дела.':
+        'You won the village\'s love and the heart of one of its folk. The wedding is the reward for kind deeds.',
+    'Долгая дорога к венцу': 'The long road to the crown',
+    'Путь был долог, но свадебный каравай доехал: теперь у тебя семья и целый приход в родне.':
+        'The road was long, but the wedding train has arrived: now you have a family and the whole parish as kin.',
 
 };
 
