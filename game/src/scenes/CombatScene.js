@@ -10,7 +10,7 @@ import { createButton, createDialog, createFloatingText, registerAnchoredUI, onS
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { ActionLog } from '../data/actionLog.js';
-import { loseHeroDead, recoverStolenItem, thiefFleesFromFight, saveThiefHp, restoreThiefHp, getThiefSpriteKey } from '../data/thief.js';
+import { loseHeroDead, recoverStolenItem, thiefFleesFromFight, saveThiefHp, restoreThiefHp, getThiefSpriteKey, getThiefGender } from '../data/thief.js';
 // Раунд 45 (пп.3,4): последствия убийства НПЦ и перемирье после побега
 import { applyNpcMurderConsequences, setNpcTruce } from '../data/reputation.js';
 // Раунд 46 (п.1): жители дерутся своими характеристиками
@@ -578,7 +578,11 @@ export class CombatScene extends Phaser.Scene {
                     this.cameras.main.shake(140, isCrit ? 0.012 : 0.006);
 
                     if (target.HP <= 0) {
-                        this.pushLog(tf('{0} повержен!', t(target.name)));
+                        // Патч 66.18 (QA-66.17): род глагола — по имени врага
+                        // («Воровка-иконокрадка повержена!», «Женщина повержена!»)
+                        const _dn = t(target.name);
+                        const _fem = /а$|я$/.test(_dn);
+                        this.pushLog(tf(_fem ? '{0} повержена!' : '{0} повержен!', _dn));
                         // Раунд 23: звук падения поверженного
                         if (this.audioManager) this.audioManager.playCombatDeath();
                         tw.sprite.setAlpha(0.4);
@@ -838,8 +842,12 @@ export class CombatScene extends Phaser.Scene {
         const elderMurdered = !!(murderInfo && murderInfo.elderMurdered);
         if (isThiefFight) {
             // Вор повержен в бою — икона в инвентарь, погоня завершена
+            // Патч 66.18 (QA-66.17): согласование рода (вор/воровка)
+            const _thiefFem = getThiefGender(this.registry) === 'female';
             recoverStolenItem(this.registry, 'killed', null);
-            ActionLog.add(this.registry, t('Бой с вором выигран. Вор повержен!'));
+            ActionLog.add(this.registry, _thiefFem
+                ? t('Бой с воровкой выигран. Воровка повержена!')
+                : t('Бой с вором выигран. Вор повержен!'));
         } else if (this.npcId === 'bandit') {
             q.banditDefeated = true;
         }
@@ -865,7 +873,11 @@ export class CombatScene extends Phaser.Scene {
         this.busy = true;
         this.pushLog(murderVictimId
             ? tf('{0} убит! Кровная вина пала на тебя...', t(this.enemies[0].name))
-            : (isThiefFight ? t('Вор повержен! Икона у тебя!') : t('Враг повержен! Ты одержал победу.')));
+            : (isThiefFight
+                ? (getThiefGender(this.registry) === 'female'
+                    ? t('Воровка повержена! Икона у тебя!')
+                    : t('Вор повержен! Икона у тебя!'))
+                : t('Враг повержен! Ты одержал победу.')));
         if (this.audioManager) this.audioManager.playLevelUp();
         // Эффект победы — золотые частицы
         const emitter = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
@@ -895,8 +907,13 @@ export class CombatScene extends Phaser.Scene {
             // Раунд 21: после победы над вором — НЕ конец игры, а возврат в деревню
             // (икону нужно вернуть старосте или священнику; игра продолжается)
             if (isThiefFight) {
-                createDialog(this, t('🏆 Вор повержен!'),
-                    t('Ты обыскал тело поверженного вора и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.'),
+                // Патч 66.18 (QA-66.17): заголовок и текст — по роду вора
+                const _femWin = getThiefGender(this.registry) === 'female';
+                createDialog(this,
+                    _femWin ? t('🏆 Воровка повержена!') : t('🏆 Вор повержен!'),
+                    _femWin
+                        ? t('Ты обыскал тело поверженной воровки и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.')
+                        : t('Ты обыскал тело поверженного вора и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.'),
                     [{ text: t('В деревню!'), callback: () => this.scene.start('Village') }],
                     { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
             } else if (murderVictimId) {

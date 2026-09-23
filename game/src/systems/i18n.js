@@ -600,6 +600,12 @@ const EN = {
         'DEFEAT: the hero has fallen. The chronicle breaks off on this page.',
     'Напал на вора в его убежище.': 'Attacked the thief at his hiding place.',
     '🏆 Вор повержен!': '🏆 The thief is defeated!',
+    // Патч 66.18 (QA-66.17): женский род вора — согласование в победных поп-апах
+    '🏆 Воровка повержена!': '🏆 The thief-woman is defeated!',
+    'Воровка повержена! Икона у тебя!': 'The thief-woman is defeated! The icon is yours!',
+    'Бой с воровкой выигран. Воровка повержена!': 'The fight with the thief-woman is won. The thief-woman is defeated!',
+    'Ты обыскал тело поверженной воровки и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.':
+        'You search the fallen thief-woman and find the miracle-working icon of the Mother of God — whole and unharmed. Return to the village: give the holy icon to the elder or the priest and claim your well-earned reward.',
     'Ты обыскал тело поверженного вора и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.':
         'You search the fallen thief and find the miracle-working icon of the Mother of God — whole and unharmed. Return to the village: give the holy icon to the elder or the priest and claim your well-earned reward.',
     'В деревню!': 'To the village!',

@@ -467,6 +467,12 @@ export class CharacterSelectionScene extends Phaser.Scene {
 
         this.registry.set('player', hero);
         this.registry.set('quest', q);
+        // Патч 66.18 (QA-66.17, баг реплея): mealState/sleepState НЕ должны
+        // переживать новую партию — кулдаун «Герой сыт»/«не хочет спать» из
+        // прошлой партии (с ДРУГОЙ датой мира) блокировал еду/сон в новой.
+        // registry.remove возвращает meal.js к дефолту { lastAbsMin: -999999 }.
+        this.registry.remove('mealState');
+        this.registry.remove('sleepState');
         initThiefHunt(this.registry);
         ActionLog.init(this.registry);
         // Инициализируем игровое время
