@@ -52,7 +52,7 @@ export const INTERIORS = {
         npcSprite: 'npc_soldier',
         portrait: 'portrait_blacksmith',
         dialogueId: 'blacksmith',
-        description: t('Жарко. Стук молота по наковальне. На стенах развешаны мечи и кольчуги.'),
+        description: t('Жарко. Стук молота по наковальне. На стенах — топоры, копья да кольчуги.'),
         decor: ['anvil', 'forge', 'weapons'],
         services: ['buy_weapon', 'buy_armor'],
         // Раунд 45 (п.6 заявки — АУДИТ ОРУЖИЯ/БРОНИ): прежний массив items
@@ -262,10 +262,9 @@ export const INTERIORS = {
         decor: ['shelf', 'table'], // раунд 66.10: 'chest' удалён (сундуки не нужны)
         market: {
             title: t('Дом ремесленника — товар'),
+            // Раунд 66.12 (п.7): мёртвые товары (факел/верёвка/кремень —
+            // эффект нулевой, ни одна система их не читала) сняты с продажи.
             items: [
-                { id: 'torch', name: 'Факел смоляной', price: 2, kind: 'heal', heal: 0, note: 'свет в ночи' },
-                { id: 'rope', name: 'Верёвка плетёная', price: 2, kind: 'heal', heal: 0, note: 'в хозяйстве сгодится' },
-                { id: 'flint', name: 'Кремень с огнивом', price: 1, kind: 'heal', heal: 0, note: 'огонь развести' },
                 { id: 'candle_w', name: 'Свеча восковая', price: 1, kind: 'heal', heal: 0, mpHeal: 1, note: '+1 MP' },
                 { id: 'amulet', name: 'Оберег от сглазу', price: 5, kind: 'heal', heal: 2, mpHeal: 2, note: '+2 HP, +2 MP' },
             ],
@@ -313,7 +312,7 @@ export const INTERIORS = {
         npcSprite: 'npc_merchant',
         portrait: 'portrait_peasant',
         dialogueId: 'peasant2',
-        description: t('Крепкая изба в два окна: на шестке чугун, у красного угла — образа с рушником, под лавкой — кувадка с прялкой Арины. У крыльца сушатся сбруя и рукавицы, в сенцах пахнет хлебом и скотиной.'),
+        description: t('Крепкая изба в два окна: на шестке горшки глиняные, у красного угла — образа с рушником, под лавкой — кувадка с прялкой Арины. У крыльца сушатся сбруя и рукавицы, в сенцах пахнет хлебом и скотиной.'),
         decor: ['bed', 'table', 'shelf'],
         secondaryNpcId: 'peasant2_wife',
         secondaryNpcName: t('Арина, жена Степана'),
@@ -373,7 +372,7 @@ export const FORK_LOCATIONS = [
     { id: 'forest_edge', name: t('Опушка леса'), icon: '🌳', description: t('Краешек леса, где кончается трава и начинаются деревья. Светло, грибные места да ягодные кусты.') },
     { id: 'forest_glade', name: t('Лесная поляна'), icon: '🌼', description: t('Солнечная поляна среди леса, в кольце деревьев. Много цветов, ягод и пчелиного звона.') },
     { id: 'forest', name: t('Густой лес'), icon: '🌲', description: t('Глубина леса: тёмная чаща за опушкой и поляной. Много следов, но и много зверья.') },
-    { id: 'road', name: t('Тракт'), icon: '🛤', description: t('Торный тракт на юг, к большим городам.') },
+    { id: 'road', name: t('Большая дорога'), icon: '🛤', description: t('Торная дорога на юг, к большим городам.') },
     { id: 'river', name: t('Река'), icon: '🌊', description: t('Брод через реку. Галька, илистый берег — следы видны хорошо.') },
-    { id: 'field', name: t('Поле'), icon: '🌾', description: t('Рожковое поле на восток. Высокие стебли скрывают следы.') },
+    { id: 'field', name: t('Поле'), icon: '🌾', description: t('Ржаное поле на восток. Высокие стебли скрывают следы.') },
 ];

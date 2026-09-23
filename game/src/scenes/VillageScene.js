@@ -13,8 +13,8 @@ import { Tutorial } from '../systems/Tutorial.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
 import { ActionLog } from '../data/actionLog.js';
 // Раунд 58 (п.2): chaseHoursLeft — часы до побега вора (тик = 1 игровой час)
-import { checkGameEnd, chaseHoursLeft } from '../data/thief.js';
-import { onLocationVisited, generateQuest, acceptQuest, NPC_QUEST_POOLS } from '../data/questGenerator.js';
+import { checkGameEnd } from '../data/thief.js';
+import { onLocationVisited, generateQuest, acceptQuest, NPC_QUEST_POOLS, getActiveQuests } from '../data/questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/TimeSystem.js';
@@ -1298,9 +1298,10 @@ export class VillageScene extends Phaser.Scene {
         const timeState = getTime(this.registry);
         const villageRep = getVillageRep(this.registry);
         const repLevel = getReputationLevel(villageRep);
-        // Раунд 21: отсчёт до побега вора в ДЕЙСТВИЯХ (тиках)
-        const ticksLeft = chaseHoursLeft(this.registry);
-        
+        // Раунд 66.12 (приказ владельца №6): ОБРАТНЫЙ ОТСЧЁТ «до побега вора»
+        // скрыт из статуса — игрок не видит, сколько часов осталось до побега.
+        // Внутренний счётчик погони работает как прежде (chaseHoursLeft).
+
         // Единый статус-бар (п.10): HP | Деньги | Дата | Действия | Репутация
         // Раунд 45 (п.1 заявки): параметр «меч» (⚔%) из виджета УДАЛЁН —
         // владение мечом смотрится в свитке персонажа, а не в строке статуса.
@@ -1323,10 +1324,6 @@ export class VillageScene extends Phaser.Scene {
             this.registry.set('novoletie', null);
             this.showNovoletieAnnounce(novoletie);
         }
-        if (ticksLeft > 0) {
-            // Раунд 58 (п.2): в статус-баре — часы до побега вора (тик = 1 час)
-            statusLine += `  ${tf(t('⏳{0} ч до побега'), ticksLeft)}`;
-        }
         // Раунд 46 (п.9 заявки): репутация игрока в деревне — в статус-баре
         // деревни, с явной подписью (раньше была только безымянная звезда ⭐).
         statusLine += `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}`;
@@ -1342,16 +1339,15 @@ export class VillageScene extends Phaser.Scene {
         if (statusTooLong && timeState) {
             const icon = this.weather ? ` ${this.weather.icon}` : '';
             const rep = `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}`;
-            const act = ticksLeft > 0 ? `  ${tf(t('⏳{0} ч до побега'), ticksLeft)}` : '';
             const candidates = [
                 // 1) без народного ориентира (« · заутреня отошла»)
                 `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${formatDateRus(timeState)}${icon}` +
-                `  🕐${slavonicHourLine(timeState)}${act}${rep}`,
+                `  🕐${slavonicHourLine(timeState)}${rep}`,
                 // 2) без дня недели и года от Р.Х. (66.3: месяц через t() —
                 //    в EN транслитерация народного месяца)
-                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${timeState.day}-й ${monthNameGen(timeState.month)}, лето ${eraYear(timeState)}-е${icon}${act}${rep}`,
+                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${timeState.day}-й ${monthNameGen(timeState.month)}, лето ${eraYear(timeState)}-е${icon}${rep}`,
                 // 3) дата в одну строку без часов
-                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${timeState.day} ${monthNameNom(timeState.month)}, лето ${eraYear(timeState)}-е${icon}${act}${rep}`,
+                `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${timeState.day} ${monthNameNom(timeState.month)}, лето ${eraYear(timeState)}-е${icon}${rep}`,
             ];
             let chosen = null;
             for (const cand of candidates) {
@@ -1622,14 +1618,12 @@ export class VillageScene extends Phaser.Scene {
             if (!NPC_QUEST_POOLS[npcId]) continue;
             const quest = generateQuest(npcId, this.registry);
             if (!quest) continue;
-            // уникальные награды (меч старосты) — только лично от старосты:
-            // если генератор «пообещал» меч, отменяем обещание и пропускаем
+            // Раунд 66.12 (п.5): меч старосты на доску не выставляется (только
+            // лично от старосты); ОБЕЩАНИЕ больше не сбрасываем — оно ставится
+            // при ПРИНЯТИИ личного поручения (acceptQuest) и сгорает только
+            // при просрочке. Раньше доска, выкатив меч, сбрасывала обещание —
+            // и уникальный меч мог достаться двоим.
             if ((quest.rewards || []).some(r => r.uniqueFromElder)) {
-                const q = this.registry.get('quest') || {};
-                if (q.elderSwordPromised) {
-                    q.elderSwordPromised = false;
-                    this.registry.set('quest', q);
-                }
                 continue;
             }
             if (offers.some(o => o.type === quest.type)) continue;
@@ -1675,6 +1669,15 @@ export class VillageScene extends Phaser.Scene {
             {
                 text: t('✓ Принять'),
                 callback: () => {
+                    // Раунд 66.12 (п.5): с доски нельзя взять второе поручение
+                    // того же жителя, пока активно первое (как и в личном разговоре).
+                    const activeSame = getActiveQuests(this.registry).some(aq => aq.npcId === quest.npcId);
+                    if (activeSame) {
+                        createDialog(this, t('Доска поручений'),
+                            tf(t('У тебя уже есть поручение от {0}. Сперва закончи его!'), quest.npcName),
+                            [{ text: t('Понятно'), callback: () => {} }]);
+                        return;
+                    }
                     acceptQuest(this.registry, quest);
                     const st = this.registry.get('boardOffers');
                     if (st) {

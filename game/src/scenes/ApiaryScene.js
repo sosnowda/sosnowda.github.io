@@ -12,7 +12,7 @@ import {
 } from '../data/apiary.js';
 import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals, getWeather } from '../systems/Weather.js';
-import { checkGameEnd, searchLocation, getHuntState, isChaseActive, isThiefAt, presentThiefEncounter, chaseTicksLeft, chaseHoursLeft } from '../data/thief.js';
+import { checkGameEnd, searchLocation, getHuntState, isChaseActive, isThiefAt, presentThiefEncounter } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
 import { createDialog, createButton } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
@@ -148,12 +148,8 @@ export class ApiaryScene extends Phaser.Scene {
         // над пасекой сбивало с толку (прогулка ≠ охота).
         if (!chaseActive) return;
 
-        // Счётчик действий — под сводкой о пчёлах (левый верхний угол)
-        this.huntTurnsText = this.add.text(12, 72, tf(t('⏳ Часов до побега вора: {0}'), state.turnsLeft), {
-            fontSize: '13px', color: state.turnsLeft <= 3 ? '#ff4040' : '#ff8060',
-            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
-            backgroundColor: '#000000aa', padding: { x: 6, y: 4 },
-        }).setScrollFactor(0).setDepth(102);
+        // Раунд 66.12 (приказ владельца №6): счётчик часов до побега вора СКРЫТ —
+        // игрок не видит, сколько вору осталось. Внутренний счётчик работает как прежде.
 
         if (alreadySearched) {
             this.add.text(width / 2, height - 170, t('Ты уже прочитал следы в этой местности.\nНовых здесь не найти.'), {
@@ -185,13 +181,7 @@ export class ApiaryScene extends Phaser.Scene {
         if (this.busyDialog) return;
         this.busyDialog = true;
         const result = searchLocation(this.registry, 'apiary');
-        // Раунд 58 (п.2): счётчик в ЧАСАХ до побега вора (тик = 1 игровой час)
-        const ticksLeft = chaseHoursLeft(this.registry);
-        if (this.huntTurnsText) {
-            this.huntTurnsText.setText(tf(t('⏳ Часов до побега вора: {0}'), ticksLeft));
-            if (ticksLeft <= 3) this.huntTurnsText.setColor('#ff4040');
-            else if (ticksLeft <= 6) this.huntTurnsText.setColor('#ffaa40');
-        }
+        // Раунд 66.12 (приказ владельца №6): отсчёт до побега вора скрыт из UI
 
         if (result.thiefEscaped) {
             this.time.delayedCall(1500, () => this.scene.start('End'));

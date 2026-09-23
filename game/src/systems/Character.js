@@ -125,7 +125,7 @@ export function formatMoney(dengas) {
 // (startWeapon/startArmor в каждом пресете — итог продуманного набора;
 //  деньги: startDengas ± 1d10-5 при создании)
 //
-//  СЛЕДОПЫТ (Гаврила/Забава): ЛУК (1d6+1, навык 55-60) + КОЖАНАЯ БРОНЯ (def 2),
+//  СЛЕДОПЫТ (Гаврила/Милуша): ЛУК (1d6+1, навык 55-60) + КОЖАНАЯ БРОНЯ (def 2),
 //      35 д. — охотничий набор: бьёт издали точнее других, но слабый урон.
 //  ВОИН (Добрыня/Рогнеда): МЕЧ (1d8+1, навык 78-80) + КОЛЬЧУГА (def 4),
 //      15 д. — профессиональный ратник: против вора решает за 2-3 удара,
@@ -161,7 +161,7 @@ export const PRESET_HEROES = [
     },
     {
         id: 'ranger_f',
-        name: 'Забава',
+        name: 'Милуша',
         archetype: 'Следопыт',
         gender: 'female',
         age: 22,
@@ -436,8 +436,8 @@ export function createRandomHero(patternId, customName) {
     const age = Math.max(AGE_MIN, Math.min(AGE_MAX, base.age + randInt(-1, 1) * randInt(2, 6)));
 
     // Случайное историческое имя по полу (в превью можно переименовать)
-    const maleNames = ['Добрыня', 'Ярополк', 'Ратибор', 'Боян', 'Ставр', 'Мирослав', 'Творимир', 'Гаврила'];
-    const femaleNames = ['Милонега', 'Забава', 'Рогнеда', 'Предслава', 'Любава', 'Неслава', 'Горислава', 'Вера'];
+    const maleNames = ['Добрыня', 'Ярополк', 'Ратибор', 'Боян', 'Ставр', 'Мирослав', 'Твердислав', 'Гаврила'];
+    const femaleNames = ['Милонега', 'Милуша', 'Рогнеда', 'Предслава', 'Любава', 'Неслава', 'Горислава', 'Вера'];
     const name = customName || (gender === 'male'
         ? maleNames[randInt(0, maleNames.length - 1)]
         : femaleNames[randInt(0, femaleNames.length - 1)]);

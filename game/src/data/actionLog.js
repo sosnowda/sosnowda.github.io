@@ -123,7 +123,7 @@ export class ActionLog {
         } else if (isVictory) {
             // Победа — оцениваем эффективность
             if (total <= 8 && failed === 0) {
-                stars = 5; title = 'Идеальный сыщик';
+                stars = 5; title = 'Идеальный следопыт';
                 comment = 'Молниеносное расследование без единой ошибки!';
             } else if (total <= 12 && failed <= 1) {
                 stars = 4; title = 'Опытный следопыт';

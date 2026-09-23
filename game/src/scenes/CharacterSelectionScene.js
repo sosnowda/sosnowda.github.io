@@ -496,7 +496,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         hero.presetName = preset.name;
         if (composed) hero.sprite = 'player_composite';
         ActionLog.add(this.registry,
-            tf(t('Облик героя: прессет «{0}» выбран автоматически по полу (раунд 62).'), t(preset.name)));
+            tf(t('Облик героя: «{0}» избран по обычаю — по полу героя.'), t(preset.name)));
         this.scene.start('Village');
     }
 }

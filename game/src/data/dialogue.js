@@ -399,7 +399,7 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'Кузнец Данила',
-                text: 'Здрав будь, воин! Моя кузница к твоим услугам. Нужно оружие или броня — открой меню «Купить оружие».',
+                text: 'Здрав будь, воин! Моя кузница к твоим услугам. Нужно оружие — открой меню «Купить оружие».',
                 en: 'Good health to you, warrior! My smithy is at your service. Need a weapon or armor? Open the "Buy weapons" menu.',
                 variants: [
                     { text: 'Стук-стук... А, это ты. Наковальня не отпустит — говори, что надо.', en: 'Clang, clang... Ah, it is you. The anvil will not let me go — speak your need.' },
@@ -454,7 +454,7 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'Ученик кузнеца',
-                text: 'Здрав будь, путник. Мастер мой... увы, покинул мир живых. Теперь у горна я: молот тяжёл, да руки крепнут. Нужно оружие или броня — открой меню «Купить оружие».',
+                text: 'Здрав будь, путник. Мастер мой... увы, покинул мир живых. Теперь у горна я: молот тяжёл, да руки крепнут. Нужно оружие — открой меню «Купить оружие».',
                 en: 'Good health to you, traveller. My master... alas, has left the world of the living. Now the forge is mine: the hammer is heavy, but my arms grow strong. Need a weapon or armor? Open the "Buy weapons" menu.',
                 action: (scene) => {
                     DIALOGUES.apprentice.nodes.a.choices = withAskThief(scene, 'blacksmith', [
@@ -503,7 +503,7 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'Мельник Авдей',
-                text: 'Здравствуй, путник. С утра до заката я на мельнице — жернова не ждут, зерно само не смелется. А тут ещё иконокража — никакого спасу от лихих людей!',
+                text: 'Здравствуй, путник. С утра до заката я на мельнице — жернова не ждут, зерно само не смелется. А тут ещё икону украли — никакого спасу от лихих людей!',
                 en: 'Good day, traveller. From sunrise to sunset I am at the mill — the millstones wait for no one, and grain will not grind itself. And now the icon stolen on top of it — there is no deliverance from wicked men!',
                 variants: [
                     { text: 'Мельница, брат, кормит, но не балует: зерно и ночь, и день в работе. Что ищешь?', en: 'The mill feeds a man, but does not pamper him: grain grills me night and day. What are you after?' },
@@ -707,8 +707,8 @@ export const DIALOGUES = {
             },
             field: {
                 speaker: 'Пахарь Тарас',
-                text: 'Земля кормит того, кто её любит. С утра бороню, после обеда — рожь сею. Дети мне в подмогу: кто на выпас скот гоняет, кто рыбу ловит, кто грибы в лесу ищет. А мёд к чаю — у Марфы спрашивай: её пасека постарше, и мёд у неё целебный — здоровье ставит на ноги.',
-                en: 'The earth feeds the one who loves it. In the morning I harrow, after the midday meal I sow the rye. The children are my helpers: one drives the cattle to the pasture, another fishes, another hunts mushrooms in the forest. And for honey with your tea, ask Marfa: her apiary is older, and her honey is a healer — it sets a man back on his feet.',
+                text: 'Земля кормит того, кто её любит. С утра бороню, после обеда — рожь сею. Дети мне в подмогу: кто на выпас скот гоняет, кто рыбу ловит, кто грибы в лесу ищет. А мёд целебный — у Марфы спрашивай: её пасека постарше, и мёд у неё целебный — здоровье ставит на ноги.',
+                en: 'The earth feeds the one who loves it. In the morning I harrow, after the midday meal I sow the rye. The children are my helpers: one drives the cattle to the pasture, another fishes, another hunts mushrooms in the forest. And for healing honey, ask Marfa: her apiary is older, and her honey is a medicine — it sets a man back on his feet.',
                 action: (scene) => {
                     DIALOGUES.beekeeper1.nodes.field.choices = withAskThief(scene, 'beekeeper1', [
                         { text: t('Спасибо за рассказ.'), end: true },
@@ -757,8 +757,8 @@ export const DIALOGUES = {
                 text: 'Заходи, путник, только тихо — малых только уложила. Нас с Тарасом Господь семерыми детками благословил: крики в избе от зари до зари!',
                 en: 'Come in, traveller, but softly — I only just laid the little ones down. God has blessed Taras and me with seven children: there is shouting in the izba from dawn to dusk!',
                 variants: [
-                    { text: 'Тихо, тихо! Дунька только заснула... А ежели по делу — Тарас на поле, я за хозяйку.', en: 'Softly, softly! Dun\'ka has only just fallen asleep... If it is business you want — Taras is at the field, and I keep the house.' },
-                    { text: 'Семеро деток, путник, — ни минуты тихой! Чаю хочу, да куда там. Тебе чего надобно?', en: 'Seven children, traveller — not a quiet minute! I dream of tea, but when would I drink it? What do you need?' },
+                    { text: 'Тихо, тихо! Дитятко только заснуло... А ежели по делу — Тарас на поле, я за хозяйку.', en: 'Softly, softly! Dun\'ka has only just fallen asleep... If it is business you want — Taras is at the field, and I keep the house.' },
+                    { text: 'Семеро деток, путник, — ни минуты тихой! Мёду тёплого хочу, да куда там. Тебе чего надобно?', en: 'Seven children, traveller — not a quiet minute! I dream of warm mead, but when would I drink it? What do you need?' },
                 ],
                 action: (scene) => {
                     // Раунд 30: Фёкла — возможный свидетель о воре (один раз)
@@ -1205,8 +1205,8 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'ребёнок',
-                text: 'Смотри, сколько грибов набрал! Вон грузди, вон рыжики! Я один ходил, честно! Ну... почти один. Тузик со мной был — это собака, она не считается! Грибы я знаю лучше всех в деревне, даже лучше тётки Марфы, только она не признаёт.',
-                en: 'Look how many mushrooms I gathered! There — milk-caps, there — orange-caps! I went all alone, honestly! Well... almost alone. Tuzik was with me — he\'s a dog, dogs don\'t count! I know mushrooms better than anyone in the village, even better than aunt Marfa, she just won\'t admit it.',
+                text: 'Смотри, сколько грибов набрал! Вон грузди, вон рыжики! Я один ходил, честно! Ну... почти один. Серко со мной был — это собака, она не считается! Грибы я знаю лучше всех в деревне, даже лучше тётки Марфы, только она не признаёт.',
+                en: 'Look how many mushrooms I gathered! There — milk-caps, there — orange-caps! I went all alone, honestly! Well... almost alone. Serko was with me — he\'s a dog, dogs don\'t count! I know mushrooms better than anyone in the village, even better than aunt Marfa, she just won\'t admit it.',
                 action: (scene) => {
                     DIALOGUES.kid3.nodes.a.choices = withAskThief(scene, 'kid3', [
                         { text: t('Во что играете?'), next: 'games' },
@@ -1236,7 +1236,7 @@ export const DIALOGUES = {
             },
             bells: {
                 speaker: 'ребёнок',
-                text: 'Как благовест услыху — так домой: мамка велела, значит, обедня скоро, надо печку топить да мойся. А в понедельник не звонят... почему-то. Дядька Лука, поди, отдыхает. А как трезвон — с берёзы листья сыплются! Сам видел!',
+                text: 'Как благовест услыху — так домой: мамка велела, значит, обедня скоро, надо печку топить да помыться. А в понедельник не звонят... почему-то. Дядька Лука, поди, отдыхает. А как трезвон — с берёзы листья сыплются! Сам видел!',
                 en: 'The moment I hear the toll — I go home: Mother says the Liturgy is soon, I must heat the stove and wash up. And on Mondays there\'s no ringing... for some reason. Uncle Luka must be resting. And when the peal rings — the birch drops its leaves! I saw it myself!',
                 choices: [
                     { text: t('Береги себя, детка.'), end: true },
@@ -1412,8 +1412,8 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'ребёнок',
-                text: 'Батя говорит: кто поле любит, того и земля кормит. А мамка говорит: не суйся в лужу, обуй валенки. А я говорю: хочу в лужу! Вот и весь уговор. А ты кто? Ты большой. Большим всё можно, да?', 
-                en: 'Father says: who loves the field, the earth feeds. And Mother says: don\'t step in the puddle, put on your felt boots. And I say: I want the puddle! That\'s the whole bargain. And who are you? You\'re big. Big folk can do anything, can\'t they?',
+                text: 'Батя говорит: кто поле любит, того и земля кормит. А мамка говорит: не суйся в лужу, обуй сапоги. А я говорю: хочу в лужу! Вот и весь уговор. А ты кто? Ты большой. Большим всё можно, да?', 
+                en: 'Father says: who loves the field, the earth feeds. And Mother says: don\'t step in the puddle, put on your boots. And I say: I want the puddle! That\'s the whole bargain. And who are you? You\'re big. Big folk can do anything, can\'t they?',
                 action: (scene) => {
                     DIALOGUES.kid6.nodes.a.choices = withAskThief(scene, 'kid6', [
                         { text: t('Во что играете?'), next: 'games' },
@@ -1550,7 +1550,7 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'Плотник Микула',
-                text: 'Микула я, плотник. Изба, клеть, сенник — всё моими руками сложено. Топор да скоба — вот и всё богатство, да зато какое: без них и деревня не деревня. Гляди-ка, у тебя плечи крепкие — не надобен ли тебе честный труд?',
+                text: 'Микула я, плотник. Изба, клеть, сенник — всё моими руками сложено. Топор да скобель — вот и всё богатство, да зато какое: без них и деревня не деревня. Гляди-ка, у тебя плечи крепкие — не надобен ли тебе честный труд?',
                 en: 'I am Mikula, the carpenter. House, storeroom, hay-barn — all built with these two hands. An axe and a saw are all the riches I own — yet what riches: without them a village is no village at all. You have broad shoulders, friend — might you be after honest work?',
                 variants: [
                     { text: 'Опять ты? Ну, заходи. Полати скрипят — так я знаю: к гостям.', en: 'You again? Well, step in. The sleeping planks creak — so I know: guests are coming.' },
@@ -1669,7 +1669,7 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'Гончар Игнат',
-                text: 'Здравствуй, добрый человек! Я Игнат, гончар. Мои горшки — в каждой избе, а не то и в церкви: кутью да в каком горшке носить? Обжиг сегодня — загляни, как огонь да глина творят чудо.',
+                text: 'Здравствуй, добрый человек! Я Игнат, гончар. Мои горшки — в каждой избе, а иные и в церкви: кутью в них носят Обжиг сегодня — загляни, как огонь да глина творят чудо.',
                 en: 'Good day, kind soul! I am Ignat, the potter. My pots sit in every house — and in the church too: after all, what would they carry the funeral wheat in? The kiln fires today — come and see what fire and clay can do together.',
                 variants: [
                     { text: 'Опять ты, добрый человек? Глина под ногами, дым в небе — заходи смело.', en: 'You again, good soul? Clay underfoot, smoke in the sky — come right in.' },
@@ -1792,7 +1792,7 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'Ткачиха Пелагея',
-                text: 'Входи, не шуми — холст на стане, сейчас перекину нитку. Вдова я, Пелагея. Муж на погосте, сын при овцах, а стан — вот он, кормит. Холст, ряднина, по́лошка — чего надобно?',
+                text: 'Входи, не шуми — холст на стане, сейчас перекину нитку. Вдова я, Пелагея. Муж на погосте, сын при овцах, а стан — вот он, кормит. Холст, ряднина, половик — чего надобно?',
                 en: 'Come in, but quietly — there is linen on the loom, I am about to change the thread. I am Pelageya, a widow. My husband lies in the churchyard, my son is with the sheep, and the loom — well, the loom feeds us. Linen, sackcloth, coarse weave — what do you need?',
                 variants: [
                     { text: 'Нитка опять порвалась... А, это ты. Постой, узелок завяжу — и выслушаю.', en: 'The thread snapped again... Ah, it is you. Wait, let me tie the knot — then I will listen.' },
@@ -1884,8 +1884,8 @@ export const DIALOGUES = {
             },
             fold: {
                 speaker: 'парень',
-                text: 'Стадо теперь на выпасе, за околицей — там трава вольная. Загон в селе разобрали — на том месте дом Степанов поставили, высокий, с трубой. Овец держать — дело верное: шерсть — матери на стан, молоко да мясо — на постоялый двор, навоз — на грядки. Овца, она всё отдаёт, только корми да счесть не забывай!',
-                en: 'The flock is on the pasture now, beyond the outskirts — the grass is free there. The pen in the village was taken apart — Stepan\'s house stands on that spot, tall, with a chimney. Keeping sheep is a sure thing: wool for Mother\'s loom, milk and meat for the lodging-yard, manure for the garden beds. A sheep gives everything — you only have to feed her and never miscount!',
+                text: 'Стадо теперь на выпасе, за околицей — там трава вольная. Загон в селе разобрали — на том месте дом Степанов поставили, высокий, на новь срубленный. Овец держать — дело верное: шерсть — матери на стан, молоко да мясо — на постоялый двор, навоз — на грядки. Овца, она всё отдаёт, только корми да счесть не забывай!',
+                en: 'The flock is on the pasture now, beyond the outskirts — the grass is free there. The pen in the village was taken apart — Stepan\'s house stands on that spot, tall, freshly raised. Keeping sheep is a sure thing: wool for Mother\'s loom, milk and meat for the lodging-yard, manure for the garden beds. A sheep gives everything — you only have to feed her and never miscount!',
                 choices: [
                     { text: t('(продолжить)'), next: 'a' },
                 ],
@@ -2041,7 +2041,7 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'Знахарка Февронья',
-                text: 'Заходи, заходи, не стой в дверях — сквозняк. Я Февронья, травами лечу от столетья века. Раны у тебя, вижу, свежие: так и знала, что дорогой идёшь. Полечу — как раз ноги не подводили?',
+                text: 'Заходи, заходи, не стой в дверях — сквозняк. Я Февронья, травами лечу весь свой век. Раны у тебя, вижу, свежие: так и знала, что дорогой идёшь. Полечу — как раз ноги не подводили?',
                 en: 'Come in, come in, do not linger in the doorway — there is a draft. I am Fevronia; I have healed with herbs since time out of mind. Your wounds are fresh, I can see: I knew you came from the road. Let me treat them — your legs still carry you, do they?',
                 variants: [
                     { text: 'Ах, это ты. Погоди, Ульяна спит — травяной сон ей на пользу. Что болит?', en: 'Ah, it is you. Wait, Ulyana is asleep — a herby sleep does her good. What ails you?' },
@@ -2090,7 +2090,7 @@ export const DIALOGUES = {
             },
             granddaughter: {
                 speaker: 'Знахарка Февронья',
-                text: 'Ульяна? Вся в меня: травы отличает, как я — свои веники. Только бабку свою слушает, а мать-то у неё померла родами... Научу всему — и дурою никто её не назовёт. Женщина с травой в руках — самостоятельный человек, запомни.',
+                text: 'Ульяна? Вся в меня: травы отличает, как я — свои веники. Только бабку свою слушает, а мать-то у неё померла родами... Научу всему — и дурою никто её не назовёт. Женщина с травой в руках — вольный человек, запомни.',
                 en: 'Ulyana? She takes after me: she can tell the herbs apart the way I tell my own brooms. She listens to her granny alone — her mother died in childbed... I shall teach her everything, and no one will dare call her a fool. A woman with herbs in her hands can stand on her own, remember that.',
                 choices: [
                     { text: t('(продолжить)'), next: 'a' },
@@ -2165,7 +2165,7 @@ export const DIALOGUES = {
                 speaker: 'ребёнок',
                 text: '...',
                 action: (scene) => {
-                    const r = askNPC(scene.registry, 'kid8', t('мальчик'));
+                    const r = askNPC(scene.registry, 'kid8', t('девочка'));
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -2201,7 +2201,7 @@ export const DIALOGUES = {
             },
             lessons: {
                 speaker: 'ребёнок',
-                text: 'Бабушка учит: рана кровоточит — подорожник, болит голова — мята, страшно ночью — то молитва, а не трава! Ещё я умею пиявок собирать. Мальчишки боятся, а я — нет. Прикольные, липкие!',
+                text: 'Бабушка учит: рана кровоточит — подорожник, болит голова — мята, страшно ночью — то молитва, а не трава! Ещё я умею пиявок собирать. Мальчишки боятся, а я — нет. Забавные, липкие!',
                 en: 'Granny teaches me: a bleeding wound — plantain, a headache — mint, fear at night — that is prayer, not an herb! I can also gather leeches. The boys are afraid, but I am not. They are funny and sticky!',
                 choices: [
                     { text: t('(продолжить)'), next: 'a' },
@@ -2219,7 +2219,7 @@ export const DIALOGUES = {
                 speaker: 'ребёнок',
                 text: '...',
                 action: (scene) => {
-                    const r = askNPC(scene.registry, 'kid9', t('мальчик'));
+                    const r = askNPC(scene.registry, 'kid9', t('девочка'));
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -2334,7 +2334,7 @@ export const DIALOGUES = {
             },
             cattle: {
                 speaker: 'Мясник Потап',
-                text: 'Скот беру у своих: у пастухов Силы и Настасьи — лучший на сёла вокруг. Коровку Мушку, что в камышах прячется, вжух — не трону: коровка добрая, молока много. А вот кабанчика дикого на прошлой неделе в силке взял — окорок вышел знатный!',
+                text: 'Скот беру у своих: у пастухов Силы и Настасьи — лучший на сёла вокруг. Коровку Мушку, что в камышах прячется, ступай с миром — не трону: коровка добрая, молока много. А вот кабанчика дикого на прошлой неделе в силке взял — окорок вышел знатный!',
                 en: 'I take livestock from my own folk: shepherd Sila and Nastasya keep the finest around. Their cow Mushka that hides in the reeds — shoo, I touch her not: she is a good cow, gives much milk. But last week I took a wild boar in a snare — a fine ham it made!',
                 choices: [
                     { text: t('(продолжить)'), next: 'a' },
@@ -2386,7 +2386,7 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'Ремесленник Аверьян',
-                text: 'Ага, гость! Аверьян я, ремесленник. В доме моём — всякая вещица к делу: ложки резные, нож, что бриту родня, верёвка — семь вёрст тянет, кремень — искру из-под дождя достанет. А обереги — от бабки-знахарки заговорённые. Бери — не прогадаешь!',
+                text: 'Ага, гость! Аверьян я, ремесленник. В доме моём — всякая вещица к делу: ложки резные, нож, что бритве родня, верёвка — семь вёрст тянет, кремень — искру из-под дождя достанет. А обереги — от бабки-знахарки заговорённые. Бери — не прогадаешь!',
                 en: 'Ah, a guest! I am Averyan, the craftsman. In my house every trinket is good for something: carved spoons, a knife that is kin to a razor, a rope that stretches seven versts, a flint that strikes a spark even in rain. And the amulets are charmed by the healer granny. Take one — you will not regret it!',
                 variants: [
                     { text: 'Снова ты! Ну, раз пришел — гляди: вот ложки резные, вот иглы, вот бусы.', en: 'You again! Well, since you are here — look: carved spoons, needles, beads.' },
@@ -2404,7 +2404,7 @@ export const DIALOGUES = {
             },
             origin: {
                 speaker: 'Ремесленник Аверьян',
-                text: 'По трактам хожу, с возами торгаши вожу — вот и присматриваю, что народу надобно. Ножи — у кузнеца выторговал, свечи — от церковного воска, обереги — знахарка Февронья плетёт да наговаривает. Всё по-честному, каждая вещь — с историей!',
+                text: 'По дорогам хожу, с возами торгаши вожу — вот и присматриваю, что народу надобно. Ножи — у кузнеца выторговал, свечи — от церковного воска, обереги — знахарка Февронья плетёт да наговаривает. Всё по-честному, каждая вещь — с историей!',
                 en: 'I walk the roads, drive carts with merchants — and I watch what folk need. The knives I traded from the smith, the candles are from church wax, the amulets the healer Fevronia weaves and charms. All honestly made, every item with a story!',
                 choices: [
                     { text: t('(продолжить)'), next: 'a' },
@@ -2444,7 +2444,7 @@ export const DIALOGUES = {
                 speaker: 'Ремесленник Аверьян',
                 text: '...',
                 choices: [
-                    { text: t('Спасибо, торгарь.'), end: true },
+                    { text: t('Спасибо, мастер.'), end: true },
                 ],
             },
         },
@@ -2456,10 +2456,10 @@ export const DIALOGUES = {
         nodes: {
             a: {
                 speaker: 'Сапожник Нефёд',
-                text: 'Нефёд я, сапожник. Сапог на Руси — не обуза, а гордость: у доброго сапога голенище в обтяжку, подошва — что дубовая кора. Дай сюда ногу... э, да ты не в очередь — садись, погутарим, пока Агафья чаю ставит.',
-                en: 'I am Nefyod, the shoemaker. A boot in Rus is not a burden but a pride: a good boot fits the calf snugly, and its sole is like oak bark. Let me see your foot... ah, no queue today — sit down and let us talk while Agafya makes tea.',
+                text: 'Нефёд я, сапожник. Сапог на Руси — не обуза, а гордость: у доброго сапога голенище в обтяжку, подошва — что дубовая кора. Дай сюда ногу... э, да ты не в очередь — садись, погутарим, пока Агафья сбитню ставит.',
+                en: 'I am Nefyod, the shoemaker. A boot in Rus is not a burden but a pride: a good boot fits the calf snugly, and its sole is like oak bark. Let me see your foot... ah, no queue today — sit down and let us talk while Agafya pours the sbiten.',
                 variants: [
-                    { text: 'Опять ты? Агафья, чай! .. А, ты ненадолго. Ну говори.', en: 'You again? Agafya, tea! .. Ah, you are not staying long. Well, speak.' },
+                    { text: 'Опять ты? Агафья, квасу! .. А, ты ненадолго. Ну говори.', en: 'You again? Agafya, kvass! .. Ah, you are not staying long. Well, speak.' },
                     { text: 'Шило вон, нитку тяну... путник! Садись, только не на готовые сапоги.', en: 'Awl out, pulling the thread... traveller! Sit down, only not on the finished boots.' },
                 ],
                 action: (scene) => {
@@ -2529,7 +2529,7 @@ export const DIALOGUES = {
                 text: 'Муж мой весь в кожаной стружке, а я в кухонной. Агафья я. Нефёд шьёт — а я, чтоб дом стоял: щи да каша — пища наша. Заходи, гостюю ты ко мне, я хоть расскажу, что в слободе делается.',
                 en: 'My husband is covered in leather shavings, and I in kitchen ones. I am Agafya. Nefyod sews — and I keep the house standing: shchi and kasha are our food. Come in, dear guest, and I will tell you what goes on in the settlement.',
                 variants: [
-                    { text: 'Ты опять добрый — заходи! Щи как раз готовы, не пустая изба.', en: 'It is you again — come in! The shchi is just done, the izba is not empty.' },
+                    { text: 'О, опять ты, добрый человек — заходи! Щи как раз готовы, не пустая изба.', en: 'It is you again — come in! The shchi is just done, the izba is not empty.' },
                     { text: 'Нефед стучит, я помешиваю. Вечер — самое то: и слух, и отдых.', en: 'Nefyod hammers, I stir. Evening is just right: for listening and for rest.' },
                 ],
                 action: (scene) => {
@@ -2739,8 +2739,8 @@ export const DIALOGUES = {
                 text: 'Арина я, Степанова жена. Ты, верно, ото всюду слухи носишь — а я тебе и своя есть: куры несутся, огород уродился, а рушник к празднику вот-вот дошью. В горнице у нас чисто, хлеб — как пух. Присядь, коли устал, — щей хлебнешь.',
                 en: 'I am Arina, Stepan\'s wife. You, I suppose, carry news from everywhere — and I have some of my own: the hens lay, the garden has come up well, and the embroidered towel for the feast is nearly done. Our chamber is clean, the bread is like down. Sit if you are weary — you shall have a bowl of shchi.',
                 variants: [
-                    { text: 'Ох, и тянет же меня вон из избы — а у тебя тут тепло...', en: 'Ah, how it pulls me out of the house — yet here you are, warm and cozy...' },
-                    { text: 'Пироги Арина затеяла — по деревне дух ходит!', en: 'Arina has set to the pies — the smell goes all through the village!' },
+                    { text: 'Ох, и тянет же меня вон из избы — а дома у меня топят...', en: 'Ah, how it pulls me out of the house — yet here you are, warm and cozy...' },
+                    { text: 'Пироги затеяла — по деревне дух ходит!', en: 'Arina has set to the pies — the smell goes all through the village!' },
                 ],
                 action: (scene) => {
                     DIALOGUES.peasant2_wife.nodes.a.choices = withAskThief(scene, 'peasant2_wife', [

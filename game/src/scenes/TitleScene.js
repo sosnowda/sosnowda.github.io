@@ -78,7 +78,7 @@ export class TitleScene extends Phaser.Scene {
         // Раунд 57 (п.4 приказа): меню «Помощь» переименовано в «ИНСТРУКЦИЯ»
         this.makeButton(width / 2, by + 68, t('❓ Инструкция'), 0x6b5320, 0x7d6428, () => this.showHelp());
         this.makeButton(width / 2, by + 136, t('⚙ Настройки'), 0x4f4a1e, 0x5f5a26, () => this.showSettings());
-        this.makeButton(width / 2, by + 204, t('О игре'), 0x54382a, 0x644536, () => this.about());
+        this.makeButton(width / 2, by + 204, t('Об игре'), 0x54382a, 0x644536, () => this.about());
         
         // П.26: ESC — переключение в главное меню и обратно
         this.input.keyboard.on('keydown-ESC', () => {
@@ -179,7 +179,7 @@ export class TitleScene extends Phaser.Scene {
     }
 
     about() {
-        this.showSimpleDialog(t('О игре'), tk('title.about',
+        this.showSimpleDialog(t('Об игре'), tk('title.about',
             '«Летописи Руси» — браузерная RPG в сеттинге Руси XV века.\n' +
             'Ролевая система: BRP (Basic Roleplaying Universal Game Engine SRD) — ' +
             'характеристики 3d6×5, проверки d100, критический успех 1/20 навыка, ' +

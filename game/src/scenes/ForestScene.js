@@ -13,7 +13,7 @@ import {
 import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals, isRainy } from '../systems/Weather.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
-import { checkGameEnd, chaseTicksLeft } from '../data/thief.js';
+import { checkGameEnd } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
 import { dayKeyOf } from '../data/daily.js'; // раунд 66.10: daily вместо удалённого chests.js

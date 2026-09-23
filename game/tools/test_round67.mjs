@@ -93,7 +93,7 @@ PRESET_NAMES.forEach(n => {
 HERO_LOOKS.forEach(h => {
     ok(latin(t(h.name)), `облик «${h.name}» → «${t(h.name)}» (латиница)`);
 });
-ok(t('Раковая слобода') === 'Rakovaya sloboda', '«Раковая слобода» → Rakovaya sloboda (транслит, не перевод)');
+ok(t('Ракова слобода') === 'Rakova sloboda', '«Ракова слобода» → Rakova sloboda (транслит, не перевод; р.66.12 — историческая форма)');
 ok(HISTORICAL_VILLAGE_NAMES.length === 30, 'в списке 30 исторических деревень');
 let vilOk = 0;
 HISTORICAL_VILLAGE_NAMES.forEach(n => { if (latin(t(n))) vilOk++; });

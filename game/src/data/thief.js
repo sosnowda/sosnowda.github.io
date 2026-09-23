@@ -1013,7 +1013,7 @@ export function askNPC(registry, npcId, npcName) {
     const c = q.chase;
     if (!c || q.thiefDefeated) {
         const msg = q.thiefDefeated
-            ? t('Слава Богу, ворюгу изловили! Дай Бог тебе удачи, сыщик.')
+            ? t('Слава Богу, ворюгу изловили! Дай Бог тебе удачи, добрый молодец.')
             : t('Не видел я никакого вора. Спроси кого другого, путник.');
         return {
             gotClue: false,
@@ -1043,6 +1043,12 @@ export function askNPC(registry, npcId, npcName) {
         // Раунд 32 (пп.4,10): наводка «прибивает» вора к указанной локации
         // (2 часа гарантии, п.4) и действительна 5 игровых часов (п.10) —
         // когда срок выйдет, вор уйдёт в другую локацию.
+        // Раунд 66.12 (приказ владельца №1, уточнение): наводка очевидца —
+        // ДОБАВЛЕНИЕ к стандартному счётчику «нахождения вора на локации»
+        // (2 часа, TRAIL_LOCK_HOURS), а НЕ замена: pinThiefAtCurrentStop
+        // держит ОБА замка раздельно (npcLockHours ≥ 5 ч с forceFlee — от
+        // наводки; traceLockHours = 2 ч — от прочитанного следа),effective
+        // замок = max из них. Стандартный 2-часовой счётчик не тронут.
         const pinnedLoc = pinThiefAtCurrentStop(registry, NPC_HINT_VALID_HOURS, true);
         q.npcHint = {
             locId: pinnedLoc || (where ? where.locId : null),
@@ -1072,7 +1078,7 @@ export function askNPC(registry, npcId, npcName) {
         const notSeen = [
             t('Не видел я никакого вора. Спроси кого другого, путник.'),
             t('Вор? Здесь не пробегал. Я бы заметил — весь день на виду был.'),
-            t('Темных людей не видал, батиушко упаси. Может, в другой стороне ищешь?'),
+            t('Темных людей не видал, батюшко упаси. Может, в другой стороне ищешь?'),
         ];
         message = `${who}: «${notSeen[Math.floor(Math.random() * notSeen.length)]}»`;
         ActionLog.add(registry, tf(t('Расспрос {0} о воре — не свидетель, ничего не знает.'), who));
@@ -1292,7 +1298,7 @@ export function persuadeThief(registry) {
         recoverStolenItem(registry, 'convinced', res);
         return {
             success: true,
-            message: t('Вор, помявшись, опускает икону в траву: «Ладно! Пронеси тебя Бог, сыщик!» — и растворяется в чаще. Икона цела! Отнеси её старосте или батюшке.') +
+            message: t('Вор, помявшись, опускает икону в траву: «Ладно! Пронеси тебя Бог, молодец!» — и растворяется в чаще. Икона цела! Отнеси её старосте или батюшке.') +
                 ` (${checkLine})`,
             thiefEscaped: false,
         };
@@ -1304,7 +1310,7 @@ export function persuadeThief(registry) {
     return {
         success: false,
         message: fled.escaped
-            ? t('«Не на того напал, сыщик!» — хохочет вор и исчезает меж деревьев. Это была твоя последняя возможность...')
+            ? t('«Не на того напал, молодец!» — хохочет вор и исчезает меж деревьев. Это была твоя последняя возможность...')
             : t('«Не на того напал!» — вор швыряет в тебя ком земли и пускается наутёк. Успей прочесть его следы!'),
         thiefEscaped: fled.escaped,
     };
@@ -1459,7 +1465,7 @@ export function thiefFleesFromFight(registry, fromLocationId) {
     c.traceLockHours = 0;
     void fromLocationId;
 
-    ActionLog.add(registry, t('Вор затаился на месте, но ненадолго: когда погоня ушла из локации, он снялся с места — уже через час он будет в другом месте и оставит там следы. Но и раны его не заживали: сил у него меньше, чем было.'));
+    ActionLog.add(registry, t('Вор затаился на месте, но ненадолго: когда ты покинул локацию, он снялся с места — уже через час он будет в другом месте и оставит там следы. Но и раны его не заживали: сил у него меньше, чем было.'));
     registry.set('quest', q);
     return true;
 }

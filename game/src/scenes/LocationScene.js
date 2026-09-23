@@ -5,10 +5,10 @@ import { FORK_LOCATIONS } from '../data/interiors.js';
 import { getLocationById, isForestLocation, forestDeeper, forestShallower } from '../data/mapLocations.js';
 import {
     searchLocation, getHuntState, checkGameEnd,
-    isChaseActive, isThiefAt, presentThiefEncounter, chaseTicksLeft,
+    isChaseActive, isThiefAt, presentThiefEncounter,
     getFootprints, examineFootprint, getChase, askNPC, worldMinutesOf,
 } from '../data/thief.js';
-import { onLocationVisited } from '../data/questGenerator.js';
+import { onLocationVisited, getActiveQuests } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
 import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
@@ -206,11 +206,10 @@ export class LocationScene extends Phaser.Scene {
             fontSize: '14px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
         }).setDepth(100);
-        this.turnsText = this.add.text(16, 40, tf(t('⏳ Часов до побега вора: {0}'), state.turnsLeft), {
-            fontSize: '14px', color: state.turnsLeft <= 3 ? '#ff4040' : '#ff8060',
-            backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
-            stroke: '#000', strokeThickness: 2,
-        }).setDepth(100);
+        // Раунд 66.12 (приказ владельца №6): счётчик часов до побега вора СКРЫТ
+        // из HUD — игрок не видит, сколько вору осталось до побега. Внутренний
+        // счётчик погони работает как прежде. Попутно устранён латентный краш:
+        // doSearch() вызывал chaseHoursLeft, который здесь никогда не импортировался.
 
         // ----- Игрок -----
         // Раунд 28 QA-фикс: у спрайта героя не было depth — на локациях,
@@ -236,6 +235,19 @@ export class LocationScene extends Phaser.Scene {
 
         // ----- Состояние поиска + погоня (раунд 21) -----
         const chaseActive = isChaseActive(this.registry);
+        // Раунд 66.12 (п.5 приказа): ЛИХИЕ ЛЮДИ на большой дороге. Поручение
+        // «Избить лихих людей» теперь выполняется ЗАСАДОЙ на дороге (шанс 60%
+        // при входе на «Большую дорогу на юг» с активным поручением) — раньше
+        // единственным «разбойником» в игре был... враждебный житель в деревне.
+        if (this.locationId === 'road_south' && !chaseActive) {
+            const banditQuest = getActiveQuests(this.registry).find(qq =>
+                qq.combat && qq.enemyKeys && qq.enemyKeys.includes('bandit'));
+            if (banditQuest && Math.random() < 0.6) {
+                ActionLog.add(this.registry, t('На большой дороге тебе преградили путь лихие люди!'));
+                this.time.delayedCall(500, () => this.scene.start('Combat', { enemyKeys: ['bandit'], fromScene: 'Location' }));
+                return;
+            }
+        }
         const alreadySearched = state.locationsSearched.includes(this.locationId);
         // Раунд 30 (пп.4–6): ВИДИМЫЕ СЛЕДЫ — если вор оставил следы на этой
         // локации, общий поиск заменяется отдельной проверкой каждого следа
@@ -463,11 +475,13 @@ export class LocationScene extends Phaser.Scene {
         hint.popupShown = true;
         this.registry.set('quest', q);
         const locName = (getLocationById(hint.locId) || {}).name || hint.locId;
-        const hoursLeft = Math.max(0, Math.ceil((hint.expiresAtMin - now) / 60));
+        // Раунд 66.12 (приказ владельца №6): ЖИВЫХ ЧАСОВ в подсказке больше нет —
+        // игрок не видит обратного отсчёта (ни до побега вора, ни до конца наводки):
+        // только само правило «наводка живёт недолго».
         const title = expired ? t('⟳ Наводка устарела') : t('📍 Ты по адресу!');
         const body = expired
             ? tf(t('Селяне говорили, что вора видели у «{0}». Но с той поры прошло больше пяти часов — наводка больше не верна: вор давно перебрался в другое место. Ищи свежие следы или расспроси новых людей!'), locName)
-            : tf(t('Селяне говорили правду: вора видели именно здесь, у «{0}»! Но помни: наводка живёт только 5 часов с разговора — осталось около {1} ч. Потом вор уйдёт в другое место!'), locName, hoursLeft);
+            : tf(t('Селяне говорили правду: вора видели именно здесь, у «{0}»! Но помни: наводка живёт недолго — поспеши, пока вор не перебрался в другое место!'), locName);
         this.time.delayedCall(250, () => {
             if (this.busyDialog) return;
             createDialog(this, title, body, [
@@ -475,8 +489,8 @@ export class LocationScene extends Phaser.Scene {
             ], { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
         });
         ActionLog.add(this.registry, expired
-            ? tf(t('Наводка на «{0}» устарела (п.10).'), locName)
-            : tf(t('Наводка привела на «{0}» (п.10, осталось ~{1} ч.).'), locName, hoursLeft));
+            ? tf(t('Наводка на «{0}» устарела — вор перебрался в другое место.'), locName)
+            : tf(t('Наводка привела на «{0}».'), locName));
     }
 
     /**
@@ -1001,11 +1015,7 @@ export class LocationScene extends Phaser.Scene {
     onFootprintClick(fpId) {
         this.busyDialog = true;
         const res = examineFootprint(this.registry, this.locationId, fpId);
-        if (res.turnsLeft !== undefined && res.turnsLeft !== null) {
-            this.turnsText.setText(tf(t('⏳ Действий: {0}'), res.turnsLeft));
-            if (res.turnsLeft <= 3) this.turnsText.setColor('#ff4040');
-            else if (res.turnsLeft <= 6) this.turnsText.setColor('#ffaa40');
-        }
+        // Раунд 66.12 (приказ владельца №6): отсчёт до побега вора скрыт из UI
         if (res.thiefEscaped) {
             createDialog(this, t('🏃 Вор скрылся!'), res.message, [
                 { text: t('Итоги похода'), callback: () => this.scene.start('End') },
@@ -2443,11 +2453,7 @@ export class LocationScene extends Phaser.Scene {
      */
     doSearch() {
         const result = searchLocation(this.registry, this.locationId);
-        // Раунд 58 (п.2): счётчик в ЧАСАХ до побега вора (тик = 1 игровой час)
-        const ticksLeft = chaseHoursLeft(this.registry);
-        this.turnsText.setText(tf(t('⏳ Часов до побега вора: {0}'), ticksLeft));
-        if (ticksLeft <= 3) this.turnsText.setColor('#ff4040');
-        else if (ticksLeft <= 6) this.turnsText.setColor('#ffaa40');
+        // Раунд 66.12 (приказ владельца №6): отсчёт до побега вора скрыт из UI
 
         // Если вор сбежал — переход к концу
         if (result.thiefEscaped) {

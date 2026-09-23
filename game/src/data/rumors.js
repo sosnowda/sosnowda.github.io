@@ -36,7 +36,7 @@ const CHRONICLE_RUMORS = [
     { ru: 'Великий князь Василий Дмитриевич помер, а брат его Юрий со Звенигорода на Москву поглядывает — междоусобица чуется.', en: 'Grand Prince Vasily Dmitrievich has died, and his brother Yuri glances at Moscow from Zvenigorod — strife is brewing.' },
     { ru: 'В Царьграде турки под стенами стоят. Говорят, последняя держава крестовая падёт — а Русь остаётся.', en: 'The Turks are standing under the walls of Constantinople. They say the last crusader realm will fall — while Rus remains.' },
     { ru: 'Иван Государь третьим землю собирает: Новгород пал на Шелони, а Орду на Угре станом встретили — и ушла ни с чем.', en: 'Sovereign Ivan is gathering the lands together: Novgorod fell on the Shelon, and the Horde was met with an armed camp on the Ugra — and turned away empty-handed.' },
-    { ru: 'Судебник государев вышел: крестьянину выход Юрьевым днём указан, а вольному человеку без жалованья ходить нельзя.', en: 'The sovereign’s Law Code is out: a peasant may leave only on St. George’s Day, and a freeman may not wander without a hire.' },
+    { ru: 'Судебник государев вышел: крестьянину выход Юрьевым днём указан, а вольному человеку за старое пожилое платить надобно.', en: 'The sovereign’s Law Code is out: a peasant may leave only on St. George’s Day, and a freeman may not wander without a hire.' },
     { ru: 'Говорят, грек митрополит больше не ставится от Царьграда — Русская церковь сама епископов собирает.', en: 'They say the metropolitan is no longer set from Constantinople — the Russian church gathers its own bishops now.' },
     { ru: 'Возят вести: Ивана третьего на велиское княжение народ и бояре звали, и он на престоле с 1462 года сидит крепко.', en: 'Word is brought: the people and the boyars called Ivan the Third to the grand princedom, and he has sat firm on the throne since 1462.' },
 ];
@@ -45,7 +45,7 @@ const CHRONICLE_RUMORS = [
 const EVERYDAY_RUMORS = [
     { ru: 'У соседа свинья в огород забежала — полкапусты извела. Держи ограду крепче.', en: 'A neighbour’s pig got into the garden — ate half the cabbage. Keep your fence tight.' },
     { ru: 'У Глашки свадьба на Покров играют, а приданое уже на чердаке сушат.', en: 'Glashka’s wedding is held at the Intercession, and her trousseau is already drying in the loft.' },
-    { ru: 'Обоз из Москвы приходил: стрельцы там государевы, а соль нынче дорога.', en: 'A convoy came from Moscow: the tsar’s musketeers are there, and salt is dear these days.' },
+    { ru: 'Обоз из Москвы приходил: ратники там государевы, а соль нынче дорога.', en: 'A convoy came from Moscow: the tsar’s musketeers are there, and salt is dear these days.' },
     { ru: 'Бражник Прохор опять до петухов доплясывался — с помоста-то чуть не свалился!', en: 'Brew-lover Prokhor danced till the roosters crowed again — nearly fell right off the stage!' },
 ];
 
@@ -71,7 +71,7 @@ export function collectRumors(registry) {
                 mill:     { ru: 'у мельницы',              en: 'by the mill' },
                 pasture:  { ru: 'на выпасе',               en: 'on the pasture' },
                 pogost:   { ru: 'на погосте',              en: 'at the churchyard' },
-                road_south:{ ru: 'на южном тракте',        en: 'on the south road' },
+                road_south:{ ru: 'на большой южной дороге',        en: 'on the south road' },
             }[where];
             list.push({
                 ru: tf(t('Фёдор понижает голос: «Видели твоего вора {0}. Только ты это не от меня слыхал».'), place.ru),
@@ -79,7 +79,7 @@ export function collectRumors(registry) {
             });
         } else {
             list.push({
-                ru: t('Про вора этого говорят разное: кто — ушёл на тракт, кто — в лес запропастился. Следы-то на дорогах ещё показываются.'),
+                ru: t('Про вора этого говорят разное: кто — умчался по большой дороге, кто — в лес запропастился. Следы-то на дорогах ещё показываются.'),
                 en: 'People say all sorts about that thief: some say he took to the road, others — that he is hiding deep in the forest. The tracks still show up on the roads now and then.',
             });
         }

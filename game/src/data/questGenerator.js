@@ -9,6 +9,8 @@ import { ActionLog } from './actionLog.js';
 import { ARMORS, WEAPONS } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
 import { applyQuestFailurePenalty } from './reputation.js';
+// Раунд 66.12 (п.5): сезонная привязка — зимой грибы/травы не выдаются
+import { getSeason } from '../systems/TimeSystem.js';
 
 // ============================================================
 // БЛАГОСЛОВЕНИЕ (раунд 22, п.11)
@@ -66,13 +68,19 @@ export function tickQuestTime(registry, minutes) {
             // Раунд 43: журнал обещает штраф за провал — теперь он реально
             // применяется к репутации заказчика (лёгкое −3, среднее −8, тяжёлое −15).
             const failPenalty = applyQuestFailurePenalty(registry, quest.npcId, quest.difficulty);
-            ActionLog.add(registry, tf(t('Репутация у {0} упала на {1} за просроченное поручение.'), quest.npcName, Math.abs(failPenalty)));
+            ActionLog.add(registry, tf(t('Репутация упала на {0} за просрочку.'), Math.abs(failPenalty)));
             // РАУНД 62 (п.7): если просрочено поручение с мечом старосты —
             // обещание «отпускается»: староста ещё раз может сулить меч
             // за новое тяжёлое дело (уникальность — по ВЫДАЧЕ, elderSwordGiven).
             if (quest.rewards && quest.rewards.some(r => r.id === 'sword' && r.uniqueFromElder)) {
                 q.elderSwordPromised = false;
             }
+        }
+        // Раунд 66.12 (п.5): поручения с ОТРАБОТКОЙ (стража/примирение)
+        // завершаются, когда отработано достаточно игрового времени.
+        else if (quest.minMinutesDone && quest.minutesDone >= quest.minMinutesDone) {
+            quest.completed = true;
+            ActionLog.add(registry, tf(t('Поручение «{0}» выполнено! {1} ждёт тебя с наградой.'), quest.title, quest.npcName));
         }
     });
     if (changed) registry.set('quest', q);
@@ -81,7 +89,7 @@ export function tickQuestTime(registry, minutes) {
 // === ТИПЫ ЗАДАНИЙ (исторически достоверные для Руси XV века) ===
 export const QUEST_TYPES = {
     // Боевые задания
-    BANDIT: 'bandit',           // Избить разбойников на тракте
+    BANDIT: 'bandit',           // Избить лихих людей на большой дороге
     WOLF: 'wolf',               // Убить волка, задравшего скот
     THIEF_CATCH: 'thief_catch', // Поймать вора (главный квест)
     GUARD: 'guard',             // Постоять на страже ночью
@@ -97,7 +105,7 @@ export const QUEST_TYPES = {
 
     // Социальные задания
     FIND_PERSON: 'find_person',   // Найти пропавшего человека
-    ESCORT: 'escort',             // Сопроводить путника по тракту
+    ESCORT: 'escort',             // Сопроводить путника по большой дороге
     MEDIATE: 'mediate',           // Помирить соседей
 
     // Религиозные задания (только священник)
@@ -118,9 +126,13 @@ export const NPC_QUEST_POOLS = {
         description: 'староста',
     },
     priest: {
-        // Священник — религиозные и моральные задания + ГЛАВНЫЙ квест
-        quests: [QUEST_TYPES.ICON_RETURN, QUEST_TYPES.CANDLE_FETCH, QUEST_TYPES.PRAYER, QUEST_TYPES.FIND_PERSON, QUEST_TYPES.MEDIATE],
-        rewardTypes: ['blessing', 'herb', 'icon', 'money'],
+        // Священник — религиозные и моральные задания.
+        // Раунд 66.12 (п.5): процедурный ICON_RETURN ИЗЪЯТ — главный квест
+        // («вернуть икону») существует ТОЛЬКО в сюжете; раньше священник с
+        // шансом 30% выдавал «повторную кражу иконы» поверх сюжета, а наградой
+        // служила сама икона-предмет (логическая нелепость).
+        quests: [QUEST_TYPES.CANDLE_FETCH, QUEST_TYPES.PRAYER, QUEST_TYPES.FIND_PERSON, QUEST_TYPES.MEDIATE],
+        rewardTypes: ['blessing', 'herb', 'money'],
         rewardScale: 0.8, // священник беднее деньгами, но даёт духовные награды
         description: 'батюшка',
     },
@@ -273,13 +285,13 @@ export const NPC_QUEST_POOLS = {
 // === ОПИСАНИЯ ЗАДАНИЙ (исторически достоверные) ===
 const QUEST_TEMPLATES = {
     [QUEST_TYPES.BANDIT]: {
-        title: 'Разбойники на тракте',
+        title: 'Лихие люди на большой дороге',
         descriptions: [
-            'На большом тракте засели разбойники, грабят купцов. Прогони их, путник!',
+            'На большой дороге засели лихие люди, грабят купцов. Прогони их, путник!',
             'Лихие люди обложили дорогу данью. Купцы боятся возить товар. Разберись с ними!',
-            'Разбойничья шайка облюбовала лес у тракта. Уже три воза разграбили. Избей их!',
+            'Разбойничья ватага облюбовала лес у большой дороги. Уже три воза разграбили. Избей их!',
         ],
-        objective: 'Избить разбойников на тракте',
+        objective: 'Избить лихих людей на большой дороге',
         location: 'road',
         combat: true,
         enemyKeys: ['bandit'],
@@ -297,7 +309,7 @@ const QUEST_TEMPLATES = {
         descriptions: [
             'Волк-людоед завёлся в лесу, задрал уже двух телят. Убей его, пока не добрался до детей!',
             'Серый хищник таскает кур и ягнят. Крестьяне боятся в поле выходить. Избавь нас от него!',
-            'Стая волков обнаглела — ходят у самых дворов. Прогони их с тракта и из леса!',
+            'Стая волков обнаглела — ходят у самых дворов. Прогони их от дворов и из леса!',
         ],
         objective: 'Убить волка в лесу',
         location: 'forest',
@@ -339,6 +351,9 @@ const QUEST_TEMPLATES = {
         // РАУНД 61: ночная стража — от заката до утра ≈ 8 ч
         timeLimitHours: 8,
         difficulty: 'easy',
+        // Раунд 66.12 (п.5): стража требует ОТРАБОТКИ — 6 игровых часов
+        // (24 действия), иначе поручение «выполнялось» мгновенным визитом.
+        minMinutesDone: 360,
     },
     [QUEST_TYPES.DELIVER]: {
         title: 'Доставить послание',
@@ -377,12 +392,14 @@ const QUEST_TEMPLATES = {
     [QUEST_TYPES.GATHER_HERBS]: {
         title: 'Собрать лекарственные травы',
         descriptions: [
-            'Знахарке нужны травы: череда, зверобой, полынь. Собери их в лесу и на лугу.',
-            'Больная у меня корова — нужны лечебные травы. Поищи у реки и в лесу.',
-            'На зиму травы запасти нужно. Помоги собрать полынь и ромашку.',
+            'Знахарке нужны травы: череда, зверобой, полынь. Собери их в лесу.',
+            'Больная у меня корова — нужны лечебные травы. Поищи зверобой в лесу.',
+            'На зиму травы запасти нужно. Собери в лесу полынь да ромашку.',
         ],
         objective: 'Собрать лекарственные травы',
-        location: 'field',
+        // Раунд 66.12 (п.5): травы собирают В ЛЕСУ (там и метка «Зверобой») —
+        // раньше описание вело «у реки и в лесу», а зачёт шёл на поле.
+        location: 'forest',
         combat: false,
         baseTime: 2,
         timeLimitHours: 6,
@@ -419,7 +436,7 @@ const QUEST_TEMPLATES = {
         title: 'Найти пропавшего',
         descriptions: [
             'Сын мой ушёл утром в лес и не вернулся. Найди его, прошу!',
-            'Муж пошёл за дровами и пропал. Поищи его в лесу и на тракте.',
+            'Родич мой пошёл за дровами и пропал. Поищи его в лесу да по большой дороге.',
             'Подросток пропал — видели его последний раз у реки. Найди его!',
         ],
         objective: 'Найти пропавшего человека',
@@ -433,12 +450,12 @@ const QUEST_TEMPLATES = {
     [QUEST_TYPES.ESCORT]: {
         title: 'Сопроводить путника',
         descriptions: [
-            'Купцу нужно дойти до соседнего села. Проводи его по тракту, там неспокойно.',
+            'Купцу нужно дойти до соседнего села. Проводи его по большой дороге, там неспокойно.',
             // РАУНД 62 (п.8): монастыря НЕТ на карте местности — бабушку
-            // провожают к родне в соседнее село (по тракту, как и было).
-            'Старушка просится к дочери в соседнее село, боится одна идти. Проводи её по тракту.',
+            // провожают к родне в соседнее село (по большой дороге, как и было).
+            'Старушка просится к дочери в соседнее село, боится одна идти. Проводи её по большой дороге.',
         ],
-        objective: 'Сопроводить путника по тракту',
+        objective: 'Сопроводить путника по большой дороге',
         location: 'road',
         combat: false,
         baseTime: 4,
@@ -459,6 +476,9 @@ const QUEST_TEMPLATES = {
         baseTime: 2,
         timeLimitHours: 4,
         difficulty: 'easy',
+        // Раунд 66.12 (п.5): мирить соседей — хотя бы час уговоров (4 действия),
+        // иначе поручение «выполнялось» мгновенным визитом в деревню.
+        minMinutesDone: 60,
     },
     [QUEST_TYPES.ICON_RETURN]: {
         title: 'Вернуть украденную икону',
@@ -550,9 +570,14 @@ function generateRewards(npcId, questType, scale, registry) {
         rewards.push({ type: 'item', id: 'herb', name: t('Целебная трава'), count: 1 + Math.floor(Math.random() * 2), consumable: true });
     }
 
-    // Благословение (восстановление HP/MP)
+    // Благословение/отвар (восстановление HP/MP). Раунд 66.12 (п.5):
+    // «Благословение батюшки» — только у священника; вдова и знахарка
+    // вручают свой травный отвар (сакральное — не их роль).
     if (rewardTypes.includes('blessing')) {
-        rewards.push({ type: 'blessing', name: t('Благословение батюшки (полное восстановление)') });
+        const blessName = (npcId === 'priest')
+            ? t('Благословение батюшки (полное восстановление)')
+            : t('Травный отвар (полное восстановление)');
+        rewards.push({ type: 'blessing', name: blessName });
     }
 
     // Икона (только за главный квест)
@@ -621,19 +646,21 @@ export function generateQuest(npcId, registry) {
     const q = registry.get('quest') || {};
     const activeQuests = q.activeQuests || [];
     
-    // Выбираем случайный тип задания из пула NPC
+    // Выбираем случайный тип задания из пула NPC.
+    // Раунд 66.12 (п.5): процедурный ICON_RETURN ИЗЪЯТ из генератора —
+    // главный квест существует ТОЛЬКО в сюжете (см. приказ владельца:
+    // вор крадёт икону и убегает — с этого начинается игра).
     let questType;
-    // Если у NPC есть главный квест (ICON_RETURN) и он ещё не выдан — шанс 30% выдать его
-    if (pool.quests.includes(QUEST_TYPES.ICON_RETURN) && !q.mainQuestGiven && Math.random() < 0.3) {
-        questType = QUEST_TYPES.ICON_RETURN;
-        q.mainQuestGiven = true;
-        registry.set('quest', q);
-    } else {
+    {
     // Фильтруем задания, которые уже есть у игрока (не выдаем дубликаты).
     // Раунд 22: просроченные поручения тоже освобождают слот.
-    const availableTypes = pool.quests.filter(t => {
-            if (t === QUEST_TYPES.ICON_RETURN && q.mainQuestGiven) return false;
-            return !activeQuests.some(aq => aq.type === t && !aq.completed && !aq.failed);
+    // Раунд 66.12: ЗИМОЙ грибы не ищут и травы не собирают — такие
+    // поручения не генерируются (сезонная привязка, приказ п.5).
+    const gt6612 = registry.get('gameTime');
+    const isWinter6612 = (() => { try { return gt6612 ? getSeason(gt6612.month) === 'winter' : false; } catch (e) { return false; } })();
+    const availableTypes = pool.quests.filter(tp => {
+            if (isWinter6612 && (tp === QUEST_TYPES.FETCH || tp === QUEST_TYPES.GATHER_HERBS)) return false;
+            return !activeQuests.some(aq => aq.type === tp && !aq.completed && !aq.failed);
         });
         if (availableTypes.length === 0) return null; // нет доступных заданий
         questType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
@@ -649,12 +676,10 @@ export function generateQuest(npcId, registry) {
     // обещание держим в quest-реестре, раунд 62 п.7)
     const rewards = generateRewards(npcId, questType, pool.rewardScale, registry);
 
-    // РАУНД 62 (п.7): если староста обещал свой меч — запоминаем, пока
-    // поручение не выполнено (или не провалено), второй он не сулит.
-    if (rewards.some(r => r.id === 'sword' && r.uniqueFromElder)) {
-        q.elderSwordPromised = true;
-        registry.set('quest', q);
-    }
+    // РАУНД 62 (п.7): меч старосты — уникальная награда. РАУНД 66.12 (п.5):
+    // обещание ставится при ПРИНЯТИИ поручения (acceptQuest), а не при
+    // генерации — раньше ОТКАЗ игрока от предложения навсегда «сжигал»
+    // единственный меч старосты (флаг оставался, а меч никто не получал).
 
     // Время на выполнение — РАУНД 61 (п.1): СРОКИ РЕАЛИСТИЧНЫ.
     // У каждого шаблона свой разумный срок в ЧАСАХ (timeLimitHours):
@@ -701,6 +726,11 @@ export function acceptQuest(registry, quest) {
     if (!q.activeQuests) q.activeQuests = [];
     quest.accepted = true;
     q.activeQuests.push(quest);
+    // Раунд 66.12 (п.5): меч старосты «обещается» при ПРИНЯТИИ (а не при
+    // генерации) — отказ от предложения больше не выжигает уникальную награду.
+    if ((quest.rewards || []).some(r => r.id === 'sword' && r.uniqueFromElder)) {
+        q.elderSwordPromised = true;
+    }
     const hours = quest.timeLimitHours || Math.round((quest.timeLimit || 10) / 4);
     q.currentObjective = quest.objective + ` (${tf(t('срок: {0} ч'), hours)})`;
     registry.set('quest', q);
@@ -716,7 +746,9 @@ function matchesLocation(questLoc, visited) {
     if (questLoc === visited) return true;
     if (questLoc === 'road' && visited === 'road_south') return true;
     if (questLoc === 'any') {
-        return ['forest', 'road_south', 'field', 'river', 'lake', 'pogost', 'mill', 'apiary', 'pasture'].includes(visited);
+        // Раунд 66.12 (п.5): добавлены лесные локации Опушка/Поляна —
+        // раньше «найти пропавшего» не засчитывался на них.
+        return ['forest', 'forest_edge', 'forest_glade', 'road_south', 'field', 'river', 'lake', 'pogost', 'mill', 'apiary', 'pasture'].includes(visited);
     }
     return false;
 }
@@ -731,10 +763,14 @@ export function onLocationVisited(registry, locationId) {
     const completed = [];
     getActiveQuests(registry).forEach(quest => {
         if (quest.combat || quest.completed) return;
+        // Раунд 66.12 (п.5): поручения с ОТРАБОТКОЙ (стража/примирение)
+        // завершаются не мгновенным визитом, а отработанным временем
+        // (см. tickQuestTime) — иначе «постой до утра» выполнялось за миг.
+        if (quest.minMinutesDone && (quest.minutesDone || 0) < quest.minMinutesDone) return;
         if (matchesLocation(quest.location, locationId)) {
             quest.completed = true;
             completed.push(quest);
-            ActionLog.add(registry, tf(t('Поручение «{0}» выполнено! Загляни к {1} за наградой.'), quest.title, quest.npcName));
+            ActionLog.add(registry, tf(t('Поручение «{0}» выполнено! {1} ждёт тебя с наградой.'), quest.title, quest.npcName));
         }
     });
     return completed;
@@ -788,7 +824,14 @@ export function grantQuestRewards(registry, quest) {
     const q = registry.get('quest') || {};
     const grantedRewards = [];
 
-    quest.rewards.forEach(reward => {
+    // Раунд 66.12 (п.5): меч старосты ОДИН на игру — если он уже выдан
+    // (двойная выдача через доску/личное поручение в старых сейвах),
+    // второй меч наградой не идёт.
+    const rewardsToGrant = q.elderSwordGiven
+        ? quest.rewards.filter(r => !(r.id === 'sword' && r.uniqueFromElder))
+        : quest.rewards;
+
+    rewardsToGrant.forEach(reward => {
         if (reward.type === 'money') {
             player.dengas = (player.dengas || 0) + reward.amount;
             grantedRewards.push(`${formatMoney(reward.amount)}`);

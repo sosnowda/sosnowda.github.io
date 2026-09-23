@@ -125,7 +125,9 @@ const EN = {
     // --- Развилка (ForkScene) ---
     'Околица деревни': 'Village outskirts',
     'Куда пойдёшь?': 'Where will you go?',
-    '⏳ Ходов до побега вора: {0}': '⏳ Turns until the thief escapes: {0}',
+    // Раунд 66.12 (приказ владельца №6): ключи обратного отсчёта «до побега вора»
+    // ('⏳ Ходов до побега вора: {0}', '⏳ Часов до побега вора: {0}', '⏳{0} ч до побега',
+    // '⏳ Вор скроется…') УДАЛЕНЫ — игрок не видит, сколько часов вору осталось.
     'Улики от жителей:': 'Clues from the villagers:',
     '{0} (обыскано)': '{0} (searched)',
     '🌲 Тёмный лес — прогулка': '🌲 Dark Forest — a walk',
@@ -316,18 +318,18 @@ const EN = {
 
     // --- Локации развилки (mapLocations) ---
     'Тёмный лес': 'Dark Forest',
-    'Тракт на югъ': 'The Southern Highway',
+    'Большая дорога на юг': 'The Southern Highway',
     'Ржаное поле': 'Rye Fields',
     'Святое озеро': 'The Holy Lake',
-    'Погостъ': 'The Churchyard',
+    'Погост': 'The Churchyard',
     'Водяная мельница': 'The Watermill',
     // Раунд 27 (п.4): ветряная мельница (водяное колесо и ручей убраны)
     'Ветряная мельница': 'The Windmill',
     'Ветряная мельница на пригорке. Мельник мелет зерно для всей округи.': 'A windmill on the hill. The miller grinds grain for the whole area.',
-    'Выпасъ': 'The Pasture',
-    'Рѣка Кистерма': 'The Kisterma River',
+    'Выпас': 'The Pasture',
+    'Река Кистерма': 'The Kisterma River',
     'Густой бор за рекой. Много зверья и грибов, но и разбойники водятся.': 'A dense forest across the river. Plenty of game and mushrooms — but bandits roam here too.',
-    'Большой тракт, ведущий к южным городам. По нему ходят купеческие обозы.': 'The great highway leading to the southern cities. Merchant convoys travel along it.',
+    'Большая дорога, ведущая к южным городам. По ней ходят купеческие обозы.': 'The great road leading to the southern cities. Merchant convoys travel along it.',
     'Поля общинной пашни. Здесь крестьяне сеют рожь, овёс и ячмень.': 'Fields of communal arable land. Here the peasants sow rye, oats and barley.',
     'Тихое лесное озеро с чистой водой. Здесь ловят рыбу и собирают камыши.': 'A quiet forest lake with clear water. Fish are caught and reeds gathered here.',
     'Деревенское кладбище с деревянной часовней и рядами могил с крестами. Много деревьев и травы.': 'The village cemetery with a wooden chapel and rows of graves marked with crosses. Many trees and grass.',
@@ -338,9 +340,9 @@ const EN = {
 
     // --- Краткие описания (FORK_LOCATIONS) ---
     'Густой лес за рекой. Много следов, но и много зверья.': 'A dense forest across the river. Many tracks — and much game.',
-    'Торный тракт на юг, к большим городам.': 'A well-travelled highway south, to the big cities.',
+    'Торная дорога на юг, к большим городам.': 'A well-travelled highway south, to the big cities.',
     'Брод через реку. Галька, илистый берег — следы видны хорошо.': 'A river ford. Pebbles and muddy banks — tracks show up well.',
-    'Рожковое поле на восток. Высокие стебли скрывают следы.': 'A rye field to the east. Tall stalks hide the tracks.',
+    'Ржаное поле на восток. Высокие стебли скрывают следы.': 'A rye field to the east. Tall stalks hide the tracks.',
 
     // --- NPC (интерьеры) ---
     'Староста Мирослав': 'Elder Miroslav',
@@ -502,12 +504,11 @@ const EN = {
     'Не хватает денег!': 'Not enough money!',
 
     // ----- Раунд 21: много-локационная погоня за вором -----
-    '⏳ Вор скроется через {0} действий': '⏳ The thief will vanish in {0} actions',
-    '⏳ Действий: {0}': '⏳ Actions left: {0}',
+    // Раунд 66.12: '⏳ Вор скроется через {0} действий', '⏳ Действий: {0}'
+    // и '⏳{0} ч до побега' удалены (отсчёт скрыт из UI, ключи без использования)
     '⏳{0}действ.': '⏳{0}act.',
     // Раунд 58 (п.2): счётчик времени до побега вора — в игровых часах
-    // (EN для «⏳ Часов до побега вора: {0}» уже есть в словаре выше)
-    '⏳{0} ч до побега': '⏳{0} h until escape',
+    // Раунд 66.12 (приказ владельца №6): '⏳{0} ч до побега' удалён (отсчёт скрыт)
     '{0} действий': '{0} actions',
     // Раунд 61 (п.1): сроки поручений — в игровых часах (реалистичные)
     'срок: {0} ч': 'deadline: {0} h',
@@ -543,8 +544,8 @@ const EN = {
     'Не видел я никакого вора. Спроси кого другого, путник.':
         'I saw no thief. Ask someone else, traveller.',
     'Пока вы говорили, вор успел скрыться из вида...': 'While you were talking, the thief managed to vanish from sight...',
-    'Слава Богу, ворюгу изловили! Дай Бог тебе удачи, сыщик.':
-        'Thank God the rogue is caught! God speed you, detective.',
+    'Слава Богу, ворюгу изловили! Дай Бог тебе удачи, добрый молодец.':
+        'Thank God the rogue is caught! God speed you, good fellow.',
     'Я уже помог тебе, чем мог. Больше не дам.': 'I have already helped you all I could. I will give no more.',
     'Возьми, путник, чем богат. Помоги тебе Господь!': 'Take this, traveller, all I can spare. God bless you!',
     'Вот тебе немного денег на дорогу.': 'Here is a little money for the road.',
@@ -563,11 +564,11 @@ const EN = {
     'Итоги похода': 'Journey summary',
     '🏆 Святыня у тебя!': '🏆 The holy icon is yours!',
     '💨 Вор вырвался!': '💨 The thief broke free!',
-    'Вор, помявшись, опускает икону в траву: «Ладно! Пронеси тебя Бог, сыщик!» — и растворяется в чаще. Икона цела! Отнеси её старосте или батюшке.':
+    'Вор, помявшись, опускает икону в траву: «Ладно! Пронеси тебя Бог, молодец!» — и растворяется в чаще. Икона цела! Отнеси её старосте или батюшке.':
         'The thief hesitates, then lowers the icon into the grass: "Fine! God speed you, detective!" — and melts into the thicket. The icon is unharmed! Carry it to the village elder or the priest.',
     'бросок': 'roll',
-    '«Не на того напал, сыщик!» — хохочет вор и исчезает меж деревьев. Это была твоя последняя возможность...':
-        '"You picked the wrong man, detective!" the thief laughs and vanishes among the trees. That was your last chance...',
+    '«Не на того напал, молодец!» — хохочет вор и исчезает меж деревьев. Это была твоя последняя возможность...':
+        '"You picked the wrong man, good fellow!" the thief laughs and vanishes among the trees. That was your last chance...',
     '«Не на того напал!» — вор швыряет в тебя ком земли и пускается наутёк. Успей прочесть его следы!':
         '"You picked the wrong man!" The thief hurls a clod of earth at you and bolts. Hurry and read his tracks!',
     'Одним точным ударом в висок ты срубишь вора с ног и накрепко связываешь его. Икона в киоте невредима!':
@@ -602,7 +603,7 @@ const EN = {
     'Ты обыскал тело поверженного вора и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.':
         'You search the fallen thief and find the miracle-working icon of the Mother of God — whole and unharmed. Return to the village: give the holy icon to the elder or the priest and claim your well-earned reward.',
     'В деревню!': 'To the village!',
-    'Поручение «{0}» выполнено! Загляни к {1} за наградой.':
+    'Поручение «{0}» выполнено! {1} ждёт тебя с наградой.':
         'Errand "{0}" is done! Visit {1} to collect your reward.',
     'Принял задание: {0} от {1}. Срок: {2} ч.': 'Accepted errand: {0} from {1}. Deadline: {2} h.',
     '🏺 Вернуть икону!': '🏺 Return the icon!',
@@ -615,7 +616,7 @@ const EN = {
     'Батюшка принимает икону; на его лице слёзы радости. Святыня снова в киоте!':
         'The priest receives the icon; tears of joy on his face. The holy icon is back in its shrine!',
     '✓ Поручение выполнено!': '✓ Errand completed!',
-    'Ты справился, {0}! Прими это в благодарность.': 'Well done, {0}! Accept this with our gratitude.',
+    'Дело сделано, {0}! Прими это в благодарность.': 'Well done, {0}! Accept this with our gratitude.',
     'Спасибо!': 'Thank you!',
     'путник': 'traveller',
     'путница': 'traveller (f)',
@@ -722,7 +723,7 @@ const EN = {
 
     // --- Раунд 27: живой мир (пп.6-13) ---
     '🌙 Здесь сейчас никого нет...': '🌙 Nobody is here right now...',
-    'Найди(е) его там — или возвращайся в другой час.': 'Find them there — or come back at another hour.',
+    'Найди его там — или возвращайся в другой час.': 'Find them there — or come back at another hour.',
     '💬 Поговорить': '💬 Talk',
     'Продолжить': 'Continue',
     'на постоялом дворе': 'at the wayside inn', 'на мельнице': 'at the mill',
@@ -857,7 +858,7 @@ const EN = {
     'Видел я вора, да куда он подался — не ведаю.': 'I saw the thief, but where he went — I cannot say.',
     'Вор? Здесь не пробегал. Я бы заметил — весь день на виду был.':
         'The thief? No one ran past here. I would have noticed — I was in plain sight all day.',
-    'Темных людей не видал, батиушко упаси. Может, в другой стороне ищешь?':
+    'Темных людей не видал, батюшко упаси. Может, в другой стороне ищешь?':
         'I saw no dark figures, God forbid. Perhaps you should search another way?',
     'Вор затаился на месте, но ненадолго: когда погоня ушла из локации, он снялся с места — уже через час он будет в другом месте и оставит там следы. Но и раны его не заживали: сил у него меньше, чем было.':
         'The thief is lying low, but not for long: once the pursuit left his location, he will move on — in just one hour he will be elsewhere, leaving fresh tracks. But his wounds have not healed: his strength is less than it was.',
@@ -866,8 +867,8 @@ const EN = {
         '⚔ Combat is turn-based (BRP d100): attack, dodge, herbs, escape.\nSkill checks roll d100: success is within the skill value,\ncritical is 1/20 of it (damage ×1.5), special success — 1/5 (damage ×2).\n🛡 Armour absorbs damage from every hit.',
     'Вор повержен! Икона у тебя!': 'The thief is defeated! The icon is yours!',
     '🐺 Стая напугана — волки держатся подальше': '🐺 The pack is frightened — the wolves keep their distance',
-    '⏳ Вор скроется примерно через {0} ч.': '⏳ The thief will vanish in about {0} h.',
-    '⏳ Часов до побега вора: {0}': '⏳ Hours until the thief escapes: {0}',
+    // Раунд 66.12 (приказ владельца №6): счётчик «⏳ Часов до побега вора: {0}»
+    // и «⏳ Вор скроется примерно через {0} ч.» удалены из UI и словаря.
     'Опушка': 'Forest Edge',
     'Поляна': 'Glade',
     '🗺 Околица — карта местности: выбирай локацию и в путь.\nКаждый переход по карте занимает ровно 1 игровой час.\nСледы вора живут от 12 до 24 часов — а дождь и снег смывают их и раньше.':
@@ -900,8 +901,8 @@ const EN = {
     '📍 Ты по адресу!': '📍 You are on the spot!',
     'Селяне говорили, что вора видели у «{0}». Но с той поры прошло больше пяти часов — наводка больше не верна: вор давно перебрался в другое место. Ищи свежие следы или расспроси новых людей!':
         'The villagers said the thief was seen at "{0}". But more than five hours have passed — the tip no longer holds: the thief moved elsewhere long ago. Look for fresh tracks or question new people!',
-    'Селяне говорили правду: вора видели именно здесь, у «{0}»! Но помни: наводка живёт только 5 часов с разговора — осталось около {1} ч. Потом вор уйдёт в другое место!':
-        'The villagers spoke true: the thief was seen here at "{0}"! But remember: a tip lives only 5 hours from the talk — about {1} h remain. Then the thief will move elsewhere!',
+    'Селяне говорили правду: вора видели именно здесь, у «{0}»! Но помни: наводка живёт недолго — поспеши, пока вор не перебрался в другое место!':
+        'The villagers spoke true: the thief was seen here at "{0}"! But remember: a tip does not live long — hurry before he moves elsewhere!',
     'Расспросить о воре': 'Question about the thief',
     '✨ след прочитан': '✨ print read',
     '🔍 след вора': '🔍 thief\'s print',
@@ -1055,7 +1056,7 @@ const EN = {
     'Фёдор разводит руками: «На нынче и слыхом не слыхать — весь товар молвы разобран. Заходи завтра, обоз прибудет».': 'Fyodor spreads his hands: “Nothing worth hearing today — all the news has been carried off. Come back tomorrow, a convoy is due.”',
     '(Это последний слух на сегодня — дальше только пересуды.)': '(That is the last rumour for today — nothing but idle talk remains.)',
     'Фёдор понижает голос: «Видели твоего вора {0}. Только ты это не от меня слыхал».': 'Fyodor lowers his voice: “They saw your thief {0}. You didn’t hear it from me.”',
-    'Про вора этого говорят разное: кто — ушёл на тракт, кто — в лес запропастился. Следы-то на дорогах ещё показываются.': 'People say all sorts about that thief: some say he took to the road, others — that he is hiding deep in the forest. The tracks still show up on the roads now and then.',
+    'Про вора этого говорят разное: кто — умчался по большой дороге, кто — в лес запропастился. Следы-то на дорогах ещё показываются.': 'People say all sorts about that thief: some say he took to the road, others — that he is hiding deep in the forest. The tracks still show up on the roads now and then.',
     'Стадо нынче {0} угнали — пастухи дознают, где трава сочнее.': 'The herd was driven {0} today — the shepherds scout where the grass is juiciest.',
     'Дождь зарядил — но рыба-то его любит! На броду бери удочку: в непогоду клюёт жадно.': 'The rain has set in — but fish love it! Take your rod to the ford: in bad weather they bite eagerly.',
     'Снег пошёл. По таким дорогам только на лыжах — да и то к соседу.': 'Snow is falling. Roads like these are only fit for skis — and even then, just to the neighbour’s.',
@@ -1267,7 +1268,7 @@ const EN = {
     'До свидания.': 'Farewell.',
     'Откуда скот?': 'Where does the livestock come from?',
     'Что в народе слыхал?': 'What do the people say?',
-    'Спасибо, торгарь.': 'Thank you, peddler.',
+    'Спасибо, мастер.': 'Thank you, master.',
     'Про ремесло расскажи.': 'Tell me of your craft.',
     'Кто заказывает?': 'Who is commissioning?',
     'Спасибо, мастер.': 'Thank you, master.',
@@ -1311,7 +1312,7 @@ const EN = {
     'Дровосек Горазд': 'Gorazd the woodcutter',
     'Изба простая и ладная: в углу — поленница до потолка, у двери — топоры и пилы. На бревне у печи вырезаны метки — счёт срубленным деревьям.':
         'A plain and tidy hut: a woodpile to the ceiling in the corner, axes and saws by the door. Marks are cut into the log by the stove — a count of the trees felled.',
-    'Репутация у {0} упала на {1} за просроченное поручение.': 'Reputation of {0} fell by {1} for an overdue task.',
+    'Репутация упала на {0} за просрочку.': 'Reputation of {0} fell by {1} for an overdue task.',
     'Хлеб': 'Bread',
     'Медовуха': 'Mead',
     'Целебная трава': 'Healing herb',
@@ -1416,7 +1417,7 @@ const EN = {
     'Имя, класс, возраст, пол — облик выбирается автоматически по полу: «Пауль» ♂ / «Баэнора» ♀.':
         'Name, class, age, gender — the look is picked automatically by gender: "Paul" ♂ / "Baenora" ♀.',
     // Раунд 62 (п.1): перекрёстное сопоставление прессетов по полу
-    'Облик героя: прессет «{0}» выбран автоматически по полу (раунд 62).':
+    'Облик героя: «{0}» избран по обычаю — по полу героя.':
         'Hero\'s look: the "{0}" preset was picked automatically by gender (round 62).',
     'Облик': 'Look',
     'Пауль': 'Paul',
@@ -1425,7 +1426,7 @@ const EN = {
     // Раунд 62 (пп.7,8): экономика наград и описание проводов
     'Мечи не продаются: меч — награда старосты. Доспех кузнец выдаёт только за самые тяжёлые поручения.':
         'No swords for sale: the sword is the elder\'s reward. Armor is given by the smith only for the hardest deeds.',
-    'Старушка просится к дочери в соседнее село, боится одна идти. Проводи её по тракту.':
+    'Старушка просится к дочери в соседнее село, боится одна идти. Проводи её по большой дороге.':
         'An old woman asks to be walked to her daughter in the neighboring village — she fears the road alone. Escort her along the highway.',
     '🎨 Создание персонажа': '🎨 Character Creation',
     'Имя:': 'Name:',
@@ -1582,7 +1583,7 @@ const EN = {
     'Не хватает денег на выпивку для всех!': 'Not enough money for a drink for everyone!',
     'Угостил всех выпивкой в таверне за {0} д. (+{1} к репутации).': 'Treated everyone to drink at the tavern for {0} d. (+{1} to reputation).',
     '🎉 Выпивка для всех': '🎉 A drink for everyone',
-    'Ты заказал бочку медовуги на всех! Гости радостно поднимают кубки. «За гостеприимного гостя!» — раздаётся по залу. (Репутация у всех NPC +3, в деревне +5)':
+    'Ты заказал бочку медовухи на всех! Гости радостно поднимают кубки. «За гостеприимного гостя!» — раздаётся по залу. (Репутация у всех NPC +3, в деревне +5)':
         'You ordered a barrel of mead for all! The guests raise their cups with joy. "To the generous guest!" rings through the hall. (Reputation of all NPCs +3, in the village +5)',
     '🎉 За нас!': '🎉 To us!',
     '{0} отказался торговаться с героем дурной славы (репутация ≤ −50).': '{0} refused to trade with a person of ill repute (reputation ≤ −50).',
@@ -1593,8 +1594,8 @@ const EN = {
     'защита': 'defence',
     'снаряжение': 'gear',
     'Купил «{0}» в «{1}» за {2} д.{3}': 'Bought "{0}" in "{1}" for {2} d.{3}',
-    'Таверна «У дороги» — меню': 'Tavern "By the Road" — menu',
-    'Купил «{0}» в таверне за {1} д. ({2}).': 'Bought "{0}" at the tavern for {1} d. ({2}).',
+    'Постоялый двор «У дороги» — меню': 'Lodging-house "By the Road" — menu',
+    'Купил «{0}» на постоялом дворе за {1} д. ({2}).': 'Bought "{0}" at the lodging-house for {1} d. ({2}).',
     'Ты посидел за столом у Фёдора... но пока время шло, вор успел скрыться из вида!':
         'You sat a while at Fyodor\'s table... but while the time passed, the thief slipped out of sight!',
     '{0} откладывает молот и крестит руки на груди:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»':
@@ -1617,7 +1618,7 @@ const EN = {
     'Пожертвование': 'Donation',
     'Ты уже жертвовал сегодня. Свечей куплено на всю неделю вперёд.': 'You have already given today. Candles are bought for a week ahead.',
     'Ну ладно.': 'Well, all right.',
-    'В мошне пусто — не до пожертвований. Заработай в амбаре или помоги деревне.': 'The purse is empty — no time for donations. Earn in the workshop or help the village.',
+    'В мошне пусто — не до пожертвований. Заработай в мастерской или помоги деревне.': 'The purse is empty — no time for donations. Earn in the workshop or help the village.',
     'Приду позже.': 'I shall come later.',
     'Пожертвование в церкви': 'Donation in the church',
     'Пожертвовал 5 д. в церкви — деревня это помнит (+1 репутация).': 'Donated 5 d. in the church — the village remembers (+1 reputation).',
@@ -1628,11 +1629,11 @@ const EN = {
     'Пустой киот': 'The Empty Shrine',
     'Больше тут ничего не изменилось: ниша без иконы, воск на полу, верёвка.': 'Nothing has changed here: a niche without an icon, wax on the floor, a rope.',
     'Уйти от киота.': 'Step away from the shrine.',
-    'На полу церкви — капли стеарина и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в церкви горела свеча.':
+    'На полу церкви — капли воска и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в церкви горела свеча.':
         'On the church floor — drops of stearin and a piece of hemp rope with two knots. The icon was carried carefully, by two, and the day before a candle had burned in the church.',
     'Осмотрел киот в церкви — нашёл улику (воск, верёвка с узлами).': 'Examined the shrine in the church — found a clue (wax, knotted rope).',
     'Осмотр киота': 'Examining the shrine',
-    'Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли стеарина, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\nВор был не один — и нёс святыню бережно. Это стоит рассказать старосте.\n\nУлика добавлена к делу.':
+    'Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли воска, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\nВор был не один — и нёс святыню бережно. Это стоит рассказать старосте.\n\nУлика добавлена к делу.':
         'The niche where the wonderworking icon stood is empty. You look closely: on the floor — drops of stearin, still warm. At the foot — a piece of hemp rope with two knots.\n\nThe thief was not alone — and he carried the holy thing with care. This is worth telling the elder.\n\nThe clue is added to the case.',
     'Запомнить.': 'Remember.',
     'Силы кончились': 'Strength spent',
@@ -1683,8 +1684,8 @@ const EN = {
     'Порыбачил через лунку — налим к ужину (+{0} ❤).': 'Fished through the ice-hole — a burbot for supper (+{0} ❤).',
     'Дождь — рыба идёт на крючок смело. Отличный улов (+{0} ❤).': 'Rain — the fish bite boldly. An excellent catch (+{0} ❤).',
     'Наловил рыбы на реке к обеду (+{0} ❤).': 'Caught fish in the river for dinner (+{0} ❤).',
-    'Наводка на «{0}» устарела (п.10).': 'The lead on "{0}" has gone stale (p.10).',
-    'Наводка привела на «{0}» (п.10, осталось ~{1} ч.).': 'The lead brought you to "{0}" (p.10, ~{1} h. left).',
+    'Наводка на «{0}» устарела — вор перебрался в другое место.': 'The lead on "{0}" has gone stale — the thief moved elsewhere.',
+    'Наводка привела на «{0}».': 'The lead brought you to "{0}".',
     'Герой': 'The Hero',
     'Спи спокойно, добрая душа.': 'Sleep in peace, kind soul.',
     'житель сам напал на героя — пал(а) в честной схватке': 'the villager attacked the hero first — fell in a fair fight',
@@ -1889,7 +1890,7 @@ const EN = {
     'Тебя приняли в деревню как родного: добрые дела и честный труд дороже золота.': 'The village took you in as kin: good deeds and honest labour are worth more than gold.',
     'Долгий путь к доверию': 'A Long Road to Trust',
     'Любовь деревни снискивается годами — и ты её снискал.': 'A village\'s love is earned over years — and you have earned it.',
-    'Идеальный сыщик': 'The Perfect Sleuth',
+    'Идеальный следопыт': 'The Perfect Tracker',
     'Молниеносное расследование без единой ошибки!': 'A lightning investigation without a single mistake!',
     'Опытный следопыт': 'The Seasoned Tracker',
     'Быстро и уверенно нашли вора. Отличная работа.': 'You found the thief quickly and surely. Excellent work.',
@@ -1928,6 +1929,21 @@ const EN = {
     'Жена (мертва)': 'Wife (dead)',
     'Супруг (мёртв)': 'Spouse (dead)',
     'Супруга (мертва)': 'Spouse (dead f.)',
+    'Об игре': 'About',
+    'Большая дорога': 'The Great Road',
+    'Жарко. Стук молота по наковальне. На стенах — топоры, копья да кольчуги.':
+        'Hot. The hammer rings on the anvil. Axes, spears and mail shirts hang on the walls.',
+    'Крепкая изба в два окна: на шестке горшки глиняные, у красного угла — образа с рушником, под лавкой — кувадка с прялкой Арины. У крыльца сушатся сбруя и рукавицы, в сенцах пахнет хлебом и скотиной.':
+        'A sturdy two-window house: clay pots on the hearth, icons with a towel in the red corner, Arina\'s spinning wheel under the bench. Harness and mittens dry by the porch; the vestibule smells of bread and cattle.',
+    'Вор затаился на месте, но ненадолго: когда ты покинул локацию, он снялся с места — уже через час он будет в другом месте и оставит там следы. Но и раны его не заживали: сил у него меньше, чем было.':
+        'The thief is lying low, but not for long: once you left the place, he moved on — in an hour he will be somewhere else and leave fresh tracks there. And his wounds never healed: he has less strength than before.',
+// ----- Раунд 66.12 (приказы владельца №1–7) -----
+    'У тебя уже есть поручение от {0}. Сперва закончи его!': 'You already have a task from {0}. Finish it first!',
+    'Такая вещь у тебя уже есть — не по-торговому дважды платить за одну.': 'You already own that — paying twice for one thing is not honest trade.',
+    'Травный отвар (полное восстановление)': 'Herbal potion (full recovery)',
+    'Постоялый двор': 'Lodging-house',
+    'содержатель постоялого двора': 'lodging-house keeper',
+    'На большой дороге тебе преградили путь лихие люди!': 'On the great road, highwaymen bar your way!',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----
@@ -1944,8 +1960,8 @@ const EN_KEYS = {
         '  The thief moves AT MOST ONE STEP per game hour.\n' +
         '  🏃 If you fled the fight with the thief and left his location, he moves\n' +
         '  to another location EXACTLY 1 HOUR later, leaving fresh tracks.\n' +
-        '  ⏳ The "until the thief escapes" counter shows how many GAME HOURS remain\n' +
-        '  before he vanishes for good (a thief tick = 1 game hour; ≤3 h red, ≤6 h orange).\n' +
+        '  ⏳ The thief will not wait forever: with every game hour his tracks grow cold\n' +
+        '  and he comes closer to escaping for good. Nobody can tell how much is left — hurry.\n' +
         '  🔔 Bells ring for the services: a toll before Matins (~6 o\'clock),\n' +
         '  the Liturgy (at noon), Vespers (toward 3 pm) and Compline (toward 6 pm).',
     'title.about': '«The Chronicles of Ruthenia» — a browser RPG set in 15th-century Rus\'.\n' +
@@ -2084,18 +2100,18 @@ const EN_KEYS = {
     'Городец на Волге': 'Gorodets na Volge', 'Двинская слобода': 'Dvinskaya sloboda',
     'Елец': 'Yelets', 'Заозерье': 'Zaozerye', 'Кистерма': 'Kisterma',
     'Лукомлье': 'Lukomlye', 'Медвежья Голова': 'Medvezhya Golova',
-    'Новое Село': 'Novoye Selo', 'Опоки': 'Opoki', 'Пёрмышль': 'Pyormyshl',
-    'Раковая слобода': 'Rakovaya sloboda', 'Старая Руса': 'Staraya Russa',
-    'Торжок-Новый': 'Torzhok-Novy', 'Углич-Поле': 'Uglich-Pole',
-    'Холм Великий': 'Kholm Veliky', 'Царёво Займище': 'Tsaryovo Zaymishche',
-    'Чёрная Грязь': 'Chyornaya Gryaz', 'Шуя Малая': 'Shuya Malaya',
-    'Верхний Млин': 'Verkhniy Mlin', 'Боголюбово': 'Bogolyubovo',
-    'Вятская Поляна': 'Vyatskaya Polyana', 'Деревянница': 'Derevyannitsa',
+    'Новое Село': 'Novoye Selo', 'Опоки': 'Opoki', 'Перемышль': 'Peremyshl',
+    'Ракова слобода': 'Rakova sloboda', 'Русса': 'Russa',
+    'Новый Торг': 'Novy Torg', 'Угличе Поле': 'Ugliche Pole',
+    'Великий Холм': 'Velikiy Kholm', 'Государево Займище': 'Gosudarevo Zaymishche',
+    'Чёрная Грязь': 'Chyornaya Gryaz', 'Малая Шуя': 'Malaya Shuya',
+    'Верхняя Мельница': 'Verkhnyaya Melnitsa', 'Боголюбово': 'Bogolyubovo',
+    'Березова Поляна': 'Berezova Polyana', 'Деревянница': 'Derevyannitsa',
     'Клещин городок': 'Kleshchin gorodok', 'Муромское селище': 'Muromskoye selishche',
-    'Плёс на Волге': 'Plyos na Volge', 'Славянское': 'Slavyanskoye',
+    'Плёс на Волге': 'Plyos na Volge', 'Славянка': 'Slavyanka',
     'Тихвинское село': 'Tikhvinskoye selo', 'Великое Село': 'Velikoye Selo',
     // Имена готовых героев (Character.PRESET_HEROES) и обликов (heroes.js)
-    'Гаврила': 'Gavrila', 'Забава': 'Zabava', 'Добрыня': 'Dobrynya', 'Рогнеда': 'Rogneda',
+    'Гаврила': 'Gavrila', 'Милуша': 'Milusha', 'Добрыня': 'Dobrynya', 'Рогнеда': 'Rogneda',
     'Ярополк': 'Yaropolk', 'Предслава': 'Predslava', 'Ратибор': 'Ratibor', 'Милонега': 'Milonega',
     // «Баэнор»/«Пауль» уже в словаре (строка ~1360); здесь — облики heroes.js
     'Охотница': 'Huntress', 'Найя': 'Naia',
@@ -2104,7 +2120,7 @@ const EN_KEYS = {
         'You are a refugee in the village of {0}. Find shelter and work.',
     'Игра началась. {0} ({1}) — беженец из разорённой врагами деревни. Пришёл в незнакомую деревню {2}. Дата: {3} от Р.Х.':
         'The game has begun. {0} ({1}) is a refugee from a village ravaged by the enemy. Came to the unfamiliar village of {2}. Date: {3} AD.',
-    'Облик героя: прессет «{0}» выбран автоматически по полу (раунд 62).':
+    'Облик героя: «{0}» избран по обычаю — по полу героя.':
         'Hero look: the "{0}" preset was chosen automatically by gender (round 62).',
 
     // ===== РАУНД 66.7: доска поручений, погода, рыбалка, приметы =====

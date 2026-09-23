@@ -307,7 +307,7 @@ export class InteriorScene extends Phaser.Scene {
                 backgroundColor: '#000000aa', padding: { x: 10, y: 8 },
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(20);
-            this.add.text(width * 0.65, height * 0.66, t('Найди(е) его там — или возвращайся в другой час.'), {
+            this.add.text(width * 0.65, height * 0.66, t('Найди его там — или возвращайся в другой час.'), {
                 fontSize: '12px', color: '#c9a14a',
                 backgroundColor: '#00000088', padding: { x: 6, y: 3 },
             }).setOrigin(0.5).setDepth(20);
@@ -655,7 +655,7 @@ export class InteriorScene extends Phaser.Scene {
                     // Раунд 40 (QA-фикс): переход в бой — на следующий кадр,
                     // вне стека обработчика клика (иначе зависание цикла Phaser)
                     this.time.delayedCall(0, () => {
-                        this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
+                        this.scene.start('Combat', { enemyKeys: ['villager'], npcId: interior.npcId + '_hostile' });
                     });
                 }}],
                 { singleton: false, portraitKey: this.npcPortraitKey }
@@ -712,7 +712,7 @@ export class InteriorScene extends Phaser.Scene {
         this.busyDialog = true;
         const address = this.player && this.player.gender === 'female' ? t('путница') : t('путник');
         createDialog(this, t('✓ Поручение выполнено!'),
-            `${npcName}: «${tf(t('Ты справился, {0}! Прими это в благодарность.'), address)}»\n\n${t('Награда')}: ${rewards.join(', ')}`,
+            `${npcName}: «${tf(t('Дело сделано, {0}! Прими это в благодарность.'), address)}»\n\n${t('Награда')}: ${rewards.join(', ')}`,
             [{ text: t('Спасибо!'), callback: () => { this.busyDialog = false; } }],
             { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 25 });
         if (this.hud) this.updateHUD();
@@ -892,6 +892,9 @@ export class InteriorScene extends Phaser.Scene {
             y += 25;
 
             player.inventory.forEach((item) => {
+                // Раунд 66.12 (п.7): квестовые предметы (икона) и уникальный
+                // меч старосты НЕ ДАРЯТСЯ — их потеря ломает сюжет/награду
+                if (item.id === 'icon' || item.uniqueFromElder || item.quest) return;
                 // Определяем цену предмета
                 let itemPrice = 0;
                 if (WEAPONS[item.id]) itemPrice = WEAPONS[item.id].price;
@@ -991,7 +994,7 @@ export class InteriorScene extends Phaser.Scene {
                     // Раунд 40 (QA-фикс): переход в бой — на следующий кадр,
                     // вне стека обработчика клика (иначе зависание цикла Phaser)
                     this.time.delayedCall(0, () => {
-                        this.scene.start('Combat', { enemyKeys: ['bandit'], npcId: interior.npcId + '_hostile' });
+                        this.scene.start('Combat', { enemyKeys: ['villager'], npcId: interior.npcId + '_hostile' });
                     });
                 }}],
                 { singleton: false, portraitKey: this.npcPortraitKey }
@@ -1122,7 +1125,7 @@ export class InteriorScene extends Phaser.Scene {
         const totalBonus = applyTreatEveryoneBonus(this.registry);
         ActionLog.add(this.registry, tf(t('Угостил всех выпивкой в таверне за {0} д. (+{1} к репутации).'), cost, totalBonus));
         createDialog(this, t('🎉 Выпивка для всех'),
-            t('Ты заказал бочку медовуги на всех! Гости радостно поднимают кубки. «За гостеприимного гостя!» — раздаётся по залу. (Репутация у всех NPC +3, в деревне +5)'), [
+            t('Ты заказал бочку медовухи на всех! Гости радостно поднимают кубки. «За гостеприимного гостя!» — раздаётся по залу. (Репутация у всех NPC +3, в деревне +5)'), [
             { text: t('🎉 За нас!'), callback: () => {} },
         ], {
             singleton: false,
@@ -1256,15 +1259,28 @@ export class InteriorScene extends Phaser.Scene {
 
     showTavernShop() {
         const player = this.registry.get('player');
+        // Раунд 66.12 (п.7): единые правила торговли — при дурной славе
+        // содержатель постоялого двора тоже отказывает (как кузнец и лавка).
+        const tkName = this.npcData ? getNpcDisplayName(this.registry, 'tavernkeeper') : t('содержатель постоялого двора');
+        if (willNpcRefuseTrade(this.registry, 'tavernkeeper')) {
+            ActionLog.add(this.registry, tf(t('{0} отказался торговаться с героем дурной славы (репутация ≤ −50).'), tkName));
+            createDialog(this, t('Постоялый двор'),
+                tf(t('{0} загораживает прилавок рукой:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»'), tkName),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: 'portrait_tavernkeeper' });
+            return;
+        }
         // Список товаров с учётом репутации (п.13.2: скидки при высокой репутации).
         // Раунд 22: «Ночлег» убран из лавки — отдых теперь живёт в меню «Отдых»
         // (1 час / 8 часов), чтобы время реально текло, пока герой спит.
+        // Раунд 66.12 (п.7): перекалибровка (каша была выгоднее хлеба вдвое хуже).
         const priceMod = getPriceModifier(this.registry, 'tavernkeeper');
+        const modNote = priceMod < 1 ? t(' (скидка за добрую славу)') : (priceMod > 1 ? t(' (наценка за дурную славу)') : '');
         const items = [
             { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: '+2 HP', heal: 2, mpHeal: 0 },  // name через t() при показе
-            { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: '+3 HP', heal: 3, mpHeal: 0 },
+            { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: '+5 HP', heal: 5, mpHeal: 0 },
             { id: 'mead', name: 'Медовуха', price: Math.max(1, Math.round(4 * priceMod)), effect: '+2 MP', heal: 0, mpHeal: 2 },
-            { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: '+1 MP', heal: 0, mpHeal: 1 },
+            { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: '+2 MP', heal: 0, mpHeal: 2 },
         ];
 
         const { width, height } = this.scale;
@@ -1275,14 +1291,14 @@ export class InteriorScene extends Phaser.Scene {
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 30, t('Таверна «У дороги» — меню'), {
+        this.add.text(width / 2, height / 2 - panelH / 2 + 30, t('Постоялый двор «У дороги» — меню'), {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 65,
-            `${t('Денег:')} ${formatMoney(player.dengas || 0)}`, {
+            `${t('Денег:')} ${formatMoney(player.dengas || 0)}${modNote}`, {
             fontSize: '16px', color: '#c9a14a',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setDepth(202);
@@ -1294,7 +1310,7 @@ export class InteriorScene extends Phaser.Scene {
             const canAfford = (player.dengas || 0) >= item.price;
             createButton(this, width / 2, y, `${t(item.name)} — ${item.price} ${t('д.')} (${item.effect})`, () => {
                 if (!canAfford) {
-                    createDialog(this, t('Таверна'), t('Не хватает денег!'), [
+                    createDialog(this, t('Постоялый двор'), t('Не хватает денег!'), [
                         { text: t('Понятно'), callback: () => {} },
                     ], { singleton: false, portraitKey: 'portrait_tavernkeeper' });
                     return;
@@ -1304,7 +1320,7 @@ export class InteriorScene extends Phaser.Scene {
                 player.HP = Math.min(player.HPmax, player.HP + item.heal);
                 player.MP = Math.min(player.MPmax, player.MP + item.mpHeal);
                 this.registry.set('player', player);
-                ActionLog.add(this.registry, tf(t('Купил «{0}» в таверне за {1} д. ({2}).'), t(item.name), item.price, item.effect));
+                ActionLog.add(this.registry, tf(t('Купил «{0}» на постоялом дворе за {1} д. ({2}).'), t(item.name), item.price, item.effect));
                 this.updateHUD();
                 // Закрыть меню и открыть заново с обновлённым балансом
                 overlay.destroy();
@@ -1807,11 +1823,28 @@ export class InteriorScene extends Phaser.Scene {
                         ], { singleton: false, portraitKey: smithPortrait });
                         return;
                     }
+                    // Раунд 66.12 (п.7): повторная покупка той же вещи раньше
+                    // списывала деньги «в никуда» (вещь не дублировалась) —
+                    // теперь покупка честно блокируется.
+                    if (player.weaponId === item.id || (player.inventory || []).some(it => it.id === item.id)) {
+                        createDialog(this, t('Кузница'), t('Такая вещь у тебя уже есть — не по-торговому дважды платить за одну.'), [
+                            { text: t('Понятно'), callback: () => {} },
+                        ], { singleton: false, portraitKey: smithPortrait });
+                        return;
+                    }
                     player.dengas -= price;
                     this.audioManager.playGoldSpend(); // раунд 24: расплата монетами
                     if (tab === 'weapon') {
+                        // Раунд 66.12 (п.7): прежнее НАДЕТОЕ оружие возвращается в узел
+                        // (раньше исчезало навсегда — надеть/продать его было нельзя)
+                        const oldWeaponId = player.weaponId;
                         equipWeapon(player, item.id);
                         if (!player.inventory) player.inventory = [];
+                        if (oldWeaponId && oldWeaponId !== item.id
+                            && WEAPONS[oldWeaponId]
+                            && !player.inventory.find(it => it.id === oldWeaponId)) {
+                            player.inventory.push({ id: oldWeaponId, name: WEAPONS[oldWeaponId].name, count: 1, type: 'weapon' });
+                        }
                         if (!player.inventory.find(it => it.id === item.id)) {
                             player.inventory.push({ id: item.id, name: item.name, count: 1, type: 'weapon' });
                         }
@@ -1921,7 +1954,7 @@ export class InteriorScene extends Phaser.Scene {
             return;
         }
         if ((player.dengas || 0) < 5) {
-            createDialog(this, t('Пожертвование'), t('В мошне пусто — не до пожертвований. Заработай в амбаре или помоги деревне.'), [
+            createDialog(this, t('Пожертвование'), t('В мошне пусто — не до пожертвований. Заработай в мастерской или помоги деревне.'), [
                 { text: t('Приду позже.'), callback: () => {} },
             ]);
             return;
@@ -1959,13 +1992,13 @@ export class InteriorScene extends Phaser.Scene {
         }
         q.kiotInspected = true;
         if (!q.cluesGathered) q.cluesGathered = [];
-        const clue = t('На полу церкви — капли стеарина и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в церкви горела свеча.');
+        const clue = t('На полу церкви — капли воска и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в церкви горела свеча.');
         q.cluesGathered.push({ npcId: 'church', npcName: t('Церковь'), clue });
         this.registry.set('quest', q);
         ActionLog.add(this.registry, t('Осмотрел киот в церкви — нашёл улику (воск, верёвка с узлами).'));
 
         createDialog(this, t('Осмотр киота'),
-            t('Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли стеарина, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\nВор был не один — и нёс святыню бережно. Это стоит рассказать старосте.\n\nУлика добавлена к делу.'),
+            t('Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли воска, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\nВор был не один — и нёс святыню бережно. Это стоит рассказать старосте.\n\nУлика добавлена к делу.'),
             [{ text: t('Запомнить.'), callback: () => {} }]);
     }
 

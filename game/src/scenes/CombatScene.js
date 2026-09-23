@@ -926,7 +926,7 @@ export class CombatScene extends Phaser.Scene {
             if (!matched) return;
             const done = checkQuestCompletion(this.registry, quest, { combatWon: true, enemyKey: enemyKeys[0] });
             if (done) {
-                ActionLog.add(this.registry, tf(t('Поручение «{0}» выполнено! Загляни к {1} за наградой.'), quest.title, quest.npcName));
+                ActionLog.add(this.registry, tf(t('Поручение «{0}» выполнено! {1} ждёт тебя с наградой.'), quest.title, quest.npcName));
             }
         });
     }

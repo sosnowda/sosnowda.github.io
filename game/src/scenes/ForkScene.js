@@ -2,7 +2,7 @@
 // Теперь использует расширенную карту местности (п.2,3) и отображает время (п.13).
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
-import { getHuntState, isChaseActive, chaseTicksLeft, checkGameEnd } from '../data/thief.js';
+import { getHuntState, checkGameEnd } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
 import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
 // Раунд 32 (пп.14,15): F1 — «Информация по игре» со соотношением времени 1:30
@@ -95,15 +95,9 @@ export class ForkScene extends Phaser.Scene {
             }).setOrigin(0.5, 0);
         }
 
-        // ----- HUD: отсчёт времени до побега вора (раунд 32: часы вместо тиков) -----
-        if (isChaseActive(this.registry)) {
-            const hoursLeft = chaseTicksLeft(this.registry);
-            this.add.text(width / 2, 105, tf(t('⏳ Вор скроется примерно через {0} ч.'), hoursLeft), {
-                fontSize: '14px', color: hoursLeft <= 3 ? '#ff4040' : '#ff8060',
-                fontFamily: 'Georgia, serif',
-                stroke: '#000', strokeThickness: 2,
-            }).setOrigin(0.5, 0);
-        }
+        // ----- Раунд 66.12 (приказ владельца №6): отсчёт часов до побега вора
+        // СКРЫТ из HUD — игрок не видит, сколько осталось до побега.
+        // Внутренний счётчик погони работает как прежде (chaseTicksLeft). -----
 
         // Раунд 40 (заявка п.1): [📜 Персонаж] / [🎒 Инвентарь] на околице
         addSceneMenuButtons(this, 'Fork');

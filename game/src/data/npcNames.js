@@ -13,30 +13,30 @@ export const HISTORICAL_MALE_NAMES = [
     'Добрыня', 'Ратибор', 'Гаврила', 'Данило',
     'Степан', 'Фёдор', 'Иван', 'Михайло', 'Григорий',
     'Кузьма', 'Клим', 'Авдей', 'Тихон', 'Лука',
-    'Матвей', 'Прохор', 'Сила', 'Творимир', 'Боян',
-    'Ставр', 'Ждан', 'Милонег', 'Гостомысл', 'Турай',
+    'Матвей', 'Прохор', 'Сила', 'Твердислав', 'Боян',
+    'Ставр', 'Ждан', 'Милонег', 'Путята', 'Турай',
     'Вышата', 'Янь', 'Чюдин', 'Миронег', 'Гюрята',
     // Церковные
     'Савватий', 'Сергий', 'Варлаам', 'Зосима', 'Савва',
     'Иларион', 'Никита', 'Кирилл', 'Алексий', 'Пимен',
     // Ремесленные
-    'Кузьма', 'Демид', 'Прокоп', 'Ермил', 'Фрол',
+    'Демид', 'Прокоп', 'Ермил', 'Фрол',
     'Нестор', 'Ларион', 'Назар', 'Тарас', 'Фока',
 ];
 
 export const HISTORICAL_FEMALE_NAMES = [
     // Княжеские и боярские
-    'Предслава', 'Рогнеда', 'Забава', 'Любава', 'Неслава',
+    'Предслава', 'Рогнеда', 'Милуша', 'Любава', 'Неслава',
     'Горислава', 'Вера', 'Надежда', 'Любовь', 'Малуша',
     'Годислава', 'Жизномира', 'Настасья', 'Милонега',
     // Простонародные
-    'Марфа', 'Лукерья', 'Матрёна', 'Акулина', 'Василиса',
+    'Марфа', 'Гликерия', 'Матрёна', 'Акулина', 'Василиса',
     'Фёкла', 'Прасковья', 'Ульяна', 'Евдокия', 'Анна',
     'Мария', 'Ирина', 'Агафья', 'Феодосия', 'Пелагея',
-    'Домна', 'Мавра', 'Ксения', 'Агафья', 'Татьяна',
+    'Домна', 'Мавра', 'Ксения', 'Татьяна',
     // Ремесленные
     'Овдотья', 'Олимпиада', 'Анфиса', 'Капитолина', 'Ефросинья',
-    'Стефанида', 'Мелания', 'Варвара', 'Александра', 'Сосипатра',
+    'Стефанида', 'Мелания', 'Варвара', 'Мстислава', 'Сосипатра',
 ];
 
 // Возрастные группы (п.2)
@@ -224,16 +224,20 @@ export function initNpcNames(registry) {
     // Раунд 27 (пп.6,7,8,9): Авдей — мельник, Марфа — пасечница,
     // новые жители: семья пасечника (Тарас + Фёкла) и жена старосты.
     const npcConfigs = [
-        { id: 'elder',        gender: 'male',   age: 58, professionId: 'elder',      sprite: 'npc_elder',    portrait: 'portrait_elder',      interiorId: 'elder_house', married: true }, // женат на Любаве
-        { id: 'priest',       gender: 'male',   age: 62, professionId: 'priest',     sprite: 'npc_elder',    portrait: 'portrait_priest',     interiorId: 'church' },
-        { id: 'tavernkeeper', gender: 'male',   age: 45, professionId: 'tavernkeeper', sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'tavern' },
-        { id: 'blacksmith',   gender: 'male',   age: 40, professionId: 'blacksmith', sprite: 'npc_soldier',  portrait: 'portrait_blacksmith', interiorId: 'blacksmith' },
+        // Раунд 66.12 (приказ владельца №3 — проверка имён): канонические имена
+        // ключевых жителей ЗАКРЕПЛЕНЫ (раньше выпадали случайно, вступая в конфликт
+        // с жёсткими именами в дереве диалогов/расписаниях: «Тавернщик Фёдор при
+        // тавернщике Миронеге», «отец Савватий», «кузнец Данила», «староста Мирослав»).
+        { id: 'elder',        gender: 'male',   age: 58, professionId: 'elder',      sprite: 'npc_elder',    portrait: 'portrait_elder',      interiorId: 'elder_house', name: 'Мирослав', married: true }, // женат на Любаве
+        { id: 'priest',       gender: 'male',   age: 62, professionId: 'priest',     sprite: 'npc_elder',    portrait: 'portrait_priest',     interiorId: 'church', name: 'Савватий' },
+        { id: 'tavernkeeper', gender: 'male',   age: 45, professionId: 'tavernkeeper', sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'tavern', name: 'Фёдор' },
+        { id: 'blacksmith',   gender: 'male',   age: 40, professionId: 'blacksmith', sprite: 'npc_soldier',  portrait: 'portrait_blacksmith', interiorId: 'blacksmith', name: 'Данила' },
         { id: 'peasant1',     gender: 'male',   age: 35, professionId: 'miller',     sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_1', name: 'Авдей' },
         { id: 'widow',        gender: 'female', age: 55, professionId: 'beekeeper',  sprite: 'npc_elder',    portrait: 'portrait_widow',      interiorId: 'villager_house_2', name: 'Марфа' },
         // Раунд 37: у знахарки и рыбака — СОБСТВЕННЫЕ дома (вариант Б: вторая улица)
         { id: 'healer',       gender: 'female', age: 70, professionId: 'healer_f',   sprite: 'npc_elder',    portrait: 'portrait_healer',     interiorId: 'healer_house', name: 'Февронья' },
-        { id: 'hunter',       gender: 'male',   age: 32, professionId: 'hunter',     sprite: 'npc_soldier',  portrait: 'portrait_hunter',     interiorId: 'villager_house_1' },
-        { id: 'guard',        gender: 'male',   age: 28, professionId: 'guard',      sprite: 'npc_soldier',  portrait: 'portrait_guard',      interiorId: 'villager_house_1' },
+        { id: 'hunter',       gender: 'male',   age: 32, professionId: 'hunter',     sprite: 'npc_soldier',  portrait: 'portrait_hunter',     interiorId: 'villager_house_1', name: 'Гаврила' },
+        { id: 'guard',        gender: 'male',   age: 28, professionId: 'guard',      sprite: 'npc_soldier',  portrait: 'portrait_guard',      interiorId: 'villager_house_1', name: 'Илья' },
         { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',  sprite: 'npc_merchant', portrait: 'portrait_fisherman',  interiorId: 'fisher_house', name: 'Ерёма', married: true }, // женат на Домне
         // Раунд 27 (п.6), уточнено раундом 28 (п.1): дом на месте часовни —
         // ДОМ ПАХАРЯ (не пасечника!): Тарас днём на ПОЛЕ, жена Фёкла,
@@ -287,7 +291,7 @@ export function initNpcNames(registry) {
 
     // Раунд 43 (п.11/13 заявки): жёны (Фёкла, Любава, Матрёна, Анна, Домна)
     // состоят в браке — «Свататься» к ним нельзя (canMarry отвергнет:
-    // «уже состоит в браке»). Вдова Марфа — НЕ замужем (профессия «вдова»).
+    // «уже состоит в браке»). Марфа-пасечница (id widow) — НЕ замужем.
 
     const npcs = npcConfigs.map(cfg => {
         const name = cfg.name || getRandomName(cfg.gender);

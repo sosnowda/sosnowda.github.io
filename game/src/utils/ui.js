@@ -805,6 +805,12 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     let contentScrollY = 0;
     let contentMaskGfx = null;
     let wheelHandler = null;
+    // Раунд 66.12 (п.4 приказа владельца): ТАЧ-СКРОЛЛ длинного текста — на
+    // мобильных раньше нельзя было прокрутить переполнение (только колесо мыши).
+    let dragPointerId = null;
+    let dragStartY = 0;
+    let dragStartScroll = 0;
+    const dragHandlers = { down: null, move: null, up: null };
     let layoutOverflow = 0;
     let layoutContentTop = 0;
     let maxContentHCache = 120;
@@ -1015,6 +1021,29 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
                 };
                 scene.input.on('wheel', wheelHandler);
             }
+            // Раунд 66.12 (п.4 приказа владельца): прокрутка переполненного текста
+            // ПАЛЬЦОМ/перетаскиванием — иначе на телефоне длинные реплики
+            // были нечитаемы ниже среза маски.
+            if (!dragHandlers.down) {
+                dragHandlers.down = (p) => {
+                    if (dragPointerId !== null) return;
+                    dragPointerId = p.id;
+                    dragStartY = p.y;
+                    dragStartScroll = contentScrollY;
+                };
+                dragHandlers.move = (p) => {
+                    if (dragPointerId !== p.id || !dialog.scene) return;
+                    contentScrollY = Phaser.Math.Clamp(dragStartScroll + (dragStartY - p.y), 0, layoutOverflow);
+                    contentText.y = layoutContentTop - contentScrollY;
+                };
+                dragHandlers.up = (p) => {
+                    if (dragPointerId === p.id) dragPointerId = null;
+                };
+                scene.input.on('pointerdown', dragHandlers.down);
+                scene.input.on('pointermove', dragHandlers.move);
+                scene.input.on('pointerup', dragHandlers.up);
+                scene.input.on('pointerupoutside', dragHandlers.up);
+            }
         }
         contentText.y = layoutContentTop - contentScrollY;
     };
@@ -1089,6 +1118,14 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         if (typeTimer) typeTimer.remove();
         // Раунд 32: убрать колесо прокрутки и маску длинного текста
         if (wheelHandler) { scene.input.removeListener('wheel', wheelHandler); wheelHandler = null; }
+        // Раунд 66.12: снять и тач-обработчики прокрутки
+        if (dragHandlers.down) {
+            scene.input.removeListener('pointerdown', dragHandlers.down);
+            scene.input.removeListener('pointermove', dragHandlers.move);
+            scene.input.removeListener('pointerup', dragHandlers.up);
+            scene.input.removeListener('pointerupoutside', dragHandlers.up);
+            dragHandlers.down = null; dragHandlers.move = null; dragHandlers.up = null;
+        }
         if (contentMaskGfx) { contentMaskGfx.destroy(); contentMaskGfx = null; }
 
         actionButtons.forEach((btn) => {
