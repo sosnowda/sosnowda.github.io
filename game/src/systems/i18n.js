@@ -149,7 +149,6 @@ const EN = {
     'Нажмите E — {0}': 'Press E — {0}',
     'Войти': 'Enter',
     'Выйти из деревни': 'Leave the village',
-    'Отдохнуть у костра (1 час)': 'Rest by the campfire (1 hour)',
     'Рыбалка': 'Fishing',
     'Помолиться у креста (1 час)': 'Pray at the cross (1 hour)',
     'Двинская слобода': 'Dvinskaya Sloboda',
@@ -1113,13 +1112,10 @@ const EN = {
     // --- Раунд 66.6: плавная смена погоды ---
     'Погода меняется': 'The weather is turning',
     '🎣 Лунка во льду': '🎣 Ice Fishing Hole',
-    'Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим. Ужин обеспечен.':
-        'You cut a hole in the river ice and wait long, warming your fingers... The float jerks — a burbot thrashes on the ice. Supper is secured.',
-    'Забросил удочку с берега под моросящим дождём... Рыба клюёт одна за другой — вёдра полные!':
-        'You cast your line from the bank in the drizzling rain... Fish bite one after another — the buckets are full!',
-    'Забросил удочку с песчаного брода... Через час в корзине пара ершей и лещ. Свежая рыба — это силы.':
-        'You cast your line from the sandy ford... An hour later there are a couple of ruffe and a bream in the basket. Fresh fish means strength.',
-    'Свежая рыба': 'Fresh fish',
+    'Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим.':
+        'You cut a hole in the river ice and wait long, warming your fingers... The float jerks — a burbot thrashes on the ice.',
+    'Забросил удочку с песчаного брода... Через час в корзине бьётся улов.':
+        'You cast your line from the sandy ford... An hour later the basket is alive with fish.',
     'Взять улов': 'Take the catch',
     'Порыбачил на реке — клёв плохой.': 'Went fishing at the river — the bite is poor.',
     'Клюёт плохо: рыба сыта или уже видела твою наживку. Попробуй завтра.':
@@ -1670,9 +1666,6 @@ const EN = {
     'Игрок углубился в лес: «{0}».': 'The player went deeper into the forest: "{0}".',
     'Игрок вышел из леса на «{0}».': 'The player came out of the forest to "{0}".',
     'Игрок покинул локацию «{0}».': 'The player left the location "{0}".',
-    'Порыбачил через лунку — налим к ужину (+{0} ❤).': 'Fished through the ice-hole — a burbot for supper (+{0} ❤).',
-    'Дождь — рыба идёт на крючок смело. Отличный улов (+{0} ❤).': 'Rain — the fish bite boldly. An excellent catch (+{0} ❤).',
-    'Наловил рыбы на реке к обеду (+{0} ❤).': 'Caught fish in the river for dinner (+{0} ❤).',
     'Наводка на «{0}» устарела — вор перебрался в другое место.': 'The lead on "{0}" has gone stale — the thief moved elsewhere.',
     'Наводка привела на «{0}».': 'The lead brought you to "{0}".',
     'Герой': 'The Hero',
@@ -1947,9 +1940,9 @@ const EN = {
         'Bought and ate "{0}" at the lodging house for {1} d. (+{2} HP, one hour of time).',
     'Ночлег {0} ч ({1} д.) {2}': 'Lodge for {0} h ({1} d.) {2}',
     'Отдохнуть {0} ч ({1} д.) {2}': 'Rest for {0} h ({1} d.) {2}',
-    '— лечение ~1/3': '— heal ~1/3',
+    '— вернёт ~{0}% здоровья': '— restores ~{0}% health',
     '— полное восстановление': '— full recovery',
-    '— сон {0} ({1} д.)': '— sleep {0} ({1} d.)',
+    '— сон {0} ({1} д.), ~{2}% здоровья': '— sleep {0} ({1} d.), ~{2}% health',
     '🌙 До полуночи (в 0:00)': '🌙 Until midnight (at 0:00)',
     'Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Сколько будешь отдыхать?»':
         'Fyodor wipes the counter: "The room is clean, the hay is fresh. How long will you rest?"',
@@ -1964,6 +1957,109 @@ const EN = {
     'Купил мёд у Марфы (8 д.): +1 HP, час времени.': 'Bought honey from Marfa (8 d.): +1 HP, one hour of time.',
     '(Осенний жор: рыба берёт жадно, но сыт герой не объестся сверх меры.)':
         '(Autumn frenzy: the fish bite greedily, but a full hero eats no more than he should.)',
+    // ===== РАУНД 66.17 — 13 ПРИКАЗОВ ВЛАДЕЛЬЦА (добыча, готовка, охота) =====
+    // п.2–3: пропорциональный отдых, минимальный сон 2 часа
+    '— вернёт ~{0}% здоровья': '— restores ~{0}% health',
+    '— сон {0} ({1} д.), ~{2}% здоровья': '— sleep {0} ({1} d.), ~{2}% health',
+    'Фёдор качает головой: «Что ж ты в постель-то ложишься — только прилёг и вставать? Сон меньше двух часов — не сон. Отдыхай подольше, либо иди делецом».\n\n(Отдых отменён: сон должен быть не менее 2 часов.)':
+        'Fyodor shakes his head: "Why do you lie down just to get up again? Sleep shorter than two hours is no sleep. Rest longer, or go about your business."\n\n(Rest cancelled: sleep must be at least 2 hours.)',
+    'Здоровье +{0}, Воля +{1} (~{2}% от полного).': 'Health +{0}, Will +{1} (~{2}% of full).',
+    // п.5: продажа добычи
+    '💰 Продать добычу': '💰 Sell the spoils',
+    'Столешня Потапа — скупка добычи': "Potap's butcher shop — buying spoils",
+    'Кухня Фёдора — скупка добычи': "Fyodor's kitchen — buying spoils",
+    'Продать 1 ({0} д.)': 'Sell 1 ({0} d.)',
+    'Всё ({0} д.)': 'All ({0} d.)',
+    'Продал «{0}» ({1}) за {2} д.': 'Sold "{0}" ({1}) for {2} d.',
+    'Продал всё «{0}» ×{1} ({2}) за {3} д.': 'Sold all "{0}" ×{1} ({2}) for {3} d.',
+    'В узле нет добычи. Настреляй дичи из лука, налови рыбы на броду — или раздери волка.':
+        'No spoils in your sack. Shoot some game with a bow, catch fish at the ford — or wrestle a wolf.',
+    'печёное дороже сырого': 'cooked is worth more than raw',
+    // п.6: ставка подёнки
+    'Слава о работнике идёт по деревне: +1 к доброй славе (ставка подёнки — раз в сутки).':
+        'Word of a good worker spreads through the village: +1 to good renown (day-labour rate — once a day).',
+    'Ставка подёнки: +1 к славе в деревне за отработанный день.': 'Day-labour rate: +1 village renown for a day worked.',
+    // п.7,13: рыбалка — удочка, чужая уда, улов в узел
+    '🎣 Без удочки': '🎣 Without a fishing rod',
+    'Смотри на воду, а поймать нечем: без удочки рыбу не выловить. Купи удочку у ремесленника Аверьяна (12 д.) — или надейся, что на броду стоит Ерёмина уда (рыбак не всегда её оставляет).':
+        "You stare at the water with nothing to catch with: without a rod there is no fishing. Buy a rod from the craftsman Averyan (12 d.) — or hope that Yeryoma's rod is left at the ford (the fisherman does not always leave it there).",
+    'Собрался порыбачить, но удочки нет — рыбалка сорвалась.': 'Set out to fish, but no rod — the fishing trip fell through.',
+    '🐟 Улов': '🐟 Catch',
+    'Рыба (сырая)': 'Fish (raw)',
+    'в узел': 'into the sack',
+    'Сырую рыбу не едят: приготовь на костре или продай трактирщику/мяснику.':
+        'Raw fish is not eaten: cook it over a campfire or sell it to the innkeeper/the butcher.',
+    '(Ловил Ерёминой удой с брода: одна рыба — хозяину.)': "(Fished with Yeryoma's rod at the ford: one fish goes to the owner.)",
+    ' (чужая уда, доля хозяину)': " (stranger's rod, owner's share)",
+    'Забросил удочку с берега под моросящим дождём... Рыба клюёт одна за другой — вёдра полные!':
+        'You cast your line from the bank in the drizzling rain... Fish bite one after another — the buckets are full!',
+    'трактирщик': 'the innkeeper',
+    'Столешня': 'The butcher shop',
+    'Хорошо': 'Good.',
+    'Наловил рыбы на реке: +{0} сырая рыба в узел{1}.': 'Caught fish in the river: +{0} raw fish into the sack{1}.',
+    '(Осенний жор: рыба берёт жадно — улов щедрее.)': '(Autumn frenzy: the fish bite greedily — the catch is richer.)',
+    '🐟 Чужая уда (Ерёмина)': "🐟 Stranger's rod (Yeryoma's)",
+    // п.8: готовка на костре
+    '🔥 Приготовить рыбу ({0} мин)': '🔥 Cook the fish ({0} min)',
+    '🔥 Жарить мясо дичи ({0} мин)': '🔥 Roast the game meat ({0} min)',
+    '🔥 Готово': '🔥 Done',
+    'На углях поспело: {0}. Теперь в узле — можно съесть (Персонаж → Инвентарь → «Съесть») или продать.':
+        'Ready off the coals: {0}. It is in your sack now — eat it (Character → Inventory → "Eat") or sell it.',
+    'Приготовил на костре: {0} → {1} (30 мин).': 'Cooked over the campfire: {0} → {1} (30 min).',
+    'Тёплый огонь разгоняет лесную мглу. У костра можно пересидеть час — раны он не лечит, только время идёт мимо. На огне можно приготовить сырую рыбу или мясо дичи.\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)':
+        'The warm fire dispels the forest gloom. You can sit out an hour by the fire — it heals no wounds, only time goes by. Raw fish or game meat can be cooked over the fire.\n\nSit out an hour by the fire? (1 hour — time +1 hour, no healing.)',
+    'Пастухи сложили костёр у стада. У огня можно только пересидеть час — раны он не лечит, только время идёт мимо. На огне можно приготовить сырую рыбу или мясо дичи.\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)':
+        'The shepherds built a fire by the herd. You can only sit out an hour by the fire — it heals no wounds, only time goes by. Raw fish or game meat can be cooked over the fire.\n\nSit out an hour by the fire? (1 hour — time +1 hour, no healing.)',
+    'Костёр: отдых и готовка': 'Campfire: rest and cooking',
+    // п.9–11: дичь, стрельба, мясо
+    'Заяц': 'Hare',
+    'Глухарь': 'Capercaillie',
+    'Косуля': 'Roe deer',
+    'Стрелять из лука ({0})': 'Shoot with the bow ({0})',
+    '{0} рядом — нужен экипированный лук': '{0} nearby — an equipped bow is needed',
+    '🏹 Без лука': '🏹 Without a bow',
+    'Стрелять можно только из лука — и он должен быть экипирован (Персонаж → Оружие). Кузнец Данила кует луки.':
+        'You can only shoot with a bow — and it must be equipped (Character → Weapons). Smith Danila forges bows.',
+    'Дичь так просто не догнать — нужна стрельба. Лук должен лежать в узле и быть экипирован (Персонаж → Оружие). Луки куёт кузнец Данила.':
+        'There is no catching up with game — you need archery. The bow must be in your sack and equipped (Character → Weapons). Smith Danila forges bows.',
+    'Попал!': 'A hit!',
+    'Мимо!': 'A miss!',
+    'Подстрелил {0} из лука — туша осталась лежать, можно обобрать.':
+        'Shot {0} with the bow — the carcass lies there, ready to be looted.',
+    'Выстрел из лука по {0} — мимо: зверь удрал.': 'A bow shot at {0} — a miss: the animal fled.',
+    'Обобрать дичь ({0})': 'Loot the game ({0})',
+    'Обобрал тушу {0}: +{1} сырое мясо (приготовить на костре или продать).':
+        'Looted the carcass of {0}: +{1} raw meat (cook over a campfire or sell).',
+    'Обобрал тушу убитого волка: +{0} сырое мясо (приготовить на костре или продать).':
+        'Looted the carcass of the slain wolf: +{0} raw meat (cook over a campfire or sell).',
+    'Подстрелил {0} на поляне из лука и обобрал тушу: +{1} сырое мясо (приготовить или продать).':
+        'Shot {0} in the glade with the bow and looted the carcass: +{1} raw meat (cook or sell).',
+    'Выстрел из лука по {0} — мимо: зверь удрал с поляны.': 'A bow shot at {0} — a miss: the animal fled the glade.',
+    'Заметил {0} на поляне, но стрелять нечем — нужен экипированный лук.':
+        'Spotted {0} in the glade, but have nothing to shoot with — an equipped bow is needed.',
+    '{0} щиплет траву в стороне. Стрелять можно только из лука — и он должен быть экипирован (Персонаж → Оружие). Луки куёт кузнец Данила.':
+        '{0} is grazing at a distance. You can only shoot with a bow — and it must be equipped (Character → Weapons). Smith Danila forges bows.',
+    '{0} близко, но настороже. Тянуть тетиву? (шанс зависит от твоего навыка стрельбы)\nВыстрел — 5 минут времени.':
+        '{0} is close but wary. Draw the string? (the chance depends on your archery skill)\nA shot takes 5 minutes.',
+    '🎯 Есть!': '🎯 Got it!',
+    'Стрела дошла — {0} повержен. Ты обобрал тушу: +{1} сырое мясо в узел.\nСырым не едят: приготовь на костре или продай.':
+        'The arrow found its mark — {0} is down. You looted the carcass: +{1} raw meat into the sack.\nRaw is not eaten: cook over a fire or sell.',
+    '💨 Мимо!': '💨 Miss!',
+    'Стрела вонзилась в траву — {0} прыгнул в кусты и скрылся.': 'The arrow sank into the grass — {0} bounded into the bushes and vanished.',
+    'Потереть затылок': 'Scratch your head',
+    'Отойти тихо': 'Back away quietly',
+    // п.4: «Съесть» из инвентаря
+    '🍽 Съесть': '🍽 Eat',
+    '{0} ×{1} в узле. Съесть порцию: +{2} здоровья, час времени, кулдаун следующего приёма еды — 4 часа.':
+        '{0} ×{1} in the sack. Eat a portion: +{2} health, one hour of time, the next meal is on a 4-hour cooldown.',
+    'Сырым это не едят: приготовь на костре (лесное кострище или костёр пастухов — 30 мин) или продай трактирщику/мяснику.':
+        "This is not eaten raw: cook it over a campfire (forest campfire or shepherds' fire — 30 min) or sell it to the innkeeper/the butcher.",
+    'Рыба печёная': 'Baked fish',
+    'Жаркое из дичи': 'Game roast',
+    'Мясо дичи (сырое)': 'Game meat (raw)',
+    // п.12: удочка
+    'Удочка': 'Fishing rod',
+    'для рыбалки': 'for fishing',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----
@@ -2032,7 +2128,11 @@ const EN_KEYS = {
         '  E — gather mushrooms, berries and herbs (limited per day)\n' +
         '  Wolves patrol the thicket: don\'t get close.\n' +
         '  In rain they hear worse — their aggro radius shrinks.\n' +
-        '  Rest (1 h) by the old woodcutters\' campfire in the north-west.\n' +
+        '  Game (hares, capercaillies; roe deer deep in the thicket): with a\n' +
+        '  BOW equipped, come close enough and press E to shoot; loot the\n' +
+        '  carcass for raw meat.\n' +
+        '  Rest (1 h) by the old woodcutters\' campfire in the north-west;\n' +
+        '  raw fish or game meat can be COOKED over the fire (30 min).\n' +
         '  If a wolf is defeated, the pack stays scared for 4 hours.\n' +
         '  F1 — this help. ESC — main menu.',
     'apiary.help.body': '🐝 APIARY — A QUIET STROLL\n' +

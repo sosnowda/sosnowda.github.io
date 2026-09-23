@@ -38,7 +38,12 @@ import { getNpcWornLine } from '../data/characters.js';
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 // Раунд 66.16 (приказы 1–4): единые правила еды и сна (кукдауны, поп-апы)
-import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal, canSleep, registerSleep, showMealBlockedPopup, showSleepBlockedPopup } from '../systems/meal.js';
+// Раунд 66.17: пропорциональный отдых (8 ч = 100%), минимальный сон 2 часа
+import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal, canSleep, registerSleep, showMealBlockedPopup, showSleepBlockedPopup, restHealPct, SLEEP_MIN_MIN } from '../systems/meal.js';
+// Раунд 66.17 (п.5): ПРОДАЖА ДОБЫЧИ — трактирщик берёт рыбу/дичь на кухню
+import { sellableLoot, removeItem } from '../systems/loot.js';
+// Раунд 66.17 (п.6): ставка подёнки — +1 к славе за отработанный день
+import { dayKeyOf } from '../data/daily.js';
 
 export class InteriorScene extends Phaser.Scene {
     constructor() {
@@ -514,6 +519,8 @@ export class InteriorScene extends Phaser.Scene {
             if (interior.id === 'tavern') {
                 buttons.push({ label: t('\u{1F37B} Угостить (20\u0434)'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.treatEveryone(interior) });
                 buttons.push({ label: t('\u{1F6D2} Купить еды'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showTavernShop() });
+                // Раунд 66.17 (п.5): ПРОДАЖА ДОБЫЧИ — Фёдор берёт рыбу и дичь на кухню
+                buttons.push({ label: t('\u{1F4B0} Продать добычу'), bg: 0x5a4a2a, hover: 0x6a5a3a, cb: () => this.showSellLootMenu(interior) });
                 // Раунд 22 (п.10/12): отдых в таверне — 1 час (частичное лечение)
                 // или 8 часов (полное восстановление)
                 buttons.push({ label: t('\u{1F6CF} Отдых'), bg: 0x4a3a5a, hover: 0x5a4a6a, cb: () => this.showTavernRestMenu(interior) });
@@ -526,6 +533,9 @@ export class InteriorScene extends Phaser.Scene {
                 buttons.push({ label: t('\u{1F6D2} Купить оружие'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
                 // Раунд 40: кнопка «Персонаж» теперь ПОСТОЯННАЯ вверху справа
                 // ВО ВСЕХ помещениях (addSceneMenuButtons) — дубликат у кузнеца снят
+            } else if (interior.id === 'butcher_house') {
+                // Раунд 66.17 (п.5): мясник Потап скупает добычу (мясо/рыбу) на столешню
+                buttons.push({ label: t('\u{1F4B0} Продать добычу'), bg: 0x5a4a2a, hover: 0x6a5a3a, cb: () => this.showSellLootMenu(interior) });
             }
             // Раунд 26: в церкви — богомолье и осмотр киота (переехали из удалённой часовни)
             if (interior.id === 'church') {
@@ -1232,6 +1242,17 @@ export class InteriorScene extends Phaser.Scene {
                         player.inventory.push({ id: item.armorId, name: ARMORS[item.armorId].name, count: 1, type: 'armor' });
                     }
                     logNote = t('снаряжение');
+                } else if (item.kind === 'gear') {
+                    // Раунд 66.17 (п.12): снаряжение, которое ЛОЖИТСЯ В УЗЕЛ
+                    // (удочка и т.п.) — не съедается, не надевается, хранится.
+                    if (!player.inventory) player.inventory = [];
+                    const have = player.inventory.find(it => it.id === item.id);
+                    if (have) {
+                        have.count = (have.count || 1) + 1;
+                    } else {
+                        player.inventory.push({ id: item.id, name: t(item.name), count: 1, type: 'gear' });
+                    }
+                    logNote = t('в узел');
                 } else {
                     // Еда/мелочь: эффект сразу (HP/MP), «в узел» не кладётся
                     if (item.heal) player.HP = Math.min(player.HPmax, player.HP + item.heal);
@@ -1275,17 +1296,19 @@ export class InteriorScene extends Phaser.Scene {
         // Список товаров с учётом репутации (п.13.2: скидки при высокой репутации).
         // Раунд 22: «Ночлег» убран из лавки — отдых теперь живёт в меню «Отдых»
         // (1 час / 8 часов), чтобы время реально текло, пока герой спит.
-        // Раунд 66.16 (приказы 1–3): ЛЮБАЯ еда лечит РОВНО +1 HP, занимает
-        // РОВНО 1 час и имеет ОБЩИЙ кулдаун 4 часа (см. systems/meal.js).
-        // Медовуха и квас — тоже еда/питьё: +1 HP, Воля едой не восстанавливается.
+        // Раунд 66.16 (приказы 1–3): еда занимает РОВНО 1 час и имеет ОБЩИЙ
+        // кулдаун 4 часа (см. systems/meal.js).
+        // РАУНД 66.17 (уточнение п.1): «+1 HP» — про ПРОСТУЮ еду (яблоко, мёд).
+        // ПОЛНОЦЕННАЯ еда в трактире лечит 2–3 HP: каша +3, хлеб +2.
+        // Медовуха и квас — питьё: +1 HP, Воля едой не восстанавливается.
         const priceMod = getPriceModifier(this.registry, 'tavernkeeper');
         const modNote = priceMod < 1 ? t(' (скидка за добрую славу)') : (priceMod > 1 ? t(' (наценка за дурную славу)') : '');
-        const mealEffect = `+${MEAL_HEAL_HP} HP · ${t('1 час')}`;
+        const mkEffect = (heal) => `+${heal} HP · ${t('1 час')}`;
         const items = [
-            { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: mealEffect, heal: MEAL_HEAL_HP, mpHeal: 0 },  // name через t() при показе
-            { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: mealEffect, heal: MEAL_HEAL_HP, mpHeal: 0 },
-            { id: 'mead', name: 'Медовуха', price: Math.max(1, Math.round(4 * priceMod)), effect: mealEffect, heal: MEAL_HEAL_HP, mpHeal: 0 },
-            { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: mealEffect, heal: MEAL_HEAL_HP, mpHeal: 0 },
+            { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: mkEffect(2), heal: 2, mpHeal: 0 },   // полноценная еда
+            { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: mkEffect(3), heal: 3, mpHeal: 0 },   // самая сытная
+            { id: 'mead', name: 'Медовуха', price: Math.max(1, Math.round(4 * priceMod)), effect: mkEffect(1), heal: 1, mpHeal: 0 }, // питьё
+            { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: mkEffect(1), heal: 1, mpHeal: 0 },   // питьё
         ];
 
         const { width, height } = this.scale;
@@ -1362,13 +1385,116 @@ export class InteriorScene extends Phaser.Scene {
     }
 
     /**
+     * РАУНД 66.17 (п.5): ПРОДАЖА ДОБЫЧИ. Трактирщик (Фёдор — на кухню)
+     * и мясник (Потап — на столешню) скупают добычу: сырую/печёную рыбу,
+     * сырое мясо и жаркое. Цены за штуку — из LOOT_DEFS (приготовленное
+     * дороже сырого). «Продать 1» и «Продать всё» на каждый товар.
+     */
+    showSellLootMenu(interior) {
+        const player = this.registry.get('player');
+        if (!player) return;
+        const { width, height } = this.scale;
+        const isButcher = interior.id === 'butcher_house';
+        const buyerName = isButcher
+            ? (this.npcData ? getNpcDisplayName(this.registry, 'butcher') : t('Потап, мясник'))
+            : t('трактирщик');
+
+        // Отказ от торговли при дурной славе (единые правила торговли)
+        const buyerNpcId = isButcher ? 'butcher' : 'tavernkeeper';
+        if (willNpcRefuseTrade(this.registry, buyerNpcId)) {
+            ActionLog.add(this.registry, tf(t('{0} отказался торговаться с героем дурной славы (репутация ≤ −50).'), buyerName));
+            createDialog(this, isButcher ? t('Столешня') : t('Постоялый двор'),
+                tf(t('{0} загораживает прилавок рукой:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»'), buyerName),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: isButcher ? 'portrait_peasant' : 'portrait_tavernkeeper' });
+            return;
+        }
+
+        const rows = sellableLoot(player);
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
+            .setOrigin(0).setInteractive().setDepth(200);
+        const panelW = 560, panelH = 420;
+        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
+            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+        const closeMenu = () => {
+            overlay.destroy(); panel.destroy();
+            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+        };
+
+        this.add.text(width / 2, height / 2 - panelH / 2 + 30,
+            isButcher ? t('Столешня Потапа — скупка добычи') : t('Кухня Фёдора — скупка добычи'), {
+                fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
+                fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(202);
+        this.add.text(width / 2, height / 2 - panelH / 2 + 62,
+            `${t('Денег:')} ${formatMoney(player.dengas || 0)}`, {
+                fontSize: '15px', color: '#c9a14a', stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0.5).setDepth(202);
+
+        if (rows.length === 0) {
+            this.add.text(width / 2, height / 2 - 10,
+                t('В узле нет добычи. Настреляй дичи из лука, налови рыбы на броду — или раздери волка.'), {
+                    fontSize: '14px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
+                    align: 'center',
+                }).setOrigin(0.5).setDepth(202);
+        }
+
+        const startY = height / 2 - panelH / 2 + 105;
+        rows.forEach((row, i) => {
+            const y = startY + i * 52;
+            const def = row.def;
+            this.add.text(width / 2 - panelW / 2 + 30, y - 22,
+                `${def.emoji} ${t(def.name)} ×${row.count} — ${row.price} ${t('д.')}${def.edible ? ` (${t('печёное дороже сырого')})` : ''}`, {
+                    fontSize: '13px', color: RUS.text, stroke: '#000', strokeThickness: 1,
+                }).setOrigin(0, 0.5).setDepth(202);
+            createButton(this, width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), row.price), () => {
+                removeItem(player, def.id, 1);
+                player.dengas = (player.dengas || 0) + row.price;
+                this.registry.set('player', player);
+                if (this.audioManager) this.audioManager.playGoldReceive();
+                ActionLog.add(this.registry, tf(t('Продал «{0}» ({1}) за {2} д.'), t(def.name), buyerName, row.price));
+                this.updateHUD();
+                closeMenu();
+                this.showSellLootMenu(interior);
+            }, {
+                backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
+                fontSize: 12, padding: { left: 10, right: 10, top: 6, bottom: 6 },
+            }).setDepth(202);
+            if (row.count > 1) {
+                createButton(this, width / 2 + 205, y + 4, tf(t('Всё ({0} д.)'), row.price * row.count), () => {
+                    const n = row.count;
+                    removeItem(player, def.id, n);
+                    player.dengas = (player.dengas || 0) + row.price * n;
+                    this.registry.set('player', player);
+                    if (this.audioManager) this.audioManager.playGoldReceive();
+                    ActionLog.add(this.registry, tf(t('Продал всё «{0}» ×{1} ({2}) за {3} д.'), t(def.name), n, buyerName, row.price * n));
+                    this.updateHUD();
+                    closeMenu();
+                    this.showSellLootMenu(interior);
+                }, {
+                    backgroundColor: 0x2a4a5a, hoverColor: 0x3a5a6a, textColor: RUS.text,
+                    fontSize: 12, padding: { left: 10, right: 10, top: 6, bottom: 6 },
+                }).setDepth(202);
+            }
+        });
+
+        createButton(this, width / 2, height / 2 + panelH / 2 - 34, t('Закрыть'), closeMenu, {
+            backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
+            fontSize: 13, padding: { left: 24, right: 24, top: 7, bottom: 7 },
+        }).setDepth(202);
+    }
+
+    /**
      * Раунд 22 (п.10/12): ОТДЫХ В ТАВЕРНЕ.
      * Раунд 66.16 (приказы 2, 4, 7): выбор времени отдыха — от 1 до 12 часов
      * ИЛИ фиксированное «до утра / до полудня / до вечера / до полуночи».
      * Кулдаун сна 12 часов: при попытке поспать во время отката — поп-ап
      * «герой не хочет спать», отдых отменяется (без денег и времени).
-     * Отдых <8 ч лечит около трети здоровья и Воли, 8 ч и более — ПОЛНОЕ
-     * восстановление. (Раунд 23: ваучер «Бесплатный ночлег» убран.)
+     * РАУНД 66.17 (уточнение приказов 2–3): отдых 8+ часов восстанавливает
+     * здоровье ПОЛНОСТЬЮ; меньше 8 часов — ПРОПОРЦИОНАЛЬНО (8 ч = 100%,
+     * 2 ч = 25%, 4 ч = 50%, 6 ч = 75%); сон короче 2 часов НЕдоступен:
+     * пункт «1 час» снят с меню, «до X» не предлагается, если до цели
+     * меньше 2 часов. (Раунд 23: ваучер «Бесплатный ночлег» убран.)
      * Время реально течёт: во время погони за вором сон — дорогое решение.
      */
     showTavernRestMenu(interior) {
@@ -1386,15 +1512,17 @@ export class InteriorScene extends Phaser.Scene {
 
         // Приказ 2: цены — минимум 4 д., 2 д. за час, но не дороже 12 д.
         const costOf = (h) => Math.min(12, Math.max(4, h * 2));
-        const healLabel = t('— лечение ~1/3');
+        // Раунд 66.17: 8 ч = 100%, меньше — пропорционально; сон меньше 2 ч — нельзя
+        const healLabel = (h) => tf(t('— вернёт ~{0}% здоровья'), Math.round(restHealPct(h * 60) * 100));
         const fullLabel = t('— полное восстановление');
-        const hourOptions = [1, 2, 3, 4, 6, 8, 12].map((h) => ({
+        const hourOptions = [2, 3, 4, 6, 8, 12].map((h) => ({
             text: (h >= 8)
                 ? tf(t('Ночлег {0} ч ({1} д.) {2}'), h, costOf(h), fullLabel)
-                : tf(t('Отдохнуть {0} ч ({1} д.) {2}'), h, costOf(h), healLabel),
+                : tf(t('Отдохнуть {0} ч ({1} д.) {2}'), h, costOf(h), healLabel(h)),
             hours: h,
         }));
-        // Фиксированное время: спим ровно до цели (минутами, без округления)
+        // Фиксированное время: спим ровно до цели (минутами, без округления);
+        // раунд 66.17: цели, до которых меньше 2 часов сна, не предлагаются
         const fixedOptions = [
             { hour: 6,  key: '🌅 До утра (в 6:00)' },
             { hour: 12, key: '☀️ До полудня (в 12:00)' },
@@ -1402,13 +1530,15 @@ export class InteriorScene extends Phaser.Scene {
             { hour: 0,  key: '🌙 До полуночи (в 0:00)' },
         ].map((f) => {
             const mins = this.minutesUntilHour(f.hour);
+            if (mins < SLEEP_MIN_MIN) return null;   // сон меньше 2 часов не бывает
             const h = Math.ceil(mins / 60);
+            const pct = Math.round(restHealPct(mins) * 100);
             return {
-                text: `${t(f.key)} ${tf(t('— сон {0} ({1} д.)'), this.spendHoursLabel(mins), costOf(h))}`,
+                text: `${t(f.key)} ${tf(t('— сон {0} ({1} д.), ~{2}% здоровья'), this.spendHoursLabel(mins), costOf(h), pct)}`,
                 hours: h,
                 minutes: mins,
             };
-        });
+        }).filter(Boolean);
 
         this.busyDialog = true;
         createDialog(this, t('🛏 Отдых в таверне'),
@@ -1437,7 +1567,9 @@ export class InteriorScene extends Phaser.Scene {
      * точная длительность для «до утра/полудня/вечера/полуночи».
      * Кулдаун сна 12 часов (приказ 4): при откате — поп-ап «герой не
      * хочет спать», отдых отменён. После сна кулдаун ставится.
-     * <8 ч лечит ~1/3 HP и Воли, 8+ часов восстанавливают всё.
+     * РАУНД 66.17: сон короче 2 часов НЕдопустим (поп-ап и отмена);
+     * лечение ПРОПОРЦИОНАЛЬНО: 8 ч = 100% (полное), меньше — по доле
+     * restHealPct (2 ч = 25%, 4 ч = 50%, 6 ч = 75%).
      */
     restInTavern(interior, hours, minutesOverride) {
         if (this.busyDialog) return;
@@ -1449,6 +1581,14 @@ export class InteriorScene extends Phaser.Scene {
         // меню уже проверяет; здесь герой ничего не платит и не теряет время)
         if (!canSleep(this.registry).ok) {
             showSleepBlockedPopup(this);
+            return;
+        }
+        // Раунд 66.17: сон не может быть короче 2 часов — отмена без денег/времени
+        if (sleepMinutes < SLEEP_MIN_MIN) {
+            createDialog(this, t('🛏 Отдых'),
+                t('Фёдор качает головой: «Что ж ты в постель-то ложишься — только прилёг и вставать? Сон меньше двух часов — не сон. Отдыхай подольше, либо иди делецом».\n\n(Отдых отменён: сон должен быть не менее 2 часов.)'),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: this.npcPortraitKey });
             return;
         }
 
@@ -1470,17 +1610,19 @@ export class InteriorScene extends Phaser.Scene {
             tickTime(this.registry, sleepMinutes);
             registerSleep(this.registry);
 
+            // Раунд 66.17: доля восстановления — 8 часов = 100%, меньше — пропорция
+            const pct = restHealPct(sleepMinutes);
             let effectText;
-            if (hours >= 8) {
+            if (pct >= 1) {
                 player.HP = player.HPmax;
                 player.MP = player.MPmax;
                 effectText = t('Здоровье и Воля восстановлены ПОЛНОСТЬЮ.');
             } else {
-                const heal = Math.max(3, Math.round((player.HPmax || 10) * 0.34));
-                const mp = Math.max(1, Math.round((player.MPmax || 4) * 0.34));
+                const heal = Math.max(1, Math.round((player.HPmax || 10) * pct));
+                const mp = Math.max(1, Math.round((player.MPmax || 4) * pct));
                 player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
                 player.MP = Math.min(player.MPmax || player.MP + mp, player.MP + mp);
-                effectText = tf(t('Здоровье +{0}, Воля +{1}.'), heal, mp);
+                effectText = tf(t('Здоровье +{0}, Воля +{1} (~{2}% от полного).'), heal, mp, Math.round(pct * 100));
             }
             this.registry.set('player', player);
             this.updateHUD();
@@ -2110,9 +2252,23 @@ export class InteriorScene extends Phaser.Scene {
         this.updateHUD();
         ActionLog.add(this.registry, tf(t('Отработал час в гончарной мастерской: +{0} д., усталость −3 HP.'), wage + bonus));
 
+        // РАУНД 66.17 (п.6): СТАВКА ПОДЁНКИ — за отработанный день герою
+        // начисляется МИНИМУМ 1 очко репутации в деревне (раз в сутки;
+        // хоть десять часов в день — приработка и так честная, а слава +1/день).
+        let repMsg = '';
+        const today66 = dayKeyOf(getTime(this.registry));
+        const q66 = this.registry.get('quest') || {};
+        if (q66.dayworkRepDay !== today66) {
+            q66.dayworkRepDay = today66;
+            this.registry.set('quest', q66);
+            changeVillageRep(this.registry, 1, 'подённая работа');
+            repMsg = '\n' + t('Слава о работнике идёт по деревне: +1 к доброй славе (ставка подёнки — раз в сутки).');
+            ActionLog.add(this.registry, t('Ставка подёнки: +1 к славе в деревне за отработанный день.'));
+        }
+
         createDialog(this, t('Помощь в мастерской'),
             t('Час у круга и печи: носил дрова, мешал глину, ставил горшки на обжиг. Игнат доволен: «Работник, что надо!»\n\n') +
-            tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), wage) + bonusMsg,
+            tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), wage) + bonusMsg + repMsg,
             [
                 { text: t('Спасибо'), callback: () => {} },
             ]);

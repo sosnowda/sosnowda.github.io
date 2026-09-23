@@ -18,6 +18,8 @@ import { findNpc } from '../data/npcNames.js';
 import { getActiveQuests, checkQuestCompletion, consumeBlessing } from '../data/questGenerator.js';
 import { getTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals } from '../systems/Weather.js';
+// Раунд 66.17 (п.11): с убитого волка — мясо (сырое; готовить на костре или продать)
+import { addItem } from '../systems/loot.js';
 // Раунд 32 (пп.14,15): F1 — «Информация по игре» и в бою
 import { timeRatioInfoLine } from '../systems/WorldClock.js';
 import { t, tf } from '../systems/i18n.js';
@@ -848,6 +850,13 @@ export class CombatScene extends Phaser.Scene {
             q.currentObjective = murderVictimId
                 ? t('Кровная вина на тебе. Староста может помирить за виру.')
                 : t('Враг повержен');
+            // РАУНД 66.17 (п.11): с убитого волка случайно снимают мясо —
+            // объём по размеру зверя (2–4 шт.); сырое: готовить или продавать
+            if (this.enemyKeys && this.enemyKeys.includes('wolf')) {
+                const meatN = Phaser.Math.Between(2, 4);
+                addItem(this.player, 'meat_raw', meatN);
+                ActionLog.add(this.registry, tf(t('Обобрал тушу убитого волка: +{0} сырое мясо (приготовить на костре или продать).'), meatN));
+            }
         } else {
             q.currentObjective = t('Икона у тебя! Верни её старосте или священнику.');
         }

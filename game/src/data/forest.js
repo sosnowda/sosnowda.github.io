@@ -127,6 +127,86 @@ export function campfirePos() {
     return { col: 4, row: 4 };
 }
 
+// ============================================================
+// РАУНД 66.17 (приказы 9,10,11): ЛЕСНАЯ ДИЧЬ.
+//  • п.9: на поляне и в лесу водится дичь — крупные ПТИЦЫ и ЗАЙЦЫ;
+//    КОСУЛЯ — редко и только в чаще (северная, самая густая часть карты).
+//  • п.10: по дичи можно стрелять из лука — шанс зависит от вида дичи
+//    (base) и навыка «Стрельба из лука» (см. shotChance в systems/loot.js);
+//    лук должен быть В УЗЛЕ И ЭКИПИРОВАН (player.weaponId === 'bow').
+//  • п.11: при обдире туши случайно выпадает мясо — объём по размеру
+//    зверя (meat: [мин, макс]); с убитого волка тоже (CombatScene).
+// ============================================================
+export const GAME_ANIMALS = {
+    hare: {
+        id: 'hare', name: 'Заяц', emoji: '🐇',
+        tex: 'game_hare', corpseTex: 'game_hare_dead',
+        base: 45,            // базовый шанс попадания (%)
+        meat: [1, 2],        // мясо с туши (шт., случайно)
+        fleeRadius: 120,     // ближе — ускакал
+        speed: 190,
+        scale: 1.6,
+    },
+    bird: {
+        id: 'bird', name: 'Глухарь', emoji: '🦅',
+        tex: 'game_bird', corpseTex: 'game_bird_dead',
+        base: 30,            // летящую крупную птицу бить труднее
+        meat: [1, 2],
+        fleeRadius: 95,
+        speed: 250,
+        scale: 1.5,
+        flying: true,        // спугнул — взлетает и исчезает
+    },
+    roe: {
+        id: 'roe', name: 'Косуля', emoji: '🦌',
+        tex: 'game_roe', corpseTex: 'game_roe_dead',
+        base: 55,
+        meat: [3, 5],        // крупная добыча — мяса много
+        fleeRadius: 140,
+        speed: 215,
+        scale: 2.0,
+        rare: true,          // редко
+        maxRow: 7,           // только в чаще (север карты)
+    },
+};
+
+/**
+ * План спавна дичи на ходячей карте Густого леса: список
+ * { kind, col, row } по ПРОХОДИМЫМ тайлам (валидно для BFS-карты).
+ * Зайцы (2–3) и глухари (1–2) — по всему лесу; косуля — шанс 25%,
+ * только ряды 0..maxRow (чаща). rng подменяется в тестах.
+ */
+export function planForestAnimals(rng = Math.random) {
+    const passable = [];
+    for (let row = 0; row < FOREST_ROWS; row++) {
+        for (let col = 0; col < FOREST_COLS; col++) {
+            if (!isForestSolid(col, row)) passable.push({ col, row });
+        }
+    }
+    const pick = (filter) => {
+        const pool = passable.filter(filter);
+        if (!pool.length) return null;
+        return pool[Math.floor(rng() * pool.length)];
+    };
+    const plan = [];
+    const hares = 2 + Math.floor(rng() * 2);           // 2–3
+    const birds = 1 + Math.floor(rng() * 2);           // 1–2
+    for (let i = 0; i < hares; i++) {
+        const spot = pick(({ row }) => row >= 8 && row <= FOREST_ROWS - 3);
+        if (spot) plan.push({ kind: 'hare', ...spot });
+    }
+    for (let i = 0; i < birds; i++) {
+        const spot = pick(({ row }) => row >= 2 && row <= FOREST_ROWS - 3);
+        if (spot) plan.push({ kind: 'bird', ...spot });
+    }
+    if (rng() < 0.25) {                                 // косуля — редко, в чаще
+        const roeCfg = GAME_ANIMALS.roe;
+        const spot = pick(({ row }) => row >= 1 && row <= roeCfg.maxRow);
+        if (spot) plan.push({ kind: 'roe', ...spot });
+    }
+    return plan;
+}
+
 export function forestTileAt(col, row) {
     if (col < 0 || row < 0 || col >= FOREST_COLS || row >= FOREST_ROWS) return 'T';
     return FOREST_MAP[row][col] || 'T';

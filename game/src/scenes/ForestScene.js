@@ -6,7 +6,7 @@
 // Phaser загружен глобально через CDN
 import {
     FOREST_COLS, FOREST_ROWS, FOREST_SPAWN, FOREST_EXIT,
-    WOLF_DENS, WOLF_CFG,
+    WOLF_DENS, WOLF_CFG, GAME_ANIMALS, planForestAnimals,
     forestGatherSpots, campfirePos, forestTileAt,
     validateForestMap,
 } from '../data/forest.js';
@@ -18,7 +18,9 @@ import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
 import { dayKeyOf } from '../data/daily.js'; // раунд 66.10: daily вместо удалённого chests.js
 // Раунд 66.16 (приказы 1–3): лесные грибы/ягоды — еда (+1 HP, час, кулдаун 4 ч)
+// Раунд 66.17 (приказы 8,10,11): готовка на костре, стрельба по дичи, мясо с туши
 import { MEAL_DURATION_MIN, canEat, registerMeal, showMealBlockedPopup } from '../systems/meal.js';
+import { addItem, removeItem, countOf, shotChance, getLootDef } from '../systems/loot.js';
 import { createDialog } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
@@ -85,6 +87,8 @@ export class ForestScene extends Phaser.Scene {
         this.gatherEntries = [];
         this.gatherByTile = new Map();
         this.wolves = [];
+        this.animals = [];   // раунд 66.17: живая дичь (зайцы/глухари/косули)
+        this.corpses = [];   // раунд 66.17: туши, которые можно обобрать
         this.fireflies = [];
         this.busyDialog = false;
         this.lastDir = 'down';
@@ -97,6 +101,7 @@ export class ForestScene extends Phaser.Scene {
         this.drawExitMarker();
         this.spawnPlayer();
         this.spawnWolves();
+        this.spawnGameAnimals();   // раунд 66.17 (п.9): дичь в лесу
         this.buildAtmosphere();
         this.buildHUD();
 
@@ -120,7 +125,8 @@ export class ForestScene extends Phaser.Scene {
                 'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
                 '🐺 Волки рыщут у логовищ: заметят — погонят. В бою можно драться или сбежать.\n' +
                 '🍄 Грибы, ягоды и зверобой восстанавливают здоровье (раз в игровой день).\n' +
-                '🔥 У старого кострища (северо-запад) можно пересидеть час — время идёт мимо.\n' +
+                '🏹 Дичь (зайцы, глухари, в чаще — косули): с экипированным луком подходи на выстрел и жми E; тушу можно обобрать.\n' +
+                '🔥 У старого кострища (северо-запад) можно пересидеть час и приготовить сырую рыбу/мясо.\n' +
                 '◀ Выход к околице — на юге у кромки леса.'),
             [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
             { singletonKey: 'forest-help' });
@@ -364,6 +370,204 @@ export class ForestScene extends Phaser.Scene {
         });
     }
 
+    /**
+     * РАУНД 66.17 (п.9): ДИЧЬ В ЛЕСУ. По плану planForestAnimals():
+     * зайцы (2–3) и глухари (1–2) по всему лесу, косуля — редко (25%)
+     * и только в чаще (север карты). Звери безразличны к человеку,
+     * но близко не подпускают: подошёл — удирал (птица взлетает).
+     */
+    spawnGameAnimals() {
+        planForestAnimals().forEach((spot, i) => {
+            const cfg = GAME_ANIMALS[spot.kind];
+            if (!cfg || !this.textures.exists(cfg.tex)) return;
+            const ax = spot.col * TS + TS / 2;
+            const ay = spot.row * TS + TS / 2;
+            const spr = this.physics.add.sprite(ax, ay, cfg.tex)
+                .setScale(cfg.scale).setDepth(ay / TS);
+            if (spr.body) {
+                spr.body.setSize(20, 14, true);
+                spr.setCollideWorldBounds(true);
+            }
+            this.physics.add.collider(spr, this.solids);
+            const animal = {
+                id: `${spot.kind}_${i}`,
+                kind: spot.kind,
+                cfg,
+                sprite: spr,
+                state: 'wander',
+                targetX: ax, targetY: ay,
+                nextThink: this.time.now + 600 + i * 500,
+                fleeUntil: 0,
+                dead: false,
+                phase: Math.random() * Math.PI * 2,
+            };
+            this.animals.push(animal);
+            // Птица «клyёт» — лёгкое покачивание
+            if (cfg.flying) {
+                this.tweens.add({
+                    targets: spr,
+                    angle: { from: -4, to: 4 },
+                    duration: 700 + i * 130, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                });
+            }
+        });
+    }
+
+    /** Раунд 66.17: движение дичи — блуждание + паническое бегство. */
+    updateAnimals(time) {
+        const p = this.playerObj;
+        this.animals.forEach((a) => {
+            const s = a.sprite;
+            if (!s.active || a.dead) return;
+            const dist = Phaser.Math.Distance.Between(s.x, s.y, p.x, p.y);
+            let vx = 0, vy = 0, speed = 0;
+
+            if (a.state === 'flee' && time < a.fleeUntil) {
+                // Бегство от игрока по последнему направлению
+                const dx = s.x - p.x, dy = s.y - p.y;
+                const len = Math.max(1, Math.hypot(dx, dy));
+                vx = dx / len; vy = dy / len;
+                speed = a.cfg.speed;
+            } else if (dist < a.cfg.fleeRadius) {
+                // Подошёл слишком близко — прочь (птица — взлетает и исчезает)
+                if (a.cfg.flying) {
+                    a.dead = true;            // исчезает из сцены (упорхнула)
+                    s.setVelocity(0, 0);
+                    this.tweens.add({
+                        targets: s,
+                        y: s.y - 90,
+                        alpha: 0,
+                        angle: s.angle + (Math.random() < 0.5 ? -20 : 20),
+                        duration: 900,
+                        ease: 'Quad.easeOut',
+                        onComplete: () => s.destroy(),
+                    });
+                    return;
+                }
+                a.state = 'flee';
+                a.fleeUntil = time + 2200;
+                const dx = s.x - p.x, dy = s.y - p.y;
+                const len = Math.max(1, Math.hypot(dx, dy));
+                vx = dx / len; vy = dy / len;
+                speed = a.cfg.speed;
+            } else {
+                // Спокойное блуждание в радиусе 3 тайлов
+                if (time > a.nextThink || Phaser.Math.Distance.Between(s.x, s.y, a.targetX, a.targetY) < 6) {
+                    a.nextThink = time + 1600 + Math.random() * 2600;
+                    const c = Math.round(s.x / TS) + Math.floor(Math.random() * 7) - 3;
+                    const r = Math.round(s.y / TS) + Math.floor(Math.random() * 7) - 3;
+                    if (!'TtrLbCS'.includes(forestTileAt(c, r))) {
+                        a.targetX = c * TS + TS / 2;
+                        a.targetY = r * TS + TS / 2;
+                    }
+                }
+                const dx = a.targetX - s.x, dy = a.targetY - s.y;
+                const len = Math.max(1, Math.hypot(dx, dy));
+                if (len > 5) {
+                    vx = dx / len; vy = dy / len;
+                    speed = Math.round(a.cfg.speed * 0.3);   // рысцой/пошком
+                } else {
+                    a.state = 'wander';
+                }
+            }
+
+            s.setVelocity(vx * speed, vy * speed);
+            if (vx !== 0) s.setFlipX(vx > 0);   // профиль влево — flip вправо
+            s.setDepth(s.y / TS);
+        });
+    }
+
+    /**
+     * РАУНД 66.17 (п.10): ВЫСТРЕЛ ИЗ ЛУКА ПО ДИЧИ. Лук должен быть
+     * В УЗЛЕ И ЭКИПИРОВАН (weaponId === 'bow'); шанс = base вида дичи
+     * + половина навыка «Стрельба из лука» (shotChance). Промах —
+     * дичь удирает (птица — взлетает). Выстрел — 5 минут времени.
+     */
+    shootAnimal(animal) {
+        if (this.busyDialog || !animal || animal.dead) return;
+        const player = this.player;
+        if (!player) return;
+        if (player.weaponId !== 'bow') {
+            createDialog(this, t('🏹 Без лука'),
+                t('Стрелять можно только из лука — и он должен быть экипирован (Персонаж → Оружие). Кузнец Данила кует луки.'),
+                [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+            return;
+        }
+        this.busyDialog = true;
+        const s = animal.sprite;
+        tickTime(this.registry, 5);
+        if (this.audioManager) this.audioManager.playShoot();
+
+        // Стрела — тонкая палочка, летящая от героя к зверю (160 мс)
+        const dx = s.x - this.playerObj.x, dy = s.y - this.playerObj.y;
+        const len = Math.max(1, Math.hypot(dx, dy));
+        const arrow = this.add.rectangle(this.playerObj.x, this.playerObj.y - 10, 14, 2, 0xd8c8a0)
+            .setRotation(Math.atan2(dy, dx)).setDepth(150);
+        this.tweens.add({
+            targets: arrow,
+            x: s.x, y: s.y,
+            duration: 160, ease: 'Quad.easeOut',
+            onComplete: () => arrow.destroy(),
+        });
+
+        const chance = shotChance(animal.cfg.base, (player.skills && player.skills.bow) || 15);
+        const roll = Math.random() * 100;
+        this.time.delayedCall(180, () => {
+            if (roll < chance) {
+                // ПОПАДАНИЕ: зверь — туша (обобрать — п.11)
+                animal.dead = true;
+                s.setVelocity(0, 0);
+                if (s.body) s.body.enable = false;
+                if (this.textures.exists(animal.cfg.corpseTex)) s.setTexture(animal.cfg.corpseTex);
+                s.setScale(Math.max(animal.cfg.scale, 1.4));
+                s.setAngle(0);
+                this.corpses.push(animal);
+                this.showFloatingText(s.x, s.y - 20, t('Попал!'), '#8adf8a');
+                ActionLog.add(this.registry, tf(t('Подстрелил {0} из лука — туша осталась лежать, можно обобрать.'), t(animal.cfg.name)));
+            } else {
+                // ПРОМАХ: дичь удирает
+                this.showFloatingText(s.x, s.y - 20, t('Мимо!'), '#e8cc7a');
+                ActionLog.add(this.registry, tf(t('Выстрел из лука по {0} — мимо: зверь удрал.'), t(animal.cfg.name)));
+                if (animal.cfg.flying) {
+                    animal.dead = true;
+                    s.setVelocity(0, 0);
+                    this.tweens.add({
+                        targets: s, y: s.y - 90, alpha: 0, duration: 900, ease: 'Quad.easeOut',
+                        onComplete: () => s.destroy(),
+                    });
+                } else {
+                    animal.state = 'flee';
+                    animal.fleeUntil = this.time.now + 2600;
+                }
+            }
+            this.busyDialog = false;
+        });
+    }
+
+    /**
+     * РАУНД 66.17 (п.11): ОБОБРАТЬ ТУШУ — случайно количество мяса
+     * по размеру зверя (meat: [мин, макс]), мясо сырое: есть нельзя,
+     * только приготовить на костре или продать (п.7).
+     */
+    lootAnimalCorpse(animal) {
+        if (this.busyDialog || !animal || !animal.dead) return;
+        const player = this.player;
+        if (!player) return;
+        const [minM, maxM] = animal.cfg.meat;
+        const n = Phaser.Math.Between(minM, maxM);
+        addItem(player, 'meat_raw', n);
+        this.registry.set('player', player);
+        tickTime(this.registry, 10);
+        const spr = animal.sprite;
+        this.animals = this.animals.filter(x => x !== animal);
+        this.corpses = this.corpses.filter(x => x !== animal);
+        if (spr) spr.destroy();
+        if (this.audioManager) this.audioManager.playHeal();
+        this.showFloatingText(this.playerObj.x, this.playerObj.y - 30, `+${n} 🥩`, '#e8b08a');
+        ActionLog.add(this.registry, tf(t('Обобрал тушу {0}: +{1} сырое мясо (приготовить на костре или продать).'), t(animal.cfg.name), n));
+        this.updateHUD();
+    }
+
     buildAtmosphere() {
         const { width, height } = this.scale;
 
@@ -540,6 +744,7 @@ export class ForestScene extends Phaser.Scene {
 
         this.movePlayer();
         this.updateWolves(time);
+        this.updateAnimals(time);
         this.updateNearestInteractable();
         this.updateHUD();
     }
@@ -670,16 +875,46 @@ export class ForestScene extends Phaser.Scene {
                     nearest = { type: 'gather', entry: g, label: g.prompt };
                     continue;
                 }
+                // РАУНД 66.17 (п.11): туша рядом — обобрать мясо
+                for (const corpse of this.corpses) {
+                    const cc = Math.floor(corpse.sprite.x / TS), cr = Math.floor(corpse.sprite.y / TS);
+                    if (cc === cx && cr === cy) {
+                        bestDist = dist;
+                        nearest = { type: 'loot_animal', animal: corpse, label: tf(t('Обобрать дичь ({0})'), t(corpse.cfg.name)) };
+                    }
+                }
                 // РАУНД 65 (п.5): отдых у костра — ТОЛЬКО в лесу (из деревни удалён)
                 const camp = campfirePos();
                 if (cx === camp.col && cy === camp.row) {
                     bestDist = dist;
-                    nearest = { type: 'campfire', label: t('Отдохнуть у костра (1 час)') };
+                    nearest = { type: 'campfire', label: t('Костёр: отдых и готовка') };
                     continue;
                 }
                 if (cx === FOREST_EXIT.col && cy === FOREST_EXIT.row) {
                     bestDist = dist;
                     nearest = { type: 'exit', label: t('Вернуться к околице') };
+                }
+            }
+        }
+
+        // РАУНД 66.17 (п.10): СТРЕЛЬБА — дичь в пределах 2..6.5 тайлов.
+        // Лук в узле И экипирован → «Стрелять из лука (Заяц)»; рядом без лука —
+        // только подсказка. Приоритет — у ближних действий (сбор/костёр/туша).
+        if (!nearest) {
+            const player = this.player;
+            let shootTarget = null, shootDist = Infinity;
+            this.animals.forEach((a) => {
+                if (a.dead || !a.sprite.active) return;
+                const dTiles = Phaser.Math.Distance.Between(this.playerObj.x, this.playerObj.y, a.sprite.x, a.sprite.y) / TS;
+                if (dTiles >= 2 && dTiles <= 6.5 && dTiles < shootDist) {
+                    shootDist = dTiles; shootTarget = a;
+                }
+            });
+            if (shootTarget) {
+                if (player && player.weaponId === 'bow') {
+                    nearest = { type: 'shoot', animal: shootTarget, label: tf(t('Стрелять из лука ({0})'), t(shootTarget.cfg.name)) };
+                } else if (shootDist <= 3) {
+                    nearest = { type: 'need_bow', animal: shootTarget, label: tf(t('{0} рядом — нужен экипированный лук'), t(shootTarget.cfg.name)) };
                 }
             }
         }
@@ -699,6 +934,14 @@ export class ForestScene extends Phaser.Scene {
         if (n.type === 'gather') this.gatherResource(n.entry);
         else if (n.type === 'campfire') this.restAtCampfire();
         else if (n.type === 'exit') this.leaveForest();
+        else if (n.type === 'shoot') this.shootAnimal(n.animal);
+        else if (n.type === 'loot_animal') this.lootAnimalCorpse(n.animal);
+        else if (n.type === 'need_bow') {
+            this.busyDialog = true;
+            createDialog(this, t('🏹 Без лука'),
+                t('Дичь так просто не догнать — нужна стрельба. Лук должен лежать в узле и быть экипирован (Персонаж → Оружие). Луки куёт кузнец Данила.'),
+                [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }], { singleton: false });
+        }
     }
 
     /**
@@ -717,8 +960,20 @@ export class ForestScene extends Phaser.Scene {
         if (!player) return;
         this.busyDialog = true;
         const close = () => { this.busyDialog = false; };
+        // РАУНД 66.17 (п.8): на костре можно ПРИГОТОВИТЬ сырую рыбу и мясо
+        // дичи (по 30 минут за штуку). Приготовленное — полноценная еда:
+        // печёная рыба +2 HP, жаркое +3 HP (есть из инвентаря — «Съесть»).
+        const fishRaw = countOf(player, 'fish_raw');
+        const meatRaw = countOf(player, 'meat_raw');
+        const cookOpts = [];
+        if (fishRaw > 0) {
+            cookOpts.push({ text: tf(t('🔥 Приготовить рыбу ({0} мин)'), 30), callback: () => { close(); this.cookAtCampfire('fish_raw'); } });
+        }
+        if (meatRaw > 0) {
+            cookOpts.push({ text: tf(t('🔥 Жарить мясо дичи ({0} мин)'), 30), callback: () => { close(); this.cookAtCampfire('meat_raw'); } });
+        }
         createDialog(this, t('🔥 Костёр в лесу'),
-            t('Тёплый огонь разгоняет лесную мглу. У костра можно только пересидеть час — раны он не лечит, только время идёт мимо.\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)'),
+            t('Тёплый огонь разгоняет лесную мглу. У костра можно пересидеть час — раны он не лечит, только время идёт мимо. На огне можно приготовить сырую рыбу или мясо дичи.\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)'),
             [
                 { text: t('Присесть у огня (1 час)'), callback: () => {
                     close();
@@ -733,8 +988,29 @@ export class ForestScene extends Phaser.Scene {
                         this.cameras.main.fadeIn(700, 0, 0, 0);
                     });
                 } },
+                ...cookOpts,
                 { text: t('Не сейчас'), callback: close },
             ]);
+    }
+
+    /**
+     * РАУНД 66.17 (п.8): готовка на костре — 1 сырая штука → 1 приготовленная
+     * за 30 минут (печёная рыба +2 HP, жаркое +3 HP — есть из инвентаря).
+     */
+    cookAtCampfire(rawId) {
+        const player = this.player || this.registry.get('player');
+        if (!player || countOf(player, rawId) <= 0) return;
+        const def = getLootDef(rawId);
+        if (!def || !def.cookTo) return;
+        removeItem(player, rawId, 1);
+        addItem(player, def.cookTo, 1);
+        this.registry.set('player', player);
+        tickTime(this.registry, def.cookMinutes || 30);
+        const cooked = getLootDef(def.cookTo);
+        if (this.audioManager) this.audioManager.playHeal();
+        this.showFloatingText(this.playerObj.x, this.playerObj.y - 40, `${cooked.emoji} ${t(cooked.name)}`, '#ffd9a0');
+        ActionLog.add(this.registry, tf(t('Приготовил на костре: {0} → {1} (30 мин).'), t(def.name), t(cooked.name)));
+        this.updateHUD();
     }
 
     // ================= МЕХАНИКИ =================

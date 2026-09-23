@@ -854,6 +854,85 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(0x2a5a2a, 1); g.fillRect(8, 2, 1, 4);              // вырез к центру
         g.generateTexture('deco_lilypad', 16, 10);
 
+        // ===== РАУНД 66.17: ДИЧЬ — заяц, глухарь, косуля + туши (п.9-11) =====
+        // Заяц (28×22, профиль влево): серо-бурый, длинные уши, белый хвост
+        g.clear();
+        g.fillStyle(0x8a7a62, 1); g.fillEllipse(12, 15, 18, 11);       // туловище
+        g.fillStyle(0x9a8a70, 1); g.fillEllipse(11, 13, 12, 6);        // спина-блик
+        g.fillStyle(0x8a7a62, 1); g.fillEllipse(21, 12, 8, 7);         // голова
+        g.fillStyle(0x6a5a48, 1); g.fillRect(19, 3, 2, 8);             // ухо 1
+        g.fillStyle(0x6a5a48, 1); g.fillRect(22, 4, 2, 7);             // ухо 2
+        g.fillStyle(0x2a2018, 1); g.fillRect(23, 11, 1, 1);            // глаз
+        g.fillStyle(0xf0ece0, 1); g.fillEllipse(4, 13, 5, 5);          // хвост (белый)
+        g.fillStyle(0x6a5a48, 1); g.fillRect(8, 19, 2, 3);             // лапы
+        g.fillStyle(0x6a5a48, 1); g.fillRect(15, 19, 2, 3);
+        g.generateTexture('game_hare', 28, 22);
+        // Туша зайца (28×14): лежит на боку
+        g.clear();
+        g.fillStyle(0x6e6250, 1); g.fillEllipse(12, 8, 20, 8);         // тело на боку
+        g.fillStyle(0x5a5040, 1); g.fillEllipse(20, 7, 7, 5);          // голова
+        g.fillStyle(0x4a4034, 1); g.fillRect(18, 1, 2, 5);             // ухо
+        g.fillStyle(0xb53925, 0.7); g.fillEllipse(10, 11, 12, 4);      // кровь под тушей
+        g.fillStyle(0xf0ece0, 1); g.fillEllipse(3, 7, 4, 4);           // хвост
+        g.generateTexture('game_hare_dead', 28, 14);
+
+        // Глухарь (26×20, профиль влево): тёмная птица с веерным хвостом
+        g.clear();
+        g.fillStyle(0x2e2a26, 1); g.fillEllipse(11, 10, 14, 10);       // туловище
+        g.fillStyle(0x3c3630, 1); g.fillEllipse(10, 8, 9, 5);          // спина-блик
+        g.fillStyle(0x26221e, 1); g.fillEllipse(19, 6, 6, 6);          // голова
+        g.fillStyle(0xb53925, 1); g.fillEllipse(21, 6, 2, 2);          // бровь (красная)
+        g.fillStyle(0xd9a441, 1); g.fillRect(23, 8, 3, 2);             // клюв (жёлтый)
+        g.fillStyle(0x1e1a16, 1);                                      // хвост веером
+        g.fillTriangle(4, 8, 0, 4, 0, 12); g.fillTriangle(5, 10, 0, 8, 0, 16);
+        g.fillStyle(0x4a4238, 1); g.fillRect(9, 15, 2, 4);             // лапы
+        g.fillStyle(0x2e2a26, 1); g.fillEllipse(12, 14, 8, 4);         // подхвостье
+        g.generateTexture('game_bird', 26, 20);
+        // Туша глухаря (26×12)
+        g.clear();
+        g.fillStyle(0x26221e, 1); g.fillEllipse(11, 7, 16, 7);
+        g.fillStyle(0x1e1a16, 1); g.fillEllipse(19, 5, 6, 5);
+        g.fillStyle(0xb53925, 0.7); g.fillEllipse(10, 10, 12, 3);
+        g.fillStyle(0x1e1a16, 1); g.fillTriangle(4, 7, 0, 4, 0, 10);
+        g.generateTexture('game_bird_dead', 26, 12);
+
+        // Косуля (34×28, профиль влево): рыже-бурая, рожки, белое горло
+        g.clear();
+        g.fillStyle(0x9d6b40, 1); g.fillEllipse(13, 16, 22, 12);       // туловище
+        g.fillStyle(0xb07c4c, 1); g.fillEllipse(12, 12, 15, 6);        // спина-блик
+        g.fillStyle(0x9d6b40, 1); g.fillEllipse(26, 9, 9, 8);          // голова
+        g.fillStyle(0x7a5230, 1); g.fillRect(24, 0, 2, 6);             // рожок 1
+        g.fillStyle(0x7a5230, 1); g.fillRect(28, 1, 2, 5);             // рожок 2
+        g.fillStyle(0x2a2018, 1); g.fillRect(28, 8, 1, 1);             // глаз
+        g.fillStyle(0x2a2018, 1); g.fillEllipse(30, 12, 2, 3);         // нос
+        g.fillStyle(0xf0e8d8, 1); g.fillRect(26, 13, 3, 3);            // горло (светлое)
+        g.fillStyle(0x7a5230, 1);                                      // ноги
+        g.fillRect(7, 21, 2, 7); g.fillRect(12, 22, 2, 6);
+        g.fillRect(18, 21, 2, 7); g.fillRect(21, 22, 2, 6);
+        g.fillStyle(0xf0ece0, 1); g.fillEllipse(4, 14, 5, 4);          // хвост
+        g.generateTexture('game_roe', 34, 28);
+        // Туша косули (34×18)
+        g.clear();
+        g.fillStyle(0x845a36, 1); g.fillEllipse(14, 10, 24, 9);
+        g.fillStyle(0x6a4a2c, 1); g.fillEllipse(25, 8, 8, 6);
+        g.fillStyle(0x7a5230, 1); g.fillRect(23, 2, 2, 4);
+        g.fillStyle(0xb53925, 0.7); g.fillEllipse(12, 14, 16, 4);
+        g.generateTexture('game_roe_dead', 34, 18);
+
+        // ===== Чужая удочка на броду (п.13): удилище, леска, поплавок =====
+        g.clear();
+        g.fillStyle(0x5a4028, 1);                                       // удилище (диагональ)
+        g.fillRect(2, 2, 2, 2); g.fillRect(4, 4, 2, 2); g.fillRect(6, 6, 2, 2);
+        g.fillRect(8, 8, 2, 2); g.fillRect(10, 10, 2, 2); g.fillRect(12, 12, 2, 2);
+        g.fillStyle(0x7d5834, 1);
+        g.fillRect(3, 3, 1, 1); g.fillRect(5, 5, 1, 1); g.fillRect(7, 7, 1, 1);
+        g.fillStyle(0xd8d8d8, 1);                                       // леска вниз
+        g.fillRect(13, 14, 1, 6);
+        g.fillStyle(0xc0492f, 1);                                       // поплавок
+        g.fillRect(12, 20, 3, 3);
+        g.fillStyle(0xf0ece0, 1); g.fillRect(13, 21, 1, 1);
+        g.generateTexture('deco_fishing_rod', 16, 24);
+
         g.destroy();
     }
 

@@ -16,8 +16,12 @@ import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import { getTime, getDayNightOverlay, tickTime, getSeason } from '../systems/TimeSystem.js';
-// Раунд 66.16 (приказы 1–3): улов съедается на месте — правила еды (+1 HP, кулдаун)
-import { MEAL_HEAL_HP, canEat, registerMeal, showMealBlockedPopup } from '../systems/meal.js';
+// Раунд 66.16 (приказы 1–3): правила еды доступны на локациях
+// Раунд 66.17 (п.7): рыба больше НЕ съедается на месте — улов идёт в узел;
+// сырую рыбу нельзя есть (только готовить или продавать)
+import { addItem, countOf, fishingCatchCount, shotChance, getLootDef, removeItem } from '../systems/loot.js';
+// Раунд 66.17 (п.9): дичь на Лесной поляне — зайцы и глухари
+import { GAME_ANIMALS } from '../data/forest.js';
 // Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
 import { MAP_TRAVEL_MINUTES } from './ForkScene.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
@@ -368,6 +372,24 @@ export class LocationScene extends Phaser.Scene {
         // Авдей на мельнице, Марфа с травами на озере/реке/в лесу и т.д.
         this.drawLocationNpcs(width, height);
 
+        // ----- РАУНД 66.17 (п.13): ЧУЖАЯ УДА на броду Реки — если Ерёма
+        // её сегодня оставил; рисунок + подпись, чтобы игрок видел шанс ---
+        if (isRiver && this.strangersRodPresent() && this.textures.exists('deco_fishing_rod')) {
+            const rodSpot = clampOutOfWater('river', width, height, width * 0.5 + 232, height * 0.45 + 34, 26);
+            const rodImg = this.add.image(rodSpot.x, rodSpot.y, 'deco_fishing_rod')
+                .setScale(1.6).setDepth(7);
+            this.add.text(rodImg.x, rodImg.y + 26, t('🐟 Чужая уда (Ерёмина)'), {
+                fontSize: '10px', color: '#c9d8e8', backgroundColor: '#000000aa',
+                padding: { x: 4, y: 2 }, stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(7);
+        }
+
+        // ----- РАУНД 66.17 (п.9): ДИЧЬ на Лесной поляне — зайцы/глухари
+        // (косуля — только в чаще Густого леса), клик — стрельба из лука ---
+        if (this.locationId === 'forest_glade') {
+            this.spawnGladeAnimals(width, height);
+        }
+
         // ----- Раунд 66.6: СЕЗОННЫЕ РАБОТЫ на Поле — статисты-крестьяне
         // (пахарь/сеятель/косарь/жнец) + плашка «Сенокосная пора…» -----
         if (this.locationId === 'field') {
@@ -387,11 +409,15 @@ export class LocationScene extends Phaser.Scene {
 
     /**
      * Раунд 36: рыбалка на Реке (пруд в деревне удалён по заявке владельца).
-     * Первый улов за день: свежая рыба +3 ❤, уходит 1 час. Повторно —
-     * «не клюёт», уходит 15 минут. В дождь рыба активнее (+4), зимой —
-     * лунка во льду (механика переехала из VillageScene без изменений).
-     * РАУНД 66.7 (п.4): СЕЗОННЫЕ ЗАПРЕТЫ/БОНУСЫ — апрель-май НЕРЕСТ
-     * (запрет), сентябрь-октябрь ЖОР (+2), декабрь-февраль лунка.
+     * РАУНД 66.17 (пп.7,12,13):
+     *  • рыбалка требует СВОЮ удочку (товар Аверьяна, лежит в узле)
+     *    ИЛИ ЧУЖУЮ УДУ на броду — Ерёмина уда стоит на берегу не всегда
+     *    (рыбак то рыбачит, то сети чинит — детерминировано по дню);
+     *  • улов — сырая рыба В УЗЕЛ (1–3 шт.: жор +1, дождь +1; с чужой
+     *    уда на одну меньше — доля хозяину);
+     *  • СЫРУЮ рыбу есть нельзя — только приготовить на костре или продать;
+     *  • повторно в тот же день — «не клюёт», уходит 15 минут.
+     * Сезонные запреты/бонусы — FishingSeasons (нерест — запрет).
      */
     goFishing() {
         const player = this.registry.get('player');
@@ -413,50 +439,56 @@ export class LocationScene extends Phaser.Scene {
             return;
         }
 
+        // --- П.13: для рыбалки нужна своя удочка ИЛИ чужая уда на броду ---
+        const hasOwnRod = countOf(player, 'rod') > 0;
+        const strangersRod = this.strangersRodPresent();
+        if (!hasOwnRod && !strangersRod) {
+            tickTime(this.registry, 5);
+            ActionLog.add(this.registry, t('Собрался порыбачить, но удочки нет — рыбалка сорвалась.'));
+            createDialog(this, t('🎣 Без удочки'),
+                t('Смотри на воду, а поймать нечем: без удочки рыбу не выловить. Купи удочку у ремесленника Аверьяна (12 д.) — или надейся, что на броду стоит Ерёмина уда (рыбак не всегда её оставляет).'),
+                [{ text: t('Понятно'), callback: () => {} }]);
+            return;
+        }
+
         const caught = isActionDoneToday(q, 'fish_daily', today);
         const title = season.title;
         // Раунд 66.6: плеск воды — заброс/лунка озвучены всегда
         playWaterSplash(this, winter ? 0.5 : 0.7);
 
         if (!caught) {
-            // Раунд 66.16 (приказы 1–3): улов съедается на месте — это приём еды:
-            // ровно +1 HP (погодные/сезонные бусты сняты), час рыбалки и общий
-            // кулдаун еды 4 часа. Сытый герой не рыбачит — поп-ап, время не идёт.
-            if (!canEat(this.registry).ok) {
-                showMealBlockedPopup(this);
-                return;
-            }
             tickTime(this.registry, 60);
             markActionDone(q, 'fish_daily', today);
             this.registry.set('quest', q);
-            // Погода/сезон — только для текста улова: раунд 66.16 снял
-            // бусты лечения (приказ 2: любая еда — ровно +1 HP)
+            // РАУНД 66.17 (п.7): улов — СЫРАЯ РЫБА В УЗЕЛ (не съедается на месте):
+            // штук — по погоде/сезону; с чужой удочки — доля хозяину (−1).
             const weather = getWeather(this.registry);
             const raining = weather && isRainy(weather);
-            // Раунд 66.16 (приказ 2): любая еда — ровно +1 HP
-            const heal = MEAL_HEAL_HP;
-            player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
-            registerMeal(this.registry); // приказ 3: кулдаун еды 4 часа
+            const catchN = fishingCatchCount({
+                seasonId: season.id, raining, winter, ownRod: hasOwnRod,
+            });
+            addItem(player, 'fish_raw', catchN);
             this.registry.set('player', player);
             let catchLine;
             if (winter) {
-                catchLine = t('Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим. Ужин обеспечен.');
+                catchLine = t('Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим.');
             } else if (raining) {
                 catchLine = t('Забросил удочку с берега под моросящим дождём... Рыба клюёт одна за другой — вёдра полные!');
             } else if (season.id === 'autumn_feed') {
                 catchLine = t('Рыба жирует перед зимой и берёт жадно: крючок едва успевает коснуться дна. Корзина полна!');
             } else {
-                catchLine = t('Забросил удочку с песчаного брода... Через час в корзине пара ершей и лещ. Свежая рыба — это силы.');
+                catchLine = t('Забросил удочку с песчаного брода... Через час в корзине бьётся улов.');
             }
-            ActionLog.add(this.registry, winter
-                ? tf(t('Порыбачил через лунку — налим к ужину (+{0} ❤).'), heal)
-                : (raining
-                    ? tf(t('Дождь — рыба идёт на крючок смело. Отличный улов (+{0} ❤).'), heal)
-                    : tf(t('Наловил рыбы на реке к обеду (+{0} ❤).'), heal)));
+            const rodNote = hasOwnRod
+                ? ''
+                : '\n' + t('(Ловил Ерёминой удой с брода: одна рыба — хозяину.)');
+            ActionLog.add(this.registry, tf(t('Наловил рыбы на реке: +{0} сырая рыба в узел{1}.'), catchN, hasOwnRod ? '' : t(' (чужая уда, доля хозяину)')));
             createDialog(this, title,
                 catchLine
-                + `\n\n${t('Свежая рыба')}: +${heal} ❤ · ${t('час времени')}.`
-                + (season.id === 'autumn_feed' ? `\n${t('(Осенний жор: рыба берёт жадно, но сыт герой не объестся сверх меры.)')}` : ''),
+                + `\n\n${t('🐟 Улов')} : +${catchN} × ${t('Рыба (сырая)')} — ${t('в узел')}.`
+                + `\n${t('Сырую рыбу не едят: приготовь на костре или продай трактирщику/мяснику.')}`
+                + rodNote
+                + (season.id === 'autumn_feed' ? `\n${t('(Осенний жор: рыба берёт жадно — улов щедрее.)')}` : ''),
                 [{ text: t('Взять улов'), callback: () => {} }]);
         } else {
             tickTime(this.registry, 15);
@@ -465,6 +497,19 @@ export class LocationScene extends Phaser.Scene {
                 t('Клюёт плохо: рыба сыта или уже видела твою наживку. Попробуй завтра.'),
                 [{ text: t('Смотать удочку'), callback: () => {} }]);
         }
+    }
+
+    /**
+     * РАУНД 66.17 (п.13): стоит ли на броду ЧУЖАЯ УДА. Ерёма оставляет
+     * её не каждый день (то рыбачит сам, то сети чинит) — детерминировано
+     * по дню (хэш dayKey), чтобы перезаход на локацию не перебрасывал кубик.
+     */
+    strangersRodPresent() {
+        const ts = getTime(this.registry);
+        const key = ts ? `${ts.yearFromChrist}_${ts.month}_${ts.day}` : '0';
+        let hash = 0;
+        for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) % 1000;
+        return hash % 100 < 60;   // ~60% дней уда стоит на броду
     }
 
     /**
@@ -746,16 +791,106 @@ export class LocationScene extends Phaser.Scene {
     }
 
     /**
+     * Раунд 66.16 (приказы 1–3): улов съедается на месте — правила еды (+1 HP, кулдаун)
+     * РАУНД 66.17 (п.9): ДИЧЬ НА ЛЕСНОЙ ПОЛЯНЕ. По приказу владельцу дичь
+     * водится «на лесную поляну и в густой лес»: поляна — это статическая
+     * локация, поэтому дичь здесь кликабельная: с экипированным луком —
+     * «Стрелять» (шанс = база вида + половина навыка стрельбы), попал —
+     * мясо в узел сразу (тушу в статике не оставляем), промах — ускакала.
+     * Косуля на поляну не выходит — только в чаще (ForestScene).
+     */
+    spawnGladeAnimals(width, height) {
+        const roll = Math.random();
+        const present = [];
+        if (roll < 0.7) present.push({ kind: 'hare', x: width * 0.3, y: height * 0.58 });
+        if (Math.random() < 0.5) present.push({ kind: 'bird', x: width * 0.66, y: height * 0.4 });
+        present.forEach((entry, i) => {
+            const cfg = GAME_ANIMALS[entry.kind];
+            if (!cfg || !this.textures.exists(cfg.tex)) return;
+            const spr = this.add.image(entry.x, entry.y, cfg.tex)
+                .setScale(cfg.scale * 1.6).setDepth(20);
+            spr.setInteractive({ useHandCursor: true });
+            this.tweens.add({
+                targets: spr,
+                y: entry.y - 4,
+                duration: 900 + i * 220, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+            this.add.text(entry.x, entry.y + 30, t(cfg.name), {
+                fontSize: '11px', color: RUS.text, backgroundColor: '#000000aa',
+                padding: { x: 4, y: 2 }, stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(20);
+            spr.on('pointerdown', (pointer) => {
+                if (pointer.leftButtonDown() && !this.busyDialog) this.huntGladeAnimal(spr, cfg);
+            });
+        });
+    }
+
+    /** Раунд 66.17 (п.10): попытка подстрелить дичь на поляне (лук экипирован?). */
+    huntGladeAnimal(spr, cfg) {
+        const player = this.registry.get('player');
+        if (!player) return;
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+
+        if (player.weaponId !== 'bow') {
+            ActionLog.add(this.registry, tf(t('Заметил {0} на поляне, но стрелять нечем — нужен экипированный лук.'), t(cfg.name)));
+            createDialog(this, '🏹 ' + t(cfg.name),
+                tf(t('{0} щиплет траву в стороне. Стрелять можно только из лука — и он должен быть экипирован (Персонаж → Оружие). Луки куёт кузнец Данила.'), t(cfg.name)),
+                [{ text: t('Отойти тихо'), callback: close }], { singleton: false });
+            return;
+        }
+
+        createDialog(this, '🏹 ' + t(cfg.name),
+            tf(t('{0} близко, но настороже. Тянуть тетиву? (шанс зависит от твоего навыка стрельбы)\nВыстрел — 5 минут времени.'), t(cfg.name)),
+            [
+                { text: tf(t('Стрелять из лука ({0})'), t(cfg.name)), callback: () => {
+                    close();
+                    tickTime(this.registry, 5);
+                    if (this.audioManager) this.audioManager.playShoot();
+                    const chance = shotChance(cfg.base, (player.skills && player.skills.bow) || 15);
+                    const hit = Math.random() * 100 < chance;
+                    if (hit) {
+                        const [minM, maxM] = cfg.meat;
+                        const n = Phaser.Math.Between(minM, maxM);
+                        addItem(player, 'meat_raw', n);
+                        this.registry.set('player', player);
+                        ActionLog.add(this.registry, tf(t('Подстрелил {0} на поляне из лука и обобрал тушу: +{1} сырое мясо (приготовить или продать).'), t(cfg.name), n));
+                        createDialog(this, t('🎯 Есть!'),
+                            tf(t('Стрела дошла — {0} повержен. Ты обобрал тушу: +{1} сырое мясо в узел.\nСырым не едят: приготовь на костре или продай.'), t(cfg.name), n),
+                            [{ text: t('Хорошо'), callback: close }], { singleton: false });
+                        spr.destroy();
+                    } else {
+                        ActionLog.add(this.registry, tf(t('Выстрел из лука по {0} — мимо: зверь удрал с поляны.'), t(cfg.name)));
+                        createDialog(this, t('💨 Мимо!'),
+                            tf(t('Стрела вонзилась в траву — {0} прыгнул в кусты и скрылся.'), t(cfg.name)),
+                            [{ text: t('Потереть затылок'), callback: close }], { singleton: false });
+                        spr.destroy();
+                    }
+                } },
+                { text: t('Не сейчас'), callback: close },
+            ], { singleton: false });
+    }
+
+    /**
      * РАУНД 66 (пп.1,2 приказа): отдых у костра (Выпас) — ТОЛЬКО промотка
      * времени на 1 игровой час. Здоровье и Воля у костра НЕ восстанавливаются
      * (полное лечение — ночлег на постоялом дворе и молебен в церкви).
+     * РАУНД 66.17 (п.8): на пастушьем костре можно ПРИГОТОВИТЬ сырую рыбу/мясо.
      */
     restAtCampfire() {
         if (this.busyDialog) return;
+        const player = this.registry.get('player');
         this.busyDialog = true;
         const close = () => { this.busyDialog = false; };
+        const cookOpts = [];
+        if (player && countOf(player, 'fish_raw') > 0) {
+            cookOpts.push({ text: tf(t('🔥 Приготовить рыбу ({0} мин)'), 30), callback: () => { close(); this.cookAtCampfire('fish_raw'); } });
+        }
+        if (player && countOf(player, 'meat_raw') > 0) {
+            cookOpts.push({ text: tf(t('🔥 Жарить мясо дичи ({0} мин)'), 30), callback: () => { close(); this.cookAtCampfire('meat_raw'); } });
+        }
         createDialog(this, t('🔥 Костёр пастухов'),
-            t('Пастухи сложили костёр у стада. У огня можно только пересидеть час — раны он не лечит, только время идёт мимо.\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)'),
+            t('Пастухи сложили костёр у стада. У огня можно только пересидеть час — раны он не лечит, только время идёт мимо. На огне можно приготовить сырую рыбу или мясо дичи.\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)'),
             [
                 { text: t('Присесть у огня (1 час)'), callback: () => {
                     close();
@@ -766,8 +901,27 @@ export class LocationScene extends Phaser.Scene {
                         this.cameras.main.fadeIn(600, 0, 0, 0);
                     });
                 } },
+                ...cookOpts,
                 { text: t('Не сейчас'), callback: close },
             ]);
+    }
+
+    /** Раунд 66.17 (п.8): готовка на пастушьем костре (30 минут, 1 штука). */
+    cookAtCampfire(rawId) {
+        const player = this.registry.get('player');
+        if (!player || countOf(player, rawId) <= 0) return;
+        const def = getLootDef(rawId);
+        if (!def || !def.cookTo) return;
+        removeItem(player, rawId, 1);
+        addItem(player, def.cookTo, 1);
+        this.registry.set('player', player);
+        tickTime(this.registry, def.cookMinutes || 30);
+        const cooked = getLootDef(def.cookTo);
+        ActionLog.add(this.registry, tf(t('Приготовил на костре: {0} → {1} (30 мин).'), t(def.name), t(cooked.name)));
+        createDialog(this, t('🔥 Готово'),
+            tf(t('На углях поспело: {0}. Теперь в узле — можно съесть (Персонаж → Инвентарь → «Съесть») или продать.'), t(cooked.name)),
+            [{ text: t('Хорошо'), callback: () => { this.busyDialog = false; } }], { singleton: false });
+        this.updateHUD();
     }
 
     /** Разговор с жителем на локации (раунд 27; раунд 30: + расспрос о воре) */

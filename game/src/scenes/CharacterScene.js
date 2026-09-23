@@ -5,7 +5,7 @@ import { createButton, bindRestartOnResize } from '../utils/ui.js';
 // Раунд 42 (QA-фикс): t() использовался (строки «В руках»/«Надето»/«НАДЕТО»),
 // но i18n НЕ импортировался → вкладка «Инвентарь» падала с TypeError:
 // «Предметы»-сетка и кнопка «Назад» не рисовались, игрок застревал на экране.
-import { t } from '../systems/i18n.js';
+import { t, tf } from '../systems/i18n.js';
 import { ageUnitWord } from '../systems/AgeRules.js';
 import {
     CHARACTER_KEYS, SKILLS, SKILL_CATEGORIES,
@@ -13,6 +13,10 @@ import {
     equipWeapon, equipArmor,
     formatMoney,
 } from '../systems/Character.js';
+// Раунд 66.17 (п.4): кнопка «Съесть» для съестных припасов узла —
+// единые правила еды (1 час, кулдаун 4 часа, «герой сытый»)
+import { getLootDef, tryEatFood } from '../systems/loot.js';
+import { createDialog } from '../utils/ui.js';
 
 export class CharacterScene extends Phaser.Scene {
     constructor() {
@@ -341,6 +345,15 @@ export class CharacterScene extends Phaser.Scene {
                 }).setOrigin(0.5).setVisible(false).setDepth(52);
                 hitArea.on('pointerover', () => tooltip.setVisible(true));
                 hitArea.on('pointerout', () => tooltip.setVisible(false));
+                // РАУНД 66.17 (п.4): съестное/добыча — клик открывает карточку
+                // с кнопкой «Съесть» (печёная рыба +2, жаркое +3, рацион +1);
+                // сырое мясо/сырая рыба — карточка-подсказка (готовить/продавать).
+                const foodDef = getLootDef(item.id);
+                if (foodDef && !item.equipped) {
+                    this.add.text(ix + 20, iy - 20, '🍽', { fontSize: '12px' })
+                        .setOrigin(0.5).setDepth(51);
+                    hitArea.on('pointerup', () => this.showFoodCard(item, foodDef));
+                }
             });
         }
 
@@ -349,5 +362,33 @@ export class CharacterScene extends Phaser.Scene {
             fontSize: '15px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
+    }
+
+    /**
+     * Раунд 66.17 (п.4): карточка съестного предмета узла.
+     * Съедобное — кнопка «Съесть» (правила meal.js: 1 час, кулдаун 4 ч,
+     * поп-ап «герой сытый»); сырое — подсказка «готовить на костре/продать».
+     */
+    showFoodCard(item, def) {
+        const p = this.registry.get('player');
+        const count = (item && item.count) || 0;
+        if (count <= 0) return;
+        if (def.edible) {
+            createDialog(this, `${def.emoji} ${t(def.name)}`,
+                tf(t('{0} ×{1} в узле. Съесть порцию: +{2} здоровья, час времени, кулдаун следующего приёма еды — 4 часа.'), t(def.name), count, def.heal),
+                [
+                    { text: t('🍽 Съесть'), callback: () => {
+                        const res = tryEatFood(this, p, item.id);
+                        if (res.ok) {
+                            this.scene.restart({ from: this.from, tab: 'inventory' });
+                        }
+                    } },
+                    { text: t('Отмена'), callback: () => {} },
+                ], { singleton: false });
+        } else {
+            createDialog(this, `${def.emoji} ${t(def.name)}`,
+                t('Сырым это не едят: приготовь на костре (лесное кострище или костёр пастухов — 30 мин) или продай трактирщику/мяснику.'),
+                [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+        }
     }
 }

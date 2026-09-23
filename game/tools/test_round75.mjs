@@ -109,8 +109,8 @@ console.log('— п.7: торговля (товары, оружие, прода�
     ok(isr.includes('Такая вещь у тебя уже есть'), 'повторная покупка блокируется');
     ok(isr.includes("item.id === 'icon' || item.uniqueFromElder"), 'икона и меч старосты не дарятся');
     ok(/showTavernShop\(\) \{[\s\S]*?willNpcRefuseTrade/.test(isr), 'постоялый двор: отказ при дурной славе');
-    // Раунд 66.16: каша = mealEffect (+1 HP · 1 час) — единые правила еды
-    ok(isr.includes('effect: mealEffect'), 'еда на постоялом дворе перекалибрована по 66.16 (+1 HP · 1 час)');
+    // Раунд 66.16: еда в таверне = час времени; раунд 66.17: полноценная еда 2–3 HP
+    ok(isr.includes("const mkEffect = (heal) => `+\${heal} HP"), 'еда на постоялом дворе: метка «+N HP · 1 час» (66.16/66.17)');
     const interiors = read('game/src/data/interiors.js');
     ok(!interiors.includes("id: 'torch'") && !interiors.includes("id: 'flint'"),
         'мёртвые товары (факел/кремень) сняты с продажи');
