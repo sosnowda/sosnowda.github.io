@@ -92,18 +92,20 @@ export function forestGatherSpots() {
             if (ch === 'm') {
                 spots.push({
                     id: `m${col}_${row}`, kind: 'mushroom', col, row,
-                    hp: 2, label: t('Грибы'), prompt: t('Сорвать грибы (+2 ❤)'),
-                    actionLog: 'Собрал грибов в лесу.',
-                    floatText: '+2 ❤', tint: 0xffd9a0,
+                    // Раунд 66.16 (приказ 2): грибы — еда, лечит ровно +1 HP
+                    hp: 1, label: t('Грибы'), prompt: t('Сорвать грибы (+1 ❤)'),
+                    actionLog: 'Собрал и съел грибов в лесу (час времени).',
+                    floatText: '+1 ❤', tint: 0xffd9a0,
                 });
             } else if (ch === 'b') {
                 spots.push({
                     id: `b${col}_${row}`, kind: 'berry', col, row,
                     hp: 1, label: t('Куст ягод'), prompt: t('Собрать ягоды (+1 ❤)'),
-                    actionLog: 'Обобрал куст лесных ягод.',
+                    actionLog: 'Обобрал и съел куст лесных ягод (час времени).',
                     floatText: '+1 ❤', tint: 0xffb0b0,
                 });
             } else if (ch === 'h') {
+                // Зверобой — лекарственная трава, НЕ еда (без кулдауна еды)
                 spots.push({
                     id: `h${col}_${row}`, kind: 'herb', col, row,
                     hp: 3, label: t('Зверобой'), prompt: t('Собрать зверобой (+3 ❤)'),

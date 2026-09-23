@@ -17,6 +17,8 @@ import { checkGameEnd } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
 import { dayKeyOf } from '../data/daily.js'; // раунд 66.10: daily вместо удалённого chests.js
+// Раунд 66.16 (приказы 1–3): лесные грибы/ягоды — еда (+1 HP, час, кулдаун 4 ч)
+import { MEAL_DURATION_MIN, canEat, registerMeal, showMealBlockedPopup } from '../systems/meal.js';
 import { createDialog } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
@@ -528,8 +530,9 @@ export class ForestScene extends Phaser.Scene {
         }
 
         const endState = checkGameEnd(this.registry);
+        // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
         if (endState) {
-            this.scene.start('End');
+            if (!this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
             return;
         }
 
@@ -746,14 +749,26 @@ export class ForestScene extends Phaser.Scene {
             this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, 'Уже собрано', '#b8a88a');
             return;
         }
+
+        // Раунд 66.16 (приказы 1–3): грибы и ягоды — ЕДА («съедено на месте»):
+        // ровно +1 HP, час времени и общий кулдаун еды 4 часа. Сытый герой
+        // не ест — поп-ап предупреждение, сбор не происходит (вернуться позже).
+        // Зверобой — лекарственная трава, не еда (без кулдауна).
+        const isFood = entry.kind === 'mushroom' || entry.kind === 'berry';
+        if (isFood && !canEat(this.registry).ok) {
+            showMealBlockedPopup(this);
+            return;
+        }
+
         gathered[entry.id] = today;
         q.forestGathered = gathered;
         this.registry.set('quest', q);
 
-        // Съедено на месте: лечение
+        // Съедено на месте: лечение (для еды — ровно +1 HP, приказ 2)
         const p = this.player;
         const heal = Math.min(entry.hp, p.HPmax - p.HP);
         p.HP += heal;
+        if (isFood) registerMeal(this.registry); // приказ 3: кулдаун 4 часа
         this.registry.set('player', p);
 
         if (entry.img) entry.img.setVisible(false);
@@ -765,7 +780,8 @@ export class ForestScene extends Phaser.Scene {
             this.showFloatingText(this.playerObj.x, this.playerObj.y - 26, `+${heal} ❤`, '#8adf8a');
         }
         ActionLog.add(this.registry, entry.actionLog);
-        tickTime(this.registry, 8);
+        // Приказ 1: перекус в лесу занимает 1 час; сбор трав — по-прежнему 8 минут
+        tickTime(this.registry, isFood ? MEAL_DURATION_MIN : 8);
         this.updateHUD();
     }
 

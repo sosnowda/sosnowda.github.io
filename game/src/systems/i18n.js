@@ -257,7 +257,7 @@ const EN = {
     'Грибы': 'Mushrooms',
     'Куст ягод': 'Berry bush',
     'Зверобой': 'St. John\'s wort',
-    'Сорвать грибы (+2 ❤)': 'Pick mushrooms (+2 ❤)',
+    'Сорвать грибы (+1 ❤)': 'Pick mushrooms (+1 ❤)',
     'Собрать ягоды (+1 ❤)': 'Gather berries (+1 ❤)',
     'Собрать зверобой (+3 ❤)': 'Gather St. John\'s wort (+3 ❤)',
 
@@ -677,12 +677,8 @@ const EN = {
     // ----- Раунд 22: отдых в таверне (п.10/12) -----
     '🛏 Отдых': '🛏 Rest',
     '🛏 Отдых в таверне': '🛏 Rest at the tavern',
-    'Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Отдохнёшь — силы вернутся.»':
-        'Fyodor wipes the counter: "The room is clean, the hay is fresh. Rest a while and your strength will return."',
     '⚠ ВНИМАНИЕ: погоня за вором продолжается! Пока ты спишь, вор уйдёт далеко. Отдых лучше отложить до победы.':
         '⚠ WARNING: the chase for the thief is still on! While you sleep, the thief will get far away. Better postpone your rest until after the victory.',
-    'Отдохнуть 1 час (4 д.) — лечение ~1/3': 'Rest for 1 hour (4 d.) — heal ~1/3',
-    'Ночлег 8 часов (12 д.) — полное восстановление': 'Lodge for 8 hours (12 d.) — full recovery',
     'Не хватает денег: нужно {0} д., а у тебя {1}.': 'Not enough money: {0} d. is needed, but you have {1}.',
     '😴 Отдых окончен': '😴 Rest is over',
     'Ты выспался, сил — не меряно... но пока ты спал, вор успел скрыться из вида!':
@@ -716,8 +712,8 @@ const EN = {
     '⏳ Время прошло': '⏳ Time has passed',
     'Ты провёл за столом в горнице {0}. Сейчас {1}, {2}.':
         'You spent {0} at the table in the common room. It is now {1}, {2}.',
-    'Сил это не вернуло — для лечения есть платный «Отдых» (1 ч / 8 ч) и костёр в лесу, у брошенного лагеря.':
-        'It did not restore your strength — for healing there is the paid "Rest" (1 h / 8 h) and the campfire in the forest, by the abandoned camp.',
+    'Сил это не вернуло — для лечения есть платный «Отдых» (от 1 до 12 ч) и костёр в лесу, у брошенного лагеря.':
+        'It did not restore your strength — for healing there is the paid "Rest" (1 to 12 hours) and the campfire in the forest, by the abandoned camp.',
     'Провёл время на постоялом дворе ({0}).': 'Spent time at the inn ({0}).',
     'Ты посидел за столом у Фёдора... но пока время шло, вор успел скрыться из вида!':
         "You sat at Fyodor's table for hours... but while the time was passing, the thief managed to vanish from sight!",
@@ -732,10 +728,6 @@ const EN = {
     'в лесу': 'in the forest', 'в поле': 'in the field', 'у ворот': 'at the gate',
     'в церкви': 'in the church', 'на улице деревни': 'in the village street', 'дома': 'at home',
     '🍯 Купить мёд (8 д.)': '🍯 Buy honey (8 d.)',
-    'Марфа качает головой: «Мёд — он как лекарство: три ложки в день, и довольно. Больше — не на пользу, а во вред. Приходи завтра».':
-        'Marfa shakes her head: "Honey is like medicine: three spoonfuls a day, and that\'s it. More does harm, not good. Come back tomorrow."',
-    '«Не раньше, чем через час. Мёд силён, дай ему разойтись по крови», — говорит Марфа.':
-        '"Not before an hour passes. Honey is potent — let it settle in your blood first," Marfa says.',
     '«Без денег мёд не дам, — строго говорит Марфа. — Горшочек трудом достаётся». (Нужно 8 д.)':
         '"No honey without money," Marfa says sternly. "That pot is hard-won." (8 d. needed)',
     'Марфа наливает полную ложку янтарного мёда. Тепло разливается по телу, силы возвращаются.':
@@ -759,7 +751,6 @@ const EN = {
         'Fyodor shakes his head: "Without coin even the shchi come out thin. Two dengas needed."',
     'Фёдор ставит перед тобой миску горячих щей, краюху ржаного хлеба и кружку кваса. Ешь не спеша — силы понемногу возвращаются.':
         'Fyodor sets before you a bowl of hot shchi, a hunk of rye bread and a mug of kvass. Eat unhurried — your strength slowly returns.',
-    'Трапеза пройдёт в тот час, что уйдёт на беседу с хозяином.': 'The meal takes the same hour your talk with the host costs.',
     '«Два дняги — цена хлеба да бурдюка воды. Без денег не выйдет», — говорит Фёдор.':
         '"Two dengas — the price of a loaf and a waterskin. It won\'t happen without coin," Fyodor says.',
     'Рацион (хлеб да вода на день дороги)': 'Ration (bread and water for a day\'s travel)',
@@ -1651,9 +1642,6 @@ const EN = {
     'Спасибо': 'Thanks',
     'Мастерская': 'Workshop',
     'Гончарного зерна тут нет — только глина, дрова и ряды горшков на просушке.': 'There is no potter\'s grain here — only clay, firewood and rows of pots drying.',
-    'В углу мастерской нашлась горсть сушёных яблок — Игнат не обидится. +2 здоровья.':
-        'In the corner of the workshop a handful of dried apples was found — Ignat will not take offence. +2 health.',
-    'Подкрепился сушёными яблоками в мастерской: +2 HP.': 'Refreshed with dried apples in the workshop: +2 HP.',
     'мышь-хвостунья черкнула за мешками глины': 'a long-tailed mouse darted behind the sacks of clay',
     'воробей вылетел в слуховое окно': 'a sparrow flew out of the small window',
     'кот-невидимка оставил следы на просушке': 'an invisible cat left tracks on the drying pots',
@@ -1945,6 +1933,37 @@ const EN = {
     'Постоялый двор': 'Lodging-house',
     'содержатель постоялого двора': 'lodging-house keeper',
     'На большой дороге тебе преградили путь лихие люди!': 'On the great road, highwaymen bar your way!',
+
+    // ----- Раунд 66.16 (приказы владельца 1–7): единые правила еды и сна, «переночевать», женский портрет воровки, гард очереди переходов -----
+    '🥣 Герой сыт': '🥣 The hero is full',
+    'Герой сыт и больше не может есть — съеденное ещё не переварилось. Следующий приём еды будет позже.':
+        'The hero is full and cannot eat any more — the previous meal has not yet settled. The next meal will have to wait a bit later.',
+    '😴 Герой не хочет спать': '😴 The hero does not want to sleep',
+    'Герой не хочет спать — он только недавно встал. Отдых отменён.':
+        'The hero does not want to sleep — he only just got up. Rest cancelled.',
+    '1 час': '1 hour',
+    'час времени': 'an hour of time',
+    'Купил и съел «{0}» на постоялом дворе за {1} д. (+{2} HP, час времени).':
+        'Bought and ate "{0}" at the lodging house for {1} d. (+{2} HP, one hour of time).',
+    'Ночлег {0} ч ({1} д.) {2}': 'Lodge for {0} h ({1} d.) {2}',
+    'Отдохнуть {0} ч ({1} д.) {2}': 'Rest for {0} h ({1} d.) {2}',
+    '— лечение ~1/3': '— heal ~1/3',
+    '— полное восстановление': '— full recovery',
+    '— сон {0} ({1} д.)': '— sleep {0} ({1} d.)',
+    '🌙 До полуночи (в 0:00)': '🌙 Until midnight (at 0:00)',
+    'Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Сколько будешь отдыхать?»':
+        'Fyodor wipes the counter: "The room is clean, the hay is fresh. How long will you rest?"',
+    'Подкрепился сушёными яблоками в мастерской: +1 HP (час времени).':
+        'Refreshed with dried apples in the workshop: +1 HP (one hour of time).',
+    'В углу мастерской нашлась горсть сушёных яблок — Игнат не обидится. Перекус занял час: +1 здоровья.':
+        'In the corner of the workshop a handful of dried apples was found — Ignat will not take offence. The snack took an hour: +1 health.',
+    '🛏 Переночевать (за деньги)': '🛏 Lodge for the night (for money)',
+    'Трапеза заняла ровно один час игрового времени.': 'The meal took exactly one hour of game time.',
+    'Заказал еду у хозяина постоялого двора (2 д.): +1 HP, час времени.':
+        'Ordered a meal from the lodging house keeper (2 d.): +1 HP, one hour of time.',
+    'Купил мёд у Марфы (8 д.): +1 HP, час времени.': 'Bought honey from Marfa (8 d.): +1 HP, one hour of time.',
+    '(Осенний жор: рыба берёт жадно, но сыт герой не объестся сверх меры.)':
+        '(Autumn frenzy: the fish bite greedily, but a full hero eats no more than he should.)',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----
@@ -2165,7 +2184,6 @@ const EN_KEYS = {
     'Сберечь рыбу': 'Spare the fish',
     'Рыба жирует перед зимой и берёт жадно: крючок едва успевает коснуться дна. Корзина полна!':
         'The fish are fattening before winter and bite greedily: the hook barely touches the bottom before a strike. The basket is full!',
-    '(Осенний жор: +2 ❤ к улову.)': '(Autumn frenzy: +2 ❤ to the catch.)',
 
     // --- Раунд 66.11: свадьба = победа и конец игры (приказ владельца) ---
     '💍 ПОБЕДА! СВАДЬБА СЫГРАНА': '💍 VICTORY! THE WEDDING IS HELD',

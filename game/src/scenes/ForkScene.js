@@ -248,8 +248,9 @@ export class ForkScene extends Phaser.Scene {
     update() {
         // Раунд 21: побег вора или иные концы закрывают поход
         if (this.busyDialog) return;
+        // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
         const endState = checkGameEnd(this.registry);
-        if (endState) this.scene.start('End');
+        if (endState && !this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
     }
 
     // П.17: Карта местности с указанием положения игрока

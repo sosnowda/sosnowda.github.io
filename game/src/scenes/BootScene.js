@@ -77,6 +77,61 @@ import { ensureFemaleChestTexture, ensureHeadTextures } from '../systems/Charact
             }
         };
     }
+
+    // ============================================================
+    // Раунд 66.16 (приказ 5, гард р.41): ОЧЕРЕДЬ ПЕРЕХОДОВ СЦЕН больше
+    // не застревает. Родной SceneManager.processQueue исполняет _queue
+    // сплошным циклом и очищает её ТОЛЬКО в конце: одно исключение внутри
+    // op обрывало цикл, очередь оставалась «отравленной» — каждый кадр
+    // падал на той же записи, а все новые переходы копились за ней
+    // (QA_ROUND66_13: «цикл жив, очередь переходов застревает до
+    // рестарта сцены»). Гард:
+    //   1) подряд идущие дубли-опы схлопываются (шторм из update()-циклов
+    //      и двойных кликов больше не раздувает очередь);
+    //   2) каждый op исполняется в try/catch — упавшая запись ВЫБРАСЫВАЕТСЯ
+    //      из очереди, а не блокирует все последующие переходы;
+    //   3) защитный кап 64 op за кадр — патологический пинг-понг
+    //      A→B→A не может зациклить кадр (остаток доедет на следующем).
+    // ============================================================
+    const origProcessQueue = SM && SM.prototype && SM.prototype.processQueue;
+    if (typeof origProcessQueue === 'function') {
+        SM.prototype.processQueue = function () {
+            try {
+                // 1) дедуп ПОДРЯД идущих одинаковых op (stop,stop / start,start)
+                const src = Array.isArray(this._queue) ? this._queue : [];
+                if (src.length > 1) {
+                    const dedup = [];
+                    for (const entry of src) {
+                        const prev = dedup[dedup.length - 1];
+                        if (prev && prev.op === entry.op && prev.keyA === entry.keyA) continue;
+                        dedup.push(entry);
+                    }
+                    this._queue = dedup;
+                }
+                // 2) дренаж очереди по одной записи, упавшая — выбрасывается
+                let budget = 64;
+                while (Array.isArray(this._queue) && this._queue.length && budget-- > 0) {
+                    const entry = this._queue[0];
+                    try {
+                        this[entry.op](entry.keyA, entry.keyB, entry.data);
+                    } catch (err) {
+                        this.isProcessing = false; // критично: не оставить цикл замороженным
+                        console.error('[Летописи:гард] op очереди сцен выброшен:', entry.op, entry.keyA, err);
+                    }
+                    this._queue.shift(); // критично: запись уходит ДАЖЕ при ошибке
+                }
+                if (budget <= 0) {
+                    console.warn('[Летописи:гард] очередь сцен: кап 64 op за кадр, остаток на следующий кадр');
+                }
+                return;
+            } catch (e) {
+                // Совсем неожиданное — чистим очередь и откатываемся на родную
+                console.error('[Летописи:гард] processQueue fallback:', e);
+                try { this._queue.length = 0; } catch (e2) { /* ignore */ }
+                try { return origProcessQueue.call(this); } catch (e3) { /* цикл жив */ }
+            }
+        };
+    }
 })();
 
 export class BootScene extends Phaser.Scene {
@@ -193,8 +248,10 @@ export class BootScene extends Phaser.Scene {
         // Раунд 34: thief — воровское лицо (капюшон/шрам/ухмылка), boy/girl — дети.
         // Раунд 35: elder_wife — седая старуха (раньше «старухе хозяйке» показывали
         // молодой портрет villager_f — визуальная несостыковка).
+        // Раунд 66.16 (приказ 6): thief_f — ЖЕНСКИЙ портрет воровки (пол вора
+        // случайный, раньше у воровки показывали мужское лицо).
         ['elder', 'priest', 'tavernkeeper', 'blacksmith', 'widow', 'healer',
-         'hunter', 'guard', 'fisherman', 'peasant', 'thief', 'narrator', 'villager_f',
+         'hunter', 'guard', 'fisherman', 'peasant', 'thief', 'thief_f', 'narrator', 'villager_f',
          'boy', 'girl', 'elder_wife'].forEach((p) => {
             this.load.image(`portrait_${p}`, `assets/sprites/portraits/portrait_${p}.webp`);
         });

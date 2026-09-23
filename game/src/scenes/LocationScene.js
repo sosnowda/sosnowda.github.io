@@ -16,6 +16,8 @@ import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import { getTime, getDayNightOverlay, tickTime, getSeason } from '../systems/TimeSystem.js';
+// Раунд 66.16 (приказы 1–3): улов съедается на месте — правила еды (+1 HP, кулдаун)
+import { MEAL_HEAL_HP, canEat, registerMeal, showMealBlockedPopup } from '../systems/meal.js';
 // Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
 import { MAP_TRAVEL_MINUTES } from './ForkScene.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
@@ -417,15 +419,24 @@ export class LocationScene extends Phaser.Scene {
         playWaterSplash(this, winter ? 0.5 : 0.7);
 
         if (!caught) {
+            // Раунд 66.16 (приказы 1–3): улов съедается на месте — это приём еды:
+            // ровно +1 HP (погодные/сезонные бусты сняты), час рыбалки и общий
+            // кулдаун еды 4 часа. Сытый герой не рыбачит — поп-ап, время не идёт.
+            if (!canEat(this.registry).ok) {
+                showMealBlockedPopup(this);
+                return;
+            }
             tickTime(this.registry, 60);
             markActionDone(q, 'fish_daily', today);
             this.registry.set('quest', q);
-            // Раунд 14: в дождь рыба активнее (+4 вместо +3).
-            // Раунд 66.7: осенний жор — ещё +2 (сезонный бонус).
+            // Погода/сезон — только для текста улова: раунд 66.16 снял
+            // бусты лечения (приказ 2: любая еда — ровно +1 HP)
             const weather = getWeather(this.registry);
             const raining = weather && isRainy(weather);
-            const heal = (raining ? 4 : 3) + (season.bonus || 0);
+            // Раунд 66.16 (приказ 2): любая еда — ровно +1 HP
+            const heal = MEAL_HEAL_HP;
             player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
+            registerMeal(this.registry); // приказ 3: кулдаун еды 4 часа
             this.registry.set('player', player);
             let catchLine;
             if (winter) {
@@ -444,8 +455,8 @@ export class LocationScene extends Phaser.Scene {
                     : tf(t('Наловил рыбы на реке к обеду (+{0} ❤).'), heal)));
             createDialog(this, title,
                 catchLine
-                + `\n\n${t('Свежая рыба')}: +${heal} ❤.`
-                + (season.id === 'autumn_feed' ? `\n${t('(Осенний жор: +2 ❤ к улову.)')}` : ''),
+                + `\n\n${t('Свежая рыба')}: +${heal} ❤ · ${t('час времени')}.`
+                + (season.id === 'autumn_feed' ? `\n${t('(Осенний жор: рыба берёт жадно, но сыт герой не объестся сверх меры.)')}` : ''),
                 [{ text: t('Взять улов'), callback: () => {} }]);
         } else {
             tickTime(this.registry, 15);
@@ -820,8 +831,9 @@ export class LocationScene extends Phaser.Scene {
     update() {
         // Раунд 21: побег вора закрывает поход (пока открыт диалог — ждём)
         if (this.busyDialog) return;
+        // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
         const endState = checkGameEnd(this.registry);
-        if (endState) this.scene.start('End');
+        if (endState && !this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
     }
 
     // ============================================================

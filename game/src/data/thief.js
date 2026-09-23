@@ -1289,7 +1289,7 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
             // Последний шанс упущен — вор сбежал
             createDialog(scene, t('🏃 Вор скрылся!'), result.message, [
                 { text: t('Итоги похода'), callback: () => scene.scene.start('End') },
-            ], { singleton: false, portraitKey: 'portrait_thief', typing: true, typingSpeed: 25 });
+            ], { singleton: false, portraitKey: getThiefPortraitKey(registry), typing: true, typingSpeed: 25 });
             return;
         }
         if (result.success) {
@@ -1302,7 +1302,7 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
         // Вор вырвался и бежит — остаёмся в локации
         createDialog(scene, t('💨 Вор вырвался!'), result.message, [
             { text: t('Продолжить'), callback: () => { scene.busyDialog = false; } },
-        ], { singleton: false, portraitKey: 'portrait_thief', typing: true, typingSpeed: 25 });
+        ], { singleton: false, portraitKey: getThiefPortraitKey(registry), typing: true, typingSpeed: 25 });
     };
 
     const noun = thiefNounInstr(registry);
@@ -1340,7 +1340,7 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
                 callback: () => { scene.busyDialog = false; },
             },
         ],
-        { singleton: false, portraitKey: 'portrait_thief', typing: true, typingSpeed: 25 });
+        { singleton: false, portraitKey: getThiefPortraitKey(registry), typing: true, typingSpeed: 25 });
 
     return sprite;
 }
@@ -1682,6 +1682,15 @@ export function getThiefGender(registry) {
 /** Спрайт-лист вора по полу (4×4 @64px, анимации в BootScene). */
 export function getThiefSpriteKey(registry) {
     return getThiefGender(registry) === 'female' ? 'enemy_thief_f' : 'enemy_thief_m';
+}
+
+/**
+ * Раунд 66.16 (приказ 6): ПОРТРЕТ Вора по полу. Раньше все поп-апы
+ * погони хардкодили мужской 'portrait_thief' даже для воровки —
+ * теперь у воровки свой женский портрет (portrait_thief_f, BootScene).
+ */
+export function getThiefPortraitKey(registry) {
+    return getThiefGender(registry) === 'female' ? 'portrait_thief_f' : 'portrait_thief';
 }
 
 /** Слово для текстов: «вор» / «воровка». */

@@ -707,8 +707,9 @@ export class ApiaryScene extends Phaser.Scene {
         }
 
         const endState = checkGameEnd(this.registry);
+        // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
         if (endState) {
-            this.scene.start('End');
+            if (!this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
             return;
         }
 

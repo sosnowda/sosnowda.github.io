@@ -892,9 +892,11 @@ export class VillageScene extends Phaser.Scene {
         }
 
         // Проверка конца игры
+        // Раунд 66.16 (гард р.41): защёлка — update() больше не кладёт
+        // стопу stop/start'End' в очередь сцен каждый кадр
         const endState = checkGameEnd(this.registry);
         if (endState) {
-            this.scene.start('End');
+            if (!this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
             return;
         }
         
@@ -909,10 +911,11 @@ export class VillageScene extends Phaser.Scene {
             q.expelledFromVillage = true;
             q.currentObjective = 'Изгнан из деревни за дурную славу.';
             this.registry.set('quest', q);
-            this.scene.start('End');
+            // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
+            if (!this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
             return;
         }
-        
+
         // Пункт 13 / Раунд 36: репутационная победа при репутации +100 —
         // ОТДЕЛЬНАЯ ветка финала. Флаг q.thiefDefeated больше НЕ трогаем
         // (раньше погоня молча умирала и итоги врали «ВОР ПОВЕРЖЕН»);
@@ -926,7 +929,8 @@ export class VillageScene extends Phaser.Scene {
             q.reputationVictory = true;
             q.currentObjective = t('Тебя приняли в деревню как своего! Победа!');
             this.registry.set('quest', q);
-            this.scene.start('End');
+            // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
+            if (!this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
             return;
         }
         // Порог +100 взят ДО «обучалки»/выбора продолжения — один раз за игру

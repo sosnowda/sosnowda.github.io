@@ -109,7 +109,8 @@ console.log('— п.7: торговля (товары, оружие, прода�
     ok(isr.includes('Такая вещь у тебя уже есть'), 'повторная покупка блокируется');
     ok(isr.includes("item.id === 'icon' || item.uniqueFromElder"), 'икона и меч старосты не дарятся');
     ok(/showTavernShop\(\) \{[\s\S]*?willNpcRefuseTrade/.test(isr), 'постоялый двор: отказ при дурной славе');
-    ok(isr.includes("effect: '+5 HP'"), 'каша перекалибрована (+5 HP)');
+    // Раунд 66.16: каша = mealEffect (+1 HP · 1 час) — единые правила еды
+    ok(isr.includes('effect: mealEffect'), 'еда на постоялом дворе перекалибрована по 66.16 (+1 HP · 1 час)');
     const interiors = read('game/src/data/interiors.js');
     ok(!interiors.includes("id: 'torch'") && !interiors.includes("id: 'flint'"),
         'мёртвые товары (факел/кремень) сняты с продажи');

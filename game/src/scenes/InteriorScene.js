@@ -37,6 +37,8 @@ import { getNpcWornLine } from '../data/characters.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
+// Раунд 66.16 (приказы 1–4): единые правила еды и сна (кукдауны, поп-апы)
+import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal, canSleep, registerSleep, showMealBlockedPopup, showSleepBlockedPopup } from '../systems/meal.js';
 
 export class InteriorScene extends Phaser.Scene {
     constructor() {
@@ -1273,14 +1275,17 @@ export class InteriorScene extends Phaser.Scene {
         // Список товаров с учётом репутации (п.13.2: скидки при высокой репутации).
         // Раунд 22: «Ночлег» убран из лавки — отдых теперь живёт в меню «Отдых»
         // (1 час / 8 часов), чтобы время реально текло, пока герой спит.
-        // Раунд 66.12 (п.7): перекалибровка (каша была выгоднее хлеба вдвое хуже).
+        // Раунд 66.16 (приказы 1–3): ЛЮБАЯ еда лечит РОВНО +1 HP, занимает
+        // РОВНО 1 час и имеет ОБЩИЙ кулдаун 4 часа (см. systems/meal.js).
+        // Медовуха и квас — тоже еда/питьё: +1 HP, Воля едой не восстанавливается.
         const priceMod = getPriceModifier(this.registry, 'tavernkeeper');
         const modNote = priceMod < 1 ? t(' (скидка за добрую славу)') : (priceMod > 1 ? t(' (наценка за дурную славу)') : '');
+        const mealEffect = `+${MEAL_HEAL_HP} HP · ${t('1 час')}`;
         const items = [
-            { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: '+2 HP', heal: 2, mpHeal: 0 },  // name через t() при показе
-            { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: '+5 HP', heal: 5, mpHeal: 0 },
-            { id: 'mead', name: 'Медовуха', price: Math.max(1, Math.round(4 * priceMod)), effect: '+2 MP', heal: 0, mpHeal: 2 },
-            { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: '+2 MP', heal: 0, mpHeal: 2 },
+            { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: mealEffect, heal: MEAL_HEAL_HP, mpHeal: 0 },  // name через t() при показе
+            { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: mealEffect, heal: MEAL_HEAL_HP, mpHeal: 0 },
+            { id: 'mead', name: 'Медовуха', price: Math.max(1, Math.round(4 * priceMod)), effect: mealEffect, heal: MEAL_HEAL_HP, mpHeal: 0 },
+            { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: mealEffect, heal: MEAL_HEAL_HP, mpHeal: 0 },
         ];
 
         const { width, height } = this.scale;
@@ -1315,12 +1320,22 @@ export class InteriorScene extends Phaser.Scene {
                     ], { singleton: false, portraitKey: 'portrait_tavernkeeper' });
                     return;
                 }
+                // Раунд 66.16 (приказ 3): кулдаун еды 4 часа — при попытке
+                // поесть во время отката всплывает поп-ап «герой сытый»,
+                // деньги НЕ списываются, время НЕ идёт.
+                if (!canEat(this.registry).ok) {
+                    showMealBlockedPopup(this);
+                    return;
+                }
                 player.dengas -= item.price;
                 this.audioManager.playGoldSpend(); // раунд 24: расплата монетами
                 player.HP = Math.min(player.HPmax, player.HP + item.heal);
                 player.MP = Math.min(player.MPmax, player.MP + item.mpHeal);
+                registerMeal(this.registry); // приказ 3: кулдаун 4 часа
+                // Приказ 1: еда ВСЕГДА занимает 1 час игрового времени
+                tickTime(this.registry, MEAL_DURATION_MIN);
                 this.registry.set('player', player);
-                ActionLog.add(this.registry, tf(t('Купил «{0}» на постоялом дворе за {1} д. ({2}).'), t(item.name), item.price, item.effect));
+                ActionLog.add(this.registry, tf(t('Купил и съел «{0}» на постоялом дворе за {1} д. (+{2} HP, час времени).'), t(item.name), item.price, item.heal));
                 this.updateHUD();
                 // Закрыть меню и открыть заново с обновлённым балансом
                 overlay.destroy();
@@ -1348,32 +1363,66 @@ export class InteriorScene extends Phaser.Scene {
 
     /**
      * Раунд 22 (п.10/12): ОТДЫХ В ТАВЕРНЕ.
-     * - Отдых 1 час (4 д.) — лечение около трети здоровья и Воли;
-     * - Ночлег 8 часов (12 д.) — ПОЛНОЕ восстановление здоровья и Воли.
-     * (Раунд 23: ваучер «Бесплатный ночлег» убран по просьбе владельца.)
+     * Раунд 66.16 (приказы 2, 4, 7): выбор времени отдыха — от 1 до 12 часов
+     * ИЛИ фиксированное «до утра / до полудня / до вечера / до полуночи».
+     * Кулдаун сна 12 часов: при попытке поспать во время отката — поп-ап
+     * «герой не хочет спать», отдых отменяется (без денег и времени).
+     * Отдых <8 ч лечит около трети здоровья и Воли, 8 ч и более — ПОЛНОЕ
+     * восстановление. (Раунд 23: ваучер «Бесплатный ночлег» убран.)
      * Время реально течёт: во время погони за вором сон — дорогое решение.
      */
     showTavernRestMenu(interior) {
         if (this.busyDialog) return;
+        // Приказ 4: кулдаун сна 12 часов — «герой не хочет спать», отмена.
+        if (!canSleep(this.registry).ok) {
+            showSleepBlockedPopup(this);
+            return;
+        }
         const chaseActive = isChaseActive(this.registry);
 
         const warning = chaseActive
             ? '\n\n' + t('⚠ ВНИМАНИЕ: погоня за вором продолжается! Пока ты спишь, вор уйдёт далеко. Отдых лучше отложить до победы.')
             : '';
 
+        // Приказ 2: цены — минимум 4 д., 2 д. за час, но не дороже 12 д.
+        const costOf = (h) => Math.min(12, Math.max(4, h * 2));
+        const healLabel = t('— лечение ~1/3');
+        const fullLabel = t('— полное восстановление');
+        const hourOptions = [1, 2, 3, 4, 6, 8, 12].map((h) => ({
+            text: (h >= 8)
+                ? tf(t('Ночлег {0} ч ({1} д.) {2}'), h, costOf(h), fullLabel)
+                : tf(t('Отдохнуть {0} ч ({1} д.) {2}'), h, costOf(h), healLabel),
+            hours: h,
+        }));
+        // Фиксированное время: спим ровно до цели (минутами, без округления)
+        const fixedOptions = [
+            { hour: 6,  key: '🌅 До утра (в 6:00)' },
+            { hour: 12, key: '☀️ До полудня (в 12:00)' },
+            { hour: 16, key: '🌇 До вечера (в 16:00)' },
+            { hour: 0,  key: '🌙 До полуночи (в 0:00)' },
+        ].map((f) => {
+            const mins = this.minutesUntilHour(f.hour);
+            const h = Math.ceil(mins / 60);
+            return {
+                text: `${t(f.key)} ${tf(t('— сон {0} ({1} д.)'), this.spendHoursLabel(mins), costOf(h))}`,
+                hours: h,
+                minutes: mins,
+            };
+        });
+
         this.busyDialog = true;
         createDialog(this, t('🛏 Отдых в таверне'),
-            t('Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Отдохнёшь — силы вернутся.»')
+            t('Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Сколько будешь отдыхать?»')
             + warning,
             [
-                {
-                    text: t('Отдохнуть 1 час (4 д.) — лечение ~1/3'),
-                    callback: () => { this.busyDialog = false; this.restInTavern(interior, 1); },
-                },
-                {
-                    text: t('Ночлег 8 часов (12 д.) — полное восстановление'),
-                    callback: () => { this.busyDialog = false; this.restInTavern(interior, 8); },
-                },
+                ...hourOptions.map((o) => ({
+                    text: o.text,
+                    callback: () => { this.busyDialog = false; this.restInTavern(interior, o.hours); },
+                })),
+                ...fixedOptions.map((o) => ({
+                    text: o.text,
+                    callback: () => { this.busyDialog = false; this.restInTavern(interior, o.hours, o.minutes); },
+                })),
                 {
                     text: t('Не сейчас'),
                     callback: () => { this.busyDialog = false; },
@@ -1384,12 +1433,24 @@ export class InteriorScene extends Phaser.Scene {
 
     /**
      * Раунд 22: выполнить отдых в таверне (см. showTavernRestMenu).
-     * 1 час лечит ~1/3 HP и Воли, 8 часов восстанавливают всё.
+     * Раунд 66.16: hours = длительность сна (1..12+), minutesOverride —
+     * точная длительность для «до утра/полудня/вечера/полуночи».
+     * Кулдаун сна 12 часов (приказ 4): при откате — поп-ап «герой не
+     * хочет спать», отдых отменён. После сна кулдаун ставится.
+     * <8 ч лечит ~1/3 HP и Воли, 8+ часов восстанавливают всё.
      */
-    restInTavern(interior, hours) {
+    restInTavern(interior, hours, minutesOverride) {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
-        const cost = hours >= 8 ? 12 : 4;
+        const cost = Math.min(12, Math.max(4, hours * 2));
+        const sleepMinutes = (minutesOverride && minutesOverride > 0) ? minutesOverride : hours * 60;
+
+        // Приказ 4: кулдаун сна 12 часов (страховка от прямых вызовов —
+        // меню уже проверяет; здесь герой ничего не платит и не теряет время)
+        if (!canSleep(this.registry).ok) {
+            showSleepBlockedPopup(this);
+            return;
+        }
 
         if ((player.dengas || 0) < cost) {
             createDialog(this, t('🛏 Отдых'),
@@ -1404,8 +1465,10 @@ export class InteriorScene extends Phaser.Scene {
         this.time.delayedCall(650, () => {
             player.dengas = (player.dengas || 0) - cost;
 
-            // Время реально течёт (8 часов = 32 тика погони!)
-            tickTime(this.registry, hours * 60);
+            // Время реально течёт (8 часов = 32 тика погони!);
+            // приказ 4: после пробуждения — кулдаун сна на 12 часов
+            tickTime(this.registry, sleepMinutes);
+            registerSleep(this.registry);
 
             let effectText;
             if (hours >= 8) {
@@ -1650,7 +1713,7 @@ export class InteriorScene extends Phaser.Scene {
                     createDialog(sceneRef, t('⏳ Время прошло'),
                         tf(t('Ты провёл за столом в горнице {0}. Сейчас {1}, {2}.'),
                             sceneRef.spendHoursLabel(minutes), hhmm, ts ? formatTime(ts) : '')
-                        + '\n' + t('Сил это не вернуло — для лечения есть платный «Отдых» (1 ч / 8 ч) и костёр в лесу, у брошенного лагеря.'),
+                        + '\n' + t('Сил это не вернуло — для лечения есть платный «Отдых» (от 1 до 12 ч) и костёр в лесу, у брошенного лагеря.'),
                         [{ text: t('Понятно'), callback: () => { sceneRef.busyDialog = false; } }],
                         { singleton: false, portraitKey: sceneRef.npcPortraitKey, typing: true, typingSpeed: 25 });
                 }
@@ -2079,12 +2142,17 @@ export class InteriorScene extends Phaser.Scene {
         tickTime(this.registry, 10);
         const player = this.registry.get('player');
         let extra = '';
-        if (Math.random() < 0.2 && player && (player.HP || 0) < (player.HPmax || 10)) {
-            player.HP = Math.min(player.HPmax || player.HP + 2, player.HP + 2);
+        // Раунд 66.16 (приказы 1–3): сушёные яблоки — тоже еда: +1 HP,
+        // кулдаун 4 часа; сытый герой яблок не находит (бонус не выпадает).
+        if (Math.random() < 0.2 && player && canEat(this.registry).ok && (player.HP || 0) < (player.HPmax || 10)) {
+            player.HP = Math.min(player.HPmax || player.HP + MEAL_HEAL_HP, player.HP + MEAL_HEAL_HP);
+            registerMeal(this.registry);
+            // Приказ 1: перекус — это приём еды, занимает 1 час
+            tickTime(this.registry, MEAL_DURATION_MIN);
             this.registry.set('player', player);
             this.updateHUD();
-            extra = '\n\n' + t('В углу мастерской нашлась горсть сушёных яблок — Игнат не обидится. +2 здоровья.');
-            ActionLog.add(this.registry, t('Подкрепился сушёными яблоками в мастерской: +2 HP.'));
+            extra = '\n\n' + t('В углу мастерской нашлась горсть сушёных яблок — Игнат не обидится. Перекус занял час: +1 здоровья.');
+            ActionLog.add(this.registry, t('Подкрепился сушёными яблоками в мастерской: +1 HP (час времени).'));
         }
         const mice = [t('мышь-хвостунья черкнула за мешками глины'), t('воробей вылетел в слуховое окно'), t('кот-невидимка оставил следы на просушке')];
         createDialog(this, t('Осмотр мастерской'),

@@ -13,6 +13,8 @@ import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, checkGam
 import { tavernRumorLine } from './rumors.js';
 import { ActionLog } from './actionLog.js';
 import { tickTime, getTime } from '../systems/TimeSystem.js';
+// Раунд 66.16 (приказы 1–3): единые правила еды — +1 HP, час, кулдаун 4 ч
+import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal } from '../systems/meal.js';
 import { t, tf } from '../systems/i18n.js';
 // Раунд 45 (пп.5,6 заявки): староста мирит игрока с разозлёнными НПЦ за виру
 // Раунд 46 (п.4): со СТАРОСТОЙ всегда можно помириться (getViraCandidates)
@@ -266,6 +268,17 @@ export const DIALOGUES = {
                     DIALOGUES.tavernkeeper.nodes.a.choices = withAskThief(scene, 'tavernkeeper', [
                         { text: t('🍲 Заказать еду (2 д.)'), next: 'meal' },
                         { text: t('🎒 Купить рацион на день дороги (2 д.)'), next: 'ration' },
+                        // Раунд 66.16 (приказ 7): тавернщик обещал «переночевать» —
+                        // теперь у беседы есть пункт ночлега (открывает меню «Отдых»)
+                        {
+                            text: t('🛏 Переночевать (за деньги)'),
+                            end: true,
+                            action: (scene) => {
+                                // Диалог закроется (_finish), меню отдыха — на следующий кадр
+                                scene.busyDialog = false;
+                                scene.time.delayedCall(0, () => scene.showTavernRestMenu(scene.interior));
+                            },
+                        },
                         { text: t('Что нового в деревне?'), next: 'b' },
                         { text: t('🗣 Что слыхал нового? (слухи)'), next: 'rumor' },
                         { text: t('Попросить денег'), next: 'ask_money' },
@@ -274,31 +287,39 @@ export const DIALOGUES = {
                 },
                 choices: [],
             },
-            // Раунд 30 (п.11): еда НЕМНОГО восстанавливает здоровье и занимает
-            // РОВНО 1 ЧАС времени. Цена 2 деньги — по каталогу харчей
-            // ChroniclesRuthenia: каравай ржаного хлеба (1 д.) + похлёбка (1 д.).
+            // Раунд 30 (п.11): еда немного восстанавливает здоровье.
+            // Раунд 66.16 (приказы 1–3): ЛЮБАЯ еда — РОВНО +1 HP, РОВНО 1 час
+            // игрового времени и общий кулдаун еды 4 часа (герой сытый).
             meal: {
                 speaker: 'Тавернщик Фёдор',
                 text: '...',
                 action: (scene) => {
                     const player = scene.registry.get('player');
                     const MEAL_PRICE = 2; // хлеб 1 д. + похлёбка 1 д. (FoodCatalog)
+                    // Раунд 66.16 (приказ 3): кулдаун еды 4 часа
+                    if (!canEat(scene.registry).ok) {
+                        scene._lastAskResult = { message: t('Герой сыт и больше не может есть — съеденное ещё не переварилось. Следующий приём еды будет позже.') };
+                        return;
+                    }
                     if ((player.dengas || 0) < MEAL_PRICE) {
                         scene._lastAskResult = { message: t('Фёдор качает головой: «Без денег и щи жидкие не варятся. Нужно 2 д.»') };
                         return;
                     }
                     player.dengas -= MEAL_PRICE;
-                    const heal = 1 + Math.floor(Math.random() * 3); // немного: 1..3 HP
+                    // Раунд 66.16 (приказ 2): любая еда лечит ровно +1 HP
+                    const heal = MEAL_HEAL_HP;
                     const before = player.HP;
                     player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
+                    registerMeal(scene.registry); // приказ 3: кулдаун 4 часа
+                    // Раунд 66.16 (приказ 1): еда занимает РОВНО 1 час времени
+                    // (сверх часа беседы — разговор и трапеза теперь отдельные дела)
+                    tickTime(scene.registry, MEAL_DURATION_MIN);
                     scene.registry.set('player', player);
-                    // Раунд 31 (пп.11,12): час списывается при закрытии беседы
-                    // (трапеза — внутри того же часа разговора с хозяином)
                     if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
-                    ActionLog.add(scene.registry, t(`Заказал еду у хозяина постоялого двора (2 д.): +${player.HP - before} HP.`));
+                    ActionLog.add(scene.registry, t('Заказал еду у хозяина постоялого двора (2 д.): +1 HP, час времени.'));
                     scene._lastAskResult = {
                         message: t('Фёдор ставит перед тобой миску горячих щей, краюху ржаного хлеба и кружку кваса. Ешь не спеша — силы понемногу возвращаются.') +
-                            `\n\n✚ Здоровье: +${player.HP - before} HP (${before} → ${player.HP})\n⏳ ${t('Трапеза пройдёт в тот час, что уйдёт на беседу с хозяином.')}` +
+                            `\n\n✚ Здоровье: +${player.HP - before} HP (${before} → ${player.HP})\n⏳ ${t('Трапеза заняла ровно один час игрового времени.')}` +
                             (scene.registry.get('quest')?.thiefEscaped ? '' : `\n⏳ ${t('Осталось действий')}: ${chaseTicksLeft(scene.registry)}`),
                     };
                 },
@@ -598,24 +619,17 @@ export const DIALOGUES = {
                 choices: [],
             },
             // Раунд 27 (п.13): мёд восстанавливает здоровье.
-            // НЕ БОЛЕЕ 3 РАЗ В СУТКИ, кулдаун между приёмами — 1 час.
+            // Раунд 66.16 (приказы 1–3): мёд — ТОЖЕ ЕДА: ровно +1 HP, ровно 1 час
+            // времени, ОБЩИЙ кулдаун еды 4 часа (лимиты «3 в сутки / 1 час» сняты
+            // — перекрыты единым откатом; состояние 'honey' больше не ведётся).
             honey: {
                 speaker: 'Пасечница Марфа',
                 text: '...',
                 action: (scene) => {
                     const player = scene.registry.get('player');
-                    const time = getTime(scene.registry);
-                    // В timeState час — поле `hour`; кулдаун считаем в минутах
-                    const hour = time ? (time.hour ?? 12) : 12;
-                    const day = time ? (time.yearFromChrist * 372 + time.month * 31 + time.day) : 0;
-                    const absMin = time ? (day * 1440 + hour * 60 + (time.minute || 0)) : 0;
-                    const st = scene.registry.get('honey') || { day: -1, uses: 0, lastAbsMin: -999 };
-                    if (st.day === day && st.uses >= 3) {
-                        scene._lastAskResult = { message: t('Марфа качает головой: «Мёд — он как лекарство: три ложки в день, и довольно. Больше — не на пользу, а во вред. Приходи завтра».') };
-                        return;
-                    }
-                    if (absMin - (st.lastAbsMin || -999) < 60) {
-                        scene._lastAskResult = { message: t('«Не раньше, чем через час. Мёд силён, дай ему разойтись по крови», — говорит Марфа.') };
+                    // Раунд 66.16 (приказ 3): общий кулдаун еды 4 часа
+                    if (!canEat(scene.registry).ok) {
+                        scene._lastAskResult = { message: t('Герой сыт и больше не может есть — съеденное ещё не переварилось. Следующий приём еды будет позже.') };
                         return;
                     }
                     if ((player.dengas || 0) < 8) {
@@ -623,19 +637,18 @@ export const DIALOGUES = {
                         return;
                     }
                     player.dengas -= 8;
-                    const heal = 8;
+                    // Раунд 66.16 (приказ 2): любая еда лечит ровно +1 HP
+                    const heal = MEAL_HEAL_HP;
                     const before = player.HP;
                     player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
-                    // Новый день — счётчик заново
-                    if (st.day !== day) { st.day = day; st.uses = 0; }
-                    st.uses += 1;
-                    st.lastAbsMin = absMin;
-                    scene.registry.set('honey', st);
+                    registerMeal(scene.registry); // приказ 3: кулдаун 4 часа
+                    // Приказ 1: еда занимает ровно 1 час игрового времени
+                    tickTime(scene.registry, MEAL_DURATION_MIN);
                     scene.registry.set('player', player);
                     if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
-                    ActionLog.add(scene.registry, t(`Купил мёд у Марфы (8 д.): +${player.HP - before} HP. Съедено за сегодня: ${st.uses}/3.`));
+                    ActionLog.add(scene.registry, t('Купил мёд у Марфы (8 д.): +1 HP, час времени.'));
                     scene._lastAskResult = { message: t('Марфа наливает полную ложку янтарного мёда. Тепло разливается по телу, силы возвращаются.') +
-                        `\n\n✚ Здоровье: +${player.HP - before} HP (${before} → ${player.HP})\n🍯 За сегодня: ${st.uses}/3 — следующая ложка не раньше, чем через час.` };
+                        `\n\n✚ Здоровье: +${player.HP - before} HP (${before} → ${player.HP})\n⏳ ${t('Трапеза заняла ровно один час игрового времени.')}` };
                 },
                 choices: [
                     { text: t('(продолжить)'), next: 'ask_result' },
@@ -1979,17 +1992,26 @@ export const DIALOGUES = {
                 action: (scene) => {
                     const player = scene.registry.get('player');
                     const FISH_PRICE = 2;
+                    // Раунд 66.16 (приказ 3): копчёная рыба — еда, кулдаун 4 часа
+                    if (!canEat(scene.registry).ok) {
+                        scene._lastAskResult = { message: t('Герой сыт и больше не может есть — съеденное ещё не переварилось. Следующий приём еды будет позже.') };
+                        return;
+                    }
                     if ((player.dengas || 0) < FISH_PRICE) {
                         scene._lastAskResult = { message: t('Ерёма разводит руками: «Без двух монет и хвост не отдаю. Рыба — она не трава, сам лови».') };
                         return;
                     }
                     player.dengas -= FISH_PRICE;
-                    const heal = 2 + Math.floor(Math.random() * 2); // 2..3 HP — дешевле трапезы, чуть жирнее
+                    // Раунд 66.16 (приказ 2): любая еда лечит ровно +1 HP
+                    const heal = MEAL_HEAL_HP;
                     player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
+                    registerMeal(scene.registry); // приказ 3: кулдаун 4 часа
+                    // Приказ 1: еда занимает ровно 1 час игрового времени
+                    tickTime(scene.registry, MEAL_DURATION_MIN);
                     scene.registry.set('player', player);
                     if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
-                    ActionLog.add(scene.registry, `Купил копчёной рыбы у Ерёмы: −2 д., +${heal} HP.`);
-                    scene._lastAskResult = { message: `Лещ копчёный, дымом пахнет — как в детстве. Ешь, не жалей.\n\n−2 д. · +${heal} здоровья.` };
+                    ActionLog.add(scene.registry, 'Купил копчёной рыбы у Ерёмы: −2 д., +1 HP, час времени.');
+                    scene._lastAskResult = { message: `Лещ копчёный, дымом пахнет — как в детстве. Ешь, не жалей.\n\n−2 д. · +1 здоровья · час времени.` };
                 },
                 choices: [
                     { text: t('(продолжить)'), next: 'ask_result' },
