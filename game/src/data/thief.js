@@ -284,6 +284,77 @@ export function washTracksByWeather(registry) {
     return washed;
 }
 
+// ============================================================
+// РАУНД 66.13 (приказ владельца): СЧЁТЧИК «СВЕЖЕСТИ» СЛЕДОВ И НАВОДКИ
+// ============================================================
+/**
+ * Свежесть = доля ещё НЕ истёкшей жизни следа (случайные 12–24 ч, trace.life)
+ * или наводки НПЦ (5 ч, NPC_HINT_VALID_HOURS), выраженная в процентах 0..100.
+ * Показывается игроку ВСЕГДА, когда виден сам след или наводка:
+ *   • вторая строка подписи каждого следа на локации («83% · ещё свежий»);
+ *   • строка в поп-апе осмотра следа («Свежесть следа: ещё свежий (83%).»);
+ *   • строка в панели улик на околице («🧭 Наводка: ещё свежая (61%)»);
+ *   • строка в поп-апе прибытия на наводку («Наводка ещё свежа: 61%.»).
+ * ВАЖНО (раунд 66.12, приказ №6): это НЕ обратный отсчёт и НЕ живые часы —
+ * никаких «осталось N часов до побега/до конца наводки». Только процент
+ * выцветания следа/наводки: игрок видит КУРС на старость, но не срок.
+ */
+
+/** Процент свежести по «оставлен в leftAt, живёт lifeMin минут» (чистая функция). */
+export function freshnessPct(leftAt, nowMin, lifeMin) {
+    if (typeof leftAt !== 'number' || typeof lifeMin !== 'number' || lifeMin <= 0) return null;
+    const frac = (leftAt + lifeMin - nowMin) / lifeMin;
+    return Math.max(0, Math.min(100, Math.round(frac * 100)));
+}
+
+/** Стадия свежести 0..3: ≥75 совсем свежий, ≥50 ещё свежий, ≥25 заветривается, ниже — почти истёрся. */
+export function freshnessStage(pct) {
+    if (typeof pct !== 'number') return 3;
+    if (pct >= 75) return 0;
+    if (pct >= 50) return 1;
+    if (pct >= 25) return 2;
+    return 3;
+}
+
+/** Словесная оценка свежести («след» — мужской род, «наводка» — женский). */
+export function freshnessStageLabel(pct, kind) {
+    if (kind === 'hint') {
+        return [t('совсем свежая'), t('ещё свежая'), t('заветривается'), t('почти истекла')][freshnessStage(pct)];
+    }
+    return [t('совсем свежий'), t('ещё свежий'), t('заветривается'), t('почти истёрся')][freshnessStage(pct)];
+}
+
+/**
+ * Свежесть следа вора на конкретной локации.
+ * @returns {{pct:number, stage:number, label:string}|null} null — следа здесь нет.
+ */
+export function traceFreshness(registry, locationId) {
+    const c = getChase(registry);
+    const tr = c && c.traces ? c.traces[locationId] : null;
+    if (!tr) return null;
+    const pct = freshnessPct(tr.leftAt, worldMinutesOf(registry), tr.life);
+    if (pct === null) return null;
+    return { pct, stage: freshnessStage(pct), label: freshnessStageLabel(pct) };
+}
+
+/**
+ * Свежесть наводки НПЦ (q.npcHint).
+ * @returns {{pct:number, stage:number, label:string, expired:boolean}|null} null — наводки нет.
+ */
+export function hintFreshness(registry) {
+    const q = registry.get('quest');
+    const hint = q && q.npcHint;
+    if (!hint) return null;
+    const now = worldMinutesOf(registry);
+    const expired = !!hint.broken || now >= hint.expiresAtMin;
+    if (typeof hint.issuedAtMin !== 'number' || typeof hint.expiresAtMin !== 'number'
+        || hint.expiresAtMin <= hint.issuedAtMin) {
+        return { pct: 0, stage: 3, label: freshnessStageLabel(0, 'hint'), expired: true };
+    }
+    const pct = expired ? 0 : freshnessPct(hint.issuedAtMin, now, hint.expiresAtMin - hint.issuedAtMin);
+    return { pct, stage: freshnessStage(pct), label: freshnessStageLabel(pct, 'hint'), expired };
+}
+
 // Раунд 30: свидетели о воре — не всякий селянин его видел. На старте игры
 // (по спецификации владельца, п.9) случайным образом выбирается, КТО может
 // рассказать о воре и месте его нахождения.

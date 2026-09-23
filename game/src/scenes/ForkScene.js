@@ -2,7 +2,7 @@
 // Теперь использует расширенную карту местности (п.2,3) и отображает время (п.13).
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
-import { getHuntState, checkGameEnd } from '../data/thief.js';
+import { getHuntState, checkGameEnd, hintFreshness } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
 import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
 // Раунд 32 (пп.14,15): F1 — «Информация по игре» со соотношением времени 1:30
@@ -102,13 +102,30 @@ export class ForkScene extends Phaser.Scene {
         // Раунд 40 (заявка п.1): [📜 Персонаж] / [🎒 Инвентарь] на околице
         addSceneMenuButtons(this, 'Fork');
 
-        // ----- Подсказки, собранные у жителей -----
+        // ----- Подсказки, собранные у жителей + счётчик свежести НАВОДКИ
+        // (раунд 66.13, приказ владельца: процент выцветания наводки; БЕЗ
+        // живых часов — р.66.12 №6) -----
+        const hintFr66 = hintFreshness(this.registry);
+        const hintLine66 = hintFr66
+            ? (hintFr66.expired
+                ? t('🧭 Наводка: устарела')
+                : tf(t('🧭 Наводка: {0} ({1}%)'), hintFr66.label, hintFr66.pct))
+            : null;
         if (state.cluesGathered && state.cluesGathered.length > 0) {
             let cluesText = t('Улики от жителей:') + '\n';
             state.cluesGathered.forEach((c) => {
                 cluesText += `• ${c.npcName}: ${c.clue}\n`;
             });
+            if (hintLine66) cluesText += hintLine66 + '\n';
             this.add.text(20, 135, cluesText, {
+                fontSize: '12px', color: '#c9a14a',
+                fontFamily: 'Georgia, serif',
+                stroke: '#000', strokeThickness: 1,
+                backgroundColor: '#00000088', padding: { x: 8, y: 6 },
+                wordWrap: { width: 280 },
+            }).setOrigin(0, 0).setDepth(50);
+        } else if (hintLine66) {
+            this.add.text(20, 135, hintLine66, {
                 fontSize: '12px', color: '#c9a14a',
                 fontFamily: 'Georgia, serif',
                 stroke: '#000', strokeThickness: 1,

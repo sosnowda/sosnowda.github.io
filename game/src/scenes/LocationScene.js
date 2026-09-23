@@ -7,6 +7,7 @@ import {
     searchLocation, getHuntState, checkGameEnd,
     isChaseActive, isThiefAt, presentThiefEncounter,
     getFootprints, examineFootprint, getChase, askNPC, worldMinutesOf,
+    traceFreshness, hintFreshness,
 } from '../data/thief.js';
 import { onLocationVisited, getActiveQuests } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
@@ -479,9 +480,15 @@ export class LocationScene extends Phaser.Scene {
         // игрок не видит обратного отсчёта (ни до побега вора, ни до конца наводки):
         // только само правило «наводка живёт недолго».
         const title = expired ? t('⟳ Наводка устарела') : t('📍 Ты по адресу!');
-        const body = expired
+        let body = expired
             ? tf(t('Селяне говорили, что вора видели у «{0}». Но с той поры прошло больше пяти часов — наводка больше не верна: вор давно перебрался в другое место. Ищи свежие следы или расспроси новых людей!'), locName)
             : tf(t('Селяне говорили правду: вора видели именно здесь, у «{0}»! Но помни: наводка живёт недолго — поспеши, пока вор не перебрался в другое место!'), locName);
+        // Раунд 66.13 (приказ владельца): счётчик свежести наводки — строкой
+        // в поп-апе прибытия (процент, БЕЗ живых часов — р.66.12 №6).
+        const frHint66 = hintFreshness(this.registry);
+        if (!expired && frHint66 && !frHint66.expired) {
+            body += '\n' + tf(t('Наводка ещё свежа: {0}%.'), frHint66.pct);
+        }
         this.time.delayedCall(250, () => {
             if (this.busyDialog) return;
             createDialog(this, title, body, [
@@ -919,9 +926,15 @@ export class LocationScene extends Phaser.Scene {
             cont.add(g);
         }
 
-        // Подпись следа — над центром цепочки
-        cont.add(this.add.text(cx, cy - 24, found ? t('✨ след прочитан') : t('🔍 след вора'), {
-            fontSize: '10px', color: found ? '#ffd76a' : '#e8d8a8',
+        // Подпись следа — над центром цепочки.
+        // Раунд 66.13 (приказ владельца): счётчик «свежести» следа — второй
+        // строкой подписи: «83% · ещё свежий». Процент выцветания, НЕ живые
+        // часы (раунд 66.12 №6: отсчётов игрок не видит).
+        const fr66 = traceFreshness(this.registry, this.locationId);
+        const fpLabel66 = (found ? t('✨ след прочитан') : t('🔍 след вора'))
+            + (fr66 ? '\n' + fr66.pct + '% · ' + fr66.label : '');
+        cont.add(this.add.text(cx, cy - 24, fpLabel66, {
+            fontSize: '10px', color: found ? '#ffd76a' : '#e8d8a8', align: 'center',
             fontFamily: 'Georgia, serif',
             backgroundColor: '#000000aa', padding: { x: 4, y: 2 },
         }).setOrigin(0.5));
@@ -1031,6 +1044,10 @@ export class LocationScene extends Phaser.Scene {
             : res.retryLeft
                 ? t('🔍 След не поддался')
                 : (res.alreadyChecked ? t('🔍 След') : t('🔍 След затёрт'));
+        // Раунд 66.13 (приказ владельца): счётчик свежести следа — строкой
+        // в поп-апе осмотра (процент + словесная оценка, без живых часов).
+        const fr66 = traceFreshness(this.registry, this.locationId);
+        if (fr66) res.message += '\n' + tf(t('Свежесть следа: {0} ({1}%).'), fr66.label, fr66.pct);
         createDialog(this, title, res.message, [
             {
                 text: t('Продолжить'),
