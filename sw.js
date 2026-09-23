@@ -1,6 +1,7 @@
 /* Service Worker — Летописи Руси XV века
    Network-first для HTML/CSS/JS, cache-first для ассетов игры.
 
+v68 — раунд 66.18 (QA + обновление скриншотов): assets/screenshots/* заменены на свежие захваты прод-сборки 66.17/66.18 (титул «Об игре», ростер с Милушей, «Большая дорога» на карте, женская воровка, кнопки боя с луком), index.html — alt-тексты 06/08/09 под новые кадры; site-cache инвалидируется (v68).
 v67 — раунд 66.8 (бэклог отчётов 66.6/66.7):
 1) ПЛАН ДЕРЕВНИ (MiniMap.js): виджет-миникарта в правом верхнем углу
    (клик — разворот), панель с легендой и меткой игрока, клавиша P
@@ -210,7 +211,7 @@ v45 — релиз (раунд 47, 5 пунктов владельца): 1) СВ
  */
 
 
-var CACHE_NAME = 'chronicles-ruthenia-v67';
+var CACHE_NAME = 'chronicles-ruthenia-v68';
 var GAME_ASSETS_CACHE = 'game-assets-v21';
 
 self.addEventListener('install', function (event) {
