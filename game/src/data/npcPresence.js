@@ -99,7 +99,10 @@ const BASE_SCHEDULE = {
     homemaker:    { dawn: 'home',    morning: 'village', noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' },
     healer:       { dawn: 'field',   morning: 'home',    noon: 'home',    evening: 'home',    dusk: 'home',    night: 'home' },
     hunter:       { dawn: 'forest',  morning: 'forest',  noon: 'forest',  evening: 'home',    dusk: 'home',    night: 'home' },
-    guard:        { dawn: 'gate',    morning: 'home',    noon: 'village', evening: 'gate',    dusk: 'gate',    night: 'gate' },
+    // Раунд 66.22 (приказ владельца): стражник — НОЧЬЮ на часах у ворот,
+    // ДНЁМ обходит выпас и пашню КОГДА ТАМ ЕСТЬ НПЦ (см. guardPatrolPlace).
+    // Базовые значения — страховая сетка (день перекрыт динамикой выше):
+    guard:        { dawn: 'home',    morning: 'village', noon: 'village',  evening: 'village', dusk: 'gate',    night: 'gate' },
     fisherman:    { dawn: 'river',   morning: 'river',   noon: 'river',   evening: 'home',    dusk: 'home',    night: 'home' },
     shepherd:     { dawn: 'pasture', morning: 'pasture', noon: 'pasture', evening: 'pasture', dusk: 'home',    night: 'home' }, // Раунд 31: место пастуха = место стада
     // Раунд 37 (вариант Б): новые профессии второй улицы
@@ -204,7 +207,10 @@ const ACTIVITY = {
     },
     guard: {
         gate: 'на страже у ворот', village: 'патрулирует деревню',
-        home: 'отсыпается после стражи',
+        // Раунд 66.22: дневной обход выпаса и пашни (при НПЦ там)
+        pasture: 'обходит выпас — глядит, чтоб стадо было цело',
+        field: 'осматривает пашню, словом перекинулся с пахарем',
+        home: 'отсыпается после ночной стражи',
     },
     fisherman: {
         river: 'ловит рыбу', home: 'коптит рыбу',
@@ -516,11 +522,26 @@ function marfaWorkPlace(registry, time, hour, segId) {
 // делу на день: выпас (пастбище), рыбалка (озеро/река), грибы (лес) или беготня
 // по деревне. Утром и после полудня место может меняться (как у Марфы).
 const CHILD_PLACES = ['pasture', 'lake', 'river', 'forest', 'village'];
-
 function childDayPlace(registry, npcId, time, segId) {
     const seed = registry.get('npcSeed') || 0;
     const dk = dayKeyOf(time);
     return CHILD_PLACES[Math.floor(hash01(`${seed}:${npcId}:${dk}:${segId}`) * CHILD_PLACES.length)];
+}
+
+// Раунд 66.22 (приказ владельца): СТРАЖНИК ИЛЬЯ — днём обходит ПАСТБИЩЕ и
+// ПАШНЮ, КОГДА ТАМ ЕСТЬ НПЦ (пастухи со стадом на выпасе, пахарь на поле);
+// если на обеих пусто — патрулирует деревню. Ночь и сумерки — на часах
+// у ворот, рассвет — отсыпается после ночной вахты.
+// Рекурсии нет: getPresence(shepherd) ведёт в getHerdState (без НПЦ),
+// getPresence(beekeeper1) — в базовое расписание.
+function guardPatrolPlace(registry, segId) {
+    const shepherdOut = ['shepherd1', 'shepherd2']
+        .some(id => getPresence(registry, id).place === 'pasture');
+    const ploughOut = getPresence(registry, 'beekeeper1').place === 'field';
+    if (shepherdOut && ploughOut) return segId === 'noon' ? 'field' : 'pasture';
+    if (shepherdOut) return 'pasture';
+    if (ploughOut) return 'field';
+    return 'village'; // никого на выпасе/пашне — патрулирует деревню
 }
 
 /**
@@ -544,6 +565,19 @@ export function getPresence(registry, npcId) {
         if (segId === 'night') return { place: 'church', activity: 'спит в келье' };
         if (hour >= 12 && hour < 13) return { place: 'tavern', activity: 'обедает в корчме' };
         if (hour >= 19 && hour < 20) return { place: 'tavern', activity: 'ужинает в корчме' };
+    }
+
+    // --- Раунд 66.22 (приказ владельца): СТРАЖНИК ИЛЬЯ ---
+    // НОЧЬЮ и в сумерках — на часах у ворот; на рассвете отсыпается после
+    // ночной вахты; ДНЁМ обходит ПАСТБИЩЕ и ПАШНЮ, КОГДА ТАМ ЕСТЬ НПЦ
+    // (пастухи со стадом на выпасе, пахарь Тарас на поле), иначе
+    // патрулирует деревню. См. guardPatrolPlace() выше.
+    if (role === 'guard') {
+        if (segId === 'night') return { place: 'gate', activity: acts.gate || 'на страже у ворот' };
+        if (segId === 'dusk') return { place: 'gate', activity: acts.gate || 'заступает на ночную стражу' };
+        if (segId === 'dawn') return { place: 'home', activity: acts.home || 'отсыпается после ночной стражи' };
+        const p = guardPatrolPlace(registry, segId);
+        return { place: p, activity: acts[p] || 'обходит околицу' };
     }
 
     // --- Ночь: все спят дома (кроме при службе); п.3: на локациях вне деревни НИКОГО

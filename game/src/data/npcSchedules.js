@@ -154,12 +154,15 @@ export const PROFESSION_SCHEDULES = {
         dusk:      { activity: 'колет дрова во дворе', location: 'home', available: true },
         night:     { activity: 'спит', location: 'home', available: false },
     },
+    // Раунд 66.22 (приказ владельца): НОЧЬ — на часах у ворот, ДЕНЬ — обход
+    // выпаса и пашни при НПЦ там (динамика: npcPresence.guardPatrolPlace),
+    // на рассвете — отсыпается. Статическая сетка — запасная/для справок.
     [PROFESSIONS.GUARD]: {
-        dawn:      { activity: 'сменяется со стражи', location: 'gate', available: true },
-        morning:   { activity: 'спит', location: 'home', available: false },
+        dawn:      { activity: 'отсыпается после ночной стражи', location: 'home', available: false },
+        morning:   { activity: 'обходит выпас и пашню', location: 'pasture', available: true },
         noon:      { activity: 'патрулирует деревню', location: 'village', available: true },
-        evening:   { activity: 'встаёт на стражу', location: 'gate', available: true },
-        dusk:      { activity: 'на страже у ворот', location: 'gate', available: true },
+        evening:   { activity: 'обходит околицу', location: 'village', available: true },
+        dusk:      { activity: 'заступает на ночную стражу', location: 'gate', available: true },
         night:     { activity: 'на страже у ворот', location: 'gate', available: true },
     },
     [PROFESSIONS.MILLER]: {

@@ -32,7 +32,7 @@ import {
     getVillageRep, changeVillageRep,
     isNpcKilled, canBuyMilitaryGear, MILITARY_GEAR_IDS,
     getSmithNpcId, // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели мастера
-    repActionAllowedToday, markRepActionDone, // Раунд 66.21: дневные лимиты похвалы/угроз
+    repActionAllowedToday, markRepActionDone, // 66.21/66.22: дневной лимит похвалы (угрозы не лимитируются)
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 // Раунд 48 (пп.2,3 заявки): параметры НПЦ игроку НЕ показываются —
@@ -1002,17 +1002,12 @@ export class InteriorScene extends Phaser.Scene {
 
     // === Пункты 7-10: Угрожать NPC ===
     threatenNpc(interior) {
-        // Раунд 66.21 (аудит баланса, приказы 6–7): угроза — ОДИН раз в день
-        // у каждого НПЦ (раньше вымогание денег можно было повторять кликами).
-        if (!repActionAllowedToday(this.registry, interior.npcId, 'threat')) {
-            const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
-            createDialog(this, t('Угроза'),
-                tf(t('{0}: «Поутру ты уже пугал меня. Нынче — не боюсь. Уходи!»'), npcName),
-                [{ text: t('Понятно'), callback: () => {} }],
-                { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 });
-            return;
-        }
-        markRepActionDone(this.registry, interior.npcId, 'threat');
+        // Раунд 66.22 (приказ 4 владельца): дневной лимит угроз УБРАН —
+        // угрожать можно сколько угодно. Баланс вместо лимита: деньги при
+        // успехе остаются (5–15 д., см. applyThreat), но падение репутации
+        // ЭСКАЛИРУЕТ (−база −3×(разы−1) лично + −2 деревне за каждую угрозу,
+        // шанс успеха падает с каждым разом) — часто угрожать невыгодно,
+        // только при крайней нужде.
         const player = this.registry.get('player');
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
         const intimidateSkill = player.skills.intimidate || 15;

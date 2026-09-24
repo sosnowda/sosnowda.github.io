@@ -1,5 +1,6 @@
 // ============================================================
-// test_round82.mjs — юнит-проверки патча 66.21 (16 приказов владельца).
+// test_round82.mjs — юнит-проверки патчей 66.21 (16 приказов) и 66.22 (сезонные
+// рассвет/закат, стук −1, угрозы без лимита с эскалацией, стражник на часах).
 // Запуск: node tools/test_round82.mjs (из папки game/).
 //
 // Покрывает:
@@ -42,12 +43,30 @@ function mockRegistry() {
     };
 }
 
-console.log('\n— п.9/п.11: ЧАСЫ ДОСТУПА (AccessHours) —');
+console.log('\n— п.1/2/9/11 (66.21+66.22): ЧАСЫ ДОСТУПА — СЕЗОННЫЕ РАССВЕТ/ЗАКАТ —');
 {
-    const { isNightHour, isChurchOpen, churchClosedReason, CHURCH_WINDOWS } = await import(join(GAME, '../src/systems/AccessHours.js'));
+    const { isNightHour, isChurchOpen, churchClosedReason, CHURCH_WINDOWS, sunTimes, dayOfYear } = await import(join(GAME, '../src/systems/AccessHours.js'));
+    // Канон без даты (66.21) сохранён как запасной
     ok(!isNightHour(20) && isNightHour(21) && isNightHour(23) && isNightHour(0) && isNightHour(3) && !isNightHour(4),
-        'ночь = 21:00–04:00 (в 20 открыто, в 21 заперто, в 4 рассвѣт)');
+        'канон без даты: ночь 21:00–04:00');
     ok(!isNightHour(12) && !isNightHour(16), 'день — не ночь');
+    // Раунд 66.22 (приказ 2): РАСЧЁТ РАССВЕТОВ И ЗАКАТОВ по времени года и дате
+    ok(dayOfYear(3, 21) === 355 && dayOfYear(9, 21) === 172 && dayOfYear(6, 21) === 80,
+        'день солнечного года: 21 дек = 355, 21 июн = 172, 21 мар = 80');
+    const stS = sunTimes(9, 21), stW = sunTimes(3, 21), stE = sunTimes(6, 21);
+    ok(stS.sunrise < 4 && stS.sunset > 21, `лето (21 июн): рассвет ~${stS.sunrise}, закат ~${stS.sunset} — белые дни`);
+    ok(stW.sunrise > 8 && stW.sunset < 15.5, `зима (21 дек): рассвет ~${stW.sunrise}, закат ~${stW.sunset} — короткий день`);
+    ok(stE.sunrise > 5.5 && stE.sunrise < 6.5 && stE.sunset > 17.5 && stE.sunset < 18.5,
+        'равноденствие (21 мар): ~6:00/18:00');
+    // Приказ 1: дома открываются С РАССВЕТОМ и запираются ПО ЗАКАТУ
+    ok(!isNightHour(21, { month: 9, day: 21 }) && isNightHour(22, { month: 9, day: 21 }),
+        'лето: в 21 двери ещё открыты (закат ~21:10), в 22 — заперты');
+    ok(!isNightHour(5, { month: 9, day: 21 }), 'лето: в 5 уже рассвело — двери открыты');
+    ok(isNightHour(16, { month: 3, day: 21 }) && !isNightHour(14, { month: 3, day: 21 }),
+        'зима: в 16 уже заперто (закат ~15:10), в 14 ещё открыто');
+    ok(isNightHour(5, { month: 3, day: 21 }) && !isNightHour(9, { month: 3, day: 21 }),
+        'зима: в 5 ещё ночь, в 9 рассвело');
+    // Церковь — канонические окна (66.21, не привязаны к солнцу)
     ok(isChurchOpen(4) && isChurchOpen(6) && isChurchOpen(11) && isChurchOpen(14),
         'церковь: утреня 4–6 и обедня 6–12 (+3 ч) — открыта до 15:00');
     ok(!isChurchOpen(15) && !isChurchOpen(15.9), 'церковь закрыта 15:00–16:00 (отдых батюшки)');
@@ -67,8 +86,8 @@ console.log('\n— п.9–10: НОЧНОЙ ЗАПОР И СТУК В ДВЕРЬ 
     const { initNpcNames } = await import(join(GAME, '../src/data/npcNames.js'));
     const { INTERIORS } = await import(join(GAME, '../src/data/interiors.js'));
 
-    ok(KNOCK_REP_PENALTY === -2 && KNOCKS_PER_NIGHT === 2,
-        'стук: −2 к личной репутации, открывают не больше двух раз за ночь');
+    ok(KNOCK_REP_PENALTY === -1 && KNOCKS_PER_NIGHT === 2,
+        'стук: −1 к личной репутации (66.22, приказ 5), открывают не больше двух раз за ночь');
 
     const reg = mockRegistry();
     reg.set('gameTime', { yearFromChrist: 1450, month: 8, day: 14, hour: 23, minute: 0 }); // ночь
@@ -83,8 +102,8 @@ console.log('\n— п.9–10: НОЧНОЙ ЗАПОР И СТУК В ДВЕРЬ 
     // 1-й стук без дела: не впускают, репутация −2
     const before = getNpcRep(reg, 'elder');
     const r1 = knockAtDoor(reg, house);
-    ok(!r1.opened && r1.penalty === -2 && getNpcRep(reg, 'elder') === before - 2,
-        'стук без срочного дела: отказ и −2 личной репутации');
+    ok(!r1.opened && r1.penalty === -1 && getNpcRep(reg, 'elder') === before - 1,
+        'стук без срочного дела: отказ и −1 личной репутации');
 
     // 2-й стук: ещё отвечает (2 стука в ночь), 3-й — молчит
     knockAtDoor(reg, house);
@@ -125,6 +144,35 @@ console.log('\n— п.11–12: РАСПОРЯДОК СВЯЩЕННИКА (обе
     ok(at(20).place === 'church', 'в 20:00 батюшка вернулся с ужина');
     ok(at(23).place === 'church' && at(23).activity.includes('келье'), 'ночью спит в келье при церкви');
     ok(at(15).place === 'church', 'после трапезы — снова в церкви');
+}
+
+console.log('\n— 66.22: СТРАЖНИК — НОЧЬ НА ЧАСАХ У ВОРОТ, ДЕНЬ ОБХОД ПАСТБИЩА/ПАШНИ —');
+{
+    const { getPresence } = await import(join(GAME, '../src/data/npcPresence.js'));
+    const regAt = (hour) => {
+        const reg = mockRegistry();
+        reg.set('gameTime', { yearFromChrist: 1450, month: 8, day: 14, hour, minute: 30 });
+        return reg;
+    };
+    ok(getPresence(regAt(23), 'guard').place === 'gate' && getPresence(regAt(2), 'guard').place === 'gate',
+        'ночью стражник на часах у ворот');
+    ok(getPresence(regAt(20), 'guard').place === 'gate', 'в сумерках заступает на ночную стражу');
+    ok(getPresence(regAt(5), 'guard').place === 'home', 'на рассвете отсыпается после ночной вахты');
+    // День: обход ТОЛЬКО там, где есть НПЦ (пастухи со стадом / пахарь)
+    const regM = regAt(9);
+    const shM = ['shepherd1', 'shepherd2'].some(id => getPresence(regM, id).place === 'pasture');
+    const plM = getPresence(regM, 'beekeeper1').place === 'field';
+    const gpM = getPresence(regM, 'guard').place;
+    const expM = shM ? 'pasture' : (plM ? 'field' : 'village');
+    ok(gpM === expM, `утренний обход по НПЦ (пастухи=${shM}, пахарь=${plM}) → «${gpM}»`);
+    ok(!['home', 'gate'].includes(gpM), 'днём стражник не отсыпается и не стоит на воротах');
+    const regE = regAt(17);
+    const shE = ['shepherd1', 'shepherd2'].some(id => getPresence(regE, id).place === 'pasture');
+    const plE = getPresence(regE, 'beekeeper1').place === 'field';
+    const gpE = getPresence(regE, 'guard').place;
+    const expE = (shE && plE) ? 'field' : shE ? 'pasture' : plE ? 'field' : 'village';
+    ok(gpE === expE, `вечерний обход по НПЦ (пастухи=${shE}, пахарь=${plE}) → «${gpE}»`);
+    ok(getPresence(regAt(9), 'guard').place === gpM, 'обход детерминирован (то же время — то же место)');
 }
 
 console.log('\n— п.2/п.3: ВИРТУАЛЬНАЯ ДОСКА — ЕДИНАЯ ТОЧКА ВЫДАЧИ ПОРУЧЕНИЙ —');
@@ -248,8 +296,37 @@ console.log('\n— п.6/п.7: БАЛАНС РЕПУТАЦИИ — ДНЕВНЫЕ
     rep.markRepActionDone(reg, 'elder', 'compliment');
     ok(!rep.repActionAllowedToday(reg, 'elder', 'compliment'), 'вторая похвала тому же НПЦ в день закрыта');
     ok(rep.repActionAllowedToday(reg, 'widow', 'compliment'), 'другому НПЦ похвала по-прежнему доступна');
-    rep.markRepActionDone(reg, 'elder', 'threat');
-    ok(!rep.repActionAllowedToday(reg, 'elder', 'threat'), 'угроза — тоже один раз в день НПЦ');
+    // Раунд 66.22 (приказ 4): угрозы НЕ лимитируются по дням —
+    // лимит жил в СЦЕНЕ (вызове), а не в reputation.js: проверяем исходник.
+    // markRepActionDone('threat') сценой больше не вызывается.
+    ok(!read('game/src/scenes/InteriorScene.js').includes("repActionAllowedToday(this.registry, interior.npcId, 'threat')"),
+        'в сцене угроза без дневного лимита (лимит остался только у похвалы)');
+    ok(!read('game/src/scenes/InteriorScene.js').includes("markRepActionDone(this.registry, interior.npcId, 'threat')"),
+        'сцена не отмечает угрозу в дневном реестре — угрожать можно сколько угодно');
+
+    // Раунд 66.22 (приказ 4, уточнение владельца): деньги при угрозах ОСТАЮТСЯ,
+    // но падение репутации ЭСКАЛИРУЕТ — часто угрожать невыгодно
+    {
+        const { initNpcNames } = await import(join(GAME, '../src/data/npcNames.js'));
+        const regT = mockRegistry();
+        regT.set('gameTime', { yearFromChrist: 1450, month: 8, day: 14, hour: 9, minute: 0 });
+        initNpcNames(regT);
+        rep.initReputation(regT);
+        regT.set('player', { name: 'Добрыня', gender: 'male', skills: { intimidate: 40 }, dengas: 0 });
+        const v0 = rep.getVillageRep(regT);
+        const p0 = rep.getNpcRep(regT, 'elder');
+        for (let i = 0; i < 5; i++) rep.applyThreat(regT, 'elder', 40, 'male');
+        ok(rep.getVillageRep(regT) <= v0 - 10,
+            'каждая угроза бьёт по деревенской славе: −2 явно + 15% каскада от личного падения (5 угроз ≥ −10)');
+        ok(p0 - rep.getNpcRep(regT, 'elder') >= 45,
+            'личная репутация падает с ЭСКАЛАЦИЕЙ (за 5 угроз суммарно ≥ 45, базы растут +3 за раз)');
+        ok(read('game/src/data/reputation.js').includes('esc = 3 * Math.max(0, rep.threatenedCount'),
+            'в applyThreat эскалация: −(база + 3×(разы−1))');
+        ok(read('game/src/data/reputation.js').includes('Вот, возьми.'),
+            'деньги при успехе угрозы ОСТАЮТСЯ (5–15 д., приказ 66.22)');
+        ok(read('game/src/scenes/InteriorScene.js').includes('Получено: {1} д.'),
+            'сцена показывает выдачу денег при успехе угрозы');
+    }
 
     // Пожертвование: тир и ТОЧНЫЕ дельты (обещанное = фактическому)
     ok(rep.donationRepAmount(5) === 1 && rep.donationRepAmount(10) === 2
@@ -339,7 +416,7 @@ console.log('\n— п.13–14: МЕНЮ ПОЖЕРТВОВАНИЯ — ПРОВ�
 console.log('\n— п.9/п.11: ЗАПОРЫ В СЦЕНАХ — ПРОВОДКА —');
 {
     const vs = read('game/src/scenes/VillageScene.js');
-    ok(vs.includes('isNightHour(hour)) return { night: true }'), 'жилые дома: ночью дверь заперта');
+    ok(vs.includes('isNightHour(hour, timeState)) return { night: true }'), 'жилые дома: ночью дверь заперта (ночь по сезону — 66.22)');
     ok(vs.includes("if (!isChurchOpen(hour)) return { church: true }"), 'церковь: вход по часам богослужений');
     ok(vs.includes('interior.public) return null'), 'постоялый двор открыт всегда (тавернщик 24/7)');
     ok(vs.includes('knockAtDoorLogic'), 'стук в дверь подключён к поп-апу запертого дома');

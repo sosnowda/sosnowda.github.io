@@ -476,6 +476,12 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
     const rep = getReputation(registry);
     if (!rep.threatenedCount[npcId]) rep.threatenedCount[npcId] = 0;
     rep.threatenedCount[npcId]++;
+    // Раунд 66.22 (приказ 4, уточнение владельца): угрозы НЕ лимитируются по
+    // дням, деньги при успехе ОСТАЮТСЯ (5–15 д.), но каждое повторение
+    // бьёт по репутации СИЛЬНЕЕ: личная −(база + 3×(разы−1)) — часто
+    // угрожать невыгодно, только при крайней нужде. Деревня тоже осуждает:
+    // за каждую угрозу — −2 к деревенской славе (смотри ниже, в конце).
+    const esc = 3 * Math.max(0, rep.threatenedCount[npcId] - 1);
     
     const npcs = getNpcs(registry);
     const npc = npcs.find(n => n.id === npcId);
@@ -545,19 +551,19 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
         // Критический успех — NPC полностью уступает
         result.success = true;
         result.message = tf(t('{0}: «Ладно, ладно! Не надо злиться! Вот, возьми.»'), npc.name);
-        result.repChange = -3; // небольшое падение — NPC обижен, но уступил
-        changeNpcRep(registry, npcId, -3, 'угроза (успех)');
+        result.repChange = -(3 + esc); // небольшое падение — NPC обижен, но уступил (эскалация 66.22)
+        changeNpcRep(registry, npcId, -(3 + esc), 'угроза (успех)');
     } else if (effectiveRes.result === 'success') {
         // Успех — NPC уступает неохотно
         result.success = true;
         result.message = tf(t('{0}: «Ну... ладно. Только не злись. Возьми и уходи.»'), npc.name);
-        result.repChange = -5;
-        changeNpcRep(registry, npcId, -5, 'угроза (успех)');
+        result.repChange = -(5 + esc);
+        changeNpcRep(registry, npcId, -(5 + esc), 'угроза (успех)');
     } else if (effectiveRes.result === 'fumble') {
         // Fumble — NPC отвечает угрозой или нападает
         result.message = tf(t('{0}: «Ты мне угрожаешь?! Да я тебя на куски порву!»'), npc.name);
-        result.repChange = -10;
-        changeNpcRep(registry, npcId, -10, 'угроза (fumble)');
+        result.repChange = -(10 + esc);
+        changeNpcRep(registry, npcId, -(10 + esc), 'угроза (fumble)');
         // Шанс нападения при fumble
         if (canAttack) {
             const attackRoll = 1 + Math.floor(Math.random() * 100);
@@ -568,8 +574,8 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
     } else {
         // Провал — NPC отказывается и злится
         result.message = tf(t('{0}: «Пошёл прочь со своими угрозами! Ничего не получишь!»'), npc.name);
-        result.repChange = -6;
-        changeNpcRep(registry, npcId, -6, 'угроза (провал)');
+        result.repChange = -(6 + esc);
+        changeNpcRep(registry, npcId, -(6 + esc), 'угроза (провал)');
         // Шанс нападения при провале
         if (canAttack) {
             const attackRoll = 1 + Math.floor(Math.random() * 100);
@@ -579,7 +585,15 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
             }
         }
     }
-    
+
+    // Раунд 66.22 (приказ 4): деревня осуждает запугивание жителей —
+    // −2 к деревенской славе за КАЖДУЮ угрозу (при провале тоже — видели).
+    // Спам угроз быстро топит славу (а она уже закрывает скупку/помощь,
+    // а на дне — изгнание по checkExpulsion), так что выгода только
+    // при КРАЙНЕЙ нужде. changeVillageRep: отрицательные дельты ×1.2.
+    changeVillageRep(registry, -2, 'угроза жителю');
+    result.villageChange = -2;
+
     return result;
 }
 
