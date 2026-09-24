@@ -94,8 +94,8 @@ export function showMealBlockedPopup(scene) {
     if (scene && scene.add) {
         createDialog(scene, t('🥣 Герой сыт'),
             t('Герой сыт и больше не может есть — съеденное ещё не переварилось. Следующий приём еды будет позже.'),
-            [{ text: t('Понятно'), callback: () => {} }],
-            { singleton: false });
+            [{ text: t('Понятно'), callback: () => {} }]);
+            // Раунд 66.19: singleton по умолчанию — попапы не стакаются
     }
     return false;
 }
@@ -132,8 +132,8 @@ export function showSleepBlockedPopup(scene) {
     if (scene && scene.add) {
         createDialog(scene, t('😴 Герой не хочет спать'),
             t('Герой не хочет спать — он только недавно встал. Отдых отменён.'),
-            [{ text: t('Понятно'), callback: () => {} }],
-            { singleton: false });
+            [{ text: t('Понятно'), callback: () => {} }]);
+            // Раунд 66.19: singleton по умолчанию — попапы не стакаются
     }
     return false;
 }

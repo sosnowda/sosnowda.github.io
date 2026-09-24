@@ -135,8 +135,9 @@ const EN = {
     '🗺 Карта местности': '🗺 Area map',
     '🏠': '🏠',
     'Лес': 'Forest',
-    // Раунд 66.14: ключ «Тракт»: 'Highway' удалён — живой лейбл узла карты
-    // переведён на каноническое «Большая дорога» (приказ 66.12 №3, аудит имён).
+    // Раунд 66.19 (приказ владельца): название «Большая дорога» возвращено
+    // обратно на «Тракт» (откат приказа 66.12 №3). Ключ 'Тракт' снова живой.
+    'Тракт': 'Highway',
     'Река': 'River',
     'Поле': 'Field',
     'Озеро': 'Lake',
@@ -318,7 +319,7 @@ const EN = {
 
     // --- Локации развилки (mapLocations) ---
     'Тёмный лес': 'Dark Forest',
-    'Большая дорога на юг': 'The Southern Highway',
+    'Тракт на юг': 'The Southern Highway',
     'Ржаное поле': 'Rye Fields',
     'Святое озеро': 'The Holy Lake',
     'Погост': 'The Churchyard',
@@ -329,7 +330,7 @@ const EN = {
     'Выпас': 'The Pasture',
     'Река Кистерма': 'The Kisterma River',
     'Густой бор за рекой. Много зверья и грибов, но и разбойники водятся.': 'A dense forest across the river. Plenty of game and mushrooms — but bandits roam here too.',
-    'Большая дорога, ведущая к южным городам. По ней ходят купеческие обозы.': 'The great road leading to the southern cities. Merchant convoys travel along it.',
+    'Большой тракт, ведущий к южным городам. По нему ходят купеческие обозы.': 'The great highway leading to the southern cities. Merchant convoys travel along it.',
     'Поля общинной пашни. Здесь крестьяне сеют рожь, овёс и ячмень.': 'Fields of communal arable land. Here the peasants sow rye, oats and barley.',
     'Тихое лесное озеро с чистой водой. Здесь ловят рыбу и собирают камыши.': 'A quiet forest lake with clear water. Fish are caught and reeds gathered here.',
     'Деревенское кладбище с деревянной часовней и рядами могил с крестами. Много деревьев и травы.': 'The village cemetery with a wooden chapel and rows of graves marked with crosses. Many trees and grass.',
@@ -340,7 +341,7 @@ const EN = {
 
     // --- Краткие описания (FORK_LOCATIONS) ---
     'Густой лес за рекой. Много следов, но и много зверья.': 'A dense forest across the river. Many tracks — and much game.',
-    'Торная дорога на юг, к большим городам.': 'A well-travelled highway south, to the big cities.',
+    'Торный тракт на юг, к большим городам.': 'A well-travelled highway south, to the big cities.',
     'Брод через реку. Галька, илистый берег — следы видны хорошо.': 'A river ford. Pebbles and muddy banks — tracks show up well.',
     'Ржаное поле на восток. Высокие стебли скрывают следы.': 'A rye field to the east. Tall stalks hide the tracks.',
 
@@ -1918,7 +1919,6 @@ const EN = {
     'Супруг (мёртв)': 'Spouse (dead)',
     'Супруга (мертва)': 'Spouse (dead f.)',
     'Об игре': 'About',
-    'Большая дорога': 'The Great Road',
     'Жарко. Стук молота по наковальне. На стенах — топоры, копья да кольчуги.':
         'Hot. The hammer rings on the anvil. Axes, spears and mail shirts hang on the walls.',
     'Крепкая изба в два окна: на шестке горшки глиняные, у красного угла — образа с рушником, под лавкой — кувадка с прялкой Арины. У крыльца сушатся сбруя и рукавицы, в сенцах пахнет хлебом и скотиной.':

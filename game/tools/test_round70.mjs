@@ -359,9 +359,9 @@ console.log('— п.3: СТРЕЛКИ ЛАЙТБОКСА ВСЕГДА ВИДНЫ
 console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v67'"), 'SW: сайт v67 (раунд 66.8)');
-    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v21'"),
-        'SW: game-assets-v21 (частокол/дорожки/церковь/фасады/фон церкви)');
+    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v69'"), 'SW: сайт v69 (раунд 66.19)');
+    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v22'"),
+        'SW: game-assets-v22 (чистка неиспользуемых ассетов, раунд 66.19)');
     setLang('en');
     ok(t('☁ Что погода сулит?') === '☁ What will the weather bring?', 'i18n: вопрос о погоде EN');
     ok(t('Доска поручений') === 'Job Board', 'i18n: доска поручений EN');

@@ -1453,8 +1453,11 @@ export class LocationScene extends Phaser.Scene {
             // ----- Раунд 28 (п.7): ГРАВИЙНАЯ ДОРОГА — настоящие тайлы вместо
             // плоской полосы: гравий двух видов (с колеями) + кромки с травой,
             // камешки и разметанные следы обоза — тракт больше не «жёлтая полоса»
+            // Раунд 66.19 (приказ владельца №2): тракт — ШИРОКАЯ гравийная
+            // дорога (лента 150px вместо 100px) с кустами по обочинам и
+            // негустым лесом по обеим сторонам вдоль всей дороги.
             const roadY = height * 0.5;
-            const roadH = 100;
+            const roadH = 150;
             const roadTop = roadY - roadH / 2;
             const roadBottom = roadY + roadH / 2;
             const hasGravel = this.textures.exists('tile_gravel_0');
@@ -1492,9 +1495,24 @@ export class LocationScene extends Phaser.Scene {
             }
             roadGfx.fillStyle(0x74654e, 0.4);
             for (let i = 0; i < 6; i++) {
-                roadGfx.fillRect(0, roadTop + 20 + (i % 2) * 40, width, 4);
+                roadGfx.fillRect(0, roadTop + 30 + (i % 3) * 40, width, 4); // колеи по всей ширине ленты
             }
             roadGfx.setDepth(1.2);
+            // ----- Раунд 66.19 (приказ №2): КУСТЫ ПО КРАЯМ ДОРОГИ —
+            // сплошная подлесочная кайма вдоль обеих обочин (с лёгким
+            // нахлёстом на гравий), изредка — ягодный куст для разнообразия
+            if (this.textures.exists('deco_road_bush')) {
+                for (let bx = 8; bx < width + 30; bx += 44 + Math.random() * 38) {
+                    const berryTop = Math.random() < 0.18;
+                    this.add.image(bx, roadTop - 4 + Math.random() * 10,
+                            berryTop && this.textures.exists('deco_berry_bush') ? 'deco_berry_bush' : 'deco_road_bush')
+                        .setScale(1.5 + Math.random() * 0.5).setDepth(1.3);
+                    const berryBottom = Math.random() < 0.18;
+                    this.add.image(bx + 16 + Math.random() * 24, roadBottom + 4 - Math.random() * 10,
+                            berryBottom && this.textures.exists('deco_berry_bush') ? 'deco_berry_bush' : 'deco_road_bush')
+                        .setScale(1.5 + Math.random() * 0.5).setDepth(1.3);
+                }
+            }
             // П.15: Камни на дороге — только ВНЕ дороги (на траве), чтобы не перекрывать
             const placedPositions = [];
             const isOnRoad = (y) => y > roadTop - 20 && y < roadBottom + 20;
@@ -1517,19 +1535,25 @@ export class LocationScene extends Phaser.Scene {
             }
             // П.15: Деревья по бокам дороги — с проверкой коллизий.
             // Раунд 27: прозрачные спрайты вместо квадратных тайлов.
-            for (let i = 0; i < 12; i++) {
-                let attempts = 0;
-                while (attempts < 10) {
-                    const x = (i < 6) ? Math.random() * 180 : width - Math.random() * 180;
-                    const y = 100 + Math.random() * (height - 150);
-                    if (!isOnRoad(y) && !hasCollision(x, y, 60)) {
-                        const tex = TREE_KEYS[i % TREE_KEYS.length];
-                        this.add.image(x, y, this.textures.exists(tex) ? tex : 'tile_forest_0')
-                            .setScale(1.6).setOrigin(0.5, 0.88).setDepth(3);
-                        placedPositions.push({ x, y });
-                        break;
+            // Раунд 66.19 (приказ №2): НЕГУСТОЙ ЛЕС ПО ОБОИМ СТОРОНАМ
+            // дороги — деревья вдоль всего тракта (а не только у краёв
+            // экрана): редкая посадка шагом 110..200 px в полосах north/south.
+            const treeBands = [
+                { yMin: 95, yMax: roadTop - 36 },              // северная сторона
+                { yMin: roadBottom + 36, yMax: height - 45 },  // южная сторона
+            ];
+            for (const band of treeBands) {
+                let tx = Math.random() * 50;
+                while (tx < width - 30) {
+                    tx += 110 + Math.random() * 90;            // негусто: шаг посадки 110..200 px
+                    if (tx > width - 30) break;
+                    const ty = band.yMin + Math.random() * Math.max(10, band.yMax - band.yMin);
+                    if (!hasCollision(tx, ty, 70)) {
+                        const tex = TREE_KEYS[Math.floor(Math.random() * TREE_KEYS.length)];
+                        this.add.image(tx, ty, this.textures.exists(tex) ? tex : 'tile_forest_0')
+                            .setScale(1.5 + Math.random() * 0.4).setOrigin(0.5, 0.88).setDepth(3);
+                        placedPositions.push({ x: tx, y: ty });
                     }
-                    attempts++;
                 }
             }
             // Тропинки травы у дороги — только выше дороги.

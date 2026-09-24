@@ -1,17 +1,15 @@
-// ТЕСТ РАУНДА 66.14 — ПРИКАЗ ВЛАДЕЛЬЦА (п.2):
-//  «проверить, чтобы и в диалогах было всё нормально с именами и
-//   названиями локаций».
-//  Найдено и исправлено:
-//  • ForkScene (панель «🗺 Карта местности»): живой лейбл узла «Тракт» —
-//    легаси, уцелевший от приказа 66.12 №3 («Тракт» → «Большая дорога»);
-//    заменён на каноническое «Большая дорога» (EN «The Great Road»).
-//  • i18n.js: ключ «Тракт»: 'Highway' удалён (осиротел).
+// ТЕСТ РАУНДА 66.19 — ПРИКАЗ ВЛАДЕЛЬЦА:
+//  ««Большая дорога» вместо «Тракт» — вернуть название обратно на «Тракт»».
+//  История имени: 66.12 №3 «Тракт»→«Большая дорога», 66.14 дожала лейбл узла;
+//  66.19 — ПОЛНЫЙ откат: узел карты, FORK_LOCATIONS, mapLocations и i18n
+//  снова на каноническом «Тракт» (EN «Highway» / «Тракт на юг» →
+//  «The Southern Highway»).
 //  Регрессии этого теста:
-//  • легаси-топонимы/орфография (Тракт/Рѣка/Тузик/ѣ) отсутствуют в живых
+//  • легаси-топонимы/орфография (Рѣка/Тузик/ъ) отсутствуют в живых
 //    исходниках сцен/данных;
 //  • id локаций узлов карты ForkScene и CHASE_LOCATIONS — из mapLocations;
 //  • в диалогах нет захардкоженных названий деревень (деревня случайна);
-//  • t('Большая дорога') на EN даёт «The Great Road» (runtime-проверка).
+//  • t('Тракт') на EN даёт «Highway» (runtime-проверка).
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -31,24 +29,25 @@ const thiefSrc = read('game/src/data/thief.js');
 const dialogueSrc = read('game/src/data/dialogue.js');
 const interiorsSrc = read('game/src/data/interiors.js');
 
-// ---------- 1. «Тракт» убран из живого лейбла ----------
-ok(!forkSrc.includes("t('Тракт')"), 'ForkScene: живого лейбла t(\'Тракт\') больше нет');
-ok(forkSrc.includes("{ id: 'road_south', name: t('Большая дорога')"), 'ForkScene: узел road_south = «Большая дорога»');
-ok(!/^    'Тракт':/m.test(i18nSrc), 'i18n: ключ «Тракт» удалён из словаря');
-ok(i18nSrc.includes("'Большая дорога': 'The Great Road'"), 'i18n: «Большая дорога» → «The Great Road» на месте');
+// ---------- 1. «Тракт» возвращён (приказ 66.19) ----------
+ok(forkSrc.includes("{ id: 'road_south', name: t('Тракт')"), 'ForkScene: узел road_south = «Тракт»');
+ok(i18nSrc.includes("'Тракт': 'Highway'"), 'i18n: ключ «Тракт»: Highway на месте');
+ok(!i18nSrc.includes("'Большая дорога'"), 'i18n: ключ «Большая дорога» удалён (осиротел)');
+ok(i18nSrc.includes("'Тракт на юг': 'The Southern Highway'"), 'i18n: «Тракт на юг» → The Southern Highway');
 setLang('en');
-ok(t('Большая дорога') === 'The Great Road', 'runtime t(): «Большая дорога» → The Great Road');
+ok(t('Тракт') === 'Highway', 'runtime t(): «Тракт» → Highway');
+ok(t('Тракт на юг') === 'The Southern Highway', 'runtime t(): «Тракт на юг» → The Southern Highway');
 setLang('ru');
-ok(t('Большая дорога') === 'Большая дорога', 'runtime t(): RU-фолбэк без изменений');
+ok(t('Тракт') === 'Тракт', 'runtime t(): RU-фолбэк без изменений');
 
 // ---------- 2. Легаси-топонимы/орфография в живых источниках ----------
 const stripComments = (src) => src.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
-ok(!stripComments(forkSrc).includes('Тракт'), 'ForkScene: в КОДЕ (без комментариев) «Тракт» нет вовсе');
-ok(!stripComments(mapSrc).includes("'Тракт'"), 'mapLocations: в коде нет строкового «Тракт»');
+ok(stripComments(forkSrc).includes("name: t('Тракт')"), 'ForkScene: в КОДЕ узел «Тракт» (приказ 66.19)');
+ok(stripComments(mapSrc).includes("name: t('Тракт на юг')"), 'mapLocations: road_south = «Тракт на юг»');
 ok(!dialogueSrc.includes('Рѣка'), 'dialogue: дореформенной «Рѣка» нет');
 ok(!thiefSrc.includes('Рѣка'), 'thief: дореформенной «Рѣка» нет');
 ok(!dialogueSrc.includes('Тузик'), 'dialogue: «Тузик» нет (заменён на Серко)');
-ok(!interiorsSrc.includes('t(\'Тракт\')'), 'interiors: нет живого t(\'Тракт\')');
+ok(interiorsSrc.includes("{ id: 'road', name: t('Тракт')"), 'interiors: FORK id road = «Тракт» (приказ 66.19)');
 
 // ---------- 3. id локаций: узлы карты и погоня ⊆ mapLocations ----------
 const mapIds = [...mapSrc.matchAll(/id:\s*'([^']+)'/g)].map(m => m[1]);

@@ -248,10 +248,10 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
         ok(loc.includes(`case '${phase}':`), `LocationScene: вид поля «${phase}» отрисован`);
     }
     ok(loc.includes('showBellToast(this, work66.toast)'), 'LocationScene: плашка сезона при входе на поле');
-    // SW: v65, ассеты не тронуты
+    // SW: v69, ассеты вычищены от неиспользуемых (66.19)
     const sw = read('../sw.js');
-    ok(sw.includes("chronicles-ruthenia-v67"), 'SW: версия сайта v67 (раунд 66.8)');
-    ok(sw.includes("game-assets-v20"), 'SW: кеш ассетов v20 не тронут (звук WebAudio, без новых файлов)');
+    ok(sw.includes("chronicles-ruthenia-v69"), 'SW: версия сайта v69 (раунд 66.19)');
+    ok(sw.includes("game-assets-v22"), 'SW: кеш ассетов v22 (чистка неиспользуемых файлов, 66.19)');
     ok(sw.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи
     const i18n = read('src/systems/i18n.js');

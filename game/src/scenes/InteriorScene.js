@@ -7,7 +7,7 @@ import AudioManager from '../systems/AudioManager.js';
 // Раунд 66.9 (CraftSounds): процедурные звуки ремёсел — молот/прялка/таверна
 import { attachCraftAudio } from '../systems/CraftAudio.js';
 import SaveManager from '../systems/SaveManager.js';
-import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
+import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons, closeAllSingletonDialogs } from '../utils/ui.js';
 import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd, askMoneyForHelp, askElderAdvance, isChaseActive } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
@@ -1393,6 +1393,12 @@ export class InteriorScene extends Phaser.Scene {
     showSellLootMenu(interior) {
         const player = this.registry.get('player');
         if (!player) return;
+        // Раунд 66.19 (бэклог «стакинг попапов»): «Скупка» закрывает ВСЕ
+        // открытые диалоги («Отдых», беседу трактирщика) — нижняя панель
+        // кликабельна под блокиратором, и раньше панель ложилась поверх них.
+        closeAllSingletonDialogs(this);
+        this.busyDialog = false;
+        this.__sellLootOpen = true;
         const { width, height } = this.scale;
         const isButcher = interior.id === 'butcher_house';
         const buyerName = isButcher
@@ -1419,6 +1425,7 @@ export class InteriorScene extends Phaser.Scene {
         const closeMenu = () => {
             overlay.destroy(); panel.destroy();
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+            this.__sellLootOpen = false;
         };
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 30,
@@ -1499,6 +1506,9 @@ export class InteriorScene extends Phaser.Scene {
      */
     showTavernRestMenu(interior) {
         if (this.busyDialog) return;
+        // Раунд 66.19 (бэклог «стакинг попапов»): панель «Скупка» перекрывает
+        // весь экран своим блокиратором — отдых поверх неё невозможен; страховка:
+        if (this.__sellLootOpen) return;
         // Приказ 4: кулдаун сна 12 часов — «герой не хочет спать», отмена.
         if (!canSleep(this.registry).ok) {
             showSleepBlockedPopup(this);
@@ -1540,6 +1550,9 @@ export class InteriorScene extends Phaser.Scene {
             };
         }).filter(Boolean);
 
+        // Раунд 66.19 (бэклог «стакинг попапов»): «Отдых» тоже закрывает все
+        // открытые диалоги — вместо нагромождения панелей остаётся одна.
+        closeAllSingletonDialogs(this);
         this.busyDialog = true;
         createDialog(this, t('🛏 Отдых в таверне'),
             t('Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Сколько будешь отдыхать?»')
@@ -1558,7 +1571,11 @@ export class InteriorScene extends Phaser.Scene {
                     callback: () => { this.busyDialog = false; },
                 },
             ],
-            { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 25 });
+            // Раунд 66.19 (бэклог «стакинг попапов»): singleton ВКЛЮЧЁН —
+            // раньше «Отдых» открывался с singleton:false, не регистрировался
+            // в реестре диалогов, не дедуплицировался и не закрывался
+            // closeAllSingletonDialogs при открытии «Скупки» — панели стакались.
+            { portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 25 });
     }
 
     /**

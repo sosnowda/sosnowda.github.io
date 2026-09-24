@@ -1190,7 +1190,6 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             }
         });
     }
-
     // Анимация появления
     resetSceneButtonVisuals();
     dialog.setScale(0.1);
@@ -1236,6 +1235,40 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     });
 
     return dialog;
+}
+
+// ============================================================
+// closeAllSingletonDialogs — закрыть все одиночные диалоги сцены
+// ============================================================
+
+/**
+ * Раунд 66.19 (приказ владельца, бэклог «стакинг попапов»): косметика —
+ * закрыть ВСЕ singleton-диалоги сцены (беседы, «Отдых», уведомления…).
+ * Причина: нижняя панель действий остаётся кликабельной ПОД блокиратором
+ * диалога (bottomFreePx), поэтому поверх «Отдыха» можно было открыть
+ * «Скупку добычи» (самодельная панель на глубине 200) — и наоборот —
+ * панели накладывались друг на друга. Каждый диалог закрывается через
+ * собственный modalClose (твин + снятие блокиратора + чистка реестра).
+ * @param {Phaser.Scene} scene
+ * @returns {number} сколько диалогов закрыто
+ */
+export function closeAllSingletonDialogs(scene) {
+    if (!scene || !scene.__uiSingletonDialogs || !scene.__uiSingletonDialogs.size) return 0;
+    let closed = 0;
+    for (const dialog of Array.from(scene.__uiSingletonDialogs.values())) {
+        if (dialog && dialog.scene && typeof dialog.modalClose === 'function') {
+            dialog.modalClose();
+            closed++;
+        } else if (dialog && typeof dialog.destroy === 'function') {
+            dialog.destroy();
+            closed++;
+        }
+    }
+    // Реестр чистится обработчиками 'destroy', но твин закрытия асинхронен:
+    // снимаем ключи сразу, чтобы быстрый повторный вызов createDialog не
+    // «воскресил» закрывающийся диалог.
+    scene.__uiSingletonDialogs.clear();
+    return closed;
 }
 
 // ============================================================

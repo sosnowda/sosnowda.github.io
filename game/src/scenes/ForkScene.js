@@ -306,9 +306,10 @@ export class ForkScene extends Phaser.Scene {
             { id: 'field', name: t('Поле'), icon: '🌾', angle: 28, dist: 255 },
             { id: 'pogost', name: t('Погост'), icon: '⚰️', angle: 120, dist: 235 },
             { id: 'mill', name: t('Мельница'), icon: '🏭', angle: 145, dist: 265 },
-            // Раунд 66.14 (приказ №2, аудит имён): «Тракт» → каноническое
-            // «Большая дорога» (как в FORK_LOCATIONS и mapLocations; приказ 66.12 №3).
-            { id: 'road_south', name: t('Большая дорога'), icon: '🛤', angle: 92, dist: 165 },
+            // Раунд 66.19 (приказ владельца): возврат названия «Тракт»
+            // (откат приказа 66.12 №3 «Тракт→Большая дорога»); имя узла —
+            // как в FORK_LOCATIONS и mapLocations.
+            { id: 'road_south', name: t('Тракт'), icon: '🛤', angle: 92, dist: 165 },
             { id: 'river', name: t('Река'), icon: '🌊', angle: 178, dist: 185 },
         ];
 

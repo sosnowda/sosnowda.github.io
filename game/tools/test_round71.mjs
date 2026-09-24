@@ -128,11 +128,11 @@ const li = read('index.html');
 ok(has(li, 'assets/images/og-image.jpg'), 'лендинг (index.html) по-прежнему указывает на og-image.jpg');
 
 // ================================= 4) SW ====================================
-console.log('\n[4] Service Worker v67');
+console.log('\n[4] Service Worker v69');
 const sw = read('sw.js');
-ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v67'"), 'CACHE_NAME бампнут до v67 (game/index.html изменён)');
-ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v21'"), 'game-assets-v21 НЕ тронут (game/assets не менялись)');
-ok(has(sw, 'v67 — раунд 66.8'), 'шапка sw.js: запись о раунде 66.8');
+ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v69'"), 'CACHE_NAME бампнут до v69 (сайт изменён, 66.19)');
+ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v22'"), 'game-assets-v22 (удаление неиспользуемых ассетов, 66.19)');
+ok(has(sw, 'v69 — раунд 66.19'), 'шапка sw.js: запись о раунде 66.19');
 ok(has(sw, 'assets/images/og-demo.jpg'), 'шапка sw.js: og-demo.jpg задокументирован');
 
 // ============================== 5) EN-ключи =================================

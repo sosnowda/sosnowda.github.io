@@ -972,6 +972,18 @@ export class BootScene extends Phaser.Scene {
         });
         g.generateTexture('deco_berry_bush', 26, 22);
 
+        // ===== Куст придорожный (34×24): пышная зелень без ягод — кайма
+        // подлеска по обочинам Тракта (раунд 66.19, приказ владельца №2) =====
+        g.clear();
+        g.fillStyle(0x2f5220, 1); g.fillEllipse(17, 16, 30, 15);       // крона
+        g.fillStyle(0x4a7c3a, 1); g.fillEllipse(22, 11, 13, 9);        // вторая шапка
+        g.fillStyle(0x3f6a2c, 1); g.fillEllipse(12, 11, 15, 9);        // блик
+        g.fillStyle(0x24421a, 1); g.fillEllipse(18, 20, 19, 6);        // тень низа
+        g.fillStyle(0x5d8f42, 1);                                      // блики листвы
+        g.fillCircle(9, 10, 1.3); g.fillCircle(15, 8, 1.3);
+        g.fillCircle(21, 9, 1.3); g.fillCircle(26, 13, 1.2);
+        g.generateTexture('deco_road_bush', 34, 24);
+
         // ===== Зверобой (16×18): пучок стеблей с жёлтыми цветками =====
         g.clear();
         g.fillStyle(0x4a6a2a, 1); g.fillRect(7, 6, 2, 11);             // главный стебель

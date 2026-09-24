@@ -1,6 +1,7 @@
 /* Service Worker — Летописи Руси XV века
    Network-first для HTML/CSS/JS, cache-first для ассетов игры.
 
+v69 — раунд 66.19 (приказы владельца): название «Большая дорога» возвращено на «Тракт» (ForkScene/interiors/mapLocations/i18n + EN Highway); Тракт перерисован — ШИРОКАЯ гравийная лента 150px, кайма кустов по обочинам (новая runtime-текстура deco_road_bush), негустой лес вдоль обеих сторон; «Скупка»/«Отдых» больше не стакаются (ui.js closeAllSingletonDialogs); ЧИСТКА РЕПОЗИТОРИЯ — удалены устаревшие доки (root docs/, кадры game/docs) и ~60 неиспользуемых ассетов (vh_*/wood_house_*/reserve/quaternius_big/старые bg_* и пр., ~8 МБ) — game-assets инвалидируется (v22), site-cache (v69).
 v68 — раунд 66.18 (QA + обновление скриншотов): assets/screenshots/* заменены на свежие захваты прод-сборки 66.17/66.18 (титул «Об игре», ростер с Милушей, «Большая дорога» на карте, женская воровка, кнопки боя с луком), index.html — alt-тексты 06/08/09 под новые кадры; site-cache инвалидируется (v68).
 v67 — раунд 66.8 (бэклог отчётов 66.6/66.7):
 1) ПЛАН ДЕРЕВНИ (MiniMap.js): виджет-миникарта в правом верхнем углу
@@ -211,8 +212,8 @@ v45 — релиз (раунд 47, 5 пунктов владельца): 1) СВ
  */
 
 
-var CACHE_NAME = 'chronicles-ruthenia-v68';
-var GAME_ASSETS_CACHE = 'game-assets-v21';
+var CACHE_NAME = 'chronicles-ruthenia-v69';
+var GAME_ASSETS_CACHE = 'game-assets-v22';
 
 self.addEventListener('install', function (event) {
     self.skipWaiting();

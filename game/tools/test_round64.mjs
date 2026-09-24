@@ -40,12 +40,16 @@ ok(Array.isArray(YARD_PROPS) && YARD_PROPS.length === 0, 'YARD_PROPS пуст (�
 ok(!village.includes('drawYardProps('), 'drawYardProps убран');
 ok(existsSync(join(root, 'src/data/world.js')), 'world.js на месте');
 
-console.log('— П.8,9: дома из частей «стены+крыши» —');
-const hpKeys = ['hp_log_thatch_a', 'hp_log_thatch_b', 'hp_log_wood_a', 'hp_log_wood_b',
-    'hp_plank_thatch_a', 'hp_plank_wood_a', 'hp_plaster_thatch_a', 'hp_plaster_wood_a',
-    'hp_narrow_thatch', 'hp_narrow_wood', 'hp_inn', 'village_gate_r64'];
-hpKeys.forEach(k => ok(existsSync(join(root, `assets/sprites/${k}.png`)), `спрайт ${k}.png существует`));
-ok(existsSync(join(root, 'assets/sprites/vh_chapel.png')), 'часовня vh_chapel сохранена');
+console.log('— П.8,9: дома из частей «стены+крыши» — устаревшее поколение удалено —');
+// Раунд 66.19: процедурные hp_* (р.64) и старые вырезы rural_*/rurald_*/vh_*/wood_house_*
+// удалены из репозитория (не загружаются ни одной сценой; актуальные фасады — fb_*).
+for (const k of ['hp_log_thatch_a', 'hp_inn', 'rural_house_0', 'rurald_house_1', 'rural_shop_1']) {
+    ok(!existsSync(join(root, `assets/sprites/${k}.png`)), `устаревший ${k}.png удалён (66.19)`);
+}
+// Раунд 66.19: устаревшие вырезы vh_* (включая часовню — церковь теперь fb_church)
+// удалены из репозитория; актуальный фасад церкви — fb_church (загружается в BootScene)
+ok(existsSync(join(root, 'assets/sprites/fb_church.png')), 'церковь fb_church существует (часовня vh_* удалена в 66.19)');
+ok(!existsSync(join(root, 'assets/sprites/vh_chapel.png')), 'устаревший vh_chapel.png удалён (66.19)');
 const boot = readFileSync(join(root, 'src/scenes/BootScene.js'), 'utf8');
 // Раунды 65–66: hp_* заменены fb_* (пак Celianna), воротня — r66
 ok(boot.includes("'fb_church'") && boot.includes("'village_gate_r66'"), 'BootScene загружает дома fb_* и воротню актуального поколения');

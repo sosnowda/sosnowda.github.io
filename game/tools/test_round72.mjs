@@ -178,9 +178,9 @@ setLang('ru');
     setLang('ru');
 }
 
-console.log('\n— Регрессия: SW не тронут (game/src — network-first, бамп не нужен) —');
-ok(read('../sw.js').includes("var CACHE_NAME = 'chronicles-ruthenia-v67';"),
-    'SW остаётся v67 (новых ассетов нет)');
+console.log('\n— Регрессия: SW на актуальной версии (66.19 — чистка ассетов, бамп v22) —');
+ok(read('../sw.js').includes("var CACHE_NAME = 'chronicles-ruthenia-v69';"),
+    'SW актуален (v69, раунд 66.19)');
 
 console.log(`\nИТОГО: ${pass} зелёных, ${fail} красных`);
 process.exit(fail ? 1 : 0);

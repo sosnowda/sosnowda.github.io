@@ -41,9 +41,9 @@ export const MAP_LOCATIONS = [
     },
     {
         id: 'road_south',
-        name: t('Большая дорога на юг'),
+        name: t('Тракт на юг'),
         icon: '🛤',
-        description: t('Большая дорога, ведущая к южным городам. По ней ходят купеческие обозы.'),
+        description: t('Большой тракт, ведущий к южным городам. По нему ходят купеческие обозы.'),
         type: 'road',
         danger: 'medium',
         canFight: true,
