@@ -160,7 +160,8 @@ const ACTIVITY = {
         dusk: 'возвращается домой', night: 'спит',
         tavern: 'заглянул на постоялом дворе', village: 'обходит деревню',
     },
-    priest: { church: 'при службе в церкви' },
+    // Раунд 66.21 (приказ 12): у батюшки — келья при церкви; обед/ужин в корчме
+    priest: { church: 'при службе в церкви', tavern: 'трапезничает в корчме', night: 'спит в келье' },
     tavernkeeper: { tavern: 'работает на постоялом дворе' },
     blacksmith: {
         home: 'куёт в кузнице', tavern: 'отдыхает на постоялом дворе',
@@ -535,13 +536,25 @@ export function getPresence(registry, npcId) {
     const role = NPC_ROLE[npcId] || 'homemaker';
     const acts = ACTIVITY[role] || {};
 
+    // --- Раунд 66.21 (приказы 11–12): распорядок отца Савватия ---
+    // В церкви он живёт при церкви, выходит ТОЛЬКО на 1 час — на обед
+    // (12:00–13:00) и ужин (19:00–20:00) в корчму; на ночь запирает
+    // церковь и спит в келье. Остальное время — при службе.
+    if (role === 'priest') {
+        if (segId === 'night') return { place: 'church', activity: 'спит в келье' };
+        if (hour >= 12 && hour < 13) return { place: 'tavern', activity: 'обедает в корчме' };
+        if (hour >= 19 && hour < 20) return { place: 'tavern', activity: 'ужинает в корчме' };
+    }
+
     // --- Ночь: все спят дома (кроме при службе); п.3: на локациях вне деревни НИКОГО
     if (segId === 'night') {
         let nightPlace = BASE_SCHEDULE[role] ? BASE_SCHEDULE[role].night : 'home';
         // Раунд 31 (п.3): если расписание вдруг отправило жителя за околицу — он дома.
         // (вор — не отсюда: он может быть на локации и ночью)
         if (NIGHT_FORBIDDEN_PLACES.has(nightPlace)) nightPlace = 'home';
-        return { place: nightPlace, activity: acts[nightPlace] || acts.night || 'спит' };
+        // Раунд 66.21: ночью честнее «спит» — дневная активность места
+        // (ткёт/печёт/ловит) в подсказках не светится
+        return { place: nightPlace, activity: acts.night || acts[nightPlace] || 'спит' };
     }
 
     // --- Пастухи (раунд 31, п.2): везде вместе со стадом; ночью — дома

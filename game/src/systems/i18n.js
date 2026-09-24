@@ -528,8 +528,8 @@ const EN = {
     'Погоня окончена — искать больше нечего.': 'The chase is over — there is nothing left to search for.',
     'Следы свежайшие — трава ещё примята! Вор где-то совсем рядом, оглянись!':
         'The tracks are absolutely fresh — the grass is still flattened! The thief is very close, look around!',
-    'Вор был здесь! Следы ведут в сторону «{0}». Не теряй времени!':
-        'The thief was here! The tracks lead towards "{0}". Waste no time!',
+    'Вор был здесь! Следы ведут в сторону {0}. Не теряй времени!':
+        'The thief was here! The tracks lead towards {0}. Waste no time!',
     'Следы вора здесь обрываются: он уходил прочь из деревни широкими шагами бегуна.':
         'The thief\'s tracks end here: he left the village at a runner\'s stride, heading away for good.',
     'Кто-то здесь проходил — видны примятые травы. Но разобрать следы не вышло. Попробуй ещё раз.':
@@ -635,12 +635,12 @@ const EN = {
         'DEFEAT: the thief left the last location and vanished from sight. The trail leads out of the village bounds.',
     'Ты уже обследовал следы здесь. Больше из них ничего не выжать — придётся искать вора в других местах.':
         'You have already examined the tracks here. Nothing more to squeeze out of them — you will have to look for the thief elsewhere.',
-    'Вор был здесь! Следы ведут в сторону «{0}».':
-        'The thief was here! The tracks lead towards "{0}".',
-    'По свежести примятой травы ясно: вор сейчас на дороге к «{0}»!':
-        'By the freshness of the trampled grass you can tell: the thief is right now on the road to "{0}"!',
-    'Судя по свежести следов, вор сейчас где-то у «{0}»!':
-        'Judging by how fresh the tracks are, the thief is somewhere near "{0}" right now!',
+    'Вор был здесь! Следы ведут в сторону {0}.':
+        'The thief was here! The tracks lead towards {0}.',
+    'По свежести примятой травы ясно: вор сейчас на дороге к {0}!':
+        'By the freshness of the trampled grass you can tell: the thief is right now on the road to {0}!',
+    'Судя по свежести следов, вор сейчас где-то у {0}!':
+        'Judging by how fresh the tracks are, the thief is somewhere near {0} right now!',
     'Кто-то здесь проходил — видны примятые травы, но разобрать следы не вышло. Можно присмотреться ещё раз (это займёт час), но следы уже примяты — шансы будут ниже.':
         'Someone passed here — the grass is trampled, but you could not make out the tracks. You may look again (it will take an hour), but the tracks are already trampled — the chances will be lower.',
     'Ты вторично присмотрелся к примятым травам, но следы так и не поддались. Здесь больше нечего искать: придётся искать вора ВСЛЕПУЮ — обходить локации или расспрашивать других селян.':
@@ -834,25 +834,25 @@ const EN = {
     'Дождь размыл все старые следы вора — остались только свежие, оставленные уже под дождём.':
         'The rain has washed away all the thief\'s old tracks — only fresh ones remain, left after the rain.',
     'Следов вора здесь нет.': 'No tracks of the thief here.',
-    '📍 Вор сейчас на дороге к «{0}»!': '📍 The thief is on the road to "{0}"!',
-    '📍 Вор сейчас где-то у «{0}»!': '📍 The thief is hiding somewhere at "{0}"!',
+    '📍 Вор сейчас на дороге к {0}!': '📍 The thief is on the road to {0}!',
+    '📍 Вор сейчас где-то у {0}!': '📍 The thief is hiding somewhere at {0}!',
     'След ещё хранит отпечаток, но свежесть ушла.': 'The print is still there, but its freshness is gone.',
     'Этот след ты уже затоптал — больше он ничего не скажет.': 'You already trampled this print — it will tell you no more.',
     'Ночь: в темноте и следы читаются куда хуже.': 'Night: in the darkness tracks are far harder to read.',
     'Пока ты склонялся над следом, вор успел скрыться из вида...': 'While you bent over the print, the thief slipped out of sight...',
-    '📍 ПОП-АП: вор сейчас на дороге к «{0}»!': '📍 TIP: the thief is on the road to "{0}"!',
-    '📍 ПОП-АП: вор сейчас где-то у «{0}»!': '📍 TIP: the thief is hiding somewhere at "{0}"!',
+    '📍 ПОП-АП: вор сейчас на дороге к {0}!': '📍 TIP: the thief is on the road to {0}!',
+    '📍 ПОП-АП: вор сейчас где-то у {0}!': '📍 TIP: the thief is hiding somewhere at {0}!',
     'След прочитан, но человек он скрытный — куда подался, не разобрать.':
         'The print is read, but he is a stealthy one — where he went is anyone\'s guess.',
-    'Сам след ведёт в сторону «{0}».': 'The print itself leads toward "{0}".',
+    'Сам след ведёт в сторону {0}.': 'The print itself leads toward {0}.',
     'Ты пригляделся к следу, но неосторожно наступил — отпечаток заветрился. Можно попытаться прочесть его ещё раз (это займёт час), но шансы уже ниже.':
         'You studied the print, but stepped carelessly — the print is weathered now. You may try to read it once more (it will take an hour), but the chances are lower.',
     'Ты снова присмотрелся к следу, но тот окончательно затёрся — второй попытки больше не будет.':
         'You studied the print again, but it is finally smeared away — there will be no third attempt.',
-    'Видел я его, темного человека! Он бежит к «{0}» — поспеши, догонешь!':
-        'I saw him, the dark man! He is running toward "{0}" — hurry, you will catch him!',
-    'Видел я его, темного человека! Он сейчас прячется у «{0}» — поспеши!':
-        'I saw him, the dark man! He is hiding at "{0}" right now — hurry!',
+    'Видел я его, темного человека! Он бежит к {0} — поспеши, догонешь!':
+        'I saw him, the dark man! He is running toward {0} — hurry, you will catch him!',
+    'Видел я его, темного человека! Он сейчас прячется у {0} — поспеши!':
+        'I saw him, the dark man! He is hiding at {0} right now — hurry!',
     'Видел я вора, да куда он подался — не ведаю.': 'I saw the thief, but where he went — I cannot say.',
     'Вор? Здесь не пробегал. Я бы заметил — весь день на виду был.':
         'The thief? No one ran past here. I would have noticed — I was in plain sight all day.',
@@ -1357,8 +1357,8 @@ const EN = {
     'Староста принимает виру — {0} д. ({1}) — и жмёт руку {2}: «Обида смыта серебром, по Судебнику быть миру!»\n\nРепутация {3} к тебе теперь +30.':
         'The elder accepts the wergild — {0} d. ({1}) — and clasps {2}\'s hand: "The offence is washed away with silver; by the Law there shall be peace!"\n\nReputation of {3} with you is now +30.',
     'СВАДЬБА: {0} {1} {2} ({3}). Свадебное торжество обошлось в {4} д. Деревенская репутация выросла.': 'WEDDING: {0} {1} {2} ({3}). The wedding feast cost {4} d. Village reputation has grown.',
-    'Обследовал след в «{0}» — след прочитан (бросок {1}, успех{2}): вор у «{3}».':
-        'Examined a footprint in "{0}" — trail read (roll {1}, success{2}): the thief is near "{3}".',
+    'Обследовал след в «{0}» — след прочитан (бросок {1}, успех{2}): вор у {3}.':
+        'Examined a footprint in "{0}" — trail read (roll {1}, success{2}): the thief is near {3}.',
     ', ночь': ', night',
     ', повтор': ', retry',
     'Обследовал след в «{0}» — провал (бросок {1}{2}), след заветрился, но не пропал.':
@@ -1378,10 +1378,10 @@ const EN = {
     'Расспрос {0} о воре — {1}: {2}.': 'Questioned {0} about the thief — {1}: {2}.',
     'СВИДЕТЕЛЬ': 'WITNESS',
     'ОЧЕВИДЕЦ С ЛОКАЦИИ, ГДЕ ПРОБЕГАЛ ВОР': 'EYEWITNESS FROM THE LOCATION WHERE THE THIEF RAN',
-    'Он через нашу сторону пробегал, верно тебе говорю! Теперь его видели на дороге к «{0}» — поспеши, догонешь!':
-        'He ran right through our side, I tell you true! He was just seen on the road to "{0}" — hurry, catch him!',
-    'Он через нашу сторону пробегал, верно тебе говорю! Теперь он прячется где-то у «{0}» — поспеши!':
-        'He ran right through our side, I tell you true! Now he is hiding somewhere near "{0}" — hurry!',
+    'Он через нашу сторону пробегал, верно тебе говорю! Теперь его видели на дороге к {0} — поспеши, догонешь!':
+        'He ran right through our side, I tell you true! He was just seen on the road to {0} — hurry, catch him!',
+    'Он через нашу сторону пробегал, верно тебе говорю! Теперь он прячется где-то у {0} — поспеши!':
+        'He ran right through our side, I tell you true! Now he is hiding somewhere near {0} — hurry!',
     'Он через нашу сторону пробегал, да куда подался — не ведаю.':
         'He ran right through our side, but where he headed — I cannot say.',
     'Расспрос {0} о воре — не свидетель, ничего не знает.': 'Questioned {0} about the thief — no witness, knows nothing.',
@@ -2323,6 +2323,87 @@ const EN_KEYS = {
     '🧭 Наводка: устарела': '🧭 Hint: stale',
     'Наводка ещё свежа: {0}%.': 'The hint is still fresh: {0}%.',
     '👣 Свежесть следов вора: {0} ({1}%)': '👣 Thief track freshness: {0} ({1}%)',
+
+    // --- Раунд 66.21: виртуальная доска поручений, ночные запоры, стук,
+    //     часы церкви, пожертвования, дневные лимиты репутации ---
+    '📜 Есть ли дело?': '📜 Any work for me?',
+    '«Ты ещё не закончил моё прошлое дело. Сперва его, потом про новое говори!»':
+        '«You have not finished my last errand yet. Finish it first, then we shall talk of a new one!»',
+    '«На нынче у меня дел больше нет. Загляни завтра — что-нибудь найдётся.»':
+        '«I have no more errands for today. Come back tomorrow — something may turn up.»',
+    '«Нет у меня сейчас для тебя дел. Зайди попозже.»':
+        '«I have no errands for you right now. Come back later.»',
+    '«Куда тебе мои дела, мал ещё. Подрастёшь — разговор будет.»':
+        '«My errands are not for the little ones. Grow up first, then we shall talk.»',
+    '«Пустое дело ищешь? Иди с миром.»':
+        '«Looking for idle work? Go in peace.»',
+    '{0}: «Ты ещё не закончил моё прошлое дело. Сперва его, потом про новое говори!»':
+        '{0}: "You have not finished my last errand yet. Finish it first, then we shall talk of a new one!"',
+    '{0}: «На нынче у меня дел больше нет. Загляни завтра — что-нибудь найдётся.»':
+        '{0}: "I have no more errands for today. Come back tomorrow — something may turn up."',
+    '{0}: «Нет у меня сейчас для тебя дел. Зайди попозже.»':
+        '{0}: "I have no errands for you right now. Come back later."',
+    '{0}: «Куда тебе мои дела, мал ещё. Подрастёшь — разговор будет.»':
+        '{0}: "My errands are not for the little ones. Grow up first, then we shall talk."',
+    '{0}: «Пустое дело ищешь? Иди с миром.»':
+        '{0}: "Looking for idle work? Go in peace."',
+    '🕯 Пожертвовать церкви': '🕯 Donate to the church',
+    '🕯 Положить на блюдо': '🕯 Lay it on the dish',
+    '🕯 Положить {0} д. (+{1} к репутации)': '🕯 Lay down {0} d. (+{1} reputation)',
+    'Отец Савватий кивает на блюдо у иконостаса: «Кто много имя́ет, от того много и требует. А кто мало — тому и малое вменится».':
+        'Father Savvaty nods towards the dish by the iconostasis: «Unto whom much is given, of him much shall be required; and unto whom men have committed little, of him they will ask the little.»',
+    'В другой раз': 'Not this time',
+    '🕯 Пожертвование': '🕯 Donation',
+    'Пожертвование церкви': 'Donation to the church',
+    'Ты уже жертвовал нынче. Свечей куплено на всю неделю вперёд.':
+        'You have already given today. Candles are bought for the whole week ahead.',
+    'Сколько положишь на блюдо?': 'How much will you lay upon the dish?',
+    'Пожертвовал {0} д. в церкви (+{1} репутации священнику и деревне).':
+        'Donated {0} d. to the church (+{1} reputation with the priest and the village).',
+    'Ты кладёшь {0} денег на блюдо. «На свечи и ладан», — говоришь тихо. Отец Савватий благословляет тебя.\n\nЛичная репутация у священника: +{1}. Деревенская: +{1}.':
+        'You lay {0} denga on the dish. "For candles and incense," you say quietly. Father Savvaty blesses you.\n\nPersonal reputation with the priest: +{1}. Village reputation: +{1}.',
+    'Дом заперт': 'House locked',
+    '🔒 Дом заперт на ночь.': '🔒 The house is locked for the night.',
+    'Внутри спит {0}.': 'Inside, {0} is asleep.',
+    'Внутри тихо.': 'All is quiet inside.',
+    '🚪 Постучать в дверь': '🚪 Knock on the door',
+    'Уйти, не тревожа': 'Leave them be',
+    'Дверь заперта на ночь: {0}.': 'The door is locked for the night: {0}.',
+    'Дела до утра подождут. Но если дело срочное — можно постучать.':
+        'Errands can wait till morning. But if your business is urgent, you may knock.',
+    'Церковь заперта: {0}.': 'The church is locked: {0}.',
+    'Церковь заперта': 'The church is locked',
+    'Ночь. Церковь заперта — богослужение начнётся на рассвете.':
+        'It is night. The church is locked — the service begins at dawn.',
+    'Батюшка отдыхает после трапезы. Церковь откроют к вечерне.':
+        'The priest rests after his meal. The church opens for vespers.',
+    'Утреня — на рассвѣте, обедня — поутру, вечерня — ввечеру. После служб церковь открыта ещё два-три часа.':
+        'Matins at dawn, mass in the morning, vespers in the evening. The church stays open for two-three hours after each service.',
+    'Стук в дверь': 'A knock at the door',
+    'Ты стучишь в дверь': 'You knock at the door',
+    'В доме тихо: никто не отвечает — никого нет дома.':
+        'Silence inside: no one answers — the house is empty.',
+    'Ты стучишь снова': 'You knock again',
+    'больше не отвечает: ночью стучать без дела дважды не прощают.':
+        'answers no more: waking folk twice in one night without cause is not forgiven.',
+    'Постучал в дверь «{0}»: впущен по срочному делу (репутация {1}).':
+        'Knocked at the door of "{0}": let in on urgent business (reputation {1}).',
+    '{0}: «Кого ляда несёт среди ночи?.. Что? Дело государеве не ждёт? Ну заходи, раз дело срочное, — но чтобы тихо!»':
+        '{0}: "What devil brings you at this hour?.. What? The Tsar\'s business brooks no delay? Well then, come in, since it is urgent — but quietly!"',
+    '\n\n({0}: личная репутация {1})': '\n\n({0}: personal reputation {1})',
+    '🚪 Войти в дом': '🚪 Enter the house',
+    'Постучал в дверь «{0}» ночью: разбужен {1} (репутация {2}).':
+        'Knocked at the door of "{0}" at night: {1} was woken (reputation {2}).',
+    '«Кого ляда несёт среди ночи?! Спать мешаешь! Дела до утра подождут. Уходи, пока цел!»':
+        '"What devil brings you at this hour?! You wake honest folk! Errands can wait till morning. Be gone while you are whole!"',
+    '{0}: «Кого ляда несёт среди ночи?! Спать мешаешь! Дела до утра подождут. Уходи, пока цел!»':
+        '{0}: "What devil brings you at this hour?! You wake honest folk! Errands can wait till morning. Be gone while you are whole!"',
+    'Уйти': 'Leave',
+    'Дело': 'The errand',
+    '{0}: «Всё, хватит мне льстить. Слова добрые по одному разу в день ценны».':
+        '{0}: "Enough flattery. Kind words are worth something spoken once a day."',
+    '{0}: «Поутру ты уже пугал меня. Нынче — не боюсь. Уходи!»':
+        '{0}: "You tried to frighten me this morning. Today I fear you not. Be gone!"',
 
 };
 

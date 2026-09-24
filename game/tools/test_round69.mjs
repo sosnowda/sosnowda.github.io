@@ -115,7 +115,7 @@ console.log('\n[2] ЗВУКИ РЕКИ И ДВЕРЕЙ (п.1)');
     ok(loc.includes('playWaterSplash(this, winter ? 0.5 : 0.7)'), 'LocationScene: плеск при рыбалке (зимой тише — лунка)');
     const vil = read('src/scenes/VillageScene.js');
     const doorOpens = vil.match(/playRealDoorOpen\(\)/g) || [];
-    ok(doorOpens.length === 2, `VillageScene: звук двери при входе — 2 точки (${doorOpens.length})`);
+    ok(doorOpens.length === 3, `VillageScene: звук двери при входе — 3 точки (${doorOpens.length}) (стук в дверь, р.66.21)`);
 }
 
 console.log('\n[3] ПЛАВНЫЕ ПОГОДНЫЕ ПЕРЕХОДЫ (п.2)');
@@ -250,8 +250,8 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     ok(loc.includes('showBellToast(this, work66.toast)'), 'LocationScene: плашка сезона при входе на поле');
     // SW: v69, ассеты вычищены от неиспользуемых (66.19)
     const sw = read('../sw.js');
-    ok(sw.includes("chronicles-ruthenia-v69"), 'SW: версия сайта v69 (раунд 66.19)');
-    ok(sw.includes("game-assets-v23"), 'SW: кеш ассетов v23 (тайлы икон церкви, 66.20)');
+    ok(sw.includes("chronicles-ruthenia-v71"), 'SW: версия сайта v69 (раунд 66.19)');
+    ok(sw.includes("game-assets-v24"), 'SW: кеш ассетов v23 (тайлы икон церкви, 66.20)');
     ok(sw.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи
     const i18n = read('src/systems/i18n.js');

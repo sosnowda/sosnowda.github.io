@@ -91,8 +91,9 @@ function chaseRegistry(over = {}) {
 let reg = chaseRegistry();
 let r = askNPC(reg, 'fisherman', 'Рыбак Елисей');
 ok(r.gotClue === true, 'рыбак на Реке (вор пробегал) — наводка ГАРАНТИРОВАНА');
-const millName = getLocationById('mill').name;
-ok(r.message.includes(millName), `наводка ведёт на текущую локацию вора («${millName}»)`);
+// Раунд 66.21 (грамматика наводок): имя локации склоняется —
+// «прячется где-то у Ветряной мельницы» (родительный), а не «у „Ветряная мельница“».
+ok(r.message.includes('Ветряной мельницы'), 'наводка ведёт на текущую локацию вора («у Ветряной мельницы», склонение 66.21)');
 ok((reg.get('quest').npcHint || {}).locId === 'mill', 'наводка «прибила» вора (npcHint + срок 5 ч)');
 ok(reg.get('quest').cluesGathered.length === 1 && reg.get('quest').cluesGathered[0].whereClue === true, 'улика попала в панель «Улики от жителей»');
 // Очевидец — даже НЕ из случайного списка свидетелей (widow в списке, рыбак — нет)

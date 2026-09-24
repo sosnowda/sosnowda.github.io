@@ -10,6 +10,9 @@ import { pauseWorldClock, resumeWorldClock, chargeTalkTime, TALK_MINUTES } from 
 import { isEn, t } from './i18n.js';
 // Раунд 66.7 (п.5): вопрос о погоде — ко всем взрослым НПЦ автоматически
 import { appendWeatherChoice } from '../data/dialogue.js';
+// Раунд 66.21 (приказы 2,13): выбор «📜 Есть ли дело?» всем взрослым НПЦ
+// с пулом поручений и «🕯 Пожертвовать церкви» в беседе священника
+import { appendQuestChoice, appendDonationChoice } from '../data/dialogue.js';
 
 export class DialogueRunner {
     constructor(scene) {
@@ -58,8 +61,12 @@ export class DialogueRunner {
 
         // Раунд 66.7 (п.5): в стартовом узле КАЖДОГО взрослого НПЦ — выбор
         // «☁ Что погода сулит?» (добавляется динамически, перед прощанием)
+        // Раунд 66.21 (приказы 2,13): и выбор «📜 Есть ли дело?» (взрослые НПЦ
+        // с пулом поручений), и «🕯 Пожертвовать церкви» (священник)
         const rawChoices = (nodeId === d.start)
-            ? appendWeatherChoice(this._dialogId, node.choices)
+            ? appendWeatherChoice(this._dialogId,
+                appendQuestChoice(this._dialogId,
+                    appendDonationChoice(this._dialogId, node.choices)))
             : (node.choices || []);
         const choices = rawChoices.map(c => ({
             text: c.text,

@@ -302,30 +302,34 @@ console.log('— п.4: СЕЗОННАЯ РЫБАЛКА (запреты/бону�
 }
 
 // ============================================================
-console.log('— п.2: ДОСКА ПОРУЧЕНИЙ У ВОРОТ —');
+console.log('— п.2: ПОРУЧЕНИЯ — ВИРТУАЛЬНАЯ ДОСКА (раунд 66.21) —');
 {
     const vs = read('game/src/scenes/VillageScene.js');
-    ok(vs.includes("ensureQuestBoardTexture") && vs.includes('openQuestBoard')
-        && vs.includes("showBoardQuest"), 'VillageScene: доска (текстура/панель/подробности)');
-    ok(vs.includes("'boardOffers'") && vs.includes('generateQuest(npcId, this.registry)'),
-        'доска: 3 поручения дня хранятся в registry, генерируются процедурно');
-    ok(vs.includes('acceptQuest(this.registry, quest)') && vs.includes("o.id !== quest.id"),
-        'взял с доски — поручение ушло с доски');
-    // пул доски без священника (главный квест — только лично)
-    const poolMatch = vs.match(/const BOARD_NPC_POOL = \[([\s\S]*?)\];/);
-    ok(!!poolMatch && !poolMatch[1].includes("'priest'"), 'в пуле доски НЕТ священника');
-    // доска стоит у ворот: тайл (23,4) — трава, рядом ворота (25,5) и улица
-    const grid = buildMap();
-    ok(grid[4][23] === '.', 'тайл доски (23,4) — свободная трава у ворот');
-    ok(grid[4][24] === 'S' && grid[5][25] === 'G', 'доска в одном тайле от дорожки ворот');
-    // уникальные награды не раздаются с доски. РАУНД 66.12: доска больше
-    // НЕ сбрасывает обещание меча — оно ставится при ПРИНЯТИИ личного
-    // поручения (acceptQuest) и откатывается только при просрочке.
-    ok(vs.includes('uniqueFromElder') && !vs.includes('q.elderSwordPromised = false'),
-        'меч старосты с доски не уходит (доска не сбрасывает обещание)');
+    // Физическая доска удалена: ни текстуры, ни панели, ни пула
+    ok(!vs.includes('ensureQuestBoardTexture') && !vs.includes('openQuestBoard')
+        && !vs.includes('showBoardQuest') && !vs.includes('BOARD_NPC_POOL'),
+        'физическая доска у ворот полностью удалена из VillageScene');
+    ok(!vs.includes("'boardOffers'"), 'реестр boardOffers больше не используется');
+    // Виртуальная доска: взрослые НПЦ выдают поручения в диалогах
+    ok(vs.includes('canOfferQuestToday') && vs.includes('makeQuestOffer'),
+        'VillageScene: уличные НПЦ предлагают дела через makeQuestOffer');
+    ok(vs.includes('showStreetQuestOffer'), 'VillageScene: оффер поручения у уличного НПЦ');
     const qg70 = read('game/src/data/questGenerator.js');
+    ok(qg70.includes('export function makeQuestOffer') && qg70.includes('export function canGiveQuests'),
+        'questGenerator: единая точка выдачи makeQuestOffer (взрослые, пул, дневной лимит)');
+    ok(qg70.includes("QUEST_GIVER_MIN_AGE = 18"), 'поручения выдают только взрослые НПЦ (18+)');
+    ok(qg70.includes("export function canOfferQuestToday"),
+        'кнопка «Есть ли дело?» показывается по чистому предикату (слот не сгорает)');
+    // Меч старосты: по-прежнему ставится при принятии, откат при просрочке
     ok(qg70.includes('q.elderSwordPromised = true') && qg70.includes('q.elderSwordPromised = false'),
         'обещание меча: ставится при принятии, откат при просрочке');
+    // Тайл старой доски (23,4) — свободная трава у ворот
+    const grid = buildMap();
+    ok(grid[4][23] === '.', 'тайл доски (23,4) — свободная трава у ворот');
+    ok(grid[4][24] === 'S' && grid[5][25] === 'G', 'у дорожки ворот — без препятствий');
+    // Мини-карта: метка доски снята
+    const mm70 = read('game/src/systems/MiniMap.js');
+    ok(!mm70.includes('QUEST_BOARD_TILE'), 'MiniMap: метка доски поручений снята с плана');
 }
 
 // ============================================================
@@ -361,9 +365,9 @@ console.log('— п.3: СТРЕЛКИ ЛАЙТБОКСА ВСЕГДА ВИДНЫ
 console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v69'"), 'SW: сайт v69 (раунд 66.19)');
-    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v23'"),
-        'SW: game-assets-v23 (тайлы икон церкви, раунд 66.20)');
+    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v71'"), 'SW: сайт v69 (раунд 66.19)');
+    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v24'"),
+        'SW: game-assets-v24 (тайлы икон церкви, раунд 66.20)');
     setLang('en');
     ok(t('☁ Что погода сулит?') === '☁ What will the weather bring?', 'i18n: вопрос о погоде EN');
     ok(t('Доска поручений') === 'Job Board', 'i18n: доска поручений EN');

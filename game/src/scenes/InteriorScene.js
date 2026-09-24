@@ -11,7 +11,11 @@ import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons, c
 import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd, askMoneyForHelp, askElderAdvance, isChaseActive } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
-import { generateQuest, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion, onLocationVisited } from '../data/questGenerator.js';
+import { makeQuestOffer, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion, onLocationVisited } from '../data/questGenerator.js';
+// Раунд 66.21 (приказ 10): срочное ночное дело (стук в дверь)
+import { hasUrgentQuestBusiness } from '../systems/NightKnock.js';
+// Раунд 66.21 (приказы 13-14): пожертвование церкви (меню сумм)
+import { showDonationMenu } from '../systems/ChurchDonation.js';
 import { getTime, formatTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { getWeather } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
@@ -28,6 +32,7 @@ import {
     getVillageRep, changeVillageRep,
     isNpcKilled, canBuyMilitaryGear, MILITARY_GEAR_IDS,
     getSmithNpcId, // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели мастера
+    repActionAllowedToday, markRepActionDone, // Раунд 66.21: дневные лимиты похвалы/угроз
 } from '../data/reputation.js';
 import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 // Раунд 48 (пп.2,3 заявки): параметры НПЦ игроку НЕ показываются —
@@ -540,7 +545,9 @@ export class InteriorScene extends Phaser.Scene {
             // Раунд 26: в церкви — богомолье и осмотр киота (переехали из удалённой часовни)
             if (interior.id === 'church') {
                 buttons.push({ label: t('\u{1F64F} Помолиться'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.prayInChurch() });
-                buttons.push({ label: t('\u{1F56F} Пожертвовать (5\u0434)'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.donateInChurch() });
+                // Раунд 66.21 (приказы 13-14): пожертвование ЛЮБОГО размера
+                // (меню 5/10/25/50 д.), личная репутация священника + деревенская
+                buttons.push({ label: t('\u{1F56F} Пожертвование'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.donateInChurch() });
                 buttons.push({ label: t('\u{1F50D} Осмотреть киот'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectChurchKiot() });
             }
         } else if (interior.id === 'potter_house') {
@@ -659,7 +666,15 @@ export class InteriorScene extends Phaser.Scene {
         // Раунд 21: если у NPC есть ВЫПОЛНЕННОЕ, но не оплаченное поручение —
         // сперва выдаём награду, потом разговор.
         if (this.claimCompletedQuests(interior)) return;
-        const talkCheck = checkNpcWillingToTalk(this.registry, interior.npcId, { npcBusy: false });
+        // Раунд 66.21 (приказ 10): если игрок внутри ночью — его впустили по
+        // срочному делу (стук в дверь); такие визиты ночная проверка не
+        // отклоняет и штрафом «разбудил» не карает.
+        const nightBusiness = hasUrgentQuestBusiness(this.registry, interior);
+        const talkCheck = checkNpcWillingToTalk(this.registry, interior.npcId, {
+            npcBusy: false,
+            urgent: nightBusiness,
+            questComplete: nightBusiness,
+        });
         if (talkCheck.willAttack) {
             createDialog(this, t('Нападение!'),
                 tf(t('{0} бросается на тебя с кулаками!'), getNpcDisplayName(this.registry, interior.npcId)),
@@ -757,32 +772,31 @@ export class InteriorScene extends Phaser.Scene {
 
     /**
      * Предложить задание от NPC (п.5-8: процедурный генератор).
+     * РАУНД 66.21 (приказ 2): единая точка выдачи makeQuestOffer — те же
+     * лимиты, что у бесед («📜 Есть ли дело?») и уличных НПЦ: взрослый
+     * НПЦ с пулом, одно активное поручение от НПЦ, одно предложение в день.
      */
     offerQuest(interior) {
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
-        // Проверяем, есть ли уже активные задания от этого NPC
-        const activeQuests = getActiveQuests(this.registry);
-        const hasActiveFromThisNpc = activeQuests.some(q => q.npcId === interior.npcId);
-        
-        if (hasActiveFromThisNpc) {
-            createDialog(this, t('Задание'), 
-                tf(t('{0}: «Ты ещё не выполнил моё прошлое поручение. Сперва закончи его!»'), npcName), 
+        const offer = makeQuestOffer(this.registry, interior.npcId);
+
+        if (!offer.ok) {
+            const lines = {
+                active: tf(t('{0}: «Ты ещё не выполнил моё прошлое поручение. Сперва закончи его!»'), npcName),
+                offered: tf(t('{0}: «На нынче у меня дел больше нет. Загляни завтра — что-нибудь найдётся.»'), npcName),
+                none: tf(t('{0}: «Нет у меня сейчас для тебя дел. Зайди попозже.»'), npcName),
+                age: tf(t('{0}: «Куда тебе мои дела, мал ещё. Подрастёшь — разговор будет.»'), npcName),
+                pool: tf(t('{0}: «Пустое дело ищешь? Иди с миром.»'), npcName),
+            };
+            createDialog(this, t('Задание'),
+                lines[offer.reason] || lines.none,
                 [{ text: t('Понятно'), callback: () => {} }],
                 { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 }
             );
             return;
         }
 
-        // Генерируем задание
-        const quest = generateQuest(interior.npcId, this.registry);
-        if (!quest) {
-            createDialog(this, t('Задание'),
-                tf(t('{0}: «Нет у меня сейчас для тебя дел. Зайди попозже.»'), npcName),
-                [{ text: t('Понятно'), callback: () => {} }],
-                { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 }
-            );
-            return;
-        }
+        const quest = offer.quest;
 
         // Формируем описание наград
         const rewardTexts = quest.rewards.map(r => {
@@ -957,10 +971,22 @@ export class InteriorScene extends Phaser.Scene {
 
     // === Пункт 11: Похвалить NPC ===
     complimentNpc(interior) {
+        // Раунд 66.21 (аудит баланса, приказы 6–7): похвала — ОДИН раз в день
+        // у каждого НПЦ. Раньше «Похвалить» можно было спамить: +2..+5 за клик
+        // без всякой цены — эксплойт накрутки репутации.
+        if (!repActionAllowedToday(this.registry, interior.npcId, 'compliment')) {
+            const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+            createDialog(this, t('Похвала'),
+                tf(t('{0}: «Всё, хватит мне льстить. Слова добрые по одному разу в день ценны».'), npcName),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 });
+            return;
+        }
         const player = this.registry.get('player');
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
         const oratorySkill = player.skills.oratory || 15;
         const result = applyCompliment(this.registry, interior.npcId, oratorySkill);
+        markRepActionDone(this.registry, interior.npcId, 'compliment');
         
         // Раунд 47 (п.4): в диалоге видна ВСТРЕЧАЯ проверка:
         // «бросок 22: Красноречие 45 против (Красноречие жителя 40) — успех»
@@ -976,6 +1002,17 @@ export class InteriorScene extends Phaser.Scene {
 
     // === Пункты 7-10: Угрожать NPC ===
     threatenNpc(interior) {
+        // Раунд 66.21 (аудит баланса, приказы 6–7): угроза — ОДИН раз в день
+        // у каждого НПЦ (раньше вымогание денег можно было повторять кликами).
+        if (!repActionAllowedToday(this.registry, interior.npcId, 'threat')) {
+            const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+            createDialog(this, t('Угроза'),
+                tf(t('{0}: «Поутру ты уже пугал меня. Нынче — не боюсь. Уходи!»'), npcName),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: this.npcPortraitKey, typing: true, typingSpeed: 30 });
+            return;
+        }
+        markRepActionDone(this.registry, interior.npcId, 'threat');
         const player = this.registry.get('player');
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
         const intimidateSkill = player.skills.intimidate || 15;
@@ -2175,41 +2212,16 @@ export class InteriorScene extends Phaser.Scene {
     }
 
     /**
-     * Пожертвование на свечи и ладан: −5 д., +1 к репутации в деревне.
-     * Не чаще одного раза в игровой день.
+     * Пожертвование на свечи и ладан (раунд 66.21): меню сумм 5/10/25/50 д.,
+     * не чаще одного раза в игровой день.
      */
     donateInChurch() {
         if (this.busyDialog) return;
-        const player = this.registry.get('player');
-        if (!player) return;
-
-        const q = this.registry.get('quest') || {};
-        const today = this.dayKey();
-        if (q.donationDay === today) {
-            createDialog(this, t('Пожертвование'), t('Ты уже жертвовал сегодня. Свечей куплено на всю неделю вперёд.'), [
-                { text: t('Ну ладно.'), callback: () => {} },
-            ]);
-            return;
-        }
-        if ((player.dengas || 0) < 5) {
-            createDialog(this, t('Пожертвование'), t('В мошне пусто — не до пожертвований. Заработай в мастерской или помоги деревне.'), [
-                { text: t('Приду позже.'), callback: () => {} },
-            ]);
-            return;
-        }
-        player.dengas -= 5;
-        this.registry.set('player', player);
-        q.donationDay = today;
-        this.registry.set('quest', q);
-        const res = changeVillageRep(this.registry, 1, t('Пожертвование в церкви'));
-        tickTime(this.registry, 10);
-        this.updateHUD();
-        ActionLog.add(this.registry, t('Пожертвовал 5 д. в церкви — деревня это помнит (+1 репутация).'));
-
-        createDialog(this, t('Пожертвование'),
-            t('Ты кладёшь пять денег на блюдо у входа. «На свечи и ладан», — говоришь тихо. Казначей церкви будет рад.\n\n') +
-            (res && res.message ? res.message : t('Репутация в деревне +1.')),
-            [{ text: t('Низко поклониться иконам.'), callback: () => {} }]);
+        // Раунд 66.21 (приказы 13-14): меню сумм 5/10/25/50 д. — размер
+        // пожертвования задаёт прибавку (5→+1 … 50→+10, потолок +10).
+        // Прибавка идёт И личной репутации у священника, И деревенской.
+        // Реестр/логика — systems/ChurchDonation.js (тестируется в Node).
+        showDonationMenu(this);
     }
 
     /**

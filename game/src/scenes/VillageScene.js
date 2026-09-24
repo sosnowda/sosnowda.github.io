@@ -14,9 +14,9 @@ import { VirtualControls } from '../systems/VirtualControls.js';
 import { ActionLog } from '../data/actionLog.js';
 // Раунд 58 (п.2): chaseHoursLeft — часы до побега вора (тик = 1 игровой час)
 import { checkGameEnd } from '../data/thief.js';
-import { onLocationVisited, generateQuest, acceptQuest, NPC_QUEST_POOLS, getActiveQuests } from '../data/questGenerator.js';
+import { onLocationVisited } from '../data/questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
-import { createButton, createDialog } from '../utils/ui.js';
+import { createButton, createDialog, closeAllSingletonDialogs } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/TimeSystem.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
 import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear, monthNameNom, monthNameGen } from '../systems/RusTime.js';
@@ -30,7 +30,6 @@ import { t, tf, tk } from '../systems/i18n.js';
 // Раунд 66.8: план деревни — виджет-миникарта в углу + большая панель (клавиша P)
 import { MiniMap } from '../systems/MiniMap.js';
 // Раунд 66.10 (приказ владельца): сундуки/тайники удалены из игры; дневной ключ — из data/daily.js
-import { dayKeyOf } from '../data/daily.js';
 import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
 import { getPresence, ALL_NPC_IDS, NPC_DIALOGUE, PLACE_NAMES, pickOutdoorLine } from '../data/npcPresence.js';
@@ -40,15 +39,15 @@ import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
 // Патч 66.3: честные окна и трубы фасадов fb_* (свечение ночью + дымок из труб)
 import { HOUSES_FX } from '../data/housesFX.js';
+// Раунд 66.21 (приказы 2, 9–11): виртуальная доска поручений, ночные запоры,
+// часы церкви и стук в запертую дверь
+import { isNightHour, isChurchOpen, churchClosedReason } from '../systems/AccessHours.js';
+import { knockAtDoor as knockAtDoorLogic, doorResponder, responderName } from '../systems/NightKnock.js';
+// Раунд 66.21 (приказ 2): выбор «📜 Есть ли дело?» в улице — единая точка выдачи
+import { makeQuestOffer, acceptQuest, canOfferQuestToday, hasActiveQuestFrom } from '../data/questGenerator.js';
 
-// РАУНД 66.7 (п.2): пул взрослых жителей для ДОСКИ ПОРУЧЕНИЙ у ворот
-// (священник исключён: главный квест — только лично из его уст).
-const BOARD_NPC_POOL = [
-    'elder', 'tavernkeeper', 'blacksmith', 'peasant1', 'widow',
-    'hunter', 'guard', 'fisherman', 'healer', 'carpenter1', 'potter1',
-    'weaver1', 'elder_wife', 'beekeeper_wife', 'carpenter_wife',
-    'potter_wife', 'fisher_wife',
-];
+// РАУНД 66.21 (приказ 2): пул доски удалён вместе с самой доской —
+// поручения теперь выдают взрослые НПЦ в диалогах (см. questGenerator).
 
 export class VillageScene extends Phaser.Scene {
     constructor() {
@@ -438,31 +437,11 @@ export class VillageScene extends Phaser.Scene {
             });
         });
 
-        // ----- РАУНД 66.7 (п.2): ДОСКА ПОРУЧЕНИЙ У ВОРОТ -----
-        // Деревянная доска с тремя бумажными свитками стоит на траве в
-        // одном тайле от ворот (23,4): деревня так объявила бы наёмному
-        // человеку, за что заплатят. Клик — панель с поручениями дня
-        // (3 шт/день, процедурные, из пулов взрослых жителей). Взял —
-        // поручение ушло с доски (registry 'boardOffers').
-        this.ensureQuestBoardTexture();
-        const boardTile = { col: 23, row: 4 };
-        const boardX = boardTile.col * ts + ts / 2;
-        const boardBaseY = (boardTile.row + 1) * ts - 6;
-        this.add.ellipse(boardX, (boardTile.row + 1) * ts - 4, ts * 0.72, 12, 0x000000, 0.22)
-            .setDepth(boardTile.row + 0.35);
-        const boardSpr = this.add.image(boardX, boardBaseY, 'quest_board')
-            .setOrigin(0.5, 1)
-            .setDepth(boardTile.row + 0.4);
-        this.add.text(boardX, boardBaseY - 66, '📜', {
-            fontSize: '15px',
-        }).setOrigin(0.5).setDepth(boardTile.row + 0.5);
-        // ствол доски — не проходим (солид на тайле)
-        const boardSolid = this.solids.create(boardX, boardTile.row * ts + ts / 2, 'quest_board');
-        boardSolid.setScale(0.72, 0.5).refreshBody().setVisible(false);
-        boardSpr.setInteractive({ useHandCursor: true });
-        boardSpr.on('pointerdown', () => {
-            if (!this.busyDialog) this.openQuestBoard();
-        });
+        // ----- РАУНД 66.21 (приказ 2): ДОСКА ПОРУЧЕНИЙ УДАЛЕНА ИЗ ДЕРЕВНИ -----
+        // Физическая доска у ворот (23,4) снята — «виртуальная доска»: теперь
+        // КАЖДЫЙ взрослый НПЦ выдаёт процедурные поручения в диалоговом окне
+        // (выбор «📜 Есть ли дело?» в беседе, кнопка «Задание» в доме).
+        // Узлы quest_talk ставит dialogue.js, лимиты — questGenerator.makeQuestOffer.
 
         // Раунд 64 (п.1): ВСЕ ОГРАДЫ УДАЛЕНЫ — ни придомовых заборов,
         // ни оград общественных зданий (addYardAndGarden/addPublicFence
@@ -1242,15 +1221,81 @@ export class VillageScene extends Phaser.Scene {
         } else {
             const line = pickOutdoorLine(this.registry, npcId, t('Занят(а) своим делом. Заходи в другой раз.'));
             // Раунд 58 (п.1): разговор с НПЦ — 10 минут (было 1 час, раунд 31)
-            createDialog(this, displayName, line, [
+            // Раунд 66.21 (приказ 2): уличный НПЦ с пулом поручений может
+            // предложить дело прямо здесь — «📜 Есть ли дело?»
+            const buttons = [
                 { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
-            ], {
+            ];
+            // Кнопка «Есть ли дело?» — по чистому предикату (без траты дневного
+            // слота); слот сгорает только при реальном вопросе (makeQuestOffer).
+            if (canOfferQuestToday(this.registry, npcId)) {
+                buttons.splice(0, 0, {
+                    text: t('📜 Есть ли дело?'),
+                    callback: () => {
+                        // QA 66.21: оффер не наслаивается на разговор (родителя закрываем)
+                        closeAllSingletonDialogs(this);
+                        const o = makeQuestOffer(this.registry, npcId);
+                        this.showStreetQuestOffer(npcId, o.ok ? o.quest : null, npcData);
+                    },
+                });
+            } else if (hasActiveQuestFrom(this.registry, npcId)) {
+                buttons.splice(0, 0, {
+                    text: t('📜 Есть ли дело?'),
+                    callback: () => {
+                        closeAllSingletonDialogs(this);
+                        createDialog(this, t('Дело'),
+                            tf(t('«Ты ещё не закончил моё прошлое дело. Сперва его, потом про новое говори!»')),
+                            [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+                            { portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+                    },
+                });
+            }
+            createDialog(this, displayName, line, buttons, {
                 singleton: true,
                 portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f',
                 talkMinutes: TALK_MINUTES,
                 talkKey: npcId + '@' + Math.floor(Date.now() / 90000),
             });
         }
+    }
+
+    /**
+     * РАУНД 66.21 (приказ 2): предложение поручения от УЛИЧНОГО НПЦ
+     * (hunter/guard/shepherd1/shepherd2 — у них нет полных деревьев бесед).
+     * Тот же единый лимит, что у бесед и кнопки «Задание» (makeQuestOffer).
+     */
+    showStreetQuestOffer(npcId, quest, npcData) {
+        const npcName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
+        const portraitKey = (npcData && npcData.portrait) || 'portrait_villager_f';
+        if (!quest) {
+            createDialog(this, t('Дело'),
+                t('«На нынче у меня дел больше нет. Загляни завтра — что-нибудь найдётся.»'),
+                [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+                { portraitKey });
+            return;
+        }
+        const hours = quest.timeLimitHours || Math.round((quest.timeLimit || 10) / 4);
+        const rewardTexts = (quest.rewards || []).map(r => {
+            if (r.type === 'money') return formatMoney(r.amount);
+            if (r.type === 'item') return `${r.name} ×${r.count}`;
+            return r.name || t('что-то');
+        });
+        createDialog(this, `📜 ${quest.title}`,
+            `«${quest.description}»\n\n`
+            + `${t('Цель:')} ${quest.objective}\n`
+            + `${t('Срок:')} ${tf(t('≈{0} ч'), hours)}\n`
+            + `${t('Награда:')} ${rewardTexts.join(', ')}`,
+            [
+                {
+                    text: t('✓ Принять'),
+                    callback: () => {
+                        acceptQuest(this.registry, quest);
+                        this.busyDialog = false;
+                    },
+                },
+                { text: t('✗ Отказаться'), callback: () => { this.busyDialog = false; } },
+            ],
+            { singleton: false, portraitKey, typing: true, typingSpeed: 25 });
     }
 
     /**
@@ -1469,13 +1514,26 @@ export class VillageScene extends Phaser.Scene {
     /**
      * Раунд 37 (п.19): закрыт ли дом для входа.
      * Возвращается { pres } (присутствие хозяина), если ВХОДИТЬ НЕЛЬЗЯ, иначе null.
-     * Открыты всегда: общественные здания (public: true — постоялый двор, церковь)
-     * и дома, где хозяин/хозяйка сейчас дома (или вторая фигура — жена).
+     * РАУНД 66.21 (приказы 9–11): ЖИЛЫЕ ДОМА ЗАПИРАЮТСЯ НА НОЧЬ (21:00–04:00),
+     * даже если хозяин внутри спит; ЦЕРКОВЬ открыта на богослужение и 2–3 часа
+     * после (systems/AccessHours.js), ночью и в час отдыха — заперта.
+     * Открыты всегда: постоялый двор (public: true, тавернщик 24/7).
+     * Днём закрыты дома, где никого нет (хозяин ушёл, жена не дома).
      * Ковка кузницы при уходе Данилы на постоялый двор (п.20) честно закрывается.
      */
     getInteriorClosure(interiorId) {
         const interior = INTERIORS[interiorId];
-        if (!interior || !interior.npcId || interior.noNpc || interior.public) return null;
+        if (!interior || !interior.npcId || interior.noNpc) return null;
+        const timeState = getTime(this.registry);
+        const hour = timeState ? (timeState.hour ?? 12) : 12;
+        // Приказ 11: церковь — по часам богослужений
+        if (interiorId === 'church') {
+            if (!isChurchOpen(hour)) return { church: true };
+            return null;
+        }
+        // Приказ 9: жилые дома заперты ночью (постоялый двор — public, не здесь)
+        if (interior.public) return null;
+        if (isNightHour(hour)) return { night: true };
         const pres = getPresence(this.registry, interior.npcId);
         const ownerHere = pres.place === 'home' || pres.place === interiorId;
         if (ownerHere) return null;
@@ -1489,10 +1547,52 @@ export class VillageScene extends Phaser.Scene {
     /**
      * Раунд 37 (пп.19,20): поп-ап «Дом закрыт, никого нет» с подсказкой,
      * где искать хозяина (деятельность · место).
+     * РАУНД 66.21 (приказ 10): ночью в запертый дом МОЖНО ПОСТУЧАТЬ —
+     * жильцов это злит (−2 к личной репутации), но при срочном деле
+     * (сдача поручения, которое не может ждать до утра) — впускают.
      */
     showClosedHouseDialog(interiorId, closure) {
         const interior = INTERIORS[interiorId];
         const name = interior ? interior.name : '';
+        // --- Ночь: заперто, но стучать можно ---
+        if (closure.night) {
+            const responder = doorResponder(this.registry, interior);
+            const who = responder
+                ? tf(t('Внутри спит {0}.'), responderName(this.registry, responder))
+                : t('Внутри тихо.');
+            this.busyDialog = true;
+            const buttons = [];
+            if (responder) {
+                buttons.push({
+                    text: t('🚪 Постучать в дверь'),
+                    callback: () => { this.busyDialog = false; this.knockAtDoor(interiorId); },
+                });
+            }
+            buttons.push({ text: t('Уйти, не тревожа'), callback: () => { this.busyDialog = false; } });
+            ActionLog.add(this.registry, tf(t('Дверь заперта на ночь: {0}.'), name));
+            createDialog(this,
+                t('Дом заперт'),
+                `${t('🔒 Дом заперт на ночь.')}\n${name}\n${who}\n\n`
+                + t('Дела до утра подождут. Но если дело срочное — можно постучать.'),
+                buttons,
+                { singletonKey: `closed-${interiorId}` });
+            return;
+        }
+        // --- Церковь заперта (ночь или час отдыха батюшки) ---
+        if (closure.church) {
+            const timeState2 = getTime(this.registry);
+            const hour2 = timeState2 ? (timeState2.hour ?? 12) : 12;
+            this.busyDialog = true;
+            ActionLog.add(this.registry, tf(t('Церковь заперта: {0}.'), name));
+            createDialog(this,
+                t('Церковь заперта'),
+                `🔒 ${name}\n\n${t(churchClosedReason(hour2))}\n\n`
+                + t('Утреня — на рассвѣте, обедня — поутру, вечерня — ввечеру. После служб церковь открыта ещё два-три часа.'),
+                [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+                { singletonKey: `closed-${interiorId}` });
+            return;
+        }
+        // --- Днём никого нет (хозяин ушёл) ---
         const pres = closure.pres;
         const where = t(PLACE_NAMES[pres.place] || '') || pres.place;
         const activity = (pres.activity ? t(pres.activity) : t('занят(а) своим делом'));
@@ -1505,6 +1605,63 @@ export class VillageScene extends Phaser.Scene {
             tf(t('Хозяин сейчас: {0} · {1}'), activity, where),
             [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
             { singletonKey: `closed-${interiorId}` });
+    }
+
+    /**
+     * РАУНД 66.21 (приказ 10): СТУК В ЗАПЕРТУЮ ДВЕРЬ НОЧЬЮ.
+     * Жильцов это злит (−2 к личной репутации отвечающего, NightKnock.js),
+     * но при срочном деле — активное поручение от жильца или сдача
+     * выполненного, что не может ждать до утра — в дом впускают.
+     */
+    knockAtDoor(interiorId) {
+        const interior = INTERIORS[interiorId];
+        if (!interior) return;
+        const res = knockAtDoorLogic(this.registry, interior);
+        const who = responderName(this.registry, res.responder);
+        const name = interior.name;
+        this.busyDialog = true;
+        const done = () => { this.busyDialog = false; };
+        // Никого дома (некому отвечать)
+        if (!res.responder) {
+            createDialog(this, t('Стук в дверь'),
+                `${t('Ты стучишь в дверь')} «${name}».\n\n${t('В доме тихо: никто не отвечает — никого нет дома.')}`,
+                [{ text: t('Понятно'), callback: done }],
+                { singletonKey: `knock-${interiorId}` });
+            return;
+        }
+        // Слишком много стуков за ночь — не отвечают
+        if (res.refused) {
+            createDialog(this, t('Стук в дверь'),
+                `${t('Ты стучишь снова')} — ${who} ${t('больше не отвечает: ночью стучать без дела дважды не прощают.')}`,
+                [{ text: t('Понятно'), callback: done }],
+                { singletonKey: `knock-${interiorId}` });
+            return;
+        }
+        if (res.opened) {
+            // Срочное дело: впускают (репутация всё равно поцарапана стуком)
+            ActionLog.add(this.registry, tf(t('Постучал в дверь «{0}»: впущен по срочному делу (репутация {1}).'), name, res.penalty));
+            createDialog(this, t('Стук в дверь'),
+                tf(t('{0}: «Кого ляда несёт среди ночи?.. Что? Дело государеве не ждёт? Ну заходи, раз дело срочное, — но чтобы тихо!»'), who) +
+                tf(t('\n\n({0}: личная репутация {1})'), who, res.penalty),
+                [{
+                    text: t('🚪 Войти в дом'),
+                    callback: () => {
+                        this.busyDialog = false;
+                        this.audioManager.playRealDoorOpen();
+                        this.scene.pause();
+                        this.scene.launch('Interior', { interiorId, from: 'Village' });
+                    },
+                }],
+                { singletonKey: `knock-${interiorId}` });
+            return;
+        }
+        // Без срочного дела: злость и отказ
+        ActionLog.add(this.registry, tf(t('Постучал в дверь «{0}» ночью: разбужен {1} (репутация {2}).'), name, who, res.penalty));
+        createDialog(this, t('Стук в дверь'),
+            tf(t('{0}: «Кого ляда несёт среди ночи?! Спать мешаешь! Дела до утра подождут. Уходи, пока цел!»'), who) +
+            tf(t('\n\n({0}: личная репутация {1})'), who, res.penalty),
+            [{ text: t('Уйти'), callback: done }],
+            { singletonKey: `knock-${interiorId}` });
     }
 
     /**
@@ -1570,134 +1727,15 @@ export class VillageScene extends Phaser.Scene {
 
     // П.5: Поп-ап тултип при наведении курсора на здание
     // ================================================================
-    // РАУНД 66.7 (п.2): ДОСКА ПОРУЧЕНИЙ У ВОРОТ
+    // РАУНД 66.21 (приказ 2): ДОСКА ПОРУЧЕНИЙ — ВИРТУАЛЬНАЯ.
+    // Физическая доска у ворот и её панель удалены: процедурные поручения
+    // выдают ВСЕ взрослые НПЦ в диалоговых окнах (выбор «📜 Есть ли дело?»
+    // в беседе на улице/в доме, кнопка «📜 Задание» в интерьере).
+    // Лимиты — questGenerator.makeQuestOffer (один НПЦ = одно предложение
+    // в день + одно активное поручение от одного НПЦ).
     // ================================================================
 
-    /** Текстура доски: щит на двух столбах с тремя свитками. */
-    ensureQuestBoardTexture() {
-        if (this.textures.exists('quest_board')) return;
-        const W = 46, H = 60;
-        const cv = this.textures.createCanvas('quest_board', W, H);
-        const c = cv.getContext();
-        // столбы
-        c.fillStyle = '#3a2417';
-        c.fillRect(9, 22, 6, 38);
-        c.fillRect(31, 22, 6, 38);
-        c.fillStyle = '#5a3f26';
-        c.fillRect(10, 22, 2, 38);
-        c.fillRect(32, 22, 2, 38);
-        // щит с рамкой
-        c.fillStyle = '#2c1c10';
-        c.fillRect(2, 4, 42, 26);
-        c.fillStyle = '#6a4a2a';
-        c.fillRect(4, 6, 38, 22);
-        c.strokeStyle = '#8a6a42';
-        c.lineWidth = 1;
-        c.strokeRect(4.5, 6.5, 37, 21);
-        // доска-жёрдочка поверх щита
-        c.fillStyle = '#4a3018';
-        c.fillRect(0, 2, 46, 5);
-        // три свитка-«грамоты» (чуть повёрнутые)
-        const papers = [[7, 9, -0.05], [18, 11, 0.04], [29, 9, -0.03]];
-        papers.forEach(([px, py, rot]) => {
-            c.save();
-            c.translate(px + 5, py + 7);
-            c.rotate(rot);
-            c.fillStyle = '#e8e0cc';
-            c.fillRect(-5, -7, 10, 14);
-            c.fillStyle = '#b8ac8c';
-            for (let i = 0; i < 4; i++) c.fillRect(-3.5, -5 + i * 3, 7, 1);
-            c.restore();
-        });
-        cv.refresh();
-    }
-
-    /** Поручения дня: 3 штуки, из пулов взрослых жителей (без священника —
-     * главный квест только лично). Обновляются каждый игровой день. */
-    ensureBoardOffers() {
-        const today = dayKeyOf(getTime(this.registry));
-        let st = this.registry.get('boardOffers');
-        if (st && st.day === today && Array.isArray(st.offers)) return st;
-        const offers = [];
-        const pool = BOARD_NPC_POOL.slice().sort(() => Math.random() - 0.5);
-        for (const npcId of pool) {
-            if (offers.length >= 3) break;
-            if (!NPC_QUEST_POOLS[npcId]) continue;
-            const quest = generateQuest(npcId, this.registry);
-            if (!quest) continue;
-            // Раунд 66.12 (п.5): меч старосты на доску не выставляется (только
-            // лично от старосты); ОБЕЩАНИЕ больше не сбрасываем — оно ставится
-            // при ПРИНЯТИИ личного поручения (acceptQuest) и сгорает только
-            // при просрочке. Раньше доска, выкатив меч, сбрасывала обещание —
-            // и уникальный меч мог достаться двоим.
-            if ((quest.rewards || []).some(r => r.uniqueFromElder)) {
-                continue;
-            }
-            if (offers.some(o => o.type === quest.type)) continue;
-            offers.push(quest);
-        }
-        st = { day: today, offers };
-        this.registry.set('boardOffers', st);
-        return st;
-    }
-
-    /** Панель доски: список поручений дня + кнопки взятия. */
-    openQuestBoard() {
-        const st = this.ensureBoardOffers();
-        const offers = st.offers || [];
-        let text;
-        if (!offers.length) {
-            text = t('Доска пуста: на нынче все дела разобрали. Загляни завтра — обоз привезёт новые поручения.');
-        } else {
-            text = t('«Кто возьмётся — пусть справится в срок и не позорит деревню». Поручения на день:')
-                + '\n' + offers.map((q, i) => `${i + 1}. ${q.title} — ${q.npcName}`).join('\n');
-        }
-        const buttons = offers.map(q => ({
-            text: tf(t('📜 Взять: {0}'), q.title),
-            callback: () => this.showBoardQuest(q),
-        }));
-        buttons.push({ text: t('Закрыть'), callback: () => {} });
-        createDialog(this, '📜 ' + t('Доска поручений'), text, buttons);
-    }
-
-    /** Подробности поручения с доски + принять/отказаться. */
-    showBoardQuest(quest) {
-        const rewardTexts = (quest.rewards || []).map(r => {
-            if (r.type === 'money') return formatMoney(r.amount);
-            if (r.type === 'item') return `${r.name} ×${r.count}`;
-            return r.name || t('что-то');
-        });
-        const questText = `${quest.description}\n\n`
-            + `${t('От кого:')} ${quest.npcName}\n`
-            + `${t('Цель:')} ${quest.objective}\n`
-            + `${t('Срок:')} ${tf(t('≈{0} ч'), quest.timeLimitHours || Math.round((quest.timeLimit || 10) / 4))}\n`
-            + `${t('Награда:')} ${rewardTexts.join(', ')}`;
-        createDialog(this, `📜 ${quest.title}`, questText, [
-            {
-                text: t('✓ Принять'),
-                callback: () => {
-                    // Раунд 66.12 (п.5): с доски нельзя взять второе поручение
-                    // того же жителя, пока активно первое (как и в личном разговоре).
-                    const activeSame = getActiveQuests(this.registry).some(aq => aq.npcId === quest.npcId);
-                    if (activeSame) {
-                        createDialog(this, t('Доска поручений'),
-                            tf(t('У тебя уже есть поручение от {0}. Сперва закончи его!'), quest.npcName),
-                            [{ text: t('Понятно'), callback: () => {} }]);
-                        return;
-                    }
-                    acceptQuest(this.registry, quest);
-                    const st = this.registry.get('boardOffers');
-                    if (st) {
-                        st.offers = (st.offers || []).filter(o => o.id !== quest.id);
-                        this.registry.set('boardOffers', st);
-                    }
-                },
-            },
-            { text: t('✗ Отказаться'), callback: () => {} },
-        ]);
-    }
-
-    showBuildingTooltip(building, screenX, screenY) {
+        showBuildingTooltip(building, screenX, screenY) {
         if (!this.buildingTooltip) {
             this.buildingTooltip = this.add.container(0, 0).setScrollFactor(0).setDepth(200);
             const bg = this.add.rectangle(0, 0, 240, 80, 0x000000, 0.9)

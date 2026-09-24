@@ -82,7 +82,8 @@ export const INTERIORS = {
         npcId: 'widow',
         npcName: t('Пасечница Марфа'),
         npcSprite: 'npc_elder',
-        portrait: 'portrait_widow',
+        // Раунд 66.21 (приказ 8): портрет по возрасту (55 лет)
+        portrait: 'portrait_healer',
         dialogueId: 'widow',
         description: t('Тихий дом. Пахнет сушёными травами и мёдом. Хозяйка приглядывает за горшками с целебными настоями.'),
         decor: ['bed', 'icon'],
@@ -172,7 +173,8 @@ export const INTERIORS = {
         npcId: 'fisherman',
         npcName: t('Рыбак Ерёма'),
         npcSprite: 'npc_merchant',
-        portrait: 'portrait_fisherman',
+        // Раунд 66.21 (приказ 8): портрет по возрасту (42 года)
+        portrait: 'portrait_tavernkeeper',
         dialogueId: 'fisherman1',
         description: t('Сети сушатся под потолком, на лавке — плетёные верши и уды. У печи хозяйка потрошит улов.'),
         decor: ['bed', 'table', 'nets'],

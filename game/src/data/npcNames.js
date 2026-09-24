@@ -233,12 +233,16 @@ export function initNpcNames(registry) {
         { id: 'tavernkeeper', gender: 'male',   age: 45, professionId: 'tavernkeeper', sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'tavern', name: 'Фёдор' },
         { id: 'blacksmith',   gender: 'male',   age: 40, professionId: 'blacksmith', sprite: 'npc_soldier',  portrait: 'portrait_blacksmith', interiorId: 'blacksmith', name: 'Данила' },
         { id: 'peasant1',     gender: 'male',   age: 35, professionId: 'miller',     sprite: 'npc_merchant', portrait: 'portrait_peasant',    interiorId: 'villager_house_1', name: 'Авдей' },
-        { id: 'widow',        gender: 'female', age: 55, professionId: 'beekeeper',  sprite: 'npc_elder',    portrait: 'portrait_widow',      interiorId: 'villager_house_2', name: 'Марфа' },
+        // Раунд 66.21 (приказ 8): Марфе (55) — портрет пожилой женщины (widow был
+        // моложавой 20-летней — возрастная несостыковка, как у Любавы в р.35)
+        { id: 'widow',        gender: 'female', age: 55, professionId: 'beekeeper',  sprite: 'npc_elder',    portrait: 'portrait_healer',     interiorId: 'villager_house_2', name: 'Марфа' },
         // Раунд 37: у знахарки и рыбака — СОБСТВЕННЫЕ дома (вариант Б: вторая улица)
         { id: 'healer',       gender: 'female', age: 70, professionId: 'healer_f',   sprite: 'npc_elder',    portrait: 'portrait_healer',     interiorId: 'healer_house', name: 'Февронья' },
         { id: 'hunter',       gender: 'male',   age: 32, professionId: 'hunter',     sprite: 'npc_soldier',  portrait: 'portrait_hunter',     interiorId: 'villager_house_1', name: 'Гаврила' },
         { id: 'guard',        gender: 'male',   age: 28, professionId: 'guard',      sprite: 'npc_soldier',  portrait: 'portrait_guard',      interiorId: 'villager_house_1', name: 'Илья' },
-        { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',  sprite: 'npc_merchant', portrait: 'portrait_fisherman',  interiorId: 'fisher_house', name: 'Ерёма', married: true }, // женат на Домне
+        // Раунд 66.21 (приказ 8): Ерёме (42) — мужской портрет средних лет
+        // (fisherman-портрет дублировал седого старосту и старил на 20+ лет)
+        { id: 'fisherman',    gender: 'male',   age: 42, professionId: 'fisherman',  sprite: 'npc_merchant', portrait: 'portrait_tavernkeeper', interiorId: 'fisher_house', name: 'Ерёма', married: true }, // женат на Домне
         // Раунд 27 (п.6), уточнено раундом 28 (п.1): дом на месте часовни —
         // ДОМ ПАХАРЯ (не пасечника!): Тарас днём на ПОЛЕ, жена Фёкла,
         // семеро детей (видимые НПЦ — см. npcPresence.KIDS).

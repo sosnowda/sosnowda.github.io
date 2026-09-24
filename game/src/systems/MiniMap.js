@@ -9,8 +9,9 @@ import { MAP_W, MAP_H } from '../data/world.js';
 import { BUILDINGS } from '../data/interiors.js';
 import { t } from './i18n.js';
 
-// Доска поручений (раунд 66.7) стоит у ворот — спрайт VillageScene на (23,4).
-export const QUEST_BOARD_TILE = { col: 23, row: 4 };
+// Раунд 66.21 (приказ 2): доска поручений стала ВИРТУАЛЬНОЙ — физическая
+// доска у ворот (23,4) удалена, метка с плана деревни снята. Поручения
+// выдают взрослые НПЦ в диалогах (questGenerator.makeQuestOffer).
 
 /** Цвет клеток плана по символу сетки buildMap(). */
 export function cellColor(ch) {
@@ -51,7 +52,6 @@ export function planLegend() {
         [buildingColor('blacksmith'), t('Кузница')],
         [buildingColor('healer_house'), t('Дом знахарки')],
         [buildingColor('potter_house'), t('Жилой дом')],
-        [0xE8DCC4, t('Доска поручений')],
         [0xD8B96A, t('Ворота')],
         [0xFF3B30, t('Ты')],
     ];
@@ -78,10 +78,8 @@ export function drawPlan(ctx, grid, cell) {
         ctx.fillStyle = '#E8DCC4';
         ctx.fillRect((b.col + Math.floor(b.w / 2)) * cell, (b.row + b.h - 1) * cell, cell, cell);
     }
-    // 3) доска поручений — белая метка
-    ctx.fillStyle = '#F5F0E0';
-    ctx.fillRect(QUEST_BOARD_TILE.col * cell, QUEST_BOARD_TILE.row * cell, cell, cell);
-    // 4) ворота — золотая полоса на восточной кромке
+    // 3) ворота — золотая полоса на восточной кромке
+    //    (раунд 66.21: метка доски поручений снята — доска виртуальная)
     ctx.fillStyle = '#D8B96A';
     ctx.fillRect((MAP_W - 1) * cell, 5 * cell, cell, cell);
 }

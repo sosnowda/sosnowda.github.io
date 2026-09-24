@@ -2917,3 +2917,159 @@ export function appendWeatherChoice(dialogId, choices) {
     });
     return out;
 }
+
+// ============================================================
+// РАУНД 66.21 (приказы 2–4): ВИРТУАЛЬНАЯ ДОСКА ПОРУЧЕНИЙ.
+// Физическая доска у ворот удалена. Теперь КАЖДЫЙ ВЗРОСЛЫЙ НПЦ,
+// у которого есть пул поручений, в стартовом узле беседы получает
+// выбор «📜 Есть ли дело?» — процедурное поручение предлагается
+// прямо в диалоговом окне (узел quest_talk, как weather_talk).
+// Дети и пастушок (KID_DIALOG_IDS) — исключены по возрасту;
+// лимиты (один НПЦ — одно предложение в день, одно активное
+// поручение от одного НПЦ) ведёт makeQuestOffer в questGenerator.
+// ============================================================
+
+import { NPC_DIALOGUE } from './npcPresence.js';
+import { NPC_QUEST_POOLS, makeQuestOffer, acceptQuest } from './questGenerator.js';
+import { showDonationMenu } from '../systems/ChurchDonation.js';
+
+const QUEST_ASK_TEXT = t('📜 Есть ли дело?');
+
+/** dialogId → npcId (обратная карта NPC_DIALOGUE). */
+function npcIdForDialog(dialogId) {
+    for (const [npcId, dlgId] of Object.entries(NPC_DIALOGUE)) {
+        if (dlgId === dialogId) return npcId;
+    }
+    return null;
+}
+
+/** Короткая строка наград для текста предложения. */
+function rewardLine(quest) {
+    return (quest.rewards || []).map(r => {
+        if (r.type === 'money') return `${r.amount} ${t('д.')}`;
+        if (r.type === 'item') return `${r.name} ×${r.count}`;
+        return r.name || t('что-то');
+    }).join(', ');
+}
+
+/** Узел «о деле» конкретного диалога: генерирует предложение поручения. */
+function buildQuestTalk(dialogId, startNode) {
+    return {
+        speaker: startNode ? startNode.speaker : '...',
+        text: '...',
+        choices: [],
+        action: (scene) => {
+            const node = DIALOGUES[dialogId] && DIALOGUES[dialogId].nodes.quest_talk;
+            if (!node || !scene || !scene.registry) return;
+            const npcId = npcIdForDialog(dialogId);
+            const offer = npcId ? makeQuestOffer(scene.registry, npcId) : { ok: false, reason: 'pool' };
+            if (!offer.ok) {
+                const lines = {
+                    active: t('«Ты ещё не закончил моё прошлое дело. Сперва его, потом про новое говори!»'),
+                    offered: t('«На нынче у меня дел больше нет. Загляни завтра — что-нибудь найдётся.»'),
+                    none: t('«Нет у меня сейчас для тебя дел. Зайди попозже.»'),
+                    age: t('«Куда тебе мои дела, мал ещё. Подрастёшь — разговор будет.»'),
+                    pool: t('«Пустое дело ищешь? Иди с миром.»'),
+                };
+                node.text = lines[offer.reason] || lines.none;
+                node.choices = [{ text: t('Понятно'), end: true }];
+                return;
+            }
+            const quest = offer.quest;
+            const hours = quest.timeLimitHours || Math.round((quest.timeLimit || 10) / 4);
+            node.text = `«${quest.description}»\n\n`
+                + `${t('Цель:')} ${quest.objective}\n`
+                + `${t('Срок:')} ${tf(t('≈{0} ч'), hours)}\n`
+                + `${t('Награда:')} ${rewardLine(quest)}`;
+            node.choices = [
+                {
+                    text: t('✓ Принять'),
+                    action: (sc) => { if (sc && sc.registry) acceptQuest(sc.registry, quest); },
+                    end: true,
+                },
+                { text: t('✗ Отказаться'), end: true },
+            ];
+        },
+    };
+}
+
+// Установить узел «о деле» всем диалогам взрослых НПЦ с пулом поручений
+// (один раз при загрузке; дети/пастушок исключены — KID_DIALOG_IDS).
+(function installQuestTalk() {
+    Object.keys(DIALOGUES).forEach((id) => {
+        const d = DIALOGUES[id];
+        if (!d || !d.nodes || KID_DIALOG_IDS.has(id)) return;
+        if (d.nodes.quest_talk) return;
+        const npcId = npcIdForDialog(id);
+        if (!npcId || !NPC_QUEST_POOLS[npcId]) return;
+        const startNode = d.nodes[d.start];
+        if (!startNode) return;
+        d.nodes.quest_talk = buildQuestTalk(id, startNode);
+    });
+})();
+
+/**
+ * Добавить выбор «📜 Есть ли дело?» в список choices стартового узла
+ * НПЦ, который может выдавать поручения (узел quest_talk установлен).
+ * Вызывается из DialogueRunner при рендере стартового узла.
+ */
+export function appendQuestChoice(dialogId, choices) {
+    if (KID_DIALOG_IDS.has(dialogId)) return choices || [];
+    const d = DIALOGUES[dialogId];
+    if (!d || !d.nodes || !d.nodes.quest_talk) return choices || [];
+    const list = Array.isArray(choices) ? choices : [];
+    if (list.some(c => c && c.__questAsk)) return list;
+    const out = list.slice();
+    out.splice(Math.max(0, out.length - 1), 0, {
+        text: QUEST_ASK_TEXT,
+        __questAsk: true,
+        next: 'quest_talk',
+    });
+    return out;
+}
+
+// ============================================================
+// РАУНД 66.21 (приказ 13): ПОЖЕРТВОВАНИЕ ЦЕРКВИ В ДИАЛОГЕ СВЯЩЕННИКА.
+// В стартовом узле беседы с отцом Савватием — выбор «🕯 Пожертвовать
+// церкви»: меню сумм 5/10/25/50 д. (systems/ChurchDonation.js).
+// ============================================================
+
+const DONATION_ASK_TEXT = t('🕯 Пожертвовать церкви');
+
+// Узел «пожертвование» — только у священника (dialogId 'priest').
+// Выбор «🕯 Положить на блюдо» открывает меню сумм ПОСЛЕ закрытия беседы
+// (действие выбора выполняется при клике; menu-диалог переживает _finish).
+(function installDonationTalk() {
+    const d = DIALOGUES['priest'];
+    if (!d || !d.nodes || d.nodes.donate_talk) return;
+    d.nodes.donate_talk = {
+        speaker: d.nodes[d.start] ? d.nodes[d.start].speaker : '...',
+        text: t('Отец Савватий кивает на блюдо у иконостаса: «Кто много имя́ет, от того много и требует. А кто мало — тому и малое вменится».'),
+        choices: [
+            {
+                text: t('🕯 Положить на блюдо'),
+                action: (scene) => {
+                    try { showDonationMenu(scene); } catch (e) { console.error('Ошибка меню пожертвования', e); }
+                },
+                end: true,
+            },
+            { text: t('В другой раз'), end: true },
+        ],
+    };
+})();
+
+/**
+ * Добавить выбор «🕯 Пожертвовать церкви» в стартовый узел священника.
+ */
+export function appendDonationChoice(dialogId, choices) {
+    if (dialogId !== 'priest') return choices || [];
+    const list = Array.isArray(choices) ? choices : [];
+    if (list.some(c => c && c.__donationAsk)) return list;
+    const out = list.slice();
+    out.splice(Math.max(0, out.length - 1), 0, {
+        text: DONATION_ASK_TEXT,
+        __donationAsk: true,
+        next: 'donate_talk',
+    });
+    return out;
+}

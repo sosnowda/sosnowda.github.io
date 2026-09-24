@@ -61,6 +61,7 @@ node game/tools/test_round69.mjs     # звук/погода/сезоны/слу
 node game/tools/test_round70.mjs     # приметы/доска/рыбалка/арт-66.7 (раунд 66.7)
 node game/tools/test_round71.mjs     # план деревни/экспорт летописи/og-demo (раунд 66.8)
 node game/tools/test_round72.mjs     # звуки ремёсел/EN-глубина (раунд 66.9)
+node game/tools/test_round82.mjs     # 66.21: виртуальная доска/ночные запоры/стук/часы церкви/пожертвования/портреты/репутация — новые раунды добавляют свои
 
 # Синтаксис правленых файлов:
 node --check game/src/…/*.js

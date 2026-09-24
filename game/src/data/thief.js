@@ -58,9 +58,51 @@ import { tickTime, getTimeOfDay } from '../systems/TimeSystem.js';
 import { getWeather, isPrecip } from '../systems/Weather.js';
 import { consumeBlessing } from './questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
-import { t, tf } from '../systems/i18n.js';
+import { t, tf, isEn } from '../systems/i18n.js';
 import { createDialog } from '../utils/ui.js';
 import { getNpcShortName, findNpc } from './npcNames.js';
+
+// Раунд 66.21 (грамматика наводок и следов): склонение названий локаций.
+// Дательный — «бежит к {0}», родительный — «у {0}»/«в сторону {0}».
+// Ключи совпадают с id локаций CHASE_LOCATIONS/mapLocations. Для EN — имя как есть.
+const LOC_TIP_DAT = {
+    forest_edge: 'опушке леса',
+    forest_glade: 'Лесной поляне',
+    forest: 'Густому лесу',
+    road_south: 'Тракту',
+    road: 'Тракту',
+    river: 'Реке',
+    field: 'Ржаному полю',
+    lake: 'Святому озеру',
+    pogost: 'Погосту',
+    mill: 'Ветряной мельнице',
+    apiary: 'Пасеке',
+    pasture: 'Выпасу',
+};
+const LOC_TIP_GEN = {
+    forest_edge: 'опушки леса',
+    forest_glade: 'Лесной поляны',
+    forest: 'Густого леса',
+    road_south: 'Тракта',
+    road: 'Тракта',
+    river: 'Реки',
+    field: 'Ржаного поля',
+    lake: 'Святого озера',
+    pogost: 'Погоста',
+    mill: 'Ветряной мельницы',
+    apiary: 'Пасеки',
+    pasture: 'Выпаса',
+};
+
+/** Склонённые имена локации для наводок/следов: { dat, gen } (раунд 66.21). */
+function tipNames(loc) {
+    if (!loc) return { dat: '?', gen: '?' };
+    if (isEn()) return { dat: loc.name, gen: loc.name };
+    return {
+        dat: LOC_TIP_DAT[loc.id] || loc.name,
+        gen: LOC_TIP_GEN[loc.id] || loc.name,
+    };
+}
 // Раунд 47 (пп.2,4 заявки): смерть кузнеца не прячет наводку — знание
 // наследует ученик; встречные проверки — по параметрам из базы жителей
 import { isNpcKilled } from './reputation.js';
@@ -491,8 +533,8 @@ export function examineFootprint(registry, locationId, fpId) {
             const nowLoc = where ? getLocationById(where.locId) : null;
             const popup = nowLoc
                 ? (where.heading
-                    ? tf(t('📍 Вор сейчас на дороге к «{0}»!'), nowLoc.name)
-                    : tf(t('📍 Вор сейчас где-то у «{0}»!'), nowLoc.name))
+                    ? tf(t('📍 Вор сейчас на дороге к {0}!'), tipNames(nowLoc).dat)
+                    : tf(t('📍 Вор сейчас где-то у {0}!'), tipNames(nowLoc).gen))
                 : t('След ещё хранит отпечаток, но свежесть ушла.');
             return { resolved: true, found: true, alreadyChecked: true, message: popup };
         }
@@ -548,17 +590,17 @@ export function examineFootprint(registry, locationId, fpId) {
         const nowLoc = where ? getLocationById(where.locId) : null;
         let message = nowLoc
             ? (where.heading
-                ? tf(t('📍 ПОП-АП: вор сейчас на дороге к «{0}»!'), nowLoc.name)
-                : tf(t('📍 ПОП-АП: вор сейчас где-то у «{0}»!'), nowLoc.name))
+                ? tf(t('📍 ПОП-АП: вор сейчас на дороге к {0}!'), tipNames(nowLoc).dat)
+                : tf(t('📍 ПОП-АП: вор сейчас где-то у {0}!'), tipNames(nowLoc).gen))
             : t('След прочитан, но человек он скрытный — куда подался, не разобрать.');
         message = message.replace('📍 ПОП-АП: ', '📍 ');
         if (trace.wentTo) {
             const next = getLocationById(trace.wentTo);
-            message += '\n' + tf(t('Сам след ведёт в сторону «{0}».'), next ? next.name : trace.wentTo);
+            message += '\n' + tf(t('Сам след ведёт в сторону {0}.'), next ? tipNames(next).gen : trace.wentTo);
         }
         if (isRetry) message += '\n' + t('(Вторая попытка: присмотрелся внимательнее — и след поддался.)');
         message += nightNote;
-        ActionLog.add(registry, tf(t('Обследовал след в «{0}» — след прочитан (бросок {1}, успех{2}): вор у «{3}».'), t(loc.name), res.roll, (nightPenalty ? t(', ночь') : '') + (retryPenalty ? t(', повтор') : ''), t(nowLoc ? nowLoc.name : '?')));
+        ActionLog.add(registry, tf(t('Обследовал след в «{0}» — след прочитан (бросок {1}, успех{2}): вор у {3}.'), t(loc.name), res.roll, (nightPenalty ? t(', ночь') : '') + (retryPenalty ? t(', повтор') : ''), nowLoc ? tipNames(nowLoc).gen : '?'));
         return { resolved: true, found: true, message, turnsLeft: chaseTicksLeft(registry), thiefEscaped: false };
     }
 
@@ -933,14 +975,14 @@ export function searchLocation(registry, locationId) {
             let message;
             if (trace.wentTo) {
                 const next = getLocationById(trace.wentTo);
-                message = tf(t('Вор был здесь! Следы ведут в сторону «{0}».'), next ? next.name : trace.wentTo);
+                message = tf(t('Вор был здесь! Следы ведут в сторону {0}.'), next ? tipNames(next).gen : trace.wentTo);
             } else {
                 message = t('Следы вора здесь обрываются: он уходил прочь из деревни широкими шагами бегуна.');
             }
             if (nowLoc) {
                 message += where.heading
-                    ? ' ' + tf(t('По свежести примятой травы ясно: вор сейчас на дороге к «{0}»!'), nowLoc.name)
-                    : ' ' + tf(t('Судя по свежести следов, вор сейчас где-то у «{0}»!'), nowLoc.name);
+                    ? ' ' + tf(t('По свежести примятой травы ясно: вор сейчас на дороге к {0}!'), tipNames(nowLoc).dat)
+                    : ' ' + tf(t('Судя по свежести следов, вор сейчас где-то у {0}!'), tipNames(nowLoc).gen);
             }
             if (isRetry) message += '\n' + t('(Вторая попытка: присмотрелся внимательнее — и след поддался.)');
             ActionLog.add(registry, tf(t('Поиск следов в «{0}» — следы прочитаны (бросок {1}, успех{2}{3}).'), t(loc.name), res.roll, nightPenaltyS ? t(', ночь') : '', retryPenaltyS ? t(', повтор') : ''));
@@ -1020,6 +1062,10 @@ export function inheritThiefKnowledge(registry) {
  * что не видели (не все могли видеть вора). Подсказка даётся ЕДИНожды:
  * второй раз строчки диалога про вора у этого NPC не появляется.
  */
+// Раунд 66.21 (грамматика наводок): склонение названий локаций для
+// подсказок свидетелей перенесено к началу модуля (LOC_TIP_DAT/LOC_TIP_GEN,
+// хелпер tipNames) — используется и в следах, и в наводках.
+
 export function askNPC(registry, npcId, npcName) {
     const who = talkerName(registry, npcId, npcName); // раунд 41: динамическое имя
     const q = registry.get('quest');
@@ -1111,6 +1157,11 @@ export function askNPC(registry, npcId, npcName) {
         gotClue = true;
         const where = thiefWhereabouts(registry);
         const loc = where ? getLocationById(where.locId) : null;
+        // Раунд 66.21 (QA честного прогона, грамматика): в наводках имя локации
+        // склоняется — «бежит к Пасеке», «прячется у Пасеки», а не именительный
+        // падеж «у «Пасека»». Для EN — имя как есть (английский не склоняется).
+        const locDat = loc ? tipNames(loc).dat : '';
+        const locGen = loc ? tipNames(loc).gen : '';
         // Раунд 32 (пп.4,10): наводка «прибивает» вора к указанной локации
         // (2 часа гарантии, п.4) и действительна 5 игровых часов (п.10) —
         // когда срок выйдет, вор уйдёт в другую локацию.
@@ -1131,13 +1182,13 @@ export function askNPC(registry, npcId, npcName) {
         const clueText = eyewitnessHere
             ? (loc
                 ? (where.heading
-                    ? tf(t('Он через нашу сторону пробегал, верно тебе говорю! Теперь его видели на дороге к «{0}» — поспеши, догонешь!'), loc.name)
-                    : tf(t('Он через нашу сторону пробегал, верно тебе говорю! Теперь он прячется где-то у «{0}» — поспеши!'), loc.name))
+                    ? tf(t('Он через нашу сторону пробегал, верно тебе говорю! Теперь его видели на дороге к {0} — поспеши, догонешь!'), locDat)
+                    : tf(t('Он через нашу сторону пробегал, верно тебе говорю! Теперь он прячется где-то у {0} — поспеши!'), locGen))
                 : t('Он через нашу сторону пробегал, да куда подался — не ведаю.'))
             : (loc
                 ? (where.heading
-                    ? tf(t('Видел я его, темного человека! Он бежит к «{0}» — поспеши, догонешь!'), loc.name)
-                    : tf(t('Видел я его, темного человека! Он сейчас прячется у «{0}» — поспеши!'), loc.name))
+                    ? tf(t('Видел я его, темного человека! Он бежит к {0} — поспеши, догонешь!'), locDat)
+                    : tf(t('Видел я его, темного человека! Он сейчас прячется у {0} — поспеши!'), locGen))
                 : t('Видел я вора, да куда он подался — не ведаю.'));
         // Раунд 41: в улике храним динамическое имя (панель «Улики от жителей»)
         q.cluesGathered.push({ npcId, npcName: who, clue: clueText, whereClue: true });

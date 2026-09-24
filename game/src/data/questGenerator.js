@@ -882,6 +882,97 @@ export function getActiveQuests(registry) {
     return (q.activeQuests || []).filter(q => q.accepted && !q.completed && !q.failed);
 }
 
+// ============================================================
+// РАУНД 66.21 (приказы владельца 2–4): ВИРТУАЛЬНАЯ ДОСКА ПОРУЧЕНИЙ.
+// Физическая доска у ворот удалена — процедурные поручения теперь
+// выдаёт КАЖДЫЙ ВЗРОСЛЫЙ НПЦ в диалоговом окне (в доме — кнопка
+// «Задание» и выбор в беседе, на улице — выбор в беседе).
+// Общие правила для всех точек выдачи:
+//   • у НПЦ есть пул поручений (NPC_QUEST_POOLS) и возраст ≥ 18 лет
+//     (дети и пастушок Ивашка 14 лет поручений не дают — приказ «взрослый»);
+//   • не больше ОДНОГО активного поручения от одного НПЦ (как прежде);
+//   • ОДНО предложение от одного НПЦ в день (реестр 'npcQuestOffered') —
+//     отказался/взял — новые дела у него только завтра;
+//   • меч старосты по-прежнему выдаётся ТОЛЬКО лично (uniqueFromElder
+//     не генерируется в предложениях... он и так только в его пуле).
+// ============================================================
+
+/** Возраст совершеннолетия для выдачи поручений. */
+export const QUEST_GIVER_MIN_AGE = 18;
+
+/** Может ли этот НПЦ выдавать процедурные поручения (пул + взрослый). */
+export function canGiveQuests(registry, npcId) {
+    if (!NPC_QUEST_POOLS[npcId]) return false;
+    const npc = (registry.get('npcs') || []).find(n => n.id === npcId);
+    if (!npc) return true; // нет данных о возрасте (старые сейвы) — пул решает
+    return (npc.age || 30) >= QUEST_GIVER_MIN_AGE;
+}
+
+/** Есть ли у игрока активное поручение от этого НПЦ. */
+export function hasActiveQuestFrom(registry, npcId) {
+    return getActiveQuests(registry).some(aq => aq.npcId === npcId);
+}
+
+/** Предлагал ли этот НПЦ дело сегодня. */
+function offeredToday(registry, npcId) {
+    const time = registry.get('gameTime');
+    const day = time ? (time.yearFromChrist * 372 + time.month * 31 + time.day) : 0;
+    const st = registry.get('npcQuestOffered');
+    if (!st || st.day !== day) return false;
+    return (st.ids || []).includes(npcId);
+}
+
+/**
+ * Может ли НПЦ СЕЙЧАС предложить дело (без побочных эффектов —
+ * для показа кнопки «📜 Есть ли дело?»; сама выдача — makeQuestOffer).
+ */
+export function canOfferQuestToday(registry, npcId) {
+    return !NPC_QUEST_POOLS[npcId]
+        ? false
+        : canGiveQuests(registry, npcId)
+            && !hasActiveQuestFrom(registry, npcId)
+            && !offeredToday(registry, npcId);
+}
+
+/** Отметить: НПЦ предложил дело сегодня (после этого — только завтра). */
+function markOffered(registry, npcId) {
+    const time = registry.get('gameTime');
+    const day = time ? (time.yearFromChrist * 372 + time.month * 31 + time.day) : 0;
+    const st = registry.get('npcQuestOffered') || { day, ids: [] };
+    if (st.day !== day) { st.day = day; st.ids = []; }
+    if (!st.ids.includes(npcId)) st.ids.push(npcId);
+    registry.set('npcQuestOffered', st);
+}
+
+/**
+ * Сформировать предложение поручения от НПЦ (единая точка для кнопки
+ * «Задание» в доме и выбора «📜 Есть ли дело?» в беседе).
+ * @returns {{ ok: boolean, quest?: object, reason?: 'pool'|'age'|'active'|'offered'|'none' }}
+ */
+export function makeQuestOffer(registry, npcId) {
+    if (!NPC_QUEST_POOLS[npcId]) return { ok: false, reason: 'pool' };
+    if (!canGiveQuests(registry, npcId)) return { ok: false, reason: 'age' };
+    if (hasActiveQuestFrom(registry, npcId)) return { ok: false, reason: 'active' };
+    if (offeredToday(registry, npcId)) return { ok: false, reason: 'offered' };
+    const quest = generateQuest(npcId, registry);
+    if (!quest) return { ok: false, reason: 'none' };
+    markOffered(registry, npcId);
+    return { ok: true, quest };
+}
+
+/**
+ * Аудит (приказ 4): все локации шаблонов поручений валидны.
+ * 'road' — легаси-имя Тракта (совпадает с road_south, см. matchesLocation).
+ * @returns {string[]} уникальные идентификаторы локаций из всех шаблонов
+ */
+export function questLocationIds() {
+    const ids = new Set();
+    Object.values(QUEST_TEMPLATES).forEach(tpl => {
+        if (tpl && tpl.location) ids.add(tpl.location);
+    });
+    return [...ids];
+}
+
 /**
  * Получить список выполненных заданий.
  */

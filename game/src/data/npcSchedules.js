@@ -48,10 +48,12 @@ export const PROFESSION_SCHEDULES = {
     [PROFESSIONS.PRIEST]: {
         dawn:      { activity: 'совершает утреню', location: 'church', available: false },
         morning:   { activity: 'служит обедню', location: 'church', available: true },
-        noon:      { activity: 'трапезничает', location: 'church', available: false },
+        // Раунд 66.21 (приказ 12): обед — 1 час (12:00–13:00) в корчме
+        // (точный час ведёт npcPresence; здесь — сегмент целиком)
+        noon:      { activity: 'обедает в корчме', location: 'tavern', available: false },
         evening:   { activity: 'совершает вечерню', location: 'church', available: true },
-        dusk:      { activity: 'запирает церковь', location: 'church', available: true },
-        night:     { activity: 'молится в келье', location: 'church', available: false },
+        dusk:      { activity: 'ужинает в корчме да возвращается в церковь', location: 'church', available: true },
+        night:     { activity: 'спит в келье', location: 'church', available: false },
     },
     [PROFESSIONS.TAVERNKEEPER]: {
         dawn:      { activity: 'спит', location: 'tavern', available: false },
@@ -285,7 +287,8 @@ export const VILLAGE_NPCS = [
         profession: PROFESSIONS.BEEKEEPER,
         gender: 'female',
         sprite: 'npc_elder',
-        portrait: 'portrait_widow',
+        // Раунд 66.21 (приказ 8): портрет по возрасту
+        portrait: 'portrait_healer',
         age: 55,
         bio: 'Вдова погибшего воина, пасечница. Держит пасеку, прядёт пряжу, помогает больным.',
         interiorId: 'villager_house_2',
@@ -329,7 +332,8 @@ export const VILLAGE_NPCS = [
         profession: PROFESSIONS.FISHERMAN,
         gender: 'male',
         sprite: 'npc_merchant',
-        portrait: 'portrait_fisherman',
+        // Раунд 66.21 (приказ 8): портрет по возрасту
+        portrait: 'portrait_tavernkeeper',
         age: 42,
         bio: 'Рыбак с многолетним опытом. Знает все рыбные места на реке.',
         interiorId: 'fisher_house',

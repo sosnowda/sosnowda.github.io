@@ -35,7 +35,8 @@ ok(has(mm, 'export function cellColor'), 'cellColor — цвет клетки п
 ok(has(mm, 'export function buildingColor'), 'buildingColor — цвет здания по interiorId');
 ok(has(mm, 'export function drawPlan'), 'drawPlan — рисует план в canvas-контекст');
 ok(has(mm, 'export function planSize'), 'planSize — размеры плана при данной клетке');
-ok(has(mm, "export const QUEST_BOARD_TILE = { col: 23, row: 4 }"), 'доска поручений на (23,4) — как спрайт VillageScene');
+// Раунд 66.21 (приказ 2): доска стала виртуальной — метка с плана снята
+ok(!mm.includes('QUEST_BOARD_TILE'), 'доска поручений виртуальна — метки QUEST_BOARD_TILE на плане нет');
 ok(has(mm, "from '../data/world.js'") && has(mm, "MAP_W, MAP_H"), 'геометрия из world.js (MAP_W×MAP_H)');
 ok(has(mm, "from '../data/interiors.js'") && has(mm, 'BUILDINGS'), 'здания из interiors.BUILDINGS');
 ok(has(mm, "from './i18n.js'") && has(mm, 't('), 'подписи через t() (EN-линия)');
@@ -44,7 +45,7 @@ ok(has(mm, "_buildWidgetTexture") && has(mm, 'minimap_widget'), 'виджет: c
 ok(has(mm, 'showPanel') && has(mm, 'hidePanel') && has(mm, 'toggle()'), 'панель: показать/скрыть/тумблер');
 
 // Палитра (проверка значений — детерминированный канон плана)
-const { cellColor, buildingColor, planLegend, planSize, QUEST_BOARD_TILE } = await import(mmPath);
+const { cellColor, buildingColor, planLegend, planSize } = await import(mmPath);
 ok(cellColor('B') === 0xC2A878, 'улица B — песок 0xC2A878');
 ok(cellColor('S') === 0xB09868, 'дорожка S — грунт 0xB09868');
 ok(cellColor('L') === 0x2E2013, 'частокол L — тёмные брёвна');
@@ -55,11 +56,10 @@ ok(buildingColor('elder_house') === 0x2A4A6A, 'староста — синий')
 ok(buildingColor('tavern') === 0xB5651D, 'постоялый двор — янтарь');
 ok(buildingColor('blacksmith') === 0x8B2C1A, 'кузница — красный');
 ok(buildingColor('potter_house') === 0x6B4A2E, 'жилой дом — коричневый');
-ok(QUEST_BOARD_TILE.col === 23 && QUEST_BOARD_TILE.row === 4, 'доска: (23,4)');
 const ps8 = planSize(8);
 ok(ps8.w === 26 * 8 && ps8.h === 15 * 8, 'план 8px/тайл = 208×120 (26×15 тайлов)');
 const legend = planLegend();
-ok(legend.length === 9, 'легенда: 9 строк (церковь/староста/двор/кузня/знахарка/дом/доска/ворота/ты)');
+ok(legend.length === 8, 'легенда: 8 строк (церковь/староста/двор/кузня/знахарка/дом/ворота/ты — доска снята, р.66.21)');
 
 // Интеграция в VillageScene
 const vs = read('game/src/scenes/VillageScene.js');
@@ -130,8 +130,8 @@ ok(has(li, 'assets/images/og-image.jpg'), 'лендинг (index.html) по-пр
 // ================================= 4) SW ====================================
 console.log('\n[4] Service Worker v69');
 const sw = read('sw.js');
-ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v69'"), 'CACHE_NAME бампнут до v69 (сайт изменён, 66.19)');
-ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v23'"), 'game-assets-v23 (тайлы икон церкви, 66.20)');
+ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v71'"), 'CACHE_NAME бампнут до v69 (сайт изменён, 66.19)');
+ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v24'"), 'game-assets-v24 (тайлы икон церкви, 66.20)');
 ok(has(sw, 'v69 — раунд 66.19'), 'шапка sw.js: запись о раунде 66.19');
 ok(has(sw, 'assets/images/og-demo.jpg'), 'шапка sw.js: og-demo.jpg задокументирован');
 

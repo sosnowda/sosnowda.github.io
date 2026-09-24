@@ -156,7 +156,7 @@ export function changeNpcRep(registry, npcId, delta, reason) {
     let actualDelta = delta;
     if (delta > 0) actualDelta = Math.round(delta * 0.7);
     else if (delta < 0) actualDelta = Math.round(delta * 1.2);
-    
+
     rep.npcRep[npcId] = clamp(rep.npcRep[npcId] + actualDelta, NPC_REP_MIN, NPC_REP_MAX);
     registry.set('reputation', rep);
     // Личная репутация влияет на деревенскую (на 15% от изменения)
@@ -165,6 +165,26 @@ export function changeNpcRep(registry, npcId, delta, reason) {
         registry.set('reputation', rep);
     }
     return rep.npcRep[npcId];
+}
+
+// === Раунд 66.21: ТОЧНЫЕ изменения репутации (без балансировочного
+// множителя и каскада) — только для пожертвований церкви (приказ 14:
+// «повышает... но не более +10» — обещанное число должно совпадать
+// с фактическим). ===
+
+export function changeNpcRepExact(registry, npcId, delta) {
+    const rep = getReputation(registry);
+    if (!rep.npcRep[npcId]) rep.npcRep[npcId] = 0;
+    rep.npcRep[npcId] = clamp(rep.npcRep[npcId] + delta, NPC_REP_MIN, NPC_REP_MAX);
+    registry.set('reputation', rep);
+    return rep.npcRep[npcId];
+}
+
+export function changeVillageRepExact(registry, delta) {
+    const rep = getReputation(registry);
+    rep.villageRep = clamp(rep.villageRep + delta, VILLAGE_REP_MIN, VILLAGE_REP_MAX);
+    registry.set('reputation', rep);
+    return rep.villageRep;
 }
 
 // === ПРОВЕРКИ ПОВЕДЕНИЯ NPC ===
@@ -284,6 +304,47 @@ export function checkNpcWillingToTalk(registry, npcId, options = {}) {
     }
     
     return { canTalk: true };
+}
+
+/**
+ * РАУНД 66.21 (приказы владельца 13–14): ПОЖЕРТВОВАНИЕ ЦЕРКВИ В ДИАЛОГЕ
+ * СО СВЯЩЕННИКОМ. Размер пожертвования растёт → репутация растёт:
+ *   5 д. → +1, 10 д. → +2, 25 д. → +5, 50 д. и больше → +10 (потолок +10).
+ * Прибавка идёт И личной репутации у священника, И деревенской репутации.
+ * Чистая функция — покрывается юнит-тестом (test_round82).
+ * @param {number} amount — сумма пожертвования в деньгах (д.)
+ * @returns {number} прибавка репутации 1..10
+ */
+export function donationRepAmount(amount) {
+    const a = Math.max(0, Math.floor(Number(amount) || 0));
+    return Math.min(10, Math.max(1, Math.floor(a / 5)));
+}
+
+/**
+ * Раунд 66.21 (аудит баланса, приказы 6–7): дневной лимит похвалы/угроз.
+ * Раньше «Похвалить»/«Угрожать» можно было спамить без ограничений:
+ * похвала капала +2..+5 за клик (эксплойт накрутки репутации), угроза
+ * вымогала деньги раз за разом. Теперь у каждого НПЦ — ОДНА похвала
+ * и ОДНА угроза в день (реестр 'repActionsDay').
+ * @param {string} kind 'compliment' | 'threat' | 'gift'
+ * @returns {boolean} true, если действие сегодня ещё доступно
+ */
+export function repActionAllowedToday(registry, npcId, kind) {
+    const time = registry.get('gameTime');
+    const day = time ? (time.yearFromChrist * 372 + time.month * 31 + time.day) : 0;
+    const st = registry.get('repActionsDay');
+    if (!st || st.day !== day) return true;
+    const key = `${npcId}:${kind}`;
+    return !st.done[key];
+}
+
+export function markRepActionDone(registry, npcId, kind) {
+    const time = registry.get('gameTime');
+    const day = time ? (time.yearFromChrist * 372 + time.month * 31 + time.day) : 0;
+    const st = registry.get('repActionsDay') || { day, done: {} };
+    if (st.day !== day) { st.day = day; st.done = {}; }
+    st.done[`${npcId}:${kind}`] = true;
+    registry.set('repActionsDay', st);
 }
 
 /**
