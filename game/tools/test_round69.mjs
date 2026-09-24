@@ -251,7 +251,7 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     // SW: v69, ассеты вычищены от неиспользуемых (66.19)
     const sw = read('../sw.js');
     ok(sw.includes("chronicles-ruthenia-v69"), 'SW: версия сайта v69 (раунд 66.19)');
-    ok(sw.includes("game-assets-v22"), 'SW: кеш ассетов v22 (чистка неиспользуемых файлов, 66.19)');
+    ok(sw.includes("game-assets-v23"), 'SW: кеш ассетов v23 (тайлы икон церкви, 66.20)');
     ok(sw.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи
     const i18n = read('src/systems/i18n.js');

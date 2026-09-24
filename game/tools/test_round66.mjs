@@ -141,9 +141,9 @@ ok(bootSrc.includes('v < 5; v++') && bootSrc.includes('deco_tree_'), 'BootScene:
 
 // ===== п.5: шрифты диалогов =====
 console.log('\nп.5 Шрифты диалогов');
-ok(styleSrc.includes("fontSize: '21px'") && styleSrc.includes('width: 440'), 'реплики 21px, панель 440 (StyleConfig)');
+ok(styleSrc.includes("fontMax: 26") && styleSrc.includes('width: 440'), 'реплики best-fit до 26px, панель 440 (66.20, StyleConfig)');
 ok(styleSrc.replace(/\n\s*/g, '').replace(/\s+/g, ' ').includes('button: {fontSize: 20'), 'кнопки 20px (StyleConfig)');
-ok(uiSrc.includes('let fontPx = 21;'), 'createDialog: стартовый шрифт 21px');
+ok(uiSrc.includes('let fontPx = best.fp') && uiSrc.includes('fontHardMin'), 'createDialog: динамический best-fit кегля 26→13 (66.20)');
 ok(uiSrc.includes('dialogWidth - pad.left - pad.right'), 'перенос строк от фактической ширины панели');
 
 // ===== п.1: отдых у костра =====

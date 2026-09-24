@@ -1221,6 +1221,9 @@ export class VillageScene extends Phaser.Scene {
      * принимает икону прямо на улице — раунд 27, п.10).
      */
     talkToStreetNpc(npcId) {
+        // РАУНД 66.20 (QA п.5): не открывать беседу поверх живого диалога
+        // (клавиатура E не блокируется оверлеем диалога/журнала)
+        if (this.busyDialog) return;
         this.busyDialog = true;
         const npcData = findNpc(this.registry, npcId);
         const displayName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
@@ -1816,6 +1819,9 @@ export class VillageScene extends Phaser.Scene {
     // П.20-22: Журнал заданий
     showQuestJournal() {
         const { width, height } = this.scale;
+        // РАУНД 66.20 (QA п.5): журнал держит busyDialog, чтобы клавиатурный
+        // разговор с НПЦ (E рядом с жителем) не открылся ПОВЕРХ журнала
+        this.busyDialog = true;
         this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
 
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
@@ -1912,6 +1918,7 @@ export class VillageScene extends Phaser.Scene {
 
         const closeJournal = () => {
             this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
+            this.busyDialog = false;
         };
         btnBg.on('pointerup', closeJournal);
         overlay.on('pointerup', closeJournal);

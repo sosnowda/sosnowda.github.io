@@ -669,7 +669,9 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
 
     // Ширина диалога — увеличена, чтобы помещался портрет + текст
     // Раунд 20: на узких экранах диалог не шире окна (поля по 12px)
-    const dialogWidth = Math.min(
+    // РАУНД 66.20: let — для длинных реплик панель расширяется в layout()
+    // (см. «динамическое расширение панели»), чтобы кегль оставался крупным.
+    let dialogWidth = Math.min(
         portraitKey ? 560 : DIALOG_STYLES.width,
         Math.max(240, cam.width - 24)
     );
@@ -697,11 +699,13 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     }).setOrigin(0.5, 0);
 
     // Контент (текст реплики)
-    // РАУНД 66 (п.5): реплики КРУПНЕЕ — 21px (было 18px); фактическая ширина
-    // переноса строк считается в layout() от ширины панели (ниже) — текст
-    // гарантированно внутри пергамента и кнопок на любом экране.
+    // РАУНД 66.20 (п.1 приказа): кегль реплики подбирается ДИНАМИЧЕСКИ под окно
+    // диалога (best-fit в layout() ниже): стартуем с fontMax и ищем НАИБОЛЬШИЙ
+    // размер, при котором панель целиком влезает в 90% высоты экрана. Короткие
+    // реплики получают крупный шрифт, длинные автоматически ужинаются БЕЗ
+    // скролла. Ширина переноса строк считается в layout() от ширины панели.
     const contentStyle = {
-        fontSize: '21px',
+        fontSize: (DIALOG_STYLES.content.fontMax || 26) + 'px',
         color: inkColor,
         fontFamily: 'Georgia, serif',
         align: 'left',
@@ -879,7 +883,15 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         const titleH = titleText.height || 30;
         const availH = Math.max(280, cam.height * 0.9);
 
-        // Подбор шрифта: 21 → 19 → 17 → 15 → 13 → 12, пока панель не влезет
+        // ----- РАУНД 66.20 (п.1 приказа): BEST-FIT КЕГЛЯ РЕПЛИКИ -----
+        // Раньше реплика стартовала с фиксированных 21px и только ужималась
+        // (21→…→12), а всё, что не убралось, уходило под маску со скроллом —
+        // длинные беседы выглядели мелко и нечитаемо. Теперь перебором с шагом
+        // 1px от максимума к минимуму выбирается НАИБОЛЬШИЙ кегль, при котором
+        // панель ЦЕЛИКОМ (текст + кнопки + отступы) влезает в доступную высоту
+        // (90% экрана): текст всегда занимает окно крупным шрифтом и помещается
+        // без прокрутки. Маска/скролл ниже остаются ТОЛЬКО аварийным
+        // предохранителем после пола fontHardMin.
         const computeTotal = () => {
             const contentH = contentText.height || 60;
             let th = pad.top + titleH + pad.title + contentH + pad.content;
@@ -890,14 +902,54 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             th += pad.bottom;
             return th;
         };
-        let fontPx = 21;
-        contentText.setStyle({ ...contentStyle, fontSize: fontPx + 'px' });
-        let naturalH = computeTotal();
-        while (naturalH > availH && fontPx > 12) {
-            fontPx -= 2;
-            contentText.setStyle({ ...contentStyle, fontSize: fontPx + 'px' });
-            naturalH = computeTotal();
+        const fontMax = Number(DIALOG_STYLES.content.fontMax) || 26;
+        const fontMin = Number(DIALOG_STYLES.content.fontMin) || 13;
+        const fontHardMin = Number(DIALOG_STYLES.content.fontHardMin) || 11;
+
+        // Подбор кегля при ТЕКУЩЕЙ ширине панели (26 → 13 → 11, шаг 1px)
+        const tryFit = () => {
+            contentStyle.wordWrap.width = Math.max(180,
+                dialogWidth - pad.left - pad.right - (portraitImg ? 106 : 0));
+            contentText.setStyle({ ...contentStyle, fontSize: fontMax + 'px' });
+            let fp = fontMax;
+            let nh = computeTotal();
+            while (nh > availH && fp > fontMin) {
+                fp -= 1;
+                contentText.setStyle({ ...contentStyle, fontSize: fp + 'px' });
+                nh = computeTotal();
+            }
+            // Аварийный дожим ниже обычного пола — прежде чем включать скролл
+            while (nh > availH && fp > fontHardMin) {
+                fp -= 1;
+                contentText.setStyle({ ...contentStyle, fontSize: fp + 'px' });
+                nh = computeTotal();
+            }
+            return { fp, nh };
+        };
+
+        // РАУНД 66.20: ДИНАМИЧЕСКОЕ РАСШИРЕНИЕ ПАНЕЛИ для длинных реплик.
+        // Если при исходной ширине (440/560) наибольший помещающийся кегль
+        // оказался ниже 15px — перебираем более широкие панели (до 760px или
+        // ширины экрана) и берём ширину с САМЫМ КРУПНЫМ кеглем: широкая
+        // панель даёт больше символов в строке и МЕНЬШЕ рядов кнопок
+        // (главные пожиратели высоты). Короткие реплики остаются на 440/560.
+        let best = tryFit();
+        let bestW = dialogWidth;
+        if (best.fp < 15) {
+            const maxW = Math.min(760, Math.max(240, cam.width - 24));
+            let w = dialogWidth + 60;
+            while (w <= maxW && best.fp < 15) {
+                dialogWidth = w;
+                const r = tryFit();
+                if (r.fp > best.fp) { best = r; bestW = w; }
+                w += 60;
+            }
+            dialogWidth = bestW;
+            const fin = tryFit();   // восстановить состояние под лучшую ширину
+            best = fin;
         }
+        let fontPx = best.fp;
+        let naturalH = best.nh;
         // Панель не выше 90% экрана, даже если текст ещё не убрался
         const totalH = Math.min(naturalH, availH);
         const contentTop = -totalH / 2 + pad.top + titleH + pad.title;

@@ -1981,6 +1981,7 @@ const EN = {
     'В узле нет добычи. Настреляй дичи из лука, налови рыбы на броду — или раздери волка.':
         'No spoils in your sack. Shoot some game with a bow, catch fish at the ford — or wrestle a wolf.',
     'печёное дороже сырого': 'cooked is worth more than raw',
+    'Печёное и жаркое дороже сырого': 'Cooked fish and roast fetch a better price',
     // п.6: ставка подёнки
     'Слава о работнике идёт по деревне: +1 к доброй славе (ставка подёнки — раз в сутки).':
         'Word of a good worker spreads through the village: +1 to good renown (day-labour rate — once a day).',

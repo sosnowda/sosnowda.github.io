@@ -1159,6 +1159,9 @@ export class InteriorScene extends Phaser.Scene {
      * отказ торговать при репутации ≤ −50 (как у кузнеца, п.7э Судебника).
      */
     showMarketShop(interior) {
+        // РАУНД 66.20: анти-стакинг — как «Скупка» (66.19): кастомная панель
+        // не должна открываться поверх живого диалога («Отдых», беседа НПЦ)
+        closeAllSingletonDialogs(this);
         const player = this.registry.get('player');
         const market = interior.market;
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
@@ -1276,11 +1279,13 @@ export class InteriorScene extends Phaser.Scene {
         // Кнопка закрытия
         createButton(this, width / 2, height / 2 + panelH / 2 - 34, t('Закрыть'), closeMenu, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
-            fontSize: 13, padding: { left: 24, right: 24, top: 7, bottom: 7 },
+            fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
         }).setDepth(202);
     }
 
     showTavernShop() {
+        // РАУНД 66.20: анти-стакинг — закрыть открытые диалоги перед панелью
+        closeAllSingletonDialogs(this);
         const player = this.registry.get('player');
         // Раунд 66.12 (п.7): единые правила торговли — при дурной славе
         // содержатель постоялого двора тоже отказывает (как кузнец и лавка).
@@ -1320,21 +1325,21 @@ export class InteriorScene extends Phaser.Scene {
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 30, t('Постоялый двор «У дороги» — меню'), {
-            fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
+            fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 65,
             `${t('Денег:')} ${formatMoney(player.dengas || 0)}${modNote}`, {
-            fontSize: '16px', color: '#c9a14a',
+            fontSize: '17px', color: '#c9a14a',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setDepth(202);
 
         // Список товаров
-        const startY = height / 2 - panelH / 2 + 110;
+        const startY = height / 2 - panelH / 2 + 112;
         items.forEach((item, i) => {
-            const y = startY + i * 42;
+            const y = startY + i * 44;
             const canAfford = (player.dengas || 0) >= item.price;
             createButton(this, width / 2, y, `${t(item.name)} — ${item.price} ${t('д.')} (${item.effect})`, () => {
                 if (!canAfford) {
@@ -1369,7 +1374,7 @@ export class InteriorScene extends Phaser.Scene {
                 backgroundColor: canAfford ? 0x3a5a3a : 0x3a3a3a,
                 hoverColor: canAfford ? 0x4a6a4a : 0x4a4a4a,
                 textColor: canAfford ? RUS.text : '#888',
-                fontSize: 14, padding: { left: 16, right: 16, top: 8, bottom: 8 },
+                fontSize: 16, padding: { left: 16, right: 16, top: 8, bottom: 8 },
             }).setDepth(202);
         });
 
@@ -1380,7 +1385,7 @@ export class InteriorScene extends Phaser.Scene {
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
-            fontSize: 16, padding: { left: 20, right: 20, top: 10, bottom: 10 },
+            fontSize: 17, padding: { left: 20, right: 20, top: 10, bottom: 10 },
         }).setDepth(202);
     }
 
@@ -1430,29 +1435,36 @@ export class InteriorScene extends Phaser.Scene {
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 30,
             isButcher ? t('Столешня Потапа — скупка добычи') : t('Кухня Фёдора — скупка добычи'), {
-                fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
+                fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
                 fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(202);
         this.add.text(width / 2, height / 2 - panelH / 2 + 62,
             `${t('Денег:')} ${formatMoney(player.dengas || 0)}`, {
-                fontSize: '15px', color: '#c9a14a', stroke: '#000', strokeThickness: 1,
+                fontSize: '17px', color: '#c9a14a', stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0.5).setDepth(202);
+        // РАУНД 66.20: подсказка о ценах вынесена в общую строку (раньше
+        // дублировалась в каждой строке списка и вынуждала держать мелкий кегль)
+        this.add.text(width / 2, height / 2 - panelH / 2 + 88,
+            t('Печёное и жаркое дороже сырого'), {
+                fontSize: '13px', color: RUS.textDim, fontStyle: 'italic',
+                stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5).setDepth(202);
 
         if (rows.length === 0) {
             this.add.text(width / 2, height / 2 - 10,
                 t('В узле нет добычи. Настреляй дичи из лука, налови рыбы на броду — или раздери волка.'), {
-                    fontSize: '14px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
+                    fontSize: '16px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
                     align: 'center',
                 }).setOrigin(0.5).setDepth(202);
         }
 
-        const startY = height / 2 - panelH / 2 + 105;
+        const startY = height / 2 - panelH / 2 + 140;
         rows.forEach((row, i) => {
             const y = startY + i * 52;
             const def = row.def;
             this.add.text(width / 2 - panelW / 2 + 30, y - 22,
-                `${def.emoji} ${t(def.name)} ×${row.count} — ${row.price} ${t('д.')}${def.edible ? ` (${t('печёное дороже сырого')})` : ''}`, {
-                    fontSize: '13px', color: RUS.text, stroke: '#000', strokeThickness: 1,
+                `${def.emoji} ${t(def.name)} ×${row.count} — ${row.price} ${t('д.')}`, {
+                    fontSize: '15px', color: RUS.text, stroke: '#000', strokeThickness: 1,
                 }).setOrigin(0, 0.5).setDepth(202);
             createButton(this, width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), row.price), () => {
                 removeItem(player, def.id, 1);
@@ -1465,7 +1477,7 @@ export class InteriorScene extends Phaser.Scene {
                 this.showSellLootMenu(interior);
             }, {
                 backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
-                fontSize: 12, padding: { left: 10, right: 10, top: 6, bottom: 6 },
+                fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 },
             }).setDepth(202);
             if (row.count > 1) {
                 createButton(this, width / 2 + 205, y + 4, tf(t('Всё ({0} д.)'), row.price * row.count), () => {
@@ -1480,14 +1492,14 @@ export class InteriorScene extends Phaser.Scene {
                     this.showSellLootMenu(interior);
                 }, {
                     backgroundColor: 0x2a4a5a, hoverColor: 0x3a5a6a, textColor: RUS.text,
-                    fontSize: 12, padding: { left: 10, right: 10, top: 6, bottom: 6 },
+                    fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 },
                 }).setDepth(202);
             }
         });
 
         createButton(this, width / 2, height / 2 + panelH / 2 - 34, t('Закрыть'), closeMenu, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
-            fontSize: 13, padding: { left: 24, right: 24, top: 7, bottom: 7 },
+            fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
         }).setDepth(202);
     }
 
@@ -1699,6 +1711,8 @@ export class InteriorScene extends Phaser.Scene {
         if (this.busyDialog) return;
         this.busyDialog = true;
         this.__spendTimeOpen = true;
+        // РАУНД 66.20: анти-стакинг — панель «Время» закрывает живые диалоги
+        closeAllSingletonDialogs(this);
 
         const { width, height } = this.scale;
         const cx = width / 2;
@@ -1891,6 +1905,8 @@ export class InteriorScene extends Phaser.Scene {
      *    честной торговле: перекупка не приносит прибыли).
      */
     showBlacksmithShop(tab = 'weapon') {
+        // РАУНД 66.20: анти-стакинг — закрыть открытые диалоги перед панелью
+        closeAllSingletonDialogs(this);
         const player = this.registry.get('player');
         const { width, height } = this.scale;
 
@@ -2096,7 +2112,7 @@ export class InteriorScene extends Phaser.Scene {
             closeMenu();
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
-            fontSize: 16, padding: { left: 20, right: 20, top: 10, bottom: 10 },
+            fontSize: 17, padding: { left: 20, right: 20, top: 10, bottom: 10 },
         }).setDepth(202);
     }
 
@@ -2679,49 +2695,64 @@ export class InteriorScene extends Phaser.Scene {
             this.add.text(width * 0.72, 78, '⚔ 🪣', { fontSize: '26px' }).setOrigin(0.5).setDepth(10);
         } else if (interior.id === 'church') {
             // Церковь (раунд 26): сюда переехал сюжет часовни — ПУСТОЙ киот,
-            // место кражи иконы (осмотр даёт улику). Киот рисуем и в живописном,
-            // и в тайловом виде — это сюжетная точка. Правый верхний угол,
-            // чтобы не перекрывать батюшку (0.65, 0.55) и игрока (0.25, 0.55).
+            // место кражи иконы (осмотр даёт улику). Киот рисуем всегда — это
+            // сюжетная точка. Правый верхний угол, чтобы не перекрывать батюшку
+            // (0.65, 0.55) и игрока (0.25, 0.55).
+            // РАУНД 66.20 (п.2): киот — резное тёмное дерево с кокошником и
+            // крестом, глубокая ниша с золотой окладкой (вместо плоской ниши
+            // с «пустым нимбом»).
             const kiot = this.add.graphics().setDepth(4);
             const kx = width * 0.86, ky = height * 0.27;
-            kiot.fillStyle(0x1e130a, 1);                       // тёмная ниша
-            kiot.fillRoundedRect(kx - 52, ky - 74, 104, 148, 10);
-            kiot.lineStyle(3, 0xc9a14a, 1);                    // золотая окантовка
-            kiot.strokeRoundedRect(kx - 52, ky - 74, 104, 148, 10);
-            kiot.lineStyle(2, 0xc9a14a, 0.6);
-            kiot.strokeCircle(kx, ky - 22, 30);                // пустой нимб
-            // След от иконы: чуть более светлая «тень» в нише
-            kiot.fillStyle(0x2c1e10, 1);
-            kiot.fillRect(kx - 26, ky - 52, 52, 104);
-            this.add.text(kx, ky + 62, t('слово Божие — в сердцах'), {
+            kiot.fillStyle(0x4a3420, 1);                       // тёмное дерево киота
+            kiot.fillRoundedRect(kx - 56, ky - 84, 112, 168, 8);
+            kiot.fillStyle(0x1e130a, 1);                       // глубокая ниша
+            kiot.fillRoundedRect(kx - 46, ky - 74, 92, 148, 6);
+            kiot.fillStyle(0x2c1e10, 1);                       // след от иконы
+            kiot.fillRect(kx - 24, ky - 52, 48, 104);
+            kiot.lineStyle(3, 0xc9a14a, 1);                    // золотая окладка ниши
+            kiot.strokeRoundedRect(kx - 46, ky - 74, 92, 148, 6);
+            kiot.lineStyle(2, 0xc9a14a, 0.75);                 // внешний резной пояс
+            kiot.strokeRoundedRect(kx - 52, ky - 80, 104, 160, 8);
+            // кокошник — ступенчатый верх с крестом
+            kiot.fillStyle(0x4a3420, 1);
+            kiot.fillTriangle(kx - 40, ky - 84, kx + 40, ky - 84, kx, ky - 118);
+            kiot.lineStyle(2, 0xc9a14a, 0.9);
+            kiot.strokeTriangle(kx - 40, ky - 84, kx + 40, ky - 84, kx, ky - 118);
+            kiot.fillStyle(0xc9a14a, 1);
+            kiot.fillRect(kx - 1.5, ky - 140, 3, 18);
+            kiot.fillRect(kx - 6, ky - 136, 12, 3);
+            this.add.text(kx, ky + 70, t('слово Божие — в сердцах'), {
                 fontSize: '10px', color: '#8a7248', fontFamily: 'Georgia, serif',
             }).setOrigin(0.5).setDepth(5);
-            if (!painted && !hasBg) {
-                // Тайловый вид: алтарь, иконостас, свечи, аналой, крест
-                // (в «живописной» церкви иконостас/алтарь/окна уже в фоне)
-                if (this.textures.exists('int_deco_table')) {
-                    this.add.image(width * 0.5, height * 0.4, 'int_deco_table').setScale(1.5).setDepth(5);
+
+            // РАУНД 66.20 (п.2): ИКОНОСТАС ИЗ НАСТОЯЩИХ ИКОН-ТАЙЛОВ.
+            // Новый фон int_bg_church — пустая деревянная церковь; иконостас
+            // и убранство собираются кодом ПОВЕРХ фона ВСЕГДА (а не только в
+            // тайловом виде): пророческий ярус, деисус, местный ряд с Царскими
+            // вратами и Голгофа — иконы новгородской школы вместо фигур-«идолов».
+            this.drawIconostasisWithIcons(width, height);
+
+            // Аналой с иконой Благовещения — на ковре перед иконостасом
+            if (this.textures.exists('int_deco_analogion')) {
+                this.add.image(width * 0.5, height * 0.62, 'int_deco_analogion').setScale(1.3).setDepth(5);
+                if (this.textures.exists('int_deco_icon_annunciation')) {
+                    this.add.image(width * 0.5, height * 0.585, 'int_deco_icon_annunciation')
+                        .setDisplaySize(40, 53).setRotation(-0.05).setDepth(6);
                 }
-                // РАУНД 66.7 (п.12): вместо трёх разрозненных плашек
-                // int_deco_icon_wall — ПОЛНОЦЕННЫЙ ИКОНОСТАС (рама, местный
-                // ряд с Царскими вратами, деисус, ярус праздников, Голгофа)
-                this.drawTileIconostasis(width, height);
-                if (this.textures.exists('int_deco_candle')) {
-                    this.add.image(width * 0.42, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
-                    this.add.image(width * 0.58, height * 0.35, 'int_deco_candle').setScale(1.5).setDepth(6);
-                    this._lightSources.push({ x: width * 0.42, y: height * 0.37, w: 80, h: 30, a: 0.4 });
-                    this._lightSources.push({ x: width * 0.58, y: height * 0.37, w: 80, h: 30, a: 0.4 });
-                }
-                // Аналой (подставка для икон/книг)
-                if (this.textures.exists('int_deco_analogion')) {
-                    this.add.image(width * 0.5, height * 0.6, 'int_deco_analogion').setScale(1.2).setDepth(5);
-                }
-                this.add.text(width * 0.5, height * 0.15, '✝', {
-                    fontSize: '48px', color: '#c9a14a',
-                }).setOrigin(0.5).setDepth(10);
-                // Красный угол с лампадой — единственный огонёк после кражи
-                // (слева, чтобы не спорить с киотом в правом верхнем углу)
-                this.addRedCorner(64, height * 0.3, true);
+            }
+            // Угасающая лампада у киота — единственный огонёк после кражи
+            if (this.textures.exists('particle_spark')) {
+                const lamp = this.add.image(kx - 34, ky + 30, 'particle_spark')
+                    .setTint(0xffb84d).setBlendMode(Phaser.BlendModes.ADD)
+                    .setDepth(7).setScale(0.45);
+                this.tweens.add({
+                    targets: lamp,
+                    alpha: { from: 0.4, to: 0.75 },
+                    scale: { from: 0.4, to: 0.55 },
+                    duration: Phaser.Math.Between(600, 900),
+                    yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                });
+                this._lightSources.push({ x: kx - 30, y: ky + 46, w: 80, h: 40, a: 0.5 });
             }
         } else if (interior.id === 'villager_house_1' && !hasBg) {
             // Дом крестьянина Авдея: стол, лавка, кровать, поленница, стог сена, ПЕЧЬ,
@@ -2817,99 +2848,93 @@ export class InteriorScene extends Phaser.Scene {
      * withNiche — усиленный вариант (дополнительная божница).
      */
     /**
-     * РАУНД 66.7 (п.12): тайловый вид церкви — ПОЛНОЦЕННЫЙ ИКОНОСТАС
-     * вместо трёх разрозненных плашек. Золотая рама на тёмной стене,
-     * местный ряд с Царскими вратами и 4 иконами, деисус (Спас крупнее),
-     * ярус праздников, Голгофский крест над короной. Правый край не доходит
-     * до сюжетного пустого киота (0.86W) — святыню не перекрываем.
+     * РАУНД 66.20 (п.2 приказа владельца): иконостас из НАСТОЯЩИХ икон-тайлов
+     * (новгородская школа, assets/interiors/deco_icon_*.jpg) вместо рисованных
+     * фигур-«идолов» с глазами-точками. Резное тёмное дерево + золото:
+     * пророческий ярус, деисус (Спас крупнее), местный ряд с Царскими вратами
+     * (икона Благовещения) и Голгофский крест над короной. Пропорции икон не
+     * искажаются (3:4), правый край не доходит до сюжетного пустого киота
+     * (0.86W) — святыню не перекрываем.
      */
-    drawTileIconostasis(width, height) {
+    drawIconostasisWithIcons(width, height) {
         const g = this.add.graphics().setDepth(4);
-        const GOLD = 0xc9a14a, GOLD_D = 0x8c6c2c, DARK = 0x1e150c;
-        const WOOD = 0x4a3420, WOOD_D = 0x33220f, SKIN = 0xd8b088;
-        const ROBES = [0x7a2838, 0x3f5a3a, 0x9a7a3a, 0x5e3460, 0x3c466e, 0x6e4a28];
+        const GOLD = 0xc9a14a, GOLD_D = 0x8c6c2c;
+        const WOOD = 0x3a2a18, WOOD_D = 0x291c0e;
         const x0 = width * 0.07, x1 = width * 0.78;
         const y0 = height * 0.07, y1 = height * 0.47;
         const iw = x1 - x0, ih = y1 - y0;
+        const AR = 0.75; // пропорции икон-тайлов 288x384 (ширина = высота * 0.75)
 
-        // задняя стена иконостаса + резная рама
+        // тёмная стена иконостаса + резная рама
         g.fillStyle(WOOD, 1);
         g.fillRect(x0, y0, iw, ih);
+        g.fillStyle(WOOD_D, 1);
+        g.fillRect(x0, y1 - 8, iw, 8);
         g.lineStyle(4, GOLD, 1);
         g.strokeRect(x0 + 2, y0 + 2, iw - 4, ih - 4);
         g.lineStyle(1, GOLD_D, 0.8);
         g.strokeRect(x0 + 8, y0 + 8, iw - 16, ih - 16);
 
-        // одна иконка: доска, оклад, нимб, фигура
-        const icon = (ix, iy, icoW, icoH, robe) => {
-            g.fillStyle(DARK, 1);
-            g.fillRect(ix, iy, icoW, icoH);
+        // Одна икона-тайл: тёмная доска, золотой оклад, изображение без искажений
+        const iconH = (key, cx, cy, icoH) => {
+            const icoW = icoH * AR;
+            g.fillStyle(0x14100a, 1);
+            g.fillRect(cx - icoW / 2 - 2, cy - icoH / 2 - 2, icoW + 4, icoH + 4);
             g.lineStyle(2, GOLD, 1);
-            g.strokeRect(ix + 1, iy + 1, icoW - 2, icoH - 2);
-            const cx = ix + icoW / 2;
-            const hr = Math.min(icoW, icoH) * 0.17;
-            g.lineStyle(2, GOLD, 0.95);
-            g.strokeCircle(cx, iy + icoH * 0.34, hr);
-            g.fillStyle(robe, 1);
-            g.fillTriangle(ix + icoW * 0.22, iy + icoH - 3, ix + icoW * 0.78, iy + icoH - 3,
-                cx, iy + icoH * 0.42);
-            g.fillStyle(SKIN, 1);
-            g.fillRect(cx - 2, iy + icoH * 0.31, 4, 4);
+            g.strokeRect(cx - icoW / 2 - 1, cy - icoH / 2 - 1, icoW + 2, icoH + 2);
+            if (this.textures.exists(key)) {
+                this.add.image(cx, cy, key).setDisplaySize(icoW, icoH).setDepth(5);
+            } else {
+                g.fillStyle(0x6e4a28, 1);
+                g.fillRect(cx - icoW / 2, cy - icoH / 2, icoW, icoH);
+            }
         };
 
-        // --- ярус 1 (верх): пророческий — 9 малых икон ---
-        const t1y = y0 + 10, t1h = ih * 0.17;
-        const n1 = 9, step1 = (iw - 24) / n1;
-        for (let i = 0; i < n1; i++) {
-            icon(x0 + 12 + i * step1 + 2, t1y, step1 - 5, t1h, ROBES[i % ROBES.length]);
-        }
+        const usable = iw - 24;                      // ширина под иконы внутри рамы
+        const cxAt = (f) => x0 + 12 + usable * f;    // центр иконы по ярусу
+        const t1y = y0 + 12, t1h = ih * 0.2;
+        const t2y = t1y + t1h + 10, t2h = ih * 0.32;
+        const t3y = t2y + t2h + 10, t3h = y1 - 12 - t3y;
 
-        // --- ярус 2: праздничный — 7 икон ---
-        const t2y = t1y + t1h + 8, t2h = ih * 0.2;
-        const n2 = 7, step2 = (iw - 24) / n2;
-        for (let i = 0; i < n2; i++) {
-            icon(x0 + 12 + i * step2 + 3, t2y, step2 - 6, t2h, ROBES[(i + 3) % ROBES.length]);
-        }
+        // --- ярус 1 (верх): пророческий — 5 малых икон ---
+        const tier1 = ['icon_archangel', 'icon_nicholas', 'icon_theotokos', 'icon_john', 'icon_archangel'];
+        tier1.forEach((k, i) => iconH('int_deco_' + k, cxAt((i + 0.5) / 5), t1y + t1h / 2, t1h));
 
-        // --- ярус 3: ДЕИСУС — Спас в центре крупнее, Богородица и Иоанн ---
-        const t3y = t2y + t2h + 9, t3h = ih * 0.28;
-        icon(x0 + 12, t3y + 4, iw * 0.16, t3h - 8, ROBES[0]);
-        icon(x0 + 12 + iw * 0.17, t3y, iw * 0.2, t3h, ROBES[1]);
-        icon(x0 + 12 + iw * 0.38, t3y - 5, iw * 0.24, t3h + 10, ROBES[3]);  // Спас
-        icon(x0 + 12 + iw * 0.63, t3y, iw * 0.2, t3h, ROBES[4]);
-        icon(x0 + 12 + iw * 0.84, t3y + 4, iw * 0.15, t3h - 8, ROBES[2]);
+        // --- ярус 2: ДЕИСУС — Спас в центре крупнее, Богородица и Иоанн ---
+        iconH('int_deco_icon_nicholas',  cxAt(0.06), t2y + t2h / 2 + 4, t2h - 16);
+        iconH('int_deco_icon_theotokos', cxAt(0.26), t2y + t2h / 2, t2h - 8);
+        iconH('int_deco_icon_christ',    cxAt(0.5),  t2y + t2h / 2 - 4, t2h + 8);
+        iconH('int_deco_icon_john',      cxAt(0.74), t2y + t2h / 2, t2h - 8);
+        iconH('int_deco_icon_archangel', cxAt(0.94), t2y + t2h / 2 + 4, t2h - 16);
 
-        // --- ярус 4 (местный): Царские врата в центре + 4 иконы ---
-        const t4y = t3y + t3h + 9, t4h = y1 - 10 - t4y;
-        const dw = iw * 0.22, dx = x0 + iw / 2 - dw / 2;
-        icon(x0 + 12, t4y, iw * 0.17, t4h, ROBES[5]);
-        icon(x0 + 12 + iw * 0.18, t4y + 2, iw * 0.15, t4h - 4, ROBES[0]);
-        icon(x0 + 12 + iw * 0.66, t4y + 2, iw * 0.15, t4h - 4, ROBES[3]);
-        icon(x0 + 12 + iw * 0.82, t4y, iw * 0.16, t4h, ROBES[1]);
-        // Царские врата: двойные створки с золотой аркой
+        // --- ярус 3 (местный): Царские врата в центре + 4 иконы ---
+        const dw = iw * 0.22, dx = cxAt(0.5) - dw / 2;
+        iconH('int_deco_icon_nicholas',  cxAt(0.10), t3y + t3h / 2, t3h);
+        iconH('int_deco_icon_theotokos', cxAt(0.30), t3y + t3h / 2 + 2, t3h - 4);
+        iconH('int_deco_icon_christ',    cxAt(0.70), t3y + t3h / 2 + 2, t3h - 4);
+        iconH('int_deco_icon_john',      cxAt(0.90), t3y + t3h / 2, t3h);
+        // Царские врата: двойные створки с золотой аркой + Благовещение
         g.fillStyle(WOOD_D, 1);
-        g.fillRect(dx, t4y - 6, dw, t4h + 6);
+        g.fillRect(dx, t3y - 6, dw, t3h + 6);
         g.lineStyle(3, GOLD, 1);
-        g.strokeRect(dx + 1, t4y - 5, dw - 2, t4h + 4);
+        g.strokeRect(dx + 1, t3y - 5, dw - 2, t3h + 4);
         g.lineStyle(2, GOLD, 1);
         g.beginPath();
-        g.moveTo(dx + dw / 2, t4y - 5);
-        g.lineTo(dx + dw / 2, t4y + t4h + 1);
+        g.moveTo(dx + dw / 2, t3y - 5);
+        g.lineTo(dx + dw / 2, t3y + t3h + 1);
         g.strokePath();
-        // Благовещение в верхних створках: две малые фигуры
-        g.fillStyle(SKIN, 1);
-        g.fillRect(dx + dw * 0.22, t4y + 2, 4, 4);
-        g.fillRect(dx + dw * 0.68, t4y + 2, 4, 4);
-        // евангелисты: 2×2 золотых круга в нижних створках
-        [[0.25, 0.52], [0.7, 0.52], [0.25, 0.78], [0.7, 0.78]].forEach(([ux, uy]) => {
+        if (this.textures.exists('int_deco_icon_annunciation')) {
+            this.add.image(dx + dw / 2, t3y + t3h * 0.32, 'int_deco_icon_annunciation')
+                .setDisplaySize(t3h * 0.4 * AR, t3h * 0.4).setDepth(5);
+        }
+        // евангелисты: золотые круги в нижних створках
+        [[0.28, 0.74], [0.72, 0.74]].forEach(([ux, uy]) => {
             g.lineStyle(2, GOLD, 0.95);
-            g.strokeCircle(dx + dw * ux, t4y + t4h * uy, 5);
-            g.fillStyle(SKIN, 1);
-            g.fillRect(dx + dw * ux - 2, t4y + t4h * uy - 2, 4, 4);
+            g.strokeCircle(dx + dw * ux, t3y + t3h * uy, 6);
         });
 
         // --- Голгофа над короной ---
-        const gx = x0 + iw / 2;
+        const gx = cxAt(0.5);
         g.fillStyle(GOLD, 1);
         g.fillRect(gx - 2, y0 - height * 0.055, 4, height * 0.055);
         g.fillRect(gx - height * 0.026, y0 - height * 0.04, height * 0.052, 4);

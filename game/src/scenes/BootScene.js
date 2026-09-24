@@ -284,6 +284,13 @@ export class BootScene extends Phaser.Scene {
         ].forEach((d) => {
             this.load.image(`int_deco_${d}`, `assets/interiors/deco_${d}.png`);
         });
+        // РАУНД 66.20 (п.2 приказа): НАСТОЯЩИЕ тайлы икон для церкви
+        // (новгородская школа, JPEG 288x384) — иконостас/аналой/Царские врата
+        ['icon_christ', 'icon_theotokos', 'icon_john', 'icon_archangel',
+         'icon_nicholas', 'icon_annunciation'
+        ].forEach((d) => {
+            this.load.image(`int_deco_${d}`, `assets/interiors/deco_${d}.jpg`);
+        });
         // Анимированный огонь (4 кадра)
         for (let f = 0; f < 4; f++) this.load.image(`int_fire_${f}`, `assets/effects/fire_${f}.png`);
 

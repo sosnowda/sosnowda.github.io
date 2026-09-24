@@ -131,7 +131,7 @@ ok(has(li, 'assets/images/og-image.jpg'), 'лендинг (index.html) по-пр
 console.log('\n[4] Service Worker v69');
 const sw = read('sw.js');
 ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v69'"), 'CACHE_NAME бампнут до v69 (сайт изменён, 66.19)');
-ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v22'"), 'game-assets-v22 (удаление неиспользуемых ассетов, 66.19)');
+ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v23'"), 'game-assets-v23 (тайлы икон церкви, 66.20)');
 ok(has(sw, 'v69 — раунд 66.19'), 'шапка sw.js: запись о раунде 66.19');
 ok(has(sw, 'assets/images/og-demo.jpg'), 'шапка sw.js: og-demo.jpg задокументирован');
 

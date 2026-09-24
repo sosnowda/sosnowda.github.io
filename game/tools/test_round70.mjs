@@ -338,8 +338,10 @@ console.log('— п.12: ИКОНОСТАС в церкви —');
         && gen.includes('wall_kiot') && gen.includes('Голгофа'),
         'генератор: 4 яруса + Царские врата + киоты по стенам + Голгофа');
     const is = read('game/src/scenes/InteriorScene.js');
-    ok(is.includes('drawTileIconostasis') && is.includes('ДЕИСУС')
-        && is.includes('евангелисты'), 'тайловый вид: иконостас рисуется graphics (деисус, евангелисты)');
+    ok(is.includes('drawIconostasisWithIcons') && is.includes('ДЕИСУС')
+        && is.includes('евангелисты'), '66.20: иконостас из икон-тайлов (деисус, евангелисты)');
+    ok(is.includes("'int_deco_icon_christ'") && is.includes("'int_deco_icon_theotokos'"),
+        '66.20: иконы-тайлы новгородской школы в иконостасе');
     ok(!is.includes("this.add.image(width * 0.5, height * 0.25, 'int_deco_icon_wall')"),
         'старые три разрозненные плашки икон убраны из церкви');
 }
@@ -360,8 +362,8 @@ console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
     ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v69'"), 'SW: сайт v69 (раунд 66.19)');
-    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v22'"),
-        'SW: game-assets-v22 (чистка неиспользуемых ассетов, раунд 66.19)');
+    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v23'"),
+        'SW: game-assets-v23 (тайлы икон церкви, раунд 66.20)');
     setLang('en');
     ok(t('☁ Что погода сулит?') === '☁ What will the weather bring?', 'i18n: вопрос о погоде EN');
     ok(t('Доска поручений') === 'Job Board', 'i18n: доска поручений EN');
