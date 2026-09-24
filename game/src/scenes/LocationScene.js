@@ -165,18 +165,20 @@ export class LocationScene extends Phaser.Scene {
         }
 
         // ----- Заголовок -----
+        // Раунд 66.19: depth 4 — выше деревьев (3): кроны высоких сосен
+        // на Тракте больше не перекрывают название и описание локации
         this.add.text(width / 2, 20, `${loc.icon} ${loc.name}`, {
             fontSize: '28px', color: RUS.text, fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5, 0);
+        }).setOrigin(0.5, 0).setDepth(4);
 
         this.add.text(width / 2, 55, loc.description, {
             fontSize: '13px', color: RUS.textDim,
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 1,
             wordWrap: { width: width - 80 },
-        }).setOrigin(0.5, 0);
+        }).setOrigin(0.5, 0).setDepth(4);
 
         // Дата и время (п.13) + погода дня (раунд 14) + время «как на Руси» (раунд 29)
         if (timeState) {
