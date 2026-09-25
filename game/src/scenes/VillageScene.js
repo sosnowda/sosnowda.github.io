@@ -17,7 +17,7 @@ import { checkGameEnd } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog, closeAllSingletonDialogs } from '../utils/ui.js';
-import { tickTime, getTime, getDayNightOverlay, getSeason } from '../systems/TimeSystem.js';
+import { tickTime, getTime, getDayNightOverlay, getSeason, getDarknessFactor } from '../systems/TimeSystem.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
 import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear, monthNameNom, monthNameGen } from '../systems/RusTime.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
@@ -37,6 +37,9 @@ import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
 import { attachNpcWander } from '../systems/NpcWander.js';
 import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
+// Раунд 66.23 (приказ владельца): визуальные часы рассвета/заката —
+// солнце/луна по дуге над деревней по солнечному расписанию (SkyClock.js)
+import { attachSkyClock } from '../systems/SkyClock.js';
 // Патч 66.3: честные окна и трубы фасадов fb_* (свечение ночью + дымок из труб)
 import { HOUSES_FX } from '../data/housesFX.js';
 // Раунд 66.21 (приказы 2, 9–11): виртуальная доска поручений, ночные запоры,
@@ -87,9 +90,9 @@ export class VillageScene extends Phaser.Scene {
         // Раунд 24: эмбиент деревни — день/ночь по игровому времени
         const vsTime = getTime(this.registry);
         const vsHour = vsTime ? vsTime.hour : 12; // раунд 31: фикс .hours → .hour (эмбиент день/ночь)
-        this.audioManager.setAmbient((vsHour >= 21 || vsHour < 5)
+        this.audioManager.setAmbient(isNightHour(vsHour, vsTime)
             ? 'ambient_town_night'
-            : 'ambient_town_day');
+            : 'ambient_town_day'); // 66.23: эмбиент — по сезонной ночи (закат/рассвет даты)
 
         this.physics.world.setBounds(0, 0, this.worldW, this.worldH);
         this.cameras.main.setBounds(0, 0, this.worldW, this.worldH);
@@ -653,6 +656,13 @@ export class VillageScene extends Phaser.Scene {
         // ----- Погода (раунд 14): затемнение + дождь/снег в экранных координатах.
         // День/ночь 90 → затемнение 92, осадки 96; HUD 100+ остаётся поверх.
         applyWeatherVisuals(this, { tintDepth: 92, precipDepth: 96 });
+
+        // ----- РАУНД 66.23 (приказ владельца): ВИЗУАЛЬНЫЕ ЧАСЫ РАССВЕТА/ЗАКАТА.
+        // Небесная полоска вверху по центру: солнце и луна идут по дуге по
+        // НАСТОЯЩЕМУ расписанию солнца (AccessHours.sunTimes по дате — 66.22);
+        // полоска окрашена фазой (заря/день/закат/ночь), при наведении —
+        // время рассвета, заката и длина светового дня. Обновляется в updateHUD.
+        this.skyClock = attachSkyClock(this, { depth: 103 });
 
         // ----- Кнопки меню сверху (Пункт 9) -----
         this.createTopMenu();
@@ -1425,17 +1435,16 @@ export class VillageScene extends Phaser.Scene {
             if (this.dayNightOverlay) {
                 this.dayNightOverlay.setFillStyle(overlay.color, overlay.alpha);
             }
+            // Раунд 66.23: небесные часы — солнце/луна по сезонному расписанию
+            if (this.skyClock) this.skyClock.update(timeState);
         }
 
         // Ночное свечение окон: чем темнее, тем ярче тёплый свет в окнах.
-        // ПАТЧ 66.3: у каждого свечения своя яркость (__k: стекло/ореол/фолбэк),
-        // ореолы едва заметно мерцают (свет свечи/лучины).
+        // РАУНД 66.23: тьма считается ПО СОЛНЦУ текущей даты (getDarknessFactor):
+        // зимой окна загораются с ~15:10 (закат), летом — после 21; на рассвете
+        // гаснут. Мерцание свечей сохранено.
         if (this.windowGlows && timeState) {
-            const h = timeState.hour;
-            let dark = 0;
-            if (h >= 21 || h < 5) dark = 1;
-            else if (h >= 18) dark = (h - 18) / 3;   // 18→0 … 21→1
-            else if (h < 8) dark = (8 - h) / 3;      // 5→1 … 8→0
+            const dark = getDarknessFactor(timeState);
             const nowSec = this.time.now / 1000;
             this.windowGlows.forEach(g => {
                 let a = dark * (g.__k != null ? g.__k : 0.38);

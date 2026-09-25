@@ -7,6 +7,9 @@
 // Раунд 15: формат даты/времени локализован (i18n) — EN месяц/день/время.
 import { t, isEn, EN_MONTHS, EN_WEEKDAYS } from './i18n.js';
 import { tickQuestTime } from '../data/questGenerator.js';
+// Раунд 66.23: небо по солнцу — оверлей дня/ночи и тьма окон считаются
+// от сезонных рассвета/заката (AccessHours.sunTimes по дате).
+import { sunTimes } from './AccessHours.js';
 
 // Месяцы церковного календаря Руси XV века (сентябрьский стиль)
 export const MONTHS = [
@@ -237,16 +240,109 @@ export function tickTime(registry, minutes = 15) {
     return timeState;
 }
 
+// ============================================================
+//  РАУНД 66.23: НЕБО ПО СОЛНЦУ (визуальные часы рассвета/заката)
+// ============================================================
+// Оверлей дня/ночи больше не привязан к жёстким полосам «рассвет 4–6,
+// сумерки 19–21»: цвет и плотность затемнения считаются от ПОЗИЦИИ
+// СОЛНЦА по сезонному расписанию AccessHours.sunTimes(month, day).
+// Летом (21 июня, рассвет ~02:50 / закат ~21:10) заря занимается около
+// трёх ночи, а вечерний свет держится до десяти; зимой (21 декабря,
+// ~08:50 / ~15:10) уже в три пополудни небо догорает, в четыре — ночь.
+// Фиксированные полосы TIME_OF_DAY остаются запасным каноном (без даты).
+
+/** Полуширина утренней/вечерней сумеречной зоны, часов. */
+const SKY_TWILIGHT_H = 1;
+
+function skyLerpK(k) {
+    k = Math.max(0, Math.min(1, k));
+    return k * k * (3 - 2 * k); // smoothstep — без изломов на стыках зон
+}
+
+function lerpHex(c1, c2, k) {
+    const ch = (a, b) => Math.round(a + (b - a) * k);
+    return (ch((c1 >> 16) & 255, (c2 >> 16) & 255) << 16)
+         | (ch((c1 >> 8) & 255, (c2 >> 8) & 255) << 8)
+         | ch(c1 & 255, c2 & 255);
+}
+
+function mixPhase(a, b, k) {
+    return { color: lerpHex(a.color, b.color, k), alpha: a.alpha + (b.alpha - a.alpha) * k };
+}
+
+/**
+ * Солнечная фаза неба (раунд 66.23): цвет/альфа оверлея по позиции солнца.
+ * Чистая функция — зоны стыкуются гладко (без скачков цвета):
+ *   ночь → заря → восход → утро/полдень/вечер (по доле светового дня)
+ *   → предзакатные сумерки → закат → ночь.
+ * @param {number} h часы (дробные, 0..24)
+ * @param {number} sunrise рассвет по sunTimes
+ * @param {number} sunset закат по sunTimes
+ * @returns {{ color: number, alpha: number, id: string }}
+ */
+export function solarSkyPhase(h, sunrise, sunset) {
+    const N = TIME_OF_DAY.NIGHT, D = TIME_OF_DAY.DAWN, M = TIME_OF_DAY.MORNING,
+          O = TIME_OF_DAY.NOON, E = TIME_OF_DAY.EVENING, K = TIME_OF_DAY.DUSK;
+    const TW = SKY_TWILIGHT_H;
+    if (h < sunrise - TW || h >= sunset + TW) return { ...N, id: 'night' };
+    if (h < sunrise) {                       // заря занимается
+        const k = skyLerpK((h - (sunrise - TW)) / TW);
+        return { ...mixPhase(N, D, k), id: 'dawn' };
+    }
+    if (h < sunrise + TW) {                  // восход: заря → утро
+        const k = skyLerpK((h - sunrise) / TW);
+        return { ...mixPhase(D, M, k), id: k < 0.5 ? 'dawn' : 'morning' };
+    }
+    if (h < sunset - TW) {                   // день — по доле светового дня
+        const span = Math.max(0.5, (sunset - TW) - (sunrise + TW));
+        const p = (h - (sunrise + TW)) / span;
+        if (p < 0.4) return { ...M, id: 'morning' };
+        if (p < 0.65) return { ...O, id: 'noon' };
+        if (p < 0.8) return { ...E, id: 'evening' };
+        const k = skyLerpK((p - 0.8) / 0.2); // вечер догорает в сумерки
+        return { ...mixPhase(E, K, k), id: 'evening' };
+    }
+    if (h < sunset) return { ...K, id: 'dusk' }; // предзакатные сумерки
+    const k = skyLerpK((h - sunset) / TW);       // сумерки → ночь
+    return { ...mixPhase(K, N, k), id: k < 0.5 ? 'dusk' : 'night' };
+}
+
+/**
+ * Насыщенность тьмы 0..1 по солнцу (раунд 66.23) — для ночных огней:
+ * окна домов загораются ПО ЗАКАТУ текущей даты (зимой с ~14:40,
+ * летом после 21) и гаснут на рассвете. 1 — глубокая ночь, 0 — день.
+ */
+export function getDarknessFactor(timeState) {
+    if (!timeState) return 0;
+    const hasDate = Number.isFinite(timeState.month) && Number.isFinite(timeState.day);
+    const h = (timeState.hour || 0) + (timeState.minute || 0) / 60;
+    let sr = 6, ss = 18;
+    if (hasDate) ({ sunrise: sr, sunset: ss } = sunTimes(timeState.month, timeState.day));
+    const TW = SKY_TWILIGHT_H;
+    if (h < sr - TW || h >= ss + TW) return 1;
+    if (h < sr) return 1 - 0.45 * skyLerpK((h - (sr - TW)) / TW);      // 1 → 0.55
+    if (h < sr + TW) return 0.55 * (1 - skyLerpK((h - sr) / TW));      // 0.55 → 0
+    if (h < ss) return 0.5 * skyLerpK((h - (ss - TW)) / TW);           // 0 → 0.5
+    return 0.5 + 0.5 * skyLerpK((h - ss) / TW);                        // 0.5 → 1
+}
+
 // Получить overlay-цвет для визуальной смены дня/ночи
+// Раунд 66.23: С ДАТОЙ — по солнцу (solarSkyPhase), без даты — канон 66.21.
 export function getDayNightOverlay(timeState) {
     if (!timeState) return { color: 0x000000, alpha: 0 };
-    const tod = getTimeOfDay(timeState.hour);
-    const season = SEASONS[getSeason(timeState.month)];
-    // Комбинируем время суток и сезон
+    const hasDate = Number.isFinite(timeState.month) && Number.isFinite(timeState.day);
+    const hasMonth = Number.isFinite(timeState.month);
+    const tod = hasDate
+        ? solarSkyPhase((timeState.hour || 0) + (timeState.minute || 0) / 60,
+            sunTimes(timeState.month, timeState.day).sunrise,
+            sunTimes(timeState.month, timeState.day).sunset)
+        : getTimeOfDay(timeState.hour);
+    const seasonAlpha = hasMonth ? (SEASONS[getSeason(timeState.month)] || {}).alpha || 0 : 0;
+    // Комбинируем фазу солнца и сезон
     return {
         color: tod.color,
-        alpha: Math.max(tod.alpha, season.alpha),
+        alpha: Math.max(tod.alpha, seasonAlpha),
         timeOfDay: tod.id,
-        season: getSeason(timeState.month),
+        season: hasMonth ? getSeason(timeState.month) : undefined,
     };
 }

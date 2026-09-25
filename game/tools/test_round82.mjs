@@ -431,5 +431,61 @@ console.log('\n— п.9/п.11: ЗАПОРЫ В СЦЕНАХ — ПРОВОДКА
         'часы доступа — чистые функции (покрыты этим тестом)');
 }
 
+console.log('\n— 66.23: НЕБО ПО СОЛНЦУ — ОВЕРЛЕЙ, ТЬМА ОКОН, НЕБЕСНЫЕ ЧАСЫ, НОЧЬ ВЕРА —');
+{
+    const tsr = await import(join(GAME, '../src/systems/TimeSystem.js'));
+    const sky = await import(join(GAME, '../src/systems/SkyClock.js'));
+    const { sunTimes } = await import(join(GAME, '../src/systems/AccessHours.js'));
+    const SUM = sunTimes(9, 21);  // 21 июня: рассвет ~02:50, закат ~21:10
+    const WIN = sunTimes(3, 21);  // 21 декабря: рассвет ~08:50, закат ~15:10
+    ok(WIN.sunset < 16 && SUM.sunset > 21, 'sunTimes: зимний закат до 16, летний после 21 (66.22)');
+    // оверлей по солнцу: с датой — фазы от позиции солнца
+    const win16 = tsr.getDayNightOverlay({ hour: 16, minute: 0, month: 3, day: 21 });
+    ok(win16.timeOfDay === 'night' && win16.alpha > 0.4, 'зима 16:00 — небо ночное (закат ~15:10)');
+    const sum21 = tsr.getDayNightOverlay({ hour: 21, minute: 0, month: 9, day: 21 });
+    ok(sum21.timeOfDay === 'dusk', 'лето 21:00 — ещё предзакатные сумерки (закат ~21:10)');
+    const sumNoon = tsr.getDayNightOverlay({ hour: 12, minute: 0, month: 9, day: 21 });
+    ok(sumNoon.alpha <= 0.1, 'летний полдень — небо чистое');
+    const sumDawn = tsr.getDayNightOverlay({ hour: 3, minute: 0, month: 9, day: 21 });
+    ok(sumDawn.timeOfDay === 'dawn', 'лето 03:00 — заря занимается (рассвет ~02:50)');
+    const canon = tsr.getDayNightOverlay({ hour: 22 });
+    ok(canon.timeOfDay === 'night', 'без даты — канон 66.21 (22:00 ночь)');
+    // плавность: стыки зон без скачков
+    const p1 = tsr.solarSkyPhase(WIN.sunrise - 0.01, WIN.sunrise, WIN.sunset);
+    const p2 = tsr.solarSkyPhase(WIN.sunrise + 0.01, WIN.sunrise, WIN.sunset);
+    ok(Math.abs(p1.alpha - p2.alpha) < 0.05, 'рассветная зона стыкуется гладко');
+    // тьма для окон — по солнцу
+    ok(tsr.getDarknessFactor({ hour: 12, minute: 0, month: 3, day: 21 }) === 0, 'зимний полдень — окна не светятся');
+    ok(tsr.getDarknessFactor({ hour: 16, minute: 30, month: 3, day: 21 }) > 0.9, 'зимой в 16:30 окна уже горят в полную силу');
+    ok(tsr.getDarknessFactor({ hour: 21, minute: 0, month: 9, day: 21 }) < 0.6, 'летом в 21:00 окна ещё не в полную силу');
+    const dA = tsr.getDarknessFactor({ hour: WIN.sunrise - 0.01, month: 3, day: 21 });
+    const dB = tsr.getDarknessFactor({ hour: WIN.sunrise + 0.01, month: 3, day: 21 });
+    ok(Math.abs(dA - dB) < 0.05, 'на рассвете окна гаснут плавно');
+    // небесные часы: дуги светил
+    const noon = sky.skyPhaseInfo({ hour: 12, minute: 0, month: 9, day: 21 });
+    ok(noon.sun && Math.abs(noon.sun.x - 0.5) < 0.03 && noon.phase === 'day', 'полдень: солнце в середине дуги, фаза «день»');
+    const midn = sky.skyPhaseInfo({ hour: 0, minute: 0, month: 3, day: 21 });
+    ok(midn.moon && !midn.sun && midn.phase === 'night', 'зимняя полночь: луна на дуге, солнца нет');
+    const dawnP = sky.skyPhaseInfo({ hour: SUM.sunrise, minute: 0, month: 9, day: 21 });
+    ok(dawnP.sun && dawnP.sun.x < 0.01 && dawnP.sun.y < 0.01 && dawnP.phase === 'dawn',
+        'на рассвете солнце встаёт у горизонта слева');
+    ok(Math.abs(noon.sunrise - SUM.sunrise) < 0.01, 'небесные часы берут рассвет из sunTimes');
+    ok(sky.moonArcProgress(12, 6, 18) === null && sky.sunArcProgress(0, 6, 18) === null,
+        'днём луны нет, ночью солнца нет');
+    ok(sky.formatHours(6.033) === '06:02', 'формат часов «06:02»');
+    // погоня за вором: ночь по солнцу (единая с дверями и небом)
+    const th = read('game/src/data/thief.js');
+    ok(th.includes("from '../systems/AccessHours.js'") && th.includes('solarIsNightHour(ts.hour, ts)'),
+        'вор: ночная проверка следов — по солнцу текущей даты (66.23)');
+    // проводка в сцене
+    const vs = read('game/src/scenes/VillageScene.js');
+    ok(vs.includes('attachSkyClock') && vs.includes('this.skyClock.update(timeState)'),
+        'деревня: небесные часы подключены и обновляются');
+    ok(vs.includes('getDarknessFactor(timeState)'), 'окна домов светятся по сезонной тьме');
+    const tsys = read('game/src/systems/TimeSystem.js');
+    ok(tsys.includes("from './AccessHours.js'") && tsys.includes('export function solarSkyPhase'),
+        'оверлей дня/ночи считает солнце по дате (solarSkyPhase)');
+}
+
 console.log(`\n=== ИТОГ: ${pass} зелёных, ${fail} красных ===`);
 process.exit(fail ? 1 : 0);

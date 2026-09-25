@@ -1118,6 +1118,9 @@ const EN = {
 
     // --- Раунд 66.6: плавная смена погоды ---
     'Погода меняется': 'The weather is turning',
+    // --- Раунд 66.23: небесные часы (подсказка виджета) ---
+    'Рассвет ~ {0} · Закат ~ {1} · Световой день {2} ч {3} мин':
+        'Sunrise ~ {0} · Sunset ~ {1} · Daylight {2} h {3} min',
     '🎣 Лунка во льду': '🎣 Ice Fishing Hole',
     'Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим.':
         'You cut a hole in the river ice and wait long, warming your fingers... The float jerks — a burbot thrashes on the ice.',

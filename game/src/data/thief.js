@@ -54,7 +54,10 @@ import { skillCheck, opposedSkillCheck, formatOpposedCheck } from '../systems/BR
 import { ActionLog } from './actionLog.js';
 import { applyBeggingPenalty, changeVillageRep } from './reputation.js';
 import { getLocationById } from './mapLocations.js';
-import { tickTime, getTimeOfDay } from '../systems/TimeSystem.js';
+import { tickTime } from '../systems/TimeSystem.js';
+// Раунд 66.23: ночная проверка следов — ПО СОЛНЦУ (как дверные запоры):
+// зимой в ~15:10 уже темно, летом в 21:00 ещё светло.
+import { isNightHour as solarIsNightHour } from '../systems/AccessHours.js';
 import { getWeather, isPrecip } from '../systems/Weather.js';
 import { consumeBlessing } from './questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
@@ -199,15 +202,19 @@ export const TRACK_RETRY_PENALTY = 10;
 // Раунд 31 (п.10): обследование следов занимает ровно 1 час
 export const FOOTPRINT_EXAMINE_MINUTES = 60;
 
-/** Ночь ли сейчас по игровому часу (сегмент «ночь»: 21:00–04:59). */
+/** Ночь ли сейчас по игровому часу (канонический сегмент «ночь»: 21:00–04:59;
+ *  остаётся для совместимости/сообщений — фактическая проверка в isNightCheck). */
 export function isNightHour(hour) {
     return hour >= 21 || hour < 5;
 }
 
+// Раунд 66.23: ночная проверка навыка идёт ПО СОЛНЦУ (AccessHours.isNightHour
+// с датой) — единая солнечная ночь для дверей, неба и следов: зимой темнеет
+// с ~15:10 (следы хуже читаются уже вечером), летом — только к 21:10.
 /** Ночная ли проверка навыка по состоянию времени (для сообщений). */
 function isNightCheck(registry) {
     const ts = registry.get('gameTime');
-    return !!(ts && (isNightHour(ts.hour) || (getTimeOfDay(ts.hour) || {}).id === 'night'));
+    return !!(ts && solarIsNightHour(ts.hour, ts));
 }
 // Лимит (для совместимости со старым UI/сохранениями)
 export const TURN_LIMIT = 20;
