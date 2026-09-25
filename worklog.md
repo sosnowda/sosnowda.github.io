@@ -1362,3 +1362,20 @@ Work Log:
 - П.9(бис): все 9 кадров лендинга пересняты; 05-map 10.5%, 04-village 11.6% — заменены.
 - П.10: tract_walkthrough_6625.mjs — 26 assert, 0 JS-ошибок (ворота → околица → карта → Северный Тракт (прогулка) → Южный Тракт (прогулка) → возврат).
 - Тесты: round83 актуализирован под новую компоновку + покрытие дорожек (67 assert); регресс 64..84 = 21 набор ВСЕ ЗЕЛЁНЫЕ. CHANGES/GAME_DOCUMENTATION/АГЕНТ.md дополнены.
+
+---
+Task ID: 66.25-verify
+Agent: Z.ai Code (main)
+Task: Прод-верификация патча 66.25 (коммит 2c2bf2e, 10 приказов владельца).
+
+Work Log:
+- Креды ~/.git-credentials восстановлены после пересборки платформы (600, credential.helper store) — как в 66.21/66.23/66.24.
+- Push: 80b10d9..2c2bf2e main -> main, EXIT=0.
+- Pages build latest: status=built, commit=2c2bf2e (66.25), ошибок нет.
+- Маркеры 66.25 на проде (все 200 OK): sw.js (site-cache v75 + game-assets-v25 активны), TerrainMap.js (TERRAIN_PATHS ×4 — новая компоновка), interiors.js (кузница col 18, Прасковья col 22 row 10 — ротация), VillageScene.js (village_gate_r67_north), PNG воротни r67_north/r67_south (200), assets/screenshots/05-map.webp (новый кадр карты).
+- sha256 прод=локал: sw.js, TerrainMap.js, interiors.js, VillageScene.js, BootScene.js, 05-map.webp — все совпали.
+- Регресс 64..84 = 21 набор зелёные; смоуки: village_visual_check (0 JS-ошибок), tract_walkthrough_6625 (26 assert, 0 JS-ошибок).
+
+Stage Summary:
+- 66.25 полностью завершена и верифицирована на проде (SW v75 / game-assets-v25).
+- Следующая итерация — 66.26, ожидаю приказы владельца.
