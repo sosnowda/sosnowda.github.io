@@ -129,7 +129,7 @@ const BASE_SCHEDULE = {
 // (вор не из этого списка — он может быть на локации и ночью)
 const NIGHT_FORBIDDEN_PLACES = new Set([
     'mill', 'apiary', 'lake', 'river', 'forest', 'field', 'pasture',
-    'pogost', 'road', 'road_south', 'forest_edge', 'forest_glade', 'work',
+    'pogost', 'road', 'road_south', 'road_north', 'forest_edge', 'forest_glade', 'work',
 ]);
 
 // Активности по роли и месту (что видно в подсказках)

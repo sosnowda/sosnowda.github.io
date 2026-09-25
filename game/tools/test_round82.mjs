@@ -280,8 +280,11 @@ console.log('\n— п.4: ВСЕ ЛОКАЦИИ ПОРУЧЕНИЙ СУЩЕСТВ
     // matchesLocation: 'road' засчитывается на road_south (внутренняя функция —
     // проверяем косвенно через экспортированный контракт questLocationIds+canон)
     const qgSrc = read('game/src/data/questGenerator.js');
-    ok(qgSrc.includes("questLoc === 'road' && visited === 'road_south'"),
-        'легаси «road» совпадает с «Тракт на юг» (road_south)');
+    // Раунд 66.24: легаси «road» совпадает с обоими трактами
+    ok(qgSrc.includes("questLoc === 'road' && (visited === 'road_south' || visited === 'road_north')"),
+        'легаси «road» совпадает с Южным (road_south) и Северным (road_north) трактом');
+    ok(qgSrc.includes("'road_south', 'road_north', 'field'"),
+        'набор any включает оба тракта (канон 66.24)');
     ok(qgSrc.includes("'pogost'") || true, 'набор any включает погост (канон 66.12)');
 }
 

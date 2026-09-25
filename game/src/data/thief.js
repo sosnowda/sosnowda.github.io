@@ -72,7 +72,8 @@ const LOC_TIP_DAT = {
     forest_edge: 'опушке леса',
     forest_glade: 'Лесной поляне',
     forest: 'Густому лесу',
-    road_south: 'Тракту',
+    road_south: 'Южному Тракту',
+    road_north: 'Северному Тракту',
     road: 'Тракту',
     river: 'Реке',
     field: 'Ржаному полю',
@@ -86,7 +87,8 @@ const LOC_TIP_GEN = {
     forest_edge: 'опушки леса',
     forest_glade: 'Лесной поляны',
     forest: 'Густого леса',
-    road_south: 'Тракта',
+    road_south: 'Южного Тракта',
+    road_north: 'Северного Тракта',
     road: 'Тракта',
     river: 'Реки',
     field: 'Ржаного поля',
@@ -223,9 +225,10 @@ export const TURN_LIMIT = 20;
 // Раунд 21: баг «road» vs «road_south» устранён — вор теперь может
 // бежать в любую локацию с развилки, включая Тракт.
 // Раунд 30: ЛЕС разделён на три части — Опушка, Поляна и сам Лес.
+// Раунд 66.24: добавлен Северный Тракт (road_north).
 export const CHASE_LOCATIONS = [
     'forest', 'forest_edge', 'forest_glade',
-    'road_south', 'field', 'river', 'lake', 'pogost', 'mill', 'apiary', 'pasture',
+    'road_south', 'road_north', 'field', 'river', 'lake', 'pogost', 'mill', 'apiary', 'pasture',
 ];
 
 // Легаси-импорт (LocationScene импортирует THIEF_LOCATIONS)
@@ -234,7 +237,7 @@ export const THIEF_LOCATIONS = CHASE_LOCATIONS;
 // Дорога до локации в тиках (ближние — 1, дальние — 2, как на «Карте местности»)
 export const TRAVEL_COST = {
     forest: 1, forest_edge: 1, forest_glade: 1,
-    road_south: 1, field: 1, river: 1,
+    road_south: 1, road_north: 1, field: 1, river: 1,
     lake: 2, pogost: 2, mill: 2, apiary: 2, pasture: 2,
 };
 

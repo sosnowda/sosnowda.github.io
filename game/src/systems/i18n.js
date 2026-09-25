@@ -320,6 +320,11 @@ const EN = {
     // --- Локации развилки (mapLocations) ---
     'Тёмный лес': 'Dark Forest',
     'Тракт на юг': 'The Southern Highway',
+    // Раунд 66.24: Тракт разделён на Южный и Северный
+    'Южный Тракт': 'The Southern Highway',
+    'Северный Тракт': 'The Northern Highway',
+    'Большой тракт на юг: от деревни до самой реки, через мост на другой берег. По нему ходят купеческие обозы.': 'The great highway south: from the village down to the river and across the bridge to the far bank. Merchant convoys travel along it.',
+    'Большой тракт на север: уходит от деревни за горизонт, к северным волостям. По нему гонят скот и возят рыбу.': 'The great highway north: it leaves the village for the horizon, towards the northern volosts. Cattle are driven and fish hauled along it.',
     'Ржаное поле': 'Rye Fields',
     'Святое озеро': 'The Holy Lake',
     'Погост': 'The Churchyard',
@@ -869,6 +874,12 @@ const EN = {
     // и «⏳ Вор скроется примерно через {0} ч.» удалены из UI и словаря.
     'Опушка': 'Forest Edge',
     'Поляна': 'Glade',
+    // Раунд 66.24: подписи на карте местности (TerrainMap)
+    'Мост': 'Bridge',
+    'Ты здесь': 'You are here',
+    'С ↑': 'N ↑',
+    '🗺 Карта местности — деревня в центре: тракт с севера через деревню и мост к реке на юге. Справа — выпас, пасека и поле, дальше леса цепочкой (Опушка → Поляна → Густой лес), у Северного Тракта — мельница и озеро.':
+        '🗺 The terrain map — the village at the centre: the highway comes from the north, crosses the village and a bridge down to the river. To the east — the pasture, apiary and field, then the forest chain (Forest Edge → Glade → Dense Forest); by the Northern Highway — the windmill and the lake.',
     '🗺 Околица — карта местности: выбирай локацию и в путь.\nКаждый переход по карте занимает ровно 1 игровой час.\nСледы вора живут от 12 до 24 часов — а дождь и снег смывают их и раньше.':
         '🗺 The outskirts — a map of the area: pick a location and set out.\nEvery crossing on the map takes exactly 1 game hour.\nThe thief\'s tracks last 12 to 24 hours — and rain or snow washes them away even sooner.',
     '🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n◀ Выход — кнопка внизу.':
@@ -1935,6 +1946,8 @@ const EN = {
     'Постоялый двор': 'Lodging-house',
     'содержатель постоялого двора': 'lodging-house keeper',
     'На большой дороге тебе преградили путь лихие люди!': 'On the great road, highwaymen bar your way!',
+    // Раунд 66.24: засада лихих людей — на обоих трактах (Южном и Северном)
+    'На большом тракте тебе преградили путь лихие люди!': 'On the highway, rogues bar your way!',
 
     // ----- Раунд 66.16 (приказы владельца 1–7): единые правила еды и сна, «переночевать», женский портрет воровки, гард очереди переходов -----
     '🥣 Герой сыт': '🥣 The hero is full',

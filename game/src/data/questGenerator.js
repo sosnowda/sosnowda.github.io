@@ -739,16 +739,18 @@ export function acceptQuest(registry, quest) {
 }
 
 // Соответствие локации поручения посещённой локации.
-// 'road' (легаси-имя) считается совпадающим с 'road_south';
-// 'any' — любая загородная локация.
+// 'road' (легаси-имя) считается совпадающим с 'road_south' И 'road_north'
+// (раунд 66.24: Тракт разделён на Южный и Северный — поручение «на Тракт»
+// засчитывается на любом из двух); 'any' — любая загородная локация.
 function matchesLocation(questLoc, visited) {
     if (!questLoc || !visited) return false;
     if (questLoc === visited) return true;
-    if (questLoc === 'road' && visited === 'road_south') return true;
+    if (questLoc === 'road' && (visited === 'road_south' || visited === 'road_north')) return true;
     if (questLoc === 'any') {
         // Раунд 66.12 (п.5): добавлены лесные локации Опушка/Поляна —
         // раньше «найти пропавшего» не засчитывался на них.
-        return ['forest', 'forest_edge', 'forest_glade', 'road_south', 'field', 'river', 'lake', 'pogost', 'mill', 'apiary', 'pasture'].includes(visited);
+        // Раунд 66.24: добавлен road_north.
+        return ['forest', 'forest_edge', 'forest_glade', 'road_south', 'road_north', 'field', 'river', 'lake', 'pogost', 'mill', 'apiary', 'pasture'].includes(visited);
     }
     return false;
 }

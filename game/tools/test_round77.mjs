@@ -29,34 +29,45 @@ const thiefSrc = read('game/src/data/thief.js');
 const dialogueSrc = read('game/src/data/dialogue.js');
 const interiorsSrc = read('game/src/data/interiors.js');
 
-// ---------- 1. «Тракт» возвращён (приказ 66.19) ----------
-ok(forkSrc.includes("{ id: 'road_south', name: t('Тракт')"), 'ForkScene: узел road_south = «Тракт»');
-ok(i18nSrc.includes("'Тракт': 'Highway'"), 'i18n: ключ «Тракт»: Highway на месте');
+// ---------- 1. Тракты (приказ 66.24): Южный + Северный, карта через TerrainMap ----------
+ok(forkSrc.includes("from '../systems/TerrainMap.js'"), 'ForkScene: карта местности через TerrainMap (66.24)');
+ok(forkSrc.includes('drawTerrainMap') && forkSrc.includes('TERRAIN_LABELS'), 'ForkScene: showMap рисует полноценную карту и накладывает подписи');
+ok(i18nSrc.includes("'Тракт': 'Highway'"), 'i18n: ключ «Тракт»: Highway на месте (легаси)');
 ok(!i18nSrc.includes("'Большая дорога'"), 'i18n: ключ «Большая дорога» удалён (осиротел)');
-ok(i18nSrc.includes("'Тракт на юг': 'The Southern Highway'"), 'i18n: «Тракт на юг» → The Southern Highway');
+ok(i18nSrc.includes("'Тракт на юг': 'The Southern Highway'"), 'i18n: «Тракт на юг» → The Southern Highway (легаси-ключ)');
+ok(i18nSrc.includes("'Южный Тракт': 'The Southern Highway'"), 'i18n: «Южный Тракт» → The Southern Highway (66.24)');
+ok(i18nSrc.includes("'Северный Тракт': 'The Northern Highway'"), 'i18n: «Северный Тракт» → The Northern Highway (66.24)');
 setLang('en');
 ok(t('Тракт') === 'Highway', 'runtime t(): «Тракт» → Highway');
 ok(t('Тракт на юг') === 'The Southern Highway', 'runtime t(): «Тракт на юг» → The Southern Highway');
+ok(t('Южный Тракт') === 'The Southern Highway', 'runtime t(): «Южный Тракт» → The Southern Highway (66.24)');
+ok(t('Северный Тракт') === 'The Northern Highway', 'runtime t(): «Северный Тракт» → The Northern Highway (66.24)');
 setLang('ru');
 ok(t('Тракт') === 'Тракт', 'runtime t(): RU-фолбэк без изменений');
+ok(t('Южный Тракт') === 'Южный Тракт' && t('Северный Тракт') === 'Северный Тракт', 'runtime t(): RU-фолбэк трактов (66.24)');
 
 // ---------- 2. Легаси-топонимы/орфография в живых источниках ----------
 const stripComments = (src) => src.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
-ok(stripComments(forkSrc).includes("name: t('Тракт')"), 'ForkScene: в КОДЕ узел «Тракт» (приказ 66.19)');
-ok(stripComments(mapSrc).includes("name: t('Тракт на юг')"), 'mapLocations: road_south = «Тракт на юг»');
+ok(stripComments(mapSrc).includes("name: t('Южный Тракт')"), 'mapLocations: road_south = «Южный Тракт» (66.24)');
+ok(stripComments(mapSrc).includes("name: t('Северный Тракт')"), 'mapLocations: road_north = «Северный Тракт» (66.24)');
 ok(!dialogueSrc.includes('Рѣка'), 'dialogue: дореформенной «Рѣка» нет');
 ok(!thiefSrc.includes('Рѣка'), 'thief: дореформенной «Рѣка» нет');
 ok(!dialogueSrc.includes('Тузик'), 'dialogue: «Тузик» нет (заменён на Серко)');
 ok(interiorsSrc.includes("{ id: 'road', name: t('Тракт')"), 'interiors: FORK id road = «Тракт» (приказ 66.19)');
 
-// ---------- 3. id локаций: узлы карты и погоня ⊆ mapLocations ----------
-const mapIds = [...mapSrc.matchAll(/id:\s*'([^']+)'/g)].map(m => m[1]);
-const posBlock = forkSrc.slice(forkSrc.indexOf('const positions = ['));
-const forkNodeIds = [...posBlock.slice(0, posBlock.indexOf('];')).matchAll(/id:\s*'([^']+)'/g)].map(m => m[1]);
+// ---------- 3. id локаций: развилка и погоня ⊆ mapLocations ----------
+// (раунд 66.24: узлового массива positions в ForkScene больше нет — карта
+// рисуется TerrainMap; развилку и погоню сверяем runtime-импортом)
+const { MAP_LOCATIONS, getForkLocations } = await import('../src/data/mapLocations.js');
+const mapIds = MAP_LOCATIONS.map(l => l.id);
+const forkIds = getForkLocations().map(l => l.id);
+ok(forkIds.length === 10, 'развилка: 10 кнопок (66.24: + Северный Тракт)');
+ok(forkIds.includes('road_south') && forkIds.includes('road_north'), 'развилка: оба тракта в списке (66.24)');
+ok(forkIds.every(id => mapIds.includes(id)), 'развилка: все id существуют в mapLocations (' + forkIds.length + ' шт.)');
 const chaseBlock = thiefSrc.slice(thiefSrc.indexOf('export const CHASE_LOCATIONS'));
 const chaseIds = [...chaseBlock.slice(0, chaseBlock.indexOf('];')).matchAll(/'([^']+)'/g)].map(m => m[1]);
-ok(forkNodeIds.length >= 10 && forkNodeIds.every(id => mapIds.includes(id)), 'ForkScene: все id узлов карты существуют в mapLocations (' + forkNodeIds.length + ' шт.)');
-ok(chaseIds.length >= 10 && chaseIds.every(id => mapIds.includes(id)), 'thief: все id CHASE_LOCATIONS существуют в mapLocations (' + chaseIds.length + ' шт.)');
+ok(chaseIds.length >= 11 && chaseIds.every(id => mapIds.includes(id)), 'thief: все id CHASE_LOCATIONS существуют в mapLocations (' + chaseIds.length + ' шт.)');
+ok(chaseIds.includes('road_north'), 'thief: вор может уйти и на Северный Тракт (66.24)');
 
 // ---------- 4. FORK_LOCATIONS (interiors): известный мап road→road_south ----------
 const forkLocBlock = interiorsSrc.slice(interiorsSrc.indexOf('export const FORK_LOCATIONS'));

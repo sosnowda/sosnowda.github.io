@@ -60,7 +60,8 @@ export function collectRumors(registry) {
     const hunt = getHuntState(registry);
     const q = registry.get('quest') || {};
     if (hunt && !q.thiefEscaped && !q.thiefDefeated) {
-        const spots = ['river', 'forest', 'field', 'lake', 'mill', 'pasture', 'pogost', 'road_south'];
+        // Раунд 66.24: оба тракта — слухи работают и про Северный
+        const spots = ['river', 'forest', 'field', 'lake', 'mill', 'pasture', 'pogost', 'road_south', 'road_north'];
         const where = spots.find((locId) => isThiefAt(registry, locId));
         if (where) {
             const place = {
@@ -71,7 +72,8 @@ export function collectRumors(registry) {
                 mill:     { ru: 'у мельницы',              en: 'by the mill' },
                 pasture:  { ru: 'на выпасе',               en: 'on the pasture' },
                 pogost:   { ru: 'на погосте',              en: 'at the churchyard' },
-                road_south:{ ru: 'на большой южной дороге',        en: 'on the south road' },
+                road_south:{ ru: 'на большом южном тракте',       en: 'on the south highway' },
+                road_north:{ ru: 'на большом северном тракте',    en: 'on the north highway' },
             }[where];
             list.push({
                 ru: tf(t('Фёдор понижает голос: «Видели твоего вора {0}. Только ты это не от меня слыхал».'), place.ru),

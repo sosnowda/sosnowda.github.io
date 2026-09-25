@@ -246,13 +246,14 @@ export class LocationScene extends Phaser.Scene {
         const chaseActive = isChaseActive(this.registry);
         // Раунд 66.12 (п.5 приказа): ЛИХИЕ ЛЮДИ на большой дороге. Поручение
         // «Избить лихих людей» теперь выполняется ЗАСАДОЙ на дороге (шанс 60%
-        // при входе на «Большую дорогу на юг» с активным поручением) — раньше
+        // при входе на большой тракт с активным поручением) — раньше
         // единственным «разбойником» в игре был... враждебный житель в деревне.
-        if (this.locationId === 'road_south' && !chaseActive) {
+        // Раунд 66.24: засада работает на ОБОИХ трактах — Южном и Северном.
+        if ((this.locationId === 'road_south' || this.locationId === 'road_north') && !chaseActive) {
             const banditQuest = getActiveQuests(this.registry).find(qq =>
                 qq.combat && qq.enemyKeys && qq.enemyKeys.includes('bandit'));
             if (banditQuest && Math.random() < 0.6) {
-                ActionLog.add(this.registry, t('На большой дороге тебе преградили путь лихие люди!'));
+                ActionLog.add(this.registry, t('На большом тракте тебе преградили путь лихие люди!'));
                 this.time.delayedCall(500, () => this.scene.start('Combat', { enemyKeys: ['bandit'], fromScene: 'Location' }));
                 return;
             }
@@ -282,10 +283,11 @@ export class LocationScene extends Phaser.Scene {
         }
 
         // П.11,16: Названия кнопок зависят от локации.
-        // Для Реки: «Поиск» и «Выход». Для Тракта: «Осмотр» и «Выход».
+        // Для Реки: «Поиск» и «Выход». Для трактов: «Осмотр» и «Выход».
         // Для остальных: «Искать следы» и «Назад к развилке».
         const isRiver = this.locationId === 'river';
-        const isRoad = this.locationId === 'road' || this.locationId === 'road_south';
+        // Раунд 66.24: оба тракта — Южный (road_south) и Северный (road_north)
+        const isRoad = this.locationId === 'road' || this.locationId === 'road_south' || this.locationId === 'road_north';
         const searchLabel = isRiver ? t('🔍 Поиск') : (isRoad ? t('🔍 Осмотр') : t('🔍 Искать следы'));
 
         // ===== РАУНД 39 (п.23 заявки): ЛЕС — ЦЕПОЧКА ЛОКАЦИЙ =====
@@ -1013,6 +1015,48 @@ export class LocationScene extends Phaser.Scene {
     }
 
     /**
+     * Раунд 66.24 (приказ 2 владельца): УКАЗАТЕЛЬ НАПРАВЛЕНИЯ НА ДЕРЕВНЮ.
+     * Деревянный столб у обочины с доской-стрелкой в сторону деревни.
+     * @param {number} x — позиция столба по X
+     * @param {number} groundY — земля у основания столба
+     * @param {number} dir — направление стрелки: -1 влево, 1 вправо
+     */
+    drawVillageSignpost(x, groundY, dir) {
+        const g = this.add.graphics().setDepth(4);
+        // тень у подножия
+        g.fillStyle(0x000000, 0.18);
+        g.fillEllipse(x + 4, groundY + 3, 44, 9);
+        // столб (бревно с бликом)
+        g.fillStyle(0x5a3f24, 1);
+        g.fillRect(x - 4, groundY - 80, 9, 80);
+        g.fillStyle(0x74562f, 1);
+        g.fillRect(x - 4, groundY - 80, 4, 80);
+        // доска-стрелка: тело + треугольный наконечник в сторону деревни
+        const bw = 104, bh = 24, tip = 16;
+        const cy = groundY - 72;
+        const cx = x + dir * (bw / 2 - 8);
+        const left = cx - bw / 2, right = cx + bw / 2;
+        g.fillStyle(0xd8b96a, 1);
+        g.fillRoundedRect(left, cy - bh / 2, bw, bh, 4);
+        if (dir > 0) {
+            g.fillTriangle(right - 3, cy - bh / 2 + 3, right - 3, cy + bh / 2 - 3, right + tip, cy);
+        } else {
+            g.fillTriangle(left + 3, cy - bh / 2 + 3, left + 3, cy + bh / 2 - 3, left - tip, cy);
+        }
+        g.lineStyle(2, 0x5a3f24, 1);
+        g.strokeRoundedRect(left, cy - bh / 2, bw, bh, 4);
+        // гвозди у края доски
+        g.fillStyle(0x3a2a1a, 1);
+        g.fillCircle(cx - dir * (bw / 2 - 10), cy - 6, 1.6);
+        g.fillCircle(cx - dir * (bw / 2 - 10), cy + 6, 1.6);
+        // надпись на доске
+        this.add.text(cx, cy, t('Деревня'), {
+            fontSize: '14px', color: '#3a2a1a', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif',
+        }).setOrigin(0.5).setDepth(4);
+    }
+
+    /**
      * Раунд 31 (п.8): направление цепочки следов — вдоль дороги локации.
      * На Реке дорога идёт вертикально (север → мост → юг): цепочка тянется
      * вдоль неё; до моста — к мосту (юг), за мостом — тоже вдоль дороги.
@@ -1024,8 +1068,9 @@ export class LocationScene extends Phaser.Scene {
                 // чтобы цепочка осталась на дороге в дальней части локации
                 return (traceSide === 'after') ? { x: 0, y: -1 } : { x: 0, y: 1 };
             case 'road_south':
+            case 'road_north':
             case 'mill':
-                return { x: 1, y: 0 };      // гравийный тракт / дорога к мельнице
+                return { x: 1, y: 0 };      // гравийный тракт (южный/северный) / дорога к мельнице
             case 'field':
                 return { x: 0.8, y: 0.6 };
             default:
@@ -1172,7 +1217,8 @@ export class LocationScene extends Phaser.Scene {
                 return { x: safe68.x, y: safe68.y };
             }
             case 'road_south':
-                // Тракт: на гравийной ленте
+            case 'road_north':
+                // Тракт (Южный/Северный): на гравийной ленте
                 return { x: 60 + (h1 % Math.max(80, width - 120)), y: height * 0.5 + jig(30) + idx * 6 };
             case 'pogost':
                 // Погост: между рядами могил (дальняя половина)
@@ -1438,8 +1484,13 @@ export class LocationScene extends Phaser.Scene {
                     });
                 }
             }
-        } else if (locId === 'road' || locId === 'road_south') {
-            // П.15: Тракт — трава по бокам, гравийная дорога горизонтально
+        } else if (locId === 'road' || locId === 'road_south' || locId === 'road_north') {
+            // П.15: Тракт — трава по бокам, гравийная дорога горизонтально.
+            // Раунд 66.24 (приказ 2): трактов теперь ДВА — Южный (road_south,
+            // упирается в Реку, внизу локации — вода и мост) и Северный
+            // (road_north, уходит за горизонт). Оба по виду почти одинаковые:
+            // та же широкая гравийная лента, кусты и негустой лес по сторонам;
+            // у каждого у дороги — УКАЗАТЕЛЬ НАПРАВЛЕНИЯ НА ДЕРЕВНЮ.
             // С коллизиями: дорога рисуется ПЕРВЫМ слоем, деревья и камни — поверх,
             // но их позиции проверяются, чтобы не пересекаться с дорогой.
             gfx.fillStyle(0x4a7c3a, 1);
@@ -1567,6 +1618,58 @@ export class LocationScene extends Phaser.Scene {
                 const y = roadTop - 10 - Math.random() * 20;
                 this.add.image(x, y, tuftOk ? 'deco_grass_tuft' : 'tile_grass_0')
                     .setScale(1.6).setDepth(1.25);
+            }
+            // ----- Раунд 66.24 (приказ 2): УКАЗАТЕЛЬ НАПРАВЛЕНИЯ НА ДЕРЕВНЮ —
+            // столб у обочины с доской-стрелкой в сторону деревни: на Южном
+            // тракте стрелка влево (деревня сзади), на Северном — вправо.
+            if (locId === 'road_south') {
+                this.drawVillageSignpost(130, roadTop + 2, -1);
+            } else if (locId === 'road_north') {
+                this.drawVillageSignpost(width - 130, roadTop + 2, 1);
+            }
+            // ----- Раунд 66.24 (приказ 2): ЮЖНЫЙ ТРАКТ УПИРАЕТСЯ В РЕКУ —
+            // в дальнем (нижнем) крае локации — лента реки с песчаными
+            // берегами; к ней от тракта уходит колея, через воду —
+            // деревянный МОСТ (настил, доски, перила) на другой берег.
+            if (locId === 'road_south') {
+                const waterY = height - 70;
+                const waterGfx = this.add.graphics().setDepth(3.5);
+                // песчаные берега
+                waterGfx.fillStyle(0xc9b183, 1);
+                waterGfx.fillRect(0, waterY - 5, width, 5);
+                waterGfx.fillRect(0, height - 4, width, 4);
+                // вода
+                waterGfx.fillStyle(0x3a5a7a, 1);
+                waterGfx.fillRect(0, waterY, width, height - waterY);
+                // штрихи течения
+                waterGfx.fillStyle(0x4a6a8a, 1);
+                for (let wy = waterY + 12; wy < height - 8; wy += 22) {
+                    for (let wx = ((wy | 0) % 44); wx < width; wx += 96) {
+                        waterGfx.fillRect(wx + ((wy * 7) % 30), wy, 26, 3);
+                    }
+                }
+                // колея от тракта к реке
+                const stubX = width * 0.5;
+                if (this.textures.exists('tile_gravel_0')) {
+                    for (let gy = roadBottom - 4; gy < waterY + 10; gy += 54) {
+                        this.add.image(stubX, gy, 'tile_gravel_0').setDisplaySize(92, 58).setDepth(3.6);
+                    }
+                } else {
+                    waterGfx.fillStyle(0x9a8060, 1);
+                    waterGfx.fillRect(stubX - 46, roadBottom - 4, 92, waterY - roadBottom + 14);
+                }
+                // деревянный мост через реку
+                const bw2 = 96;
+                const bridge2 = this.add.graphics().setDepth(3.7);
+                bridge2.fillStyle(0x8a6a42, 1);
+                bridge2.fillRect(stubX - bw2 / 2, waterY - 6, bw2, height - waterY + 6);
+                bridge2.fillStyle(0x74562f, 1);
+                for (let by = waterY + 4; by < height; by += 12) {
+                    bridge2.fillRect(stubX - bw2 / 2 + 3, by, bw2 - 6, 3);
+                }
+                bridge2.fillStyle(0x5a3f24, 1);
+                bridge2.fillRect(stubX - bw2 / 2 - 5, waterY - 10, 5, height - waterY + 10);
+                bridge2.fillRect(stubX + bw2 / 2, waterY - 10, 5, height - waterY + 10);
             }
         } else if (locId === 'river') {
             // П.10: Река — голубая полоса посередине, мост, заросли, дорога к мосту

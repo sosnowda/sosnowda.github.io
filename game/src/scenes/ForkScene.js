@@ -9,12 +9,14 @@ import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } 
 import { timeRatioInfoLine } from '../systems/WorldClock.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
-import { getForkLocations, isForestLocation, FOREST_CHAIN } from '../data/mapLocations.js';
+import { getForkLocations } from '../data/mapLocations.js';
+// Раунд 66.24 (приказ 3): полноценная карта местности (TerrainMap)
+import { drawTerrainMap, TERRAIN_W, TERRAIN_H, TERRAIN, TERRAIN_LABELS } from '../systems/TerrainMap.js';
 import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 // Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
 export const MAP_TRAVEL_MINUTES = 60;
 import { getWeather } from '../systems/Weather.js';
-import { getVillageName } from '../data/world.js';
+// (импорт getVillageName снят в 66.24: имя деревни на карте рисует TerrainMap)
 import { t, tf } from '../systems/i18n.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
@@ -253,155 +255,106 @@ export class ForkScene extends Phaser.Scene {
         if (endState && !this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
     }
 
-    // П.17: Карта местности с указанием положения игрока
+    // П.17: Карта местности. Раунд 66.24 (приказ 3 владельца): вместо кружков
+    // и стрелочек — ПОЛНОЦЕННАЯ КАРТА МЕСТНОСТИ (systems/TerrainMap.js):
+    // деревня в центре, тракт идёт с северного края через деревню и по мосту
+    // к реке на южном крае; справа от деревни и вдоль Южного Тракта —
+    // выпас, пасека и поле; на всём свободном пространстве — леса цепочкой
+    // (Опушка → Лесная поляна → Густой лес); справа от Северного Тракта —
+    // ответвление дороги к мельнице и большое озеро. Погост — слева.
+    // Карта рисуется один раз в canvas-текстуру, подписи — t() поверх.
     showMap() {
         const { width, height } = this.scale;
         this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
 
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
             .setOrigin(0).setInteractive().setDepth(200);
-        // ФИКС аудита UI: панель карты была жёстко 700×550 — на узких/низких
-        // окнах вылезала за экран, легенда наезжала на кнопку «Закрыть».
-        // Теперь панель вписывается в окно (с полями), узлы масштабируются.
-        const panelW = Math.min(700, width - 20);
-        const panelH = Math.min(550, height - 20);
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x1a2a1a, 1)
+        // Панель вписывается в окно (с полями) — фикс аудита UI.
+        const panelW = Math.min(720, width - 20);
+        const panelH = Math.min(560, height - 20);
+        this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x1a2a1a, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 20, t('🗺 Карта местности'), {
+        const topY = height / 2 - panelH / 2;
+        this.add.text(width / 2, topY + 18, t('🗺 Карта местности'), {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
-
-        // Рисуем карту: деревня в центре, локации вокруг
-        const cx = width / 2;
-        const cy = height / 2;
-        const mapGfx = this.add.graphics().setDepth(202);
-
-        // Деревня в центре
-        mapGfx.fillStyle(0x4a7c3a, 1);
-        mapGfx.fillCircle(cx, cy, 30);
-        mapGfx.lineStyle(2, 0xc9a14a, 1);
-        mapGfx.strokeCircle(cx, cy, 30);
-        this.add.text(cx, cy, '🏠', { fontSize: '20px' }).setOrigin(0.5).setDepth(203);
-        // Патч 66.3: имя деревни — собственное, в EN транслитерацией (t())
-        this.add.text(cx, cy + 35, t(getVillageName()), {
-            fontSize: '12px', color: '#c9a14a',
-        }).setOrigin(0.5).setDepth(203);
-
-        // Локации вокруг деревни (п.4: финальный список).
-        // Раунд 39 (п.23): лес — ЕДИНАЯ локация цепочкой: линия к деревне только
-        // у Опушки (единственный вход), дальше СТРЕЛКИ Опушка → Поляна → Густой лес.
-        const positions = [
-            { id: 'forest_edge', name: t('Вход: Опушка'), icon: '🌳', angle: -150, dist: 140 },
-            { id: 'forest_glade', name: t('Центр: Лесная поляна'), icon: '🌿', angle: -125, dist: 205 },
-            // Раунд 50 (п.3 заявки): точка «Густой лес» смещена ниже и левее
-            // (угол −103°→−112°, 222→205) — раньше узел с подписью залезал
-            // ПОД верхнюю надпись-легенду описания локации на карте местности.
-            { id: 'forest', name: t('Глубина: Густой лес'), icon: '🌲', angle: -112, dist: 205 },
-            { id: 'apiary', name: t('Пасека'), icon: '🐝', angle: -50, dist: 215 },
-            { id: 'lake', name: t('Озеро'), icon: '🏞', angle: -20, dist: 250 },
-            { id: 'pasture', name: t('Выпас'), icon: '🐄', angle: 8, dist: 170 },
-            { id: 'field', name: t('Поле'), icon: '🌾', angle: 28, dist: 255 },
-            { id: 'pogost', name: t('Погост'), icon: '⚰️', angle: 120, dist: 235 },
-            { id: 'mill', name: t('Мельница'), icon: '🏭', angle: 145, dist: 265 },
-            // Раунд 66.19 (приказ владельца): возврат названия «Тракт»
-            // (откат приказа 66.12 №3 «Тракт→Большая дорога»); имя узла —
-            // как в FORK_LOCATIONS и mapLocations.
-            { id: 'road_south', name: t('Тракт'), icon: '🛤', angle: 92, dist: 165 },
-            { id: 'river', name: t('Река'), icon: '🌊', angle: 178, dist: 185 },
-        ];
-
-        const nodePos = {};
-        // ФИКС аудита UI: радиусы локаций заданы для панели 700×550 —
-        // при вписанной панели масштабируем смещения узлов по обеим осям,
-        // чтобы ни один узел не оказался за границей карты.
-        const kMapX = Math.min(1, panelW / 700);
-        const kMapY = Math.min(1, panelH / 550);
-        const mapScale = Math.min(kMapX, kMapY);
-        positions.forEach(pos => {
-            const rad = Phaser.Math.DegToRad(pos.angle);
-            const x = cx + Math.cos(rad) * pos.dist * mapScale;
-            const y = cy + Math.sin(rad) * pos.dist * mapScale;
-            nodePos[pos.id] = { x, y };
-            // Линия от деревни к локации (лесная цепочка: только ОПУШКА связана
-            // с деревней — единственный вход в лес, п.23 раунда 39)
-            if (!isForestLocation(pos.id) || pos.id === 'forest_edge') {
-                mapGfx.lineStyle(1, 0x5a5a3a, 0.5);
-                mapGfx.lineBetween(cx, cy, x, y);
-            }
-            // Точка локации
-            mapGfx.fillStyle(0x3a5a3a, 1);
-            mapGfx.fillCircle(x, y, 15);
-            // Раунд 37 (п.1 заявки): мельница — ВЕТРЯНАЯ (иконка-спрайт с
-            // вращающимися крыльями вместо безликой «🏭 фабрики»)
-            if (pos.id === 'mill' && this.textures.exists('icon_windmill_tower')) {
-                this.add.image(x + 2, y + 9, 'icon_windmill_tower')
-                    .setScale(0.95)
-                    .setOrigin(0.5, 1)
-                    .setDepth(203);
-                const blades = this.add.image(x + 2, y + 9 - 33, 'icon_windmill_blades')
-                    .setScale(0.62)
-                    .setDepth(204);
-                this.tweens.add({
-                    targets: blades,
-                    angle: 360,
-                    duration: 9000,
-                    repeat: -1,
-                    ease: 'Linear',
-                });
-            } else {
-                this.add.text(x, y, pos.icon, { fontSize: '16px' }).setOrigin(0.5).setDepth(203);
-            }
-            this.add.text(x, y + 18, pos.name, {
-                fontSize: '10px', color: '#a0a080',
-            }).setOrigin(0.5).setDepth(203);
-        });
-
-        // Раунд 39 (п.23): цепочка леса — стрелки Опушка → Поляна → Густой лес
-        for (let i = 0; i < FOREST_CHAIN.length - 1; i++) {
-            const a = nodePos[FOREST_CHAIN[i]];
-            const b = nodePos[FOREST_CHAIN[i + 1]];
-            if (!a || !b) continue;
-            mapGfx.lineStyle(2.5, 0x8fae7a, 0.95);
-            mapGfx.lineBetween(a.x, a.y, b.x, b.y);
-            // Наконечник стрелки по направлению a → b
-            const ang = Math.atan2(b.y - a.y, b.x - a.x);
-            const tipX = b.x - Math.cos(ang) * 18;
-            const tipY = b.y - Math.sin(ang) * 18;
-            mapGfx.fillStyle(0x8fae7a, 1);
-            mapGfx.fillTriangle(
-                tipX, tipY,
-                tipX - Math.cos(ang - 0.5) * 9, tipY - Math.sin(ang - 0.5) * 9,
-                tipX - Math.cos(ang + 0.5) * 9, tipY - Math.sin(ang + 0.5) * 9,
-            );
-        }
-        // Подпись цепочки леса — ПОД ЗАГОЛОВКОМ карты (фикс аудита UI: легенда
-        // в нижней части наезжала на узлы «Погост»/«Тракт» и кнопку «Закрыть»;
-        // под заголовком место свободно — узлы начинаются с середины панели)
-        this.add.text(width / 2, height / 2 - panelH / 2 + 44,
-            t('🌲 Лес — единая локация цепочкой: вход через Опушку → Поляна → Густой лес; выход последовательно.'), {
-            fontSize: '11px', color: '#9dbb86', fontFamily: 'Georgia, serif',
+        this.add.text(width / 2, topY + 38, t('🗺 Карта местности — деревня в центре: тракт с севера через деревню и мост к реке на юге. Справа — выпас, пасека и поле, дальше леса цепочкой (Опушка → Поляна → Густой лес), у Северного Тракта — мельница и озеро.'), {
+            fontSize: '10px', color: '#9dbb86',
+            fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 1,
             align: 'center',
-            wordWrap: { width: panelW - 60 },
-        }).setOrigin(0.5, 0).setDepth(203);
+            wordWrap: { width: panelW - 90 },
+        }).setOrigin(0.5, 0).setDepth(202);
 
-        // Игрок — в деревне (зелёная точка)
-        mapGfx.fillStyle(0x60ff60, 1);
-        mapGfx.fillCircle(cx, cy - 5, 5);
-        this.add.text(cx, cy - 20, '🧑', { fontSize: '14px' }).setOrigin(0.5).setDepth(203);
+        // Карта-текстура (рисуется один раз) в масштабе панели
+        const mapTop = topY + 66;
+        const availW = panelW - 34;
+        const availH = panelH - 66 - 46;
+        const scale = Math.min(availW / TERRAIN_W, availH / TERRAIN_H);
+        const mw = TERRAIN_W * scale, mh = TERRAIN_H * scale;
+        const mapX = Math.round(width / 2 - mw / 2);
+        const mapY = Math.round(mapTop + (availH - mh) / 2);
+
+        if (!this.textures.exists('terrain_map')) {
+            const tex = this.textures.createCanvas('terrain_map', TERRAIN_W, TERRAIN_H);
+            drawTerrainMap(tex.getContext());
+            tex.refresh();
+        }
+        this.add.image(mapX, mapY, 'terrain_map')
+            .setOrigin(0).setDisplaySize(mw, mh).setDepth(202);
+        this.add.rectangle(mapX - 2, mapY - 2, mw + 4, mh + 4, 0x000000, 0)
+            .setOrigin(0).setStrokeStyle(2, 0xC9A961, 0.7).setDepth(203);
+
+        // Компас: стрелка севера нарисована в текстуре, буква — t()
+        this.add.text(mapX + 46 * scale, mapY + 34 * scale, t('С ↑'), {
+            fontSize: '12px', color: '#6b4a2e', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif',
+            stroke: '#e6d7ac', strokeThickness: 2,
+        }).setOrigin(0, 0.5).setDepth(204);
+
+        // Подписи локаций поверх карты (i18n)
+        TERRAIN_LABELS.forEach(l => {
+            this.add.text(mapX + l.x * scale, mapY + l.y * scale, t(l.text), {
+                fontSize: '11px', color: '#f0e6c8',
+                fontFamily: 'Georgia, serif',
+                stroke: '#000', strokeThickness: 1.5,
+                backgroundColor: '#1a2a1acc',
+                padding: { x: 3, y: 1 },
+            }).setOrigin(0.5).setDepth(204);
+        });
+
+        // Метка игрока — у деревни (пульсирует)
+        const px = mapX + TERRAIN.village.x * scale;
+        const py = mapY + (TERRAIN.village.y - 10) * scale;
+        const marker = this.add.circle(px, py, 5, 0xff5040)
+            .setStrokeStyle(2, 0xffffff, 0.9).setDepth(205);
+        this.tweens.add({
+            targets: marker,
+            scale: { from: 0.9, to: 1.3 },
+            alpha: { from: 1, to: 0.7 },
+            duration: 800, yoyo: true, repeat: -1,
+        });
+        this.add.text(px, py - 16, '🧑 ' + t('Ты здесь'), {
+            fontSize: '10px', color: '#ffd7d0',
+            fontFamily: 'Georgia, serif',
+            stroke: '#000', strokeThickness: 1.5,
+            backgroundColor: '#1a2a1acc',
+            padding: { x: 3, y: 1 },
+        }).setOrigin(0.5).setDepth(205);
 
         // Кнопка закрытия
-        const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 25, 140, 30, 0x8B2C1A, 1)
+        const btnBg = this.add.rectangle(width / 2, topY + panelH - 22, 140, 30, 0x8B2C1A, 1)
             .setStrokeStyle(2, 0xC9A961)
             .setInteractive({ useHandCursor: true }).setDepth(202);
-        const btnText = this.add.text(width / 2, height / 2 + panelH / 2 - 25, t('Закрыть'), {
+        this.add.text(width / 2, topY + panelH - 22, t('Закрыть'), {
             fontSize: '14px', color: '#E8DCC4',
         }).setOrigin(0.5).setDepth(203);
 
         const closeMap = () => {
+            this.tweens.killTweensOf(marker);
             this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
         };
         btnBg.on('pointerup', closeMap);
