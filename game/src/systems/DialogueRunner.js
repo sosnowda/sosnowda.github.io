@@ -28,6 +28,10 @@ export class DialogueRunner {
             return;
         }
         this._talkKey = 'dlg:' + id;
+        // Раунд 66.26 (приказ 1 «повтори при вопросе про вора»): память о том,
+        // какой результат УЖЕ показан на экране — ответ действия отображается
+        // РОВНО ОДИН раз (см. _node ниже).
+        this._shownResult = null;
         // Раунд 31 (п.12): беседа открыта — мировые часы стоят до её конца
         if (this.scene && this.scene.registry) pauseWorldClock(this.scene.registry);
         this._onDone = onDone;
@@ -89,9 +93,19 @@ export class DialogueRunner {
         // Найти портрет по NPC, с которым идёт диалог
         const portraitKey = this._resolvePortraitKey();
 
-        // Уничтожаем предыдущий диалог если был
+        // Уничтожаем предыдущий диалог если был.
+        // Раунд 66.26 (QA): раньше — жёсткий destroy(); затем wrappedCallback
+        // выбора вызывал closeDialog() уже уничтоженного экрана и ронял кадр
+        // («reading 'sys'») с заморозкой печати следующей реплики. Теперь —
+        // мягкое закрытие (твин-аут + disableInteractive по живым кнопкам).
         if (this._currentDialog && this._currentDialog.scene) {
-            this._currentDialog.destroy();
+            const prevDialog = this._currentDialog;
+            this._currentDialog = null;
+            if (typeof prevDialog.closeDialog === 'function') {
+                try { prevDialog.closeDialog(); } catch (e) { try { prevDialog.destroy(); } catch (e2) { /* уже нет */ } }
+            } else {
+                prevDialog.destroy();
+            }
         }
 
         // Звук открытия диалога
@@ -105,6 +119,30 @@ export class DialogueRunner {
         // узел может нести variants[] — при повторных беседах реплики РОТАЦИОННО
         // сменяют друг друга (первая встреча — исходный текст, далее — варианты).
         let displayText = (isEn() && node.en) ? node.en : node.text;
+        // Раунд 66.26: узел-заглушка «...» показывает ответ действия (_lastAskResult)
+        // ОДИН раз. Исторически этот ответ показывался ДВАЖДЫ: узел действия
+        // (ask_thief/meal/rumor/...) выводил сообщение, затем «(продолжить)» вёл
+        // в ask_result — тоже с текстом «...» — и ТОТ ЖЕ текст рисовался второй
+        // раз подряд. Теперь: если этот результат уже показан предыдущим узлом,
+        // второй экран не рисуем вовсе — «(продолжить)» закрывает беседу.
+        if (displayText === '...' && this.scene._lastAskResult && this.scene._lastAskResult.message) {
+            if (this._shownResult === this.scene._lastAskResult) {
+                // результат уже был на экране — дублирующий экран гасим.
+                // Раунд 66.26 (QA): НЕ закрываем синхронно — мы внутри колбэка
+                // кнопки живого диалога; синхронное _finish() уничтожало бы
+                // контейнер, по кнопкам которого ui.js ещё проходил
+                // disableInteractive() (крах «reading 'sys'»). Откладываем на
+                // следующий тик: сначала wrappedCallback чисто закроет окно,
+                // затем _finish() спишет время беседы и снимет busyDialog.
+                if (this.scene.time && typeof this.scene.time.delayedCall === 'function') {
+                    this.scene.time.delayedCall(0, () => this._finish());
+                } else {
+                    this._finish();
+                }
+                return;
+            }
+            this._shownResult = this.scene._lastAskResult;
+        }
         if (nodeId === d.start && Array.isArray(node.variants) && node.variants.length) {
             const reg = this.scene && this.scene.registry;
             const key = 'dlgVar:' + this._dialogId;

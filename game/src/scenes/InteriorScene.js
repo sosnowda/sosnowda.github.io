@@ -63,6 +63,11 @@ export class InteriorScene extends Phaser.Scene {
     create() {
         bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
+        // Раунд 66.26 (приказ 3): в ЦЕРКВИ фон — перспективная горница (стена
+        // уходит до ~0.58H), и персонажи на 0.55H «висели в воздухе» на стене.
+        // Спавн — на видимом полу (0.64H); в остальных интерьерах вид сверху —
+        // пол начинается у верхнего края, прежняя высота корректна.
+        const spawnY = this.interiorId === 'church' ? height * 0.64 : height * 0.55;
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.dialogue = new DialogueRunner(this);
@@ -251,7 +256,7 @@ export class InteriorScene extends Phaser.Scene {
             // Рост NPC — раунд 37 (п.4): ЕДИНЫЙ масштаб по возрасту:
             // взрослый = 2.5 (как игрок в интерьере), подросток ×0.85, ребёнок ×0.7
             this.npcBaseScale = 2.5 * this.interiorAgeScale(this.npcData);
-            this.npcSprite = this.add.sprite(width * 0.65, height * 0.55, finalSpriteKey).setScale(this.npcBaseScale).setDepth(5);
+            this.npcSprite = this.add.sprite(width * 0.65, spawnY, finalSpriteKey).setScale(this.npcBaseScale).setDepth(5);
             // Раунд 37 (п.21): тавернщик ВСЕГДА ЗА СТОЙКОЙ (инт. 'tavern') —
             // стойка рисуется в (0.5w, 0.45h); хозяин стоит за ней, чуть выше
             if (this.interiorId === 'tavern') {
@@ -428,7 +433,7 @@ export class InteriorScene extends Phaser.Scene {
         const useComposite = this.player && this.player.useComposite && this.textures.exists('player_composite');
         const playerTextureKey = useComposite ? 'player_composite' : ((this.player && this.player.sprite) || 'player');
         const safePlayerKey = this.textures.exists(playerTextureKey) ? playerTextureKey : 'player';
-        this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, safePlayerKey, 0).setScale(2.5);
+        this.playerSprite = this.add.sprite(width * 0.25, spawnY, safePlayerKey, 0).setScale(2.5);
         // П.4: Применяем tint одежды только если НЕ композит (композит уже имеет все цвета)
         if (!useComposite && this.player && this.player.appearance && this.player.appearance.jacket) {
             this.playerSprite.setTint(this.player.appearance.jacket.tint);
@@ -445,7 +450,7 @@ export class InteriorScene extends Phaser.Scene {
         }
         this.tweens.add({
             targets: this.playerSprite,
-            y: { from: height * 0.55, to: height * 0.55 - 3 },
+            y: { from: spawnY, to: spawnY - 3 },
             duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         });
 
@@ -2237,13 +2242,14 @@ export class InteriorScene extends Phaser.Scene {
         }
         q.kiotInspected = true;
         if (!q.cluesGathered) q.cluesGathered = [];
-        const clue = t('На полу церкви — капли воска и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в церкви горела свеча.');
+        // Раунд 66.26 (приказ 5): вор в игре ОДИН — улика больше не говорит «вдвоём»
+        const clue = t('На полу церкви — капли воска и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, не впопыхах, и накануне в церкви горела свеча.');
         q.cluesGathered.push({ npcId: 'church', npcName: t('Церковь'), clue });
         this.registry.set('quest', q);
         ActionLog.add(this.registry, t('Осмотрел киот в церкви — нашёл улику (воск, верёвка с узлами).'));
 
         createDialog(this, t('Осмотр киота'),
-            t('Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли воска, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\nВор был не один — и нёс святыню бережно. Это стоит рассказать старосте.\n\nУлика добавлена к делу.'),
+            t('Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли воска, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\nВор был один, но действовал не впопыхах: узлы на верёвке затянуты крепко, святыню несли бережно, а воск не успел остыть — киот открывали этой же ночью. Это стоит рассказать старосте.\n\nУлика добавлена к делу.'),
             [{ text: t('Запомнить.'), callback: () => {} }]);
     }
 
@@ -2739,11 +2745,15 @@ export class InteriorScene extends Phaser.Scene {
             // вратами и Голгофа — иконы новгородской школы вместо фигур-«идолов».
             this.drawIconostasisWithIcons(width, height);
 
-            // Аналой с иконой Благовещения — на ковре перед иконостасом
+            // Аналой с иконой — на ковре перед иконостасом.
+            // Раунд 66.26 (приказ 4): на аналое БОЛЬШЕ не та же икона Благовещения,
+            // что на Царских вратах (видимое дублирование) — иная икона из набора.
             if (this.textures.exists('int_deco_analogion')) {
                 this.add.image(width * 0.5, height * 0.62, 'int_deco_analogion').setScale(1.3).setDepth(5);
-                if (this.textures.exists('int_deco_icon_annunciation')) {
-                    this.add.image(width * 0.5, height * 0.585, 'int_deco_icon_annunciation')
+                const analogIcon = this.textures.exists('int_deco_icon_wall')
+                    ? 'int_deco_icon_wall' : 'int_deco_icon_annunciation';
+                if (this.textures.exists(analogIcon)) {
+                    this.add.image(width * 0.5, height * 0.585, analogIcon)
                         .setDisplaySize(40, 53).setRotation(-0.05).setDepth(6);
                 }
             }
@@ -2855,20 +2865,23 @@ export class InteriorScene extends Phaser.Scene {
      * withNiche — усиленный вариант (дополнительная божница).
      */
     /**
-     * РАУНД 66.20 (п.2 приказа владельца): иконостас из НАСТОЯЩИХ икон-тайлов
-     * (новгородская школа, assets/interiors/deco_icon_*.jpg) вместо рисованных
-     * фигур-«идолов» с глазами-точками. Резное тёмное дерево + золото:
-     * пророческий ярус, деисус (Спас крупнее), местный ряд с Царскими вратами
-     * (икона Благовещения) и Голгофский крест над короной. Пропорции икон не
-     * искажаются (3:4), правый край не доходит до сюжетного пустого киота
+     * РАУНД 66.26 (приказы 2,4 владельца): ИКОНОСТАС УМЕНЬШЕН И СДВИНУТ
+     * ВПРАВО — прежде панель 0.07..0.78W × 0.07..0.47H накрывала арочное
+     * ОКНО на левой стене фона (окно живёт в ~3..12%W) и выглядела непомерно
+     * большой. ДУБЛИ ИКОН УБРАНЫ: было 14 слотов из 6 текстур (Никола ×3,
+     * Богородица ×3, Иоанн ×3, Архангел ×3, Спас ×2) — теперь РОВНО ШЕСТЬ
+     * икон, каждая по одному разу: пророческий ярус (архангел, Никола,
+     * Иоанн) + местный ряд (Богородица, Царские врата с Благовещением,
+     * Спас крупнее). Голгофский крест над короной и резьба сохранены.
+     * Правый край (0.70W) по-прежнему не касается сюжетного пустого киота
      * (0.86W) — святыню не перекрываем.
      */
     drawIconostasisWithIcons(width, height) {
         const g = this.add.graphics().setDepth(4);
         const GOLD = 0xc9a14a, GOLD_D = 0x8c6c2c;
         const WOOD = 0x3a2a18, WOOD_D = 0x291c0e;
-        const x0 = width * 0.07, x1 = width * 0.78;
-        const y0 = height * 0.07, y1 = height * 0.47;
+        const x0 = width * 0.17, x1 = width * 0.70;
+        const y0 = height * 0.12, y1 = height * 0.44;
         const iw = x1 - x0, ih = y1 - y0;
         const AR = 0.75; // пропорции икон-тайлов 288x384 (ширина = высота * 0.75)
 
@@ -2899,53 +2912,44 @@ export class InteriorScene extends Phaser.Scene {
 
         const usable = iw - 24;                      // ширина под иконы внутри рамы
         const cxAt = (f) => x0 + 12 + usable * f;    // центр иконы по ярусу
-        const t1y = y0 + 12, t1h = ih * 0.2;
-        const t2y = t1y + t1h + 10, t2h = ih * 0.32;
-        const t3y = t2y + t2h + 10, t3h = y1 - 12 - t3y;
+        const t1y = y0 + 12, t1h = ih * 0.34;
+        const t2y = t1y + t1h + 12, t2h = y1 - 12 - t2y;
 
-        // --- ярус 1 (верх): пророческий — 5 малых икон ---
-        const tier1 = ['icon_archangel', 'icon_nicholas', 'icon_theotokos', 'icon_john', 'icon_archangel'];
-        tier1.forEach((k, i) => iconH('int_deco_' + k, cxAt((i + 0.5) / 5), t1y + t1h / 2, t1h));
+        // --- ярус 1 (верх): пророческий — 3 малые иконы (каждая — единожды) ---
+        iconH('int_deco_icon_archangel',  cxAt(0.14), t1y + t1h / 2, t1h);
+        iconH('int_deco_icon_nicholas',   cxAt(0.50), t1y + t1h / 2, t1h - 6);
+        iconH('int_deco_icon_john',       cxAt(0.86), t1y + t1h / 2, t1h);
 
-        // --- ярус 2: ДЕИСУС — Спас в центре крупнее, Богородица и Иоанн ---
-        iconH('int_deco_icon_nicholas',  cxAt(0.06), t2y + t2h / 2 + 4, t2h - 16);
-        iconH('int_deco_icon_theotokos', cxAt(0.26), t2y + t2h / 2, t2h - 8);
-        iconH('int_deco_icon_christ',    cxAt(0.5),  t2y + t2h / 2 - 4, t2h + 8);
-        iconH('int_deco_icon_john',      cxAt(0.74), t2y + t2h / 2, t2h - 8);
-        iconH('int_deco_icon_archangel', cxAt(0.94), t2y + t2h / 2 + 4, t2h - 16);
-
-        // --- ярус 3 (местный): Царские врата в центре + 4 иконы ---
-        const dw = iw * 0.22, dx = cxAt(0.5) - dw / 2;
-        iconH('int_deco_icon_nicholas',  cxAt(0.10), t3y + t3h / 2, t3h);
-        iconH('int_deco_icon_theotokos', cxAt(0.30), t3y + t3h / 2 + 2, t3h - 4);
-        iconH('int_deco_icon_christ',    cxAt(0.70), t3y + t3h / 2 + 2, t3h - 4);
-        iconH('int_deco_icon_john',      cxAt(0.90), t3y + t3h / 2, t3h);
+        // --- ярус 2 (местный): Богородица | ЦАРСКИЕ ВРАТА (Благовещение) | Спас ---
+        iconH('int_deco_icon_theotokos', cxAt(0.12), t2y + t2h / 2, t2h - 6);
+        iconH('int_deco_icon_christ',    cxAt(0.88), t2y + t2h / 2, t2h);
+        const dw = iw * 0.24, dx = cxAt(0.5) - dw / 2;
         // Царские врата: двойные створки с золотой аркой + Благовещение
         g.fillStyle(WOOD_D, 1);
-        g.fillRect(dx, t3y - 6, dw, t3h + 6);
+        g.fillRect(dx, t2y - 6, dw, t2h + 6);
         g.lineStyle(3, GOLD, 1);
-        g.strokeRect(dx + 1, t3y - 5, dw - 2, t3h + 4);
+        g.strokeRect(dx + 1, t2y - 5, dw - 2, t2h + 4);
         g.lineStyle(2, GOLD, 1);
         g.beginPath();
-        g.moveTo(dx + dw / 2, t3y - 5);
-        g.lineTo(dx + dw / 2, t3y + t3h + 1);
+        g.moveTo(dx + dw / 2, t2y - 5);
+        g.lineTo(dx + dw / 2, t2y + t2h + 1);
         g.strokePath();
         if (this.textures.exists('int_deco_icon_annunciation')) {
-            this.add.image(dx + dw / 2, t3y + t3h * 0.32, 'int_deco_icon_annunciation')
-                .setDisplaySize(t3h * 0.4 * AR, t3h * 0.4).setDepth(5);
+            this.add.image(dx + dw / 2, t2y + t2h * 0.34, 'int_deco_icon_annunciation')
+                .setDisplaySize(t2h * 0.34 * AR, t2h * 0.34).setDepth(5);
         }
         // евангелисты: золотые круги в нижних створках
         [[0.28, 0.74], [0.72, 0.74]].forEach(([ux, uy]) => {
             g.lineStyle(2, GOLD, 0.95);
-            g.strokeCircle(dx + dw * ux, t3y + t3h * uy, 6);
+            g.strokeCircle(dx + dw * ux, t2y + t2h * uy, 6);
         });
 
         // --- Голгофа над короной ---
         const gx = cxAt(0.5);
         g.fillStyle(GOLD, 1);
-        g.fillRect(gx - 2, y0 - height * 0.055, 4, height * 0.055);
-        g.fillRect(gx - height * 0.026, y0 - height * 0.04, height * 0.052, 4);
-        g.fillRect(gx - height * 0.015, y0 - height * 0.052, height * 0.03, 3);
+        g.fillRect(gx - 2, y0 - height * 0.042, 4, height * 0.042);
+        g.fillRect(gx - height * 0.02, y0 - height * 0.03, height * 0.04, 4);
+        g.fillRect(gx - height * 0.012, y0 - height * 0.039, height * 0.024, 3);
 
         // тень основания на полу
         g.fillStyle(0x000000, 0.35);

@@ -70,10 +70,14 @@ ok(is.includes("'int_deco_icon_christ'") && is.includes("'int_deco_icon_theotoko
     && is.includes("'int_deco_icon_nicholas'") && is.includes("'int_deco_icon_annunciation'"),
     'иконостас: все 6 икон новгородской школы (Спас, Богородица, Иоанн, Архангел, Николай, Благовещение)');
 ok(is.includes('const AR = 0.75'), 'иконы: пропорции 3:4 без искажений');
+ok(is.includes('x0 = width * 0.17, x1 = width * 0.70') && is.includes('y0 = height * 0.12, y1 = height * 0.44'),
+    '66.26: иконостас меньше и правее — арочное окно левой стены свободно');
+ok(!is.includes("icon_theotokos', 'icon_john', 'icon_archangel']"),
+    '66.26: старый ярус с дублями икон удалён');
 ok(is.includes('kx, ky - 118') && is.includes('ky - 140'),
     'киот: кокошник и крест (резное дерево, не плоская ниша)');
-ok(is.includes("'int_deco_icon_annunciation')\n                        .setDisplaySize(40, 53)"),
-    'аналой: икона Благовещения на подставке');
+ok(is.includes("int_deco_icon_wall") && is.includes(".setDisplaySize(40, 53)"),
+    '66.26: аналой с иконой, НЕ дублирующей Царские врата (int_deco_icon_wall)');
 ok(is.includes('kx - 34, ky + 30') && is.includes('ffb84d'),
     'лампада у киота — единственный огонёк после кражи');
 ok(boot.includes("'icon_christ', 'icon_theotokos', 'icon_john', 'icon_archangel',"),

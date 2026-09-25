@@ -1181,6 +1181,12 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         if (contentMaskGfx) { contentMaskGfx.destroy(); contentMaskGfx = null; }
 
         actionButtons.forEach((btn) => {
+            // Раунд 66.26 (QA): closeDialog мог вызываться УЖЕ ПОСЛЕ destroy()
+            // контейнера (DialogueRunner._node уничтожает прошлый экран при
+            // навигации) — disableInteractive по мёртвым кнопкам ронял кадр
+            // («Cannot read properties of undefined (reading 'sys')») и
+            // замораживал печать следующей реплики.
+            if (!btn || !btn.scene) return;
             if (typeof btn.disableInteractive === 'function') btn.disableInteractive();
             if (scene?.tweens && typeof scene.tweens.killTweensOf === 'function') {
                 scene.tweens.killTweensOf(btn);

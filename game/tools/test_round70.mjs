@@ -342,8 +342,8 @@ console.log('— п.12: ИКОНОСТАС в церкви —');
         && gen.includes('wall_kiot') && gen.includes('Голгофа'),
         'генератор: 4 яруса + Царские врата + киоты по стенам + Голгофа');
     const is = read('game/src/scenes/InteriorScene.js');
-    ok(is.includes('drawIconostasisWithIcons') && is.includes('ДЕИСУС')
-        && is.includes('евангелисты'), '66.20: иконостас из икон-тайлов (деисус, евангелисты)');
+    ok(is.includes('drawIconostasisWithIcons') && is.includes('евангелисты'),
+        '66.20/66.26: иконостас из икон-тайлов (2 яруса без дублей, евангелисты)');
     ok(is.includes("'int_deco_icon_christ'") && is.includes("'int_deco_icon_theotokos'"),
         '66.20: иконы-тайлы новгородской школы в иконостасе');
     ok(!is.includes("this.add.image(width * 0.5, height * 0.25, 'int_deco_icon_wall')"),
@@ -365,7 +365,7 @@ console.log('— п.3: СТРЕЛКИ ЛАЙТБОКСА ВСЕГДА ВИДНЫ
 console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v75'"), 'SW: сайт v75 (раунд 66.25)');
+    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v76'"), 'SW: сайт v76 (раунд 66.26)');
     ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v25'"),
         'SW: game-assets-v25 (PNG воротни r67, раунд 66.25)');
     setLang('en');

@@ -591,14 +591,40 @@ export class LocationScene extends Phaser.Scene {
         // Раунд 31 (п.2): пастухи рисуются ПРИ СТАДЕ (отдельными спотами)
         const SHEPHERD_IDS = ['shepherd1', 'shepherd2'];
         const here = getNpcsAtPlace(this.registry, this.locationId).filter(id => !SHEPHERD_IDS.includes(id));
-        // Взрослые (до 2) и дети (до 4) рисуются отдельными группами
+        // РАУНД 66.26 (приказ 6): прежде все взрослые стояли со сдвигом −55px,
+        // а дети — квадратом 2×2 вокруг ОДНОЙ точки: кучка мешала друг другу.
+        // Теперь у локации ПУЛ уникальных точек (разнесены ≥70px), и каждый
+        // НПЦ закреплён ЗА СВОЕЙ точкой детерминированно по id — рассадка
+        // одинакова при каждом заходе, пересечений нет. Коллизии хэша
+        // разрешаются следующей свободной точкой. Как и прежде, рисуется
+        // до 2 взрослых и до 4 детей (раунд 28).
+        const POOLS = {
+            mill:    [[-160, 40], [30, 80], [-250, 95], [130, 25], [-60, 135], [225, 65]],
+            lake:    [[120, 30], [150, -55], [95, 95], [185, 45], [65, -15], [150, -105]],
+            river:   [[150, -80], [80, -40], [225, -120], [60, -130], [185, -30], [120, -160]],
+            forest:  [[-85, -40], [120, 25], [-180, 60], [45, -90], [205, -20], [-40, 110]],
+            field:   [[-120, -30], [60, 45], [-215, 25], [150, -60], [-45, 90], [215, 15]],
+            pasture: [[-60, -20], [120, 45], [-160, 65], [40, -80], [185, -15], [-25, 120]],
+        };
+        const pool = POOLS[this.locationId] || [[0, 0], [-70, 20], [70, 30], [-140, 50], [140, 70], [0, 110]];
+        const hash66 = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
+        const used66 = new Set();
+        const spotIdx66 = (npcId) => {
+            let idx = hash66(npcId + '@' + this.locationId) % pool.length;
+            while (used66.has(idx)) idx = (idx + 1) % pool.length;
+            used66.add(idx);
+            return idx;
+        };
         const adults = here.filter(id => !isChildNpc(findNpc(this.registry, id)));
         const kids = here.filter(id => isChildNpc(findNpc(this.registry, id)));
-        adults.slice(0, 2).forEach((npcId, i) => {
-            this.drawLocationNpc(npcId, spot.x - i * 55, spot.y + i * 12, 2.3, i);
+        adults.slice(0, 2).forEach((npcId) => {
+            const [ox, oy] = pool[spotIdx66(npcId)];
+            this.drawLocationNpc(npcId, spot.x + ox, spot.y + oy, 2.3, 0);
         });
-        kids.slice(0, 4).forEach((npcId, i) => {
-            this.drawLocationNpc(npcId, spot.x + 40 + (i % 2) * 46, spot.y + 6 + Math.floor(i / 2) * 30, 1.5, i, true);
+        kids.slice(0, 4).forEach((npcId) => {
+            const idx = spotIdx66(npcId);
+            const [ox, oy] = pool[idx];
+            this.drawLocationNpc(npcId, spot.x + ox, spot.y + oy, 1.5, idx, true);
         });
         // Раунд 31 (п.2): пастухи стоят у стада (выпас или водопой)
         const herd = getHerdState(this.registry);

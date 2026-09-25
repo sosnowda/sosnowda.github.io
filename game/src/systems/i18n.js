@@ -1638,12 +1638,12 @@ const EN = {
     'Пустой киот': 'The Empty Shrine',
     'Больше тут ничего не изменилось: ниша без иконы, воск на полу, верёвка.': 'Nothing has changed here: a niche without an icon, wax on the floor, a rope.',
     'Уйти от киота.': 'Step away from the shrine.',
-    'На полу церкви — капли воска и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, вдвоём, и накануне в церкви горела свеча.':
-        'On the church floor — drops of stearin and a piece of hemp rope with two knots. The icon was carried carefully, by two, and the day before a candle had burned in the church.',
+    'На полу церкви — капли воска и обрывок пеньковой верёвки с двумя узлами. Икону несли бережно, не впопыхах, и накануне в церкви горела свеча.':
+        'On the church floor — drops of stearin and a piece of hemp rope with two knots. The icon was carried carefully, without haste, and the day before a candle had burned in the church.',
     'Осмотрел киот в церкви — нашёл улику (воск, верёвка с узлами).': 'Examined the shrine in the church — found a clue (wax, knotted rope).',
     'Осмотр киота': 'Examining the shrine',
-    'Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли воска, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\nВор был не один — и нёс святыню бережно. Это стоит рассказать старосте.\n\nУлика добавлена к делу.':
-        'The niche where the wonderworking icon stood is empty. You look closely: on the floor — drops of stearin, still warm. At the foot — a piece of hemp rope with two knots.\n\nThe thief was not alone — and he carried the holy thing with care. This is worth telling the elder.\n\nThe clue is added to the case.',
+    'Ниша, где стояла чудотворная икона, пуста. Ты присматриваешься: на полу — капли воска, ещё тёплые. У подножия — обрывок пеньковой верёвки с двумя узлами.\n\nВор был один, но действовал не впопыхах: узлы на верёвке затянуты крепко, святыню несли бережно, а воск не успел остыть — киот открывали этой же ночью. Это стоит рассказать старосте.\n\nУлика добавлена к делу.':
+        'The niche where the wonderworking icon stood is empty. You look closely: on the floor — drops of stearin, still warm. At the foot — a piece of hemp rope with two knots.\n\nThere was only one thief, but he did not hurry: the knots on the rope are pulled tight, the holy thing was carried with care, and the wax has not cooled — the shrine was opened this very night. This is worth telling the elder.\n\nThe clue is added to the case.',
     'Запомнить.': 'Remember.',
     'Силы кончились': 'Strength spent',
     'Руки не поднимаются таскать дрова и мять глину. Нужно поесть и отдохнуть, прежде чем браться за работу.':
