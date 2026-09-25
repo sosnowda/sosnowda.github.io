@@ -130,7 +130,7 @@ ok(has(li, 'assets/images/og-image.jpg'), 'лендинг (index.html) по-пр
 // ================================= 4) SW ====================================
 console.log('\n[4] Service Worker v76');
 const sw = read('sw.js');
-ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v76'"), 'CACHE_NAME бампнут до v76 (раунд 66.26)');
+ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v77'"), 'CACHE_NAME бампнут до v77 (раунд 66.27)');
 ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v25'"), 'game-assets-v25 (PNG воротни r67, 66.25)');
 ok(has(sw, 'v69 — раунд 66.19'), 'шапка sw.js: запись о раунде 66.19');
 ok(has(sw, 'assets/images/og-demo.jpg'), 'шапка sw.js: og-demo.jpg задокументирован');

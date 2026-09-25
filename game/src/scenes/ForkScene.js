@@ -148,13 +148,20 @@ export class ForkScene extends Phaser.Scene {
         // ДВЕ колонки, чтобы все кнопки + «Назад» гарантированно влезали.
         // Раунд 30: локаций стало 11 (лес — тремя частями) — всегда две колонки.
         const locations = getForkLocations();
-        const startY = 140;
+        // Раунд 66.27 (приказ 3, мобильная проверка): на низких экранах
+        // (телефон в ландшафте, высота < 520) прежняя стопка из трёх нижних
+        // кнопок («Тёмный лес» → «Вернуться» → «Карта местности») уходила
+        // ЗА нижний край — «Карта местности» оказывалась недоступна. Теперь
+        // на низких экранах: компактный шаг сетки и три действия ОДНОЙ
+        // строкой внизу с короткими подписями; на обычных — прежняя стопка.
+        const lowH = height < 520;
+        const startY = lowH ? 136 : 140;
         const twoCols = height < 640 || locations.length > 9;
         const cols = twoCols ? 2 : 1;
         const rows = Math.ceil(locations.length / cols);
         const colW = Math.min(320, (width - 40) / cols);
-        const availH = Math.max(120, height - startY - 170);
-        const step = Math.max(28, Math.min(40, Math.floor(availH / rows)));
+        const availH = Math.max(120, height - startY - (lowH ? 92 : 170));
+        const step = Math.max(lowH ? 26 : 28, Math.min(40, Math.floor(availH / rows)));
         const btnH = step - 4;
         const gridLeft = width / 2 - (colW * (cols - 1)) / 2;
 
@@ -194,7 +201,8 @@ export class ForkScene extends Phaser.Scene {
 
         // Раунд 39 (п.23): подсказка-цепочка леса — карта местности показывает
         // лес ЕДИНЫМ узлом, внутри — последовательный проход из трёх локаций
-        this.add.text(width / 2, startY + Math.ceil(locations.length / cols) * step + 6,
+        const chainHintY = startY + rows * step + (lowH ? 2 : 6);
+        this.add.text(width / 2, chainHintY,
             t('🌲 Лес цепочкой: Опушка леса → Лесная поляна → Густой лес. Вход — только через Опушку, выход — последовательно.'), {
             fontSize: '11px', color: '#8fae7a',
             fontFamily: 'Georgia, serif',
@@ -206,45 +214,74 @@ export class ForkScene extends Phaser.Scene {
         // ----- Кнопка "Тёмный лес — прогулка" (раунд 13) -----
         // Раунд 30: чаща — теперь через опушку и поляну; прогулка остаётся
         // отдельной сценой лесной чащи (ForestScene).
-        const backBtnY = startY + rows * step + 36;   // раунд 39: ниже — строка-подсказка цепочки леса
-        createButton(this, width / 2, backBtnY, t('🌲 Тёмный лес — прогулка'), () => {
-            ActionLog.add(this.registry, t('Игрок отправился гулять в Тёмный лес.'));
-            tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
-            this.scene.start('Forest', { from: 'Fork' });
-        }, {
-            backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, pressColor: 0x1e321e,
-            textColor: '#c9e0b0',
-            fontSize: 14, padding: { left: 16, right: 16, top: 8, bottom: 8 },
-            cornerRadius: 6,
-        });
+        const backBtnY = chainHintY + (lowH ? 20 : 30);   // ниже — строка-подсказка цепочки леса
+        if (!lowH) {
+            createButton(this, width / 2, backBtnY, t('🌲 Тёмный лес — прогулка'), () => {
+                ActionLog.add(this.registry, t('Игрок отправился гулять в Тёмный лес.'));
+                tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
+                this.scene.start('Forest', { from: 'Fork' });
+            }, {
+                backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, pressColor: 0x1e321e,
+                textColor: '#c9e0b0',
+                fontSize: 14, padding: { left: 16, right: 16, top: 8, bottom: 8 },
+                cornerRadius: 6,
+            });
 
-        // Раунд 57 (п.2 приказа): СЛИЯНИЕ ДВУХ ПАСЕК ЗАВЕРШЕНО.
-        // Дубль-кнопка «🐝 Пасека — прогулка» (раунд 17) удалена: на околице
-        // была ВТОРАЯ кнопка пасеки рядом с кнопкой локации «Пасека» — обе
-        // открывали одну и ту же ходячую ApiaryScene (раунд 20 слил сцены,
-        // но записи в меню остались двумя). Теперь Пасека ОДНА: кнопка
-        // локации «Пасека» в списке выше. Поиск следов на ней работает как
-        // прежде (buildHuntUI сам включается только при активной погоне,
-        // а вне погоны это мирная прогулка) — ничего не потеряно.
+            // Раунд 57 (п.2 приказа): СЛИЯНИЕ ДВУХ ПАСЕК ЗАВЕРШЕНО.
+            // Дубль-кнопка «🐝 Пасека — прогулка» (раунд 17) удалена: на околице
+            // была ВТОРАЯ кнопка пасеки рядом с кнопкой локации «Пасека» — обе
+            // открывали одну и ту же ходячую ApiaryScene (раунд 20 слил сцены,
+            // но записи в меню остались двумя). Теперь Пасека ОДНА: кнопка
+            // локации «Пасека» в списке выше. Поиск следов на ней работает как
+            // прежде (buildHuntUI сам включается только при активной погоне,
+            // а вне погоны это мирная прогулка) — ничего не потеряно.
 
-        // ----- Кнопка "Вернуться в деревню" -----
-        createButton(this, width / 2, backBtnY + 40, t('◀ Вернуться в деревню'), () => {
-            tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
-            this.scene.start('Village');
-        }, {
-            backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
-            fontSize: 16, padding: { left: 24, right: 24, top: 10, bottom: 10 },
-            cornerRadius: 8,
-        });
+            // ----- Кнопка "Вернуться в деревню" -----
+            createButton(this, width / 2, backBtnY + 40, t('◀ Вернуться в деревню'), () => {
+                tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
+                this.scene.start('Village');
+            }, {
+                backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
+                fontSize: 16, padding: { left: 24, right: 24, top: 10, bottom: 10 },
+                cornerRadius: 8,
+            });
 
-        // П.17: Кнопка "Карта" — показать карту местности
-        createButton(this, width / 2, backBtnY + 78, t('🗺 Карта местности'), () => {
-            this.showMap();
-        }, {
-            backgroundColor: 0x2a4a6a, hoverColor: 0x3a5a7a, textColor: RUS.text,
-            fontSize: 16, padding: { left: 24, right: 24, top: 10, bottom: 10 },
-            cornerRadius: 8,
-        });
+            // П.17: Кнопка "Карта" — показать карту местности
+            createButton(this, width / 2, backBtnY + 78, t('🗺 Карта местности'), () => {
+                this.showMap();
+            }, {
+                backgroundColor: 0x2a4a6a, hoverColor: 0x3a5a7a, textColor: RUS.text,
+                fontSize: 16, padding: { left: 24, right: 24, top: 10, bottom: 10 },
+                cornerRadius: 8,
+            });
+        } else {
+            // Раунд 66.27: низкий экран — три действия одной строкой внизу,
+            // короткие подписи (гарантированно выше нижнего края)
+            const rowY = height - 26;
+            const btnDX = Math.min(150, (width - 60) / 3);
+            const smallPad = { left: 10, right: 10, top: 6, bottom: 6 };
+            createButton(this, width / 2 - btnDX, rowY, t('🌲 Тёмный лес'), () => {
+                ActionLog.add(this.registry, t('Игрок отправился гулять в Тёмный лес.'));
+                tickTime(this.registry, MAP_TRAVEL_MINUTES);
+                this.scene.start('Forest', { from: 'Fork' });
+            }, {
+                backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, pressColor: 0x1e321e,
+                textColor: '#c9e0b0', fontSize: 12, padding: smallPad, cornerRadius: 6,
+            });
+            createButton(this, width / 2, rowY, t('◀ В деревню'), () => {
+                tickTime(this.registry, MAP_TRAVEL_MINUTES);
+                this.scene.start('Village');
+            }, {
+                backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
+                fontSize: 12, padding: smallPad, cornerRadius: 6,
+            });
+            createButton(this, width / 2 + btnDX, rowY, t('🗺 Карта'), () => {
+                this.showMap();
+            }, {
+                backgroundColor: 0x2a4a6a, hoverColor: 0x3a5a7a, textColor: RUS.text,
+                fontSize: 12, padding: smallPad, cornerRadius: 6,
+            });
+        }
     }
 
     update() {

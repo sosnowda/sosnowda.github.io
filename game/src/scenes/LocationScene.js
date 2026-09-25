@@ -1083,6 +1083,29 @@ export class LocationScene extends Phaser.Scene {
     }
 
     /**
+     * Раунд 66.27 (приказ 2): ВЕРСТОВОЙ КАМЕНЬ у обочины тракта — серый
+     * валун с зарубками вёрст. Деталь, перенесённая с карты местности
+     * (66.25, «верстовые камни вдоль тракта») в саму сцену.
+     */
+    drawMilestone(x, groundY) {
+        const g = this.add.graphics().setDepth(1.45);
+        g.fillStyle(0x000000, 0.16);
+        g.fillEllipse(x + 3, groundY + 4, 40, 8);
+        g.fillStyle(0x8a8a82, 1);            // тело валуна
+        g.fillRoundedRect(x - 14, groundY - 24, 28, 26, 8);
+        g.fillStyle(0x6f6f68, 1);            // тень справа
+        g.fillRoundedRect(x + 2, groundY - 24, 12, 26, 6);
+        g.fillStyle(0xa8a89e, 1);            // блик слева
+        g.fillRoundedRect(x - 12, groundY - 22, 7, 20, 4);
+        g.fillStyle(0x55554e, 1);            // зарубки вёрст
+        g.fillRect(x - 8, groundY - 14, 16, 2);
+        g.fillRect(x - 8, groundY - 9, 12, 2);
+        g.fillStyle(0x6a7a4a, 0.9);          // мох у подножия
+        g.fillCircle(x - 9, groundY - 2, 2.6);
+        g.fillCircle(x + 8, groundY, 2.1);
+    }
+
+    /**
      * Раунд 31 (п.8): направление цепочки следов — вдоль дороги локации.
      * На Реке дорога идёт вертикально (север → мост → юг): цепочка тянется
      * вдоль неё; до моста — к мосту (юг), за мостом — тоже вдоль дороги.
@@ -1340,6 +1363,54 @@ export class LocationScene extends Phaser.Scene {
                     attempts++;
                 }
             }
+            // ----- Раунд 66.27 (приказ 2): ДЕТАЛИ ЧАЩИ — грибы, валежник,
+            // лесные травы, ягодные кусты и ворон. Прежде чаща состояла
+            // только из деревьев и травяного узора, хотя в описании локации
+            // обещано «много зверья и грибов».
+            const mushDark = this.textures.exists('deco_mushroom');
+            if (mushDark) {
+                for (let i = 0; i < 12; i++) {
+                    const mx = 24 + Math.random() * (width - 48);
+                    const my = 120 + Math.random() * (height - 190);
+                    const group = 1 + Math.floor(Math.random() * 3);
+                    for (let k = 0; k < group; k++) {
+                        this.add.image(mx + k * 13 + Math.random() * 6, my + Math.random() * 8, 'deco_mushroom')
+                            .setScale(0.9 + Math.random() * 0.5)
+                            .setFlipX(Math.random() < 0.5).setDepth(1.5);
+                    }
+                }
+            }
+            if (this.textures.exists('deco_log')) {
+                for (let i = 0; i < 3; i++) {
+                    const lx = 40 + Math.random() * (width - 80);
+                    const ly = 140 + Math.random() * (height - 220);
+                    this.add.image(lx, ly, 'deco_log')
+                        .setScale(1.5 + Math.random() * 0.5)
+                        .setAngle(Phaser.Math.Between(-16, 16)).setDepth(1.6);
+                }
+            }
+            if (this.textures.exists('deco_herb')) {
+                for (let i = 0; i < 10; i++) {
+                    this.add.image(Math.random() * width, 120 + Math.random() * (height - 180), 'deco_herb')
+                        .setScale(1.1 + Math.random() * 0.4).setDepth(1.2);
+                }
+            }
+            if (this.textures.exists('deco_berry_bush')) {
+                for (let i = 0; i < 6; i++) {
+                    this.add.image(Math.random() * width, 150 + Math.random() * (height - 220), 'deco_berry_bush')
+                        .setScale(1.4).setOrigin(0.5, 0.8).setDepth(2.5);
+                }
+            }
+            // Ворон у валежника — тёмная птица (живность, не монстр)
+            if (this.textures.exists('deco_bird')) {
+                const raven = this.add.image(width * 0.72, height * 0.62, 'deco_bird')
+                    .setScale(1.8).setTint(0x3a3a36).setDepth(4);
+                this.tweens.add({
+                    targets: raven,
+                    scaleY: { from: 1.8, to: 1.4 },
+                    duration: 900, yoyo: true, repeat: -1, ease: 'Quad.easeOut',
+                });
+            }
         } else if (locId === 'forest_edge') {
             // РАУНД 30 (п.1): ОПУШКА ЛЕСА — светлая трава, деревья только у
             // верхнего края (лес «нависает» с дальнего плана), кусты и грибы
@@ -1410,6 +1481,30 @@ export class LocationScene extends Phaser.Scene {
                     });
                 }
             }
+            // ----- Раунд 66.27 (приказ 2): ГРИБНЫЕ МЕСТА ОПУШКИ — по
+            // описанию «светло, грибные места да ягодные кусты», а грибов
+            // на сцене не было. Группки грибов, травы и поваленный ствол.
+            if (this.textures.exists('deco_mushroom')) {
+                for (let i = 0; i < 8; i++) {
+                    const mx = 30 + Math.random() * (width - 60);
+                    const my = height * 0.55 + Math.random() * (height * 0.35);
+                    const group = 1 + Math.floor(Math.random() * 2);
+                    for (let k = 0; k < group; k++) {
+                        this.add.image(mx + k * 12, my + Math.random() * 6, 'deco_mushroom')
+                            .setScale(1 + Math.random() * 0.5).setDepth(1.8);
+                    }
+                }
+            }
+            if (this.textures.exists('deco_herb')) {
+                for (let i = 0; i < 8; i++) {
+                    this.add.image(Math.random() * width, 130 + Math.random() * (height - 190), 'deco_herb')
+                        .setScale(1.2).setDepth(1.3);
+                }
+            }
+            if (this.textures.exists('deco_log')) {
+                this.add.image(width * 0.78, height * 0.72, 'deco_log')
+                    .setScale(1.7).setAngle(-10).setDepth(2);
+            }
         } else if (locId === 'forest_glade') {
             // РАУНД 30 (п.1): ЛЕСНАЯ ПОЛЯНА — солнечный круг травы среди леса,
             // деревья кольцом по краю, много цветов и ягодных кустов
@@ -1469,6 +1564,13 @@ export class LocationScene extends Phaser.Scene {
             logG.fillCircle(width * 0.44 + 6, height * 0.62 + 11, 10);
             logG.fillCircle(width * 0.44 + 124, height * 0.62 + 11, 10);
             logG.setDepth(3.5);
+            // ----- Раунд 66.27 (приказ 2): СТАРЫЙ ДУБ — деталь перенесена
+            // с карты местности (66.25) в саму сцену: широкое старое дерево
+            // на краю просвета, заметно крупнее обычных.
+            if (this.textures.exists('deco_tree_3')) {
+                this.add.image(width * 0.5 - 180, height * 0.5 + 8, 'deco_tree_3')
+                    .setScale(2.35).setOrigin(0.5, 0.9).setDepth(4.4);
+            }
             // Деревья КОЛЬЦОМ вокруг поляны (лес окружает просвет)
             const placedGladeTrees = [];
             for (let i = 0; i < 16; i++) {
@@ -1541,13 +1643,19 @@ export class LocationScene extends Phaser.Scene {
             const roadBottom = roadY + roadH / 2;
             const hasGravel = this.textures.exists('tile_gravel_0');
             if (hasGravel) {
-                const step = 58;
-                for (let gx = 0; gx < width + step; gx += step) {
-                    const v = (Math.round(gx / step) % 3 === 0) && this.textures.exists('tile_gravel_1')
-                        ? 'tile_gravel_1' : 'tile_gravel_0';
-                    this.add.image(gx, roadY, v)
-                        .setDisplaySize(step + 6, roadH + 6)
-                        .setDepth(1.1);
+                // ----- Раунд 66.27 (починка): гравийная лента — TileSprite с
+                // НАТУРАЛЬНЫМ масштабом тайла 64×64. Прежние image с
+                // setDisplaySize(64,156) растягивали тайл по вертикали в 2.4
+                // раза — тракт выглядел каменной кладкой, а не дорогой.
+                this.add.tileSprite(0, roadTop, width, roadH, 'tile_gravel_0')
+                    .setOrigin(0).setDepth(1.1);
+                // пятна тёмного гравия поверх — рвут монотонность повтора
+                if (this.textures.exists('tile_gravel_1')) {
+                    for (let i = 0; i < Math.ceil(width / 110); i++) {
+                        this.add.image(Math.random() * width,
+                            roadTop + 24 + Math.random() * (roadH - 48), 'tile_gravel_1')
+                            .setAlpha(0.85).setDepth(1.12);
+                    }
                 }
                 // Кромки с травой (переход газон → гравий) сверху и снизу
                 if (this.textures.exists('tile_gravel_edge')) {
@@ -1653,6 +1761,10 @@ export class LocationScene extends Phaser.Scene {
             } else if (locId === 'road_north') {
                 this.drawVillageSignpost(width - 130, roadTop + 2, 1);
             }
+            // ----- Раунд 66.27 (приказ 2): ВЕРСТОВОЙ КАМЕНЬ — деталь,
+            // перенесённая с карты (66.25) в сцену: серый валун с зарубками
+            // вёрст у обочины, с противоположной от указателя стороны.
+            this.drawMilestone(locId === 'road_south' ? width - 190 : 190, roadTop - 2);
             // ----- Раунд 66.24 (приказ 2): ЮЖНЫЙ ТРАКТ УПИРАЕТСЯ В РЕКУ —
             // в дальнем (нижнем) крае локации — лента реки с песчаными
             // берегами; к ней от тракта уходит колея, через воду —
@@ -1677,9 +1789,11 @@ export class LocationScene extends Phaser.Scene {
                 // колея от тракта к реке
                 const stubX = width * 0.5;
                 if (this.textures.exists('tile_gravel_0')) {
-                    for (let gy = roadBottom - 4; gy < waterY + 10; gy += 54) {
-                        this.add.image(stubX, gy, 'tile_gravel_0').setDisplaySize(92, 58).setDepth(3.6);
-                    }
+                    // Раунд 66.27: колея — TileSprite в натуральном масштабе
+                    // (прежде тайлы растягивались до 92×58 и выглядели столбом
+                    // каменной кладки)
+                    this.add.tileSprite(stubX - 46, roadBottom - 4, 92, waterY - roadBottom + 14, 'tile_gravel_0')
+                        .setOrigin(0).setDepth(3.6);
                 } else {
                     waterGfx.fillStyle(0x9a8060, 1);
                     waterGfx.fillRect(stubX - 46, roadBottom - 4, 92, waterY - roadBottom + 14);
@@ -1696,6 +1810,31 @@ export class LocationScene extends Phaser.Scene {
                 bridge2.fillStyle(0x5a3f24, 1);
                 bridge2.fillRect(stubX - bw2 / 2 - 5, waterY - 10, 5, height - waterY + 10);
                 bridge2.fillRect(stubX + bw2 / 2, waterY - 10, 5, height - waterY + 10);
+                // ----- Раунд 66.27 (приказ 2): КАМЫШИ ПО БЕРЕГАМ РЕКИ у моста
+                // (деталь с карты 66.25) + ФОНАРЬ на периле моста — тёплое
+                // пятно света, виден и в сумерках.
+                if (this.textures.exists('deco_reed')) {
+                    for (let i = 0; i < 12; i++) {
+                        const rx = (i % 2 === 0)
+                            ? Math.random() * (stubX - bw2 / 2 - 30)
+                            : stubX + bw2 / 2 + 30 + Math.random() * (width - stubX - bw2 / 2 - 40);
+                        this.add.image(rx, waterY + 2, 'deco_reed')
+                            .setScale(1.4 + Math.random() * 0.5).setOrigin(0.5, 1).setDepth(3.65);
+                    }
+                    for (let i = 0; i < 8; i++) {
+                        const rx = Math.random() * width;
+                        this.add.image(rx, height - 2, 'deco_reed')
+                            .setScale(1.5 + Math.random() * 0.5).setOrigin(0.5, 1).setDepth(3.8);
+                    }
+                }
+                if (this.textures.exists('campfire_flame_0')) {
+                    const lampX = stubX - bw2 / 2 - 2;
+                    const lampY = waterY - 16;
+                    this.add.ellipse(lampX, lampY, 26, 18, 0xffc866, 0.35)
+                        .setBlendMode(Phaser.BlendModes.ADD).setDepth(3.9);
+                    this.add.image(lampX, lampY, 'campfire_flame_0')
+                        .setScale(0.55).setDepth(3.95).setAlpha(0.92);
+                }
             }
         } else if (locId === 'river') {
             // П.10: Река — голубая полоса посередине, мост, заросли, дорога к мосту
@@ -1789,6 +1928,34 @@ export class LocationScene extends Phaser.Scene {
                 const key = useBush ? 'deco_berry_bush' : (reedOk ? 'deco_reed' : 'tile_forest_0');
                 this.add.image(x, y, key).setScale(useBush ? 1.6 : 1.9)
                     .setOrigin(0.5, 0).setDepth(2);
+            }
+            // ----- Раунд 66.27 (приказ 2): ПЕРЕВЁРНУТАЯ ЛОДКА у нижнего берега
+            // и СУХИЕ СЕТИ НА КОЛЬЯХ у моста — рыбацкая жизнь реки (на карте
+            // с 66.25 есть утки и камыши, в сцене появились и лодка с сетями).
+            {
+                const boatG = this.add.graphics().setDepth(2.4);
+                const bx = width * 0.24, by = riverY + riverH + 40;
+                boatG.fillStyle(0x000000, 0.16);
+                boatG.fillEllipse(bx + 4, by + 10, 92, 12);
+                boatG.fillStyle(0x5a3f24, 1);        // перевёрнутый корпус
+                boatG.fillEllipse(bx, by, 88, 24);
+                boatG.fillStyle(0x74562f, 1);        // продольное ребро-киль
+                boatG.fillEllipse(bx, by - 4, 84, 10);
+                boatG.fillStyle(0x3a2a1a, 1);        // торцы
+                boatG.fillEllipse(bx - 42, by - 1, 9, 16);
+                boatG.fillEllipse(bx + 42, by - 1, 9, 16);
+                const netG = this.add.graphics().setDepth(2.3);
+                const nx = Math.min(width * 0.78, width - 120), ny = riverY - 30;
+                netG.fillStyle(0x5a3f24, 1);         // колья
+                netG.fillRect(nx - 26, ny - 30, 4, 34);
+                netG.fillRect(nx + 22, ny - 30, 4, 34);
+                netG.lineStyle(1.4, 0xcfc3a0, 0.75); // сеть между ними
+                for (let r = 0; r < 4; r++) {
+                    netG.lineBetween(nx - 24, ny - 26 + r * 8, nx + 24, ny - 26 + r * 8);
+                }
+                for (let c = 0; c < 5; c++) {
+                    netG.lineBetween(nx - 24 + c * 12, ny - 26, nx - 24 + c * 12, ny - 2);
+                }
             }
             // П.10.4: Деревянный мост посередине реки (вертикальный)
             const bridgeX = width / 2;
@@ -1999,6 +2166,56 @@ export class LocationScene extends Phaser.Scene {
                     });
                 }
             }
+            // ----- Раунд 66.27 (приказ 2): ДЕТАЛИ ПОЛЯ — ПУГАЛО и РИГА
+            // (овин для сушки снопов) всегда; СТОГА у нижней кромки на фазах
+            // травы/жатвы; ВОРОБЬИ в пору жатвы. Раньше поле было пустой
+            // заливкой (детали рисовали только на карте 66.25).
+            {
+                const scX = fieldX + fieldW * 0.78, scY = fieldY + fieldH * 0.38;
+                const scG = this.add.graphics().setDepth(3.5);
+                scG.fillStyle(0x000000, 0.18);
+                scG.fillEllipse(scX + 3, scY + 6, 40, 9);
+                scG.fillStyle(0x6a4a2a, 1);          // столб
+                scG.fillRect(scX - 3, scY - 66, 6, 72);
+                scG.fillStyle(0x5c3f22, 1);          // перекладина
+                scG.fillRect(scX - 26, scY - 54, 52, 6);
+                scG.fillStyle(0x8a5a3a, 1);          // рубаха
+                scG.fillRect(scX - 16, scY - 52, 32, 26);
+                scG.fillStyle(0x7a4c30, 1);          // заплата
+                scG.fillRect(scX + 2, scY - 42, 9, 8);
+                scG.fillStyle(0xd8b96a, 1);          // соломенная голова
+                scG.fillCircle(scX, scY - 66, 9);
+                scG.fillStyle(0x7a5a34, 1);          // шляпа
+                scG.fillRect(scX - 15, scY - 72, 30, 4);
+                scG.fillRect(scX - 8, scY - 82, 16, 11);
+                if (this.textures.exists('deco_riga')) {
+                    const rigaX = fieldX - 58;
+                    if (rigaX > 60) {
+                        this.add.image(rigaX, fieldY + fieldH * 0.22, 'deco_riga')
+                            .setScale(1.4).setOrigin(0.5, 0.9).setDepth(2.6);
+                    }
+                }
+                if (this.textures.exists('deco_haystack') &&
+                    (phase66 === 'haymaking' || phase66 === 'harvest' || phase66 === 'stubble')) {
+                    [0.22, 0.52, 0.82].forEach((fx, i) => {
+                        this.add.image(fieldX + fieldW * fx, fieldY + fieldH - 24, 'deco_haystack')
+                            .setScale(1.5 + (i % 2) * 0.3).setDepth(3);
+                    });
+                }
+                if (phase66 === 'harvest' && this.textures.exists('deco_bird')) {
+                    for (let i = 0; i < 3; i++) {
+                        const pbx = fieldX + 30 + Math.random() * (fieldW - 60);
+                        const pby = fieldY + 30 + Math.random() * (fieldH - 60);
+                        const sparrow = this.add.image(pbx, pby, 'deco_bird')
+                            .setScale(1.6).setTint(0x8a7a5a).setDepth(3.6).setFlipX(i % 2 === 0);
+                        this.tweens.add({
+                            targets: sparrow,
+                            scaleY: { from: 1.6, to: 1.2 },
+                            duration: 340 + i * 120, yoyo: true, repeat: -1, ease: 'Quad.easeOut',
+                        });
+                    }
+                }
+            }
             // Деревья по краям поля (раунд 27: прозрачные + взаимные коллизии)
             const placedFieldTrees = [];
             for (let i = 0; i < 6; i++) {
@@ -2065,6 +2282,68 @@ export class LocationScene extends Phaser.Scene {
                         break;
                     }
                     attempts++;
+                }
+            }
+            // ----- Раунд 66.27 (приказ 2): ЖИВОЕ ОЗЕРО — камыши по кромке,
+            // кувшинки на воде, пара уток и деревянный причал с удочкой
+            // (детали с карты 66.25: утки и камыши — теперь и в сцене).
+            if (this.textures.exists('deco_reed')) {
+                for (let i = 0; i < 12; i++) {
+                    const ang = Math.PI * (0.12 + (i / 12) * 0.76);   // южная дуга
+                    const rr = lakeR + 2 + Math.random() * 10;
+                    this.add.image(lakeCX + Math.cos(ang) * rr, lakeCY + Math.sin(ang) * rr + 6, 'deco_reed')
+                        .setScale(1.5 + Math.random() * 0.5).setOrigin(0.5, 1).setDepth(2.5);
+                }
+                for (let i = 0; i < 7; i++) {
+                    const ang = Math.PI * (1.12 + (i / 7) * 0.76);    // северная дуга
+                    const rr = lakeR + 2 + Math.random() * 8;
+                    this.add.image(lakeCX + Math.cos(ang) * rr, lakeCY + Math.sin(ang) * rr - 4, 'deco_reed')
+                        .setScale(1.3 + Math.random() * 0.4).setOrigin(0.5, 1).setDepth(2.5);
+                }
+            }
+            if (this.textures.exists('deco_lilypad')) {
+                for (let i = 0; i < 9; i++) {
+                    const ang = Math.random() * Math.PI * 2;
+                    const rr = lakeR * (0.15 + Math.random() * 0.6);
+                    const pad = this.add.image(lakeCX + Math.cos(ang) * rr, lakeCY + Math.sin(ang) * rr, 'deco_lilypad')
+                        .setScale(1.3 + Math.random() * 0.5).setDepth(2.2).setAlpha(0.95);
+                    this.tweens.add({
+                        targets: pad,
+                        x: pad.x + 6,
+                        duration: 3200 + Math.random() * 2200,
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                }
+            }
+            if (this.textures.exists('deco_bird')) {
+                for (let i = 0; i < 2; i++) {
+                    const dx0 = lakeCX + (i === 0 ? -lakeR * 0.45 : lakeR * 0.3);
+                    const dy0 = lakeCY + (i === 0 ? -lakeR * 0.25 : lakeR * 0.38);
+                    const duck = this.add.image(dx0, dy0, 'deco_bird')
+                        .setScale(1.7).setTint(0x9a7a5a).setDepth(2.6).setFlipX(i === 1);
+                    this.tweens.add({
+                        targets: duck,
+                        y: dy0 - 3,
+                        duration: 1500 + i * 350, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                    this.tweens.add({
+                        targets: duck,
+                        x: dx0 + (i === 0 ? 30 : -26),
+                        duration: 6200 + i * 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                }
+            }
+            // Причал: настил от южного берега в воду + удочка на конце
+            if (this.textures.exists('tile_pier')) {
+                const pierX = lakeCX + lakeR * 0.52;
+                const shoreY = lakeCY + lakeR;
+                for (let k = 0; k < 4; k++) {
+                    this.add.image(pierX, shoreY + 10 - k * 26, 'tile_pier')
+                        .setScale(1.15).setDepth(2.4);
+                }
+                if (this.textures.exists('deco_fishing_rod')) {
+                    this.add.image(pierX + 12, shoreY - 58, 'deco_fishing_rod')
+                        .setScale(1.4).setAngle(24).setDepth(2.6);
                 }
             }
             // Деревья по углам (раунд 27: прозрачные + взаимные коллизии)
@@ -2554,6 +2833,27 @@ export class LocationScene extends Phaser.Scene {
                     this.add.image(x + 24, height - 30, 'tile_fence_h').setScale(1.5).setDepth(2);
                 }
             }
+            // ----- Раунд 66.27 (приказ 2): СТОГА СЕНА у ограды и КОрыто
+            // С ВОДОЙ для скота — детали с карты 66.25 перенесены в сцену.
+            if (this.textures.exists('deco_haystack')) {
+                this.add.image(84, 128, 'deco_haystack').setScale(1.7).setDepth(2.2);
+                this.add.image(width - 128, 132, 'deco_haystack').setScale(1.4).setDepth(2.2);
+                this.add.image(width * 0.62, 118, 'deco_haystack').setScale(1.55).setDepth(2.2);
+            }
+            {
+                const trG = this.add.graphics().setDepth(2.5);
+                const trX = width - 140, trY = height - 62;
+                trG.fillStyle(0x000000, 0.16);
+                trG.fillEllipse(trX + 2, trY + 10, 56, 9);
+                trG.fillStyle(0x5a3f24, 1);          // деревянное корыто
+                trG.fillRect(trX - 26, trY - 8, 52, 16);
+                trG.fillStyle(0x3a2a1a, 1);
+                trG.fillRect(trX - 26, trY - 8, 52, 4);
+                trG.fillStyle(0x4a6a8a, 0.95);       // вода
+                trG.fillRect(trX - 22, trY - 4, 44, 8);
+                trG.fillStyle(0x6a8aaa, 0.8);        // блик
+                trG.fillRect(trX - 16, trY - 3, 14, 2);
+            }
             // РАУНД 66 (п.2 приказа): КОСТЁР НА ПАСТБИЩЕ ДЛЯ ПАСТУХОВ —
             // у стоянки пастухов горит живое пламя; можно присесть
             // (1 час времени, без лечения — п.1).
@@ -2700,6 +3000,14 @@ export class LocationScene extends Phaser.Scene {
                     angle: { from: -1.2, to: 1.2 },
                     duration: 2600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
                 });
+            }
+
+            // ----- Раунд 66.27 (приказ 2): САРАЙ МЕЛЬНИКА у дороги (деталь
+            // с карты 66.25 — «сарай мельника и мешки» — мешки были, сарая
+            // в сцене не было).
+            if (this.textures.exists('deco_barn')) {
+                this.add.image(millX + 172, millY - 58, 'deco_barn')
+                    .setScale(1.5).setOrigin(0.5, 0.9).setDepth(3);
             }
 
             // ----- Раунд 17: мучная пыль у двери (золотистая взвесь) -----
