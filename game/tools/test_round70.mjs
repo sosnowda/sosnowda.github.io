@@ -326,7 +326,7 @@ console.log('— п.2: ПОРУЧЕНИЯ — ВИРТУАЛЬНАЯ ДОСКА 
     // Тайл старой доски (23,4) — свободная трава у ворот
     const grid = buildMap();
     ok(grid[4][23] === '.', 'тайл доски (23,4) — свободная трава у ворот');
-    ok(grid[4][24] === 'S' && grid[5][25] === 'G', 'у дорожки ворот — без препятствий');
+    ok(grid[5][25] === 'G' && grid[4][24] !== 'L' && grid[4][24] !== 'T', 'у дорожки ворот — без препятствий (СВ угол пуст после ротации 66.25)');
     // Мини-карта: метка доски снята
     const mm70 = read('game/src/systems/MiniMap.js');
     ok(!mm70.includes('QUEST_BOARD_TILE'), 'MiniMap: метка доски поручений снята с плана');
@@ -365,9 +365,9 @@ console.log('— п.3: СТРЕЛКИ ЛАЙТБОКСА ВСЕГДА ВИДНЫ
 console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v74'"), 'SW: сайт v74 (раунд 66.24)');
-    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v24'"),
-        'SW: game-assets-v24 (тайлы икон церкви, раунд 66.20)');
+    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v75'"), 'SW: сайт v75 (раунд 66.25)');
+    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v25'"),
+        'SW: game-assets-v25 (PNG воротни r67, раунд 66.25)');
     setLang('en');
     ok(t('☁ Что погода сулит?') === '☁ What will the weather bring?', 'i18n: вопрос о погоде EN');
     ok(t('Доска поручений') === 'Job Board', 'i18n: доска поручений EN');

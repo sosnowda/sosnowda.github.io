@@ -250,7 +250,7 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     ok(loc.includes('showBellToast(this, work66.toast)'), 'LocationScene: плашка сезона при входе на поле');
     // SW: v69, ассеты вычищены от неиспользуемых (66.19)
     const sw = read('../sw.js');
-    ok(sw.includes("chronicles-ruthenia-v74"), 'SW: версия сайта v74 (раунд 66.24)');
+    ok(sw.includes("chronicles-ruthenia-v75"), 'SW: версия сайта v75 (раунд 66.25)');
     ok(sw.includes("game-assets-v24"), 'SW: кеш ассетов v23 (тайлы икон церкви, 66.20)');
     ok(sw.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи

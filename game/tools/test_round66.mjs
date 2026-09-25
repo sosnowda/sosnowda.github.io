@@ -36,7 +36,8 @@ const forestSrc = readFileSync(join(root, 'src/scenes/ForestScene.js'), 'utf8');
 const locSrc = readFileSync(join(root, 'src/scenes/LocationScene.js'), 'utf8');
 const uiSrc = readFileSync(join(root, 'src/utils/ui.js'), 'utf8');
 const styleSrc = readFileSync(join(root, 'src/config/StyleConfig.js'), 'utf8');
-const gatePng = join(root, 'assets/sprites/village_gate_r66.png');
+// 66.25: воротня — поколение r67 (два слоя), профильная r66 удалена
+const gatePng = join(root, 'assets/sprites/village_gate_r67_south.png');
 const palisadePng = join(root, 'assets/tiles/palisade_0.png');
 
 const grid = buildMap();
@@ -125,9 +126,11 @@ ok(ringOk, 'частокол — сплошное кольцо, разрыв т�
 
 // ===== п.3: ворота без вымпелов =====
 console.log('\nп.3 Ворота');
-ok(existsSync(gatePng), 'village_gate_r66.png существует');
-ok(bootSrc.includes("village_gate_r66"), 'BootScene загружает village_gate_r66');
-ok(villageSrc.includes("'village_gate_r66'"), 'VillageScene рисует village_gate_r66');
+// 66.25: r66/r65/r64 удалены насовсем, загрузка переведена на r67 north+south
+ok(existsSync(gatePng), 'village_gate_r67_south.png существует');
+ok(!existsSync(join(root, 'assets/sprites/village_gate_r66.png')), 'village_gate_r66.png удалена (66.25)');
+ok(bootSrc.includes("village_gate_r67_north") && bootSrc.includes("village_gate_r67_south"), 'BootScene загружает воротню r67 (north+south)');
+ok(villageSrc.includes("'village_gate_r67_north'") && villageSrc.includes("'village_gate_r67_south'"), 'VillageScene рисует воротню r67 (два слоя)');
 ok(!gen66.includes('вымпелы на верёвке'), 'воротня: вымпелы удалены из генератора');
 ok(!gen66.includes('подковой') && !gen66.includes('вымпелы на верёвке'), 'воротня: доска-подкова и вымпелы удалены из генератора');
 

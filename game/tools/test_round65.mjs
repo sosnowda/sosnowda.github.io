@@ -78,12 +78,18 @@ ok(interiorSrc.includes('prayInChurch'), 'молитва осталась в ц�
 ok(!i18nCode.includes('southern street'), 'в EN-помощи нет устаревшей подсказки про дом Степана');
 
 console.log('— П.7: воротня меньше и проёмом к выходу —');
-ok(existsSync(join(root, 'assets/sprites/village_gate_r65.png')), 'village_gate_r65.png существует');
-ok(bootCode.includes("'village_gate_r65'") && !bootCode.includes('village_gate_r64'),
-    'BootScene грузит r65, r64 из загрузки убрана');
-ok(villageCode.includes("'village_gate_r65'") && !villageCode.includes('village_gate_r64'),
-    'VillageScene ставит village_gate_r65');
-ok(villageCode.includes('img.setDepth(6.0)'), 'воротня с честной глубиной профиля (6.0)');
+// 66.25: воротня переведена на поколение r67 («створ поперёк дороги», два
+// слоя); профильные r64/r65/r66 удалены из репозитория и из загрузки.
+ok(existsSync(join(root, 'assets/sprites/village_gate_r67_north.png')) && existsSync(join(root, 'assets/sprites/village_gate_r67_south.png')),
+    'воротня актуального поколения r67 (north+south) существует');
+ok(!existsSync(join(root, 'assets/sprites/village_gate_r65.png')) && !existsSync(join(root, 'assets/sprites/village_gate_r66.png')),
+    'устаревшие профильные r65/r66 удалены (66.25)');
+ok(bootCode.includes("'village_gate_r67_north'") && bootCode.includes("'village_gate_r67_south'") && !bootCode.includes('village_gate_r64'),
+    'BootScene грузит r67, старые r64–r66 из загрузки убраны');
+ok(villageCode.includes("'village_gate_r67_north'") && villageCode.includes("'village_gate_r67_south'") && !villageCode.includes('village_gate_r64'),
+    'VillageScene ставит воротню r67 (два слоя)');
+ok(villageCode.includes("setDepth(VILLAGE_GATE.row - 0.55)"), 'воротня: северная башня — дальний слой 4.45');
+ok(villageCode.includes("setDepth(VILLAGE_GATE.row + 2 + 0.45)"), 'воротня: южная группа — ближний слой 7.45');
 
 console.log('— П.8: частокол вокруг деревни, разрыв только у входа —');
 let palisadeOk = true, gapOk = false;
@@ -128,7 +134,10 @@ const elder = BUILDINGS.find(b => b.interiorId === 'elder_house');
 const centerish = (b) => b.col >= 8 && b.col + b.w <= 20 && b.row >= 5 && b.row <= 9;
 ok(centerish(church) && centerish(elder), 'храм и дом старосты — в ЦЕНТРЕ деревни');
 const smithy = BUILDINGS.find(b => b.interiorId === 'blacksmith');
-ok(smithy.col + smithy.w >= MAP_W - 3 && smithy.row <= 3, 'кузница — по СЕВЕРО-ВОСТОЧНОМУ краю');
+// 66.25 (п.2): кузница («лавка» под планом деревни) ПЕРЕМЕЩЕНА из
+// северо-восточного угла в северный ряд — угол пуст, фасады не под виджетом.
+ok(smithy.row <= 3 && smithy.col + smithy.w <= 22, 'кузница — в северном ряду ЛЕВЕЕ зоны плана деревни (66.25 п.2)');
+ok(!BUILDINGS.some(b => b.col >= 23 && b.row <= 3), 'северо-восточный угол пуст — план деревни ничего не перекрывает');
 const valid = validateMap(grid);
 ok(valid.problems.length === 0, 'BFS: все двери и ворота достижимы: ' + valid.problems.join('; '));
 // каждая дверь стоит на своей дорожке: под дверью проходимо

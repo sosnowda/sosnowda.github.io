@@ -1,16 +1,21 @@
-// Раунд 66.24 (приказ 3 владельца): ПОЛНОЦЕННАЯ КАРТА МЕСТНОСТИ.
-// Вместо кружков и стрелочек — нарисованная карта окрестностей с центром
-// в деревне (карта открывается кнопкой «🗺 Карта местности» на околице):
+// Раунд 66.25 (приказы 5–8 владельца): ПЕРЕКОМПОНОВКА КАРТЫ МЕСТНОСТИ.
+// Прежняя расстановка 66.24 (выпас/пасека/поле справа, погост слева) заменена
+// по новой разметке владельца:
 //   1. Центр карты — деревня, через неё проходит ТРАКТ: Северный Тракт —
-//      от северного края карты до деревни, дальше от деревни на юг —
-//      Южный Тракт, который упирается в РЕКУ и переходит её по МОСТУ.
-//   2. Справа от деревни и вдоль Южного Тракта — Выпас, Пасека и Поле.
-//   3. Справа от деревни, вдоль Южного Тракта и на всём свободном
-//      пространстве — ЛЕСА цепочкой: Опушка → Лесная поляна → Густой лес.
-//   4. Справа от Северного Тракта — ответвление дороги к МЕЛЬНИЦЕ.
-//   5. Справа от Северного Тракта — большая локация ОЗЕРО.
-// Погост — существующая локация игры (в перечне приказа не названа) —
-// размещена слева от деревни, у грунтовой тропы.
+//      от северного края карты до деревни, дальше на юг — Южный Тракт,
+//      который упирается в РЕКУ и переходит её по МОСТУ.
+//   2. СЛЕВА от деревни и вдоль Южного Тракта — Выпас, Пасека и Поле.
+//   3. Справа от Южного Тракта и на всём свободном пространстве — ЛЕСА
+//      цепочкой: Опушка (вход) → Лесная поляна → Густой лес (до реки).
+//   4. Справа от Северного Тракта — ответвление дороги к МЕЛЬНИЦЕ И ПОГОСТУ
+//      (ветка уходит на восток, к мельнице; грунтовый отросток — к погосту).
+//   5. Справа от Северного Тракта — большая локация ОЗЕРО (66.24).
+//   П.9: КО ВСЕМ ЛОКАЦИЯМ ведут дорожки от деревни или трактов — см.
+//   TERRAIN_PATHS (грунтовые пунктирные тропы + ветка дороги).
+//   П.8 «дорисовать детали»: стога на выпасе, борозды в поле, четвёртый улей
+//   и пчёлы на пасеке, плетень и кресты на погосте, сарай у мельницы, утки и
+//   камыши на озере, камыши у реки, верстовые камни вдоль тракта, колодец и
+//   внутренние дорожки в деревне, ягоды на опушке, старый дуб на поляне.
 // Модуль ЧИСТЫЙ (без Phaser и i18n): drawTerrainMap(ctx) рисует карту на
 // 2D-контексте canvas-текстуры; ForkScene накладывает подписи (t()) и
 // пульсирующую метку игрока. Все координаты — в системе 680×540.
@@ -27,33 +32,49 @@ export const TERRAIN = {
     village: { x: 300, y: 258, w: 96, h: 66 },     // деревня в центре
     river: { y: 436, h: 42 },                      // река — лента через южный край
     bridge: { x: 300, w: 26 },                     // мост тракта через реку
-    lake: { x: 550, y: 92, rx: 102, ry: 58 },      // большое озеро (справа от Сев. тракта)
-    mill: { x: 398, y: 168, pathY: 172 },          // мельница + ответвление дороги
-    pasture: { x: 418, y: 294, rx: 46, ry: 29 },   // выпас (ближе к деревне)
-    apiary: { x: 415, y: 357, rx: 38, ry: 24 },    // пасека (средняя)
-    field: { x: 430, y: 409, rx: 56, ry: 18 },     // поле (у реки)
-    forestEdge: { x: 495, y: 222, rx: 58, ry: 32 },   // опушка — вход в лес
-    forestGlade: { x: 588, y: 252, rx: 50, ry: 28 },  // лесная поляна
-    forestDeep: { x: 572, y: 362, rx: 105, ry: 85 },  // густой лес (юго-восток)
-    pogost: { x: 140, y: 300 },                    // погост (слева от деревни)
+    lake: { x: 558, y: 88, rx: 100, ry: 52 },      // большое озеро (справа от Сев. тракта)
+    mill: { x: 485, y: 165, pathY: 165 },          // мельница + ответвление дороги (восток)
+    pogost: { x: 395, y: 208 },                    // погост — отросток от ветки (справа от Сев. тракта)
+    pasture: { x: 190, y: 300, rx: 52, ry: 30 },   // выпас — СЛЕВА от деревни
+    apiary: { x: 175, y: 356, rx: 44, ry: 26 },    // пасека — слева, южнее
+    field: { x: 190, y: 406, rx: 56, ry: 20 },     // поле — слева, у реки
+    forestEdge: { x: 425, y: 296, rx: 54, ry: 30 },   // опушка — вход в лес (справа от Юж. тракта)
+    forestGlade: { x: 540, y: 342, rx: 48, ry: 27 },  // лесная поляна
+    forestDeep: { x: 548, y: 428, rx: 102, ry: 75 },  // густой лес (юго-восток, до реки)
 };
+
+// ===== ДОРОЖКИ (п.9): ко ВСЕЙ локации — от деревни или трактов =====
+// kind: 'road' — песчаная дорога (ветка к мельнице/погосту),
+//       'trail' — грунтовая тропа (пунктир).
+export const TERRAIN_PATHS = [
+    { to: 'pasture', kind: 'trail', x1: 293, y1: 300, x2: 244, y2: 300 },
+    { to: 'apiary', kind: 'trail', x1: 293, y1: 356, x2: 221, y2: 356 },
+    { to: 'field', kind: 'trail', x1: 293, y1: 406, x2: 248, y2: 406 },
+    { to: 'forestEdge', kind: 'trail', x1: 307, y1: 308, x2: 377, y2: 302 },
+    // лесная цепочка — рисуется кривыми (9в), в данных — для проверки покрытия
+    { to: 'forestGlade', kind: 'trail', chain: true, x1: 471, y1: 304, x2: 496, y2: 336 },
+    { to: 'forestDeep', kind: 'trail', chain: true, x1: 556, y1: 368, x2: 568, y2: 392 },
+    { to: 'mill', kind: 'road', x1: 300, y1: 165, x2: 478, y2: 165 },
+    { to: 'pogost', kind: 'road', x1: 395, y1: 165, x2: 395, y2: 190 },
+    { to: 'lake', kind: 'trail', x1: 307, y1: 100, x2: 451, y2: 100 },
+];
 
 // ===== ПОДПИСИ КАРТЫ (ключи i18n; рисует ForkScene поверх текстуры) =====
 export const TERRAIN_LABELS = [
     { key: 'village', text: 'Деревня', x: 218, y: 250 },
-    { key: 'northTract', text: 'Северный Тракт', x: 300, y: 62 },
-    { key: 'southTract', text: 'Южный Тракт', x: 300, y: 362 },
+    { key: 'northTract', text: 'Северный Тракт', x: 300, y: 52 },
+    { key: 'southTract', text: 'Южный Тракт', x: 300, y: 356 },
     { key: 'river', text: 'Река', x: 150, y: 457 },
     { key: 'bridge', text: 'Мост', x: 352, y: 470 },
-    { key: 'lake', text: 'Озеро', x: 550, y: 92 },
-    { key: 'mill', text: 'Мельница', x: 398, y: 143 },
-    { key: 'pasture', text: 'Выпас', x: 418, y: 294 },
-    { key: 'apiary', text: 'Пасека', x: 415, y: 357 },
-    { key: 'field', text: 'Поле', x: 430, y: 409 },
-    { key: 'forestEdge', text: 'Опушка', x: 495, y: 222 },
-    { key: 'forestGlade', text: 'Лесная поляна', x: 588, y: 252 },
-    { key: 'forestDeep', text: 'Густой лес', x: 572, y: 358 },
-    { key: 'pogost', text: 'Погост', x: 140, y: 340 },
+    { key: 'lake', text: 'Озеро', x: 558, y: 88 },
+    { key: 'mill', text: 'Мельница', x: 485, y: 138 },
+    { key: 'pogost', text: 'Погост', x: 395, y: 236 },
+    { key: 'pasture', text: 'Выпас', x: 190, y: 300 },
+    { key: 'apiary', text: 'Пасека', x: 175, y: 356 },
+    { key: 'field', text: 'Поле', x: 190, y: 406 },
+    { key: 'forestEdge', text: 'Опушка', x: 425, y: 296 },
+    { key: 'forestGlade', text: 'Лесная поляна', x: 540, y: 342 },
+    { key: 'forestDeep', text: 'Густой лес', x: 548, y: 424 },
 ];
 
 // Детерминированный псевдослучайный генератор (карта одинакова при
@@ -85,6 +106,37 @@ function drawTree(ctx, x, y, r, crown, dark) {
     ctx.stroke();
 }
 
+/** Стог сена: жёлтый полукруг со штрихами (деталь выпаса, п.8). */
+function drawHaystack(ctx, x, y, s) {
+    ctx.fillStyle = '#d9b95c';
+    ctx.beginPath();
+    ctx.moveTo(x - s, y);
+    ctx.quadraticCurveTo(x - s * 0.6, y - s * 1.5, x, y - s * 1.6);
+    ctx.quadraticCurveTo(x + s * 0.6, y - s * 1.5, x + s, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#a8862e';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.5, y - 1);
+    ctx.lineTo(x - s * 0.2, y - s);
+    ctx.moveTo(x + s * 0.4, y - 1);
+    ctx.lineTo(x + s * 0.2, y - s * 0.9);
+    ctx.stroke();
+}
+
+/** Утка на воде: две дуги-галочки (деталь озера, п.8). */
+function drawDuck(ctx, x, y) {
+    ctx.strokeStyle = 'rgba(40, 55, 70, 0.75)';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(x - 4, y);
+    ctx.quadraticCurveTo(x, y - 3.4, x + 1, y);
+    ctx.moveTo(x + 1, y);
+    ctx.quadraticCurveTo(x + 3, y - 2.4, x + 5, y - 1.2);
+    ctx.stroke();
+}
+
 /**
  * Рисует полноценную карту местности на 2D-контексте canvas.
  * Размер канвы — TERRAIN_W × TERRAIN_H.
@@ -92,7 +144,7 @@ function drawTree(ctx, x, y, r, crown, dark) {
  */
 export function drawTerrainMap(ctx) {
     const W = TERRAIN_W, H = TERRAIN_H, F = TERRAIN_FRAME;
-    const rnd = mulberry32(6624);
+    const rnd = mulberry32(6625);
     const T = TERRAIN;
 
     // ===== 1) Пергаментная основа =====
@@ -125,28 +177,46 @@ export function drawTerrainMap(ctx) {
     ctx.lineWidth = 1.2;
     ctx.strokeRect(12.5, 12.5, W - 25, H - 25);
 
-    // ===== 4) Поля (рожь): золотистый массив со стеблями =====
+    // ===== 4) Поле (рожь): золотистый массив с БОРОЗДАМИ (деталь п.8) =====
     {
         const f = T.field;
         ctx.fillStyle = '#d9b95c';
         ctx.beginPath();
         ctx.ellipse(f.x, f.y, f.rx, f.ry, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(f.x, f.y, f.rx, f.ry, 0, 0, Math.PI * 2);
+        ctx.clip();
+        // борозды — дуги рядами
         ctx.strokeStyle = '#b6923a';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 90; i++) {
-            const ang = rnd() * Math.PI * 2;
-            const rr = Math.sqrt(rnd());
-            const sx = f.x + Math.cos(ang) * rr * (f.rx - 6);
-            const sy = f.y + Math.sin(ang) * rr * (f.ry - 4);
+        ctx.lineWidth = 1.1;
+        for (let row = -2; row <= 2; row++) {
+            const yy = f.y + row * (f.ry * 0.36);
             ctx.beginPath();
-            ctx.moveTo(sx, sy + 3);
-            ctx.lineTo(sx, sy - 4);
+            ctx.moveTo(f.x - f.rx, yy);
+            ctx.quadraticCurveTo(f.x, yy + 4, f.x + f.rx, yy);
             ctx.stroke();
         }
+        // снопы
+        for (let i = 0; i < 5; i++) {
+            const sx = f.x - f.rx * 0.6 + i * f.rx * 0.3;
+            const sy = f.y + (i % 2 ? 6 : -5);
+            ctx.fillStyle = '#c4a23e';
+            ctx.beginPath();
+            ctx.arc(sx, sy, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#8a6a1e';
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(sx - 1.6, sy + 2);
+            ctx.lineTo(sx + 1.6, sy + 2);
+            ctx.stroke();
+        }
+        ctx.restore();
     }
 
-    // ===== 5) Выпас: сочный луг с кочками и цветами =====
+    // ===== 5) Выпас: сочный луг, цветы и СТОГА (деталь п.8) =====
     {
         const p = T.pasture;
         ctx.fillStyle = '#8fbc62';
@@ -176,10 +246,20 @@ export function drawTerrainMap(ctx) {
             ctx.arc(fx, fy, 1.7, 0, Math.PI * 2);
             ctx.fill();
         }
+        // стога сена (деталь п.8)
+        drawHaystack(ctx, p.x - p.rx * 0.45, p.y + p.ry * 0.3, 6);
+        drawHaystack(ctx, p.x + p.rx * 0.35, p.y - p.ry * 0.25, 5);
+        // жердь-стойка у стога
+        ctx.strokeStyle = '#6b4a2e';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(p.x - p.rx * 0.45, p.y + p.ry * 0.3);
+        ctx.lineTo(p.x - p.rx * 0.45 + 3, p.y + p.ry * 0.3 - 9);
+        ctx.stroke();
     }
 
     // ===== 6) ЛЕСА (цепочка): опушка → поляна → густой лес =====
-    // 6а. Опушка — светлая, редкие деревья
+    // 6а. Опушка — светлая, редкие деревья, ягодные кусты (деталь п.8)
     {
         const e = T.forestEdge;
         ctx.fillStyle = '#7fae5e';
@@ -194,8 +274,19 @@ export function drawTerrainMap(ctx) {
                 e.y + Math.sin(ang) * rr * (e.ry - 6),
                 4.5 + rnd() * 1.5, '#5f9448', '#3f6b34');
         }
+        // ягоды-бусины
+        for (let i = 0; i < 7; i++) {
+            const ang = rnd() * Math.PI * 2;
+            const rr = Math.sqrt(rnd());
+            const bx = e.x + Math.cos(ang) * rr * (e.rx - 10);
+            const by = e.y + Math.sin(ang) * rr * (e.ry - 8);
+            ctx.fillStyle = '#c4453c';
+            ctx.beginPath();
+            ctx.arc(bx, by, 1.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
-    // 6б. Поляна — солнечный круг с цветами в кольце деревьев
+    // 6б. Поляна — солнечный круг с цветами, кольцо деревьев и СТАРЫЙ ДУБ (п.8)
     {
         const g = T.forestGlade;
         ctx.fillStyle = '#9cc878';
@@ -221,6 +312,8 @@ export function drawTerrainMap(ctx) {
             ctx.arc(fx, fy, 1.6, 0, Math.PI * 2);
             ctx.fill();
         }
+        // старый дуб в середине поляны (деталь п.8)
+        drawTree(ctx, g.x + 2, g.y + 6, 7.5, '#3f6b34', '#28451f');
     }
     // 6в. Густой лес — тёмная чаща на юго-востоке (до самой реки)
     {
@@ -243,6 +336,16 @@ export function drawTerrainMap(ctx) {
             const ty = d.y + Math.sin(ang) * rr * (d.ry - 8);
             if (ty > T.river.y - 8) continue; // не сажаем в реку
             drawTree(ctx, tx, ty, 4 + rnd() * 2, '#2f5526', '#1f3a1a');
+        }
+        // грибочки на просвете (деталь п.8)
+        for (let i = 0; i < 4; i++) {
+            const mx = d.x - d.rx * 0.3 + i * 9, my = d.y - d.ry * 0.2 + (i % 2) * 8;
+            ctx.fillStyle = '#e8dcc4';
+            ctx.fillRect(mx, my, 1.4, 3);
+            ctx.fillStyle = '#b06a3a';
+            ctx.beginPath();
+            ctx.arc(mx + 0.7, my, 2.4, Math.PI, 0);
+            ctx.fill();
         }
     }
 
@@ -289,6 +392,9 @@ export function drawTerrainMap(ctx) {
             ctx.lineTo(rx2 + 1, ry2 - 4);
             ctx.stroke();
         }
+        // утки (деталь п.8)
+        drawDuck(ctx, l.x - l.rx * 0.35, l.y - l.ry * 0.15);
+        drawDuck(ctx, l.x + l.rx * 0.15, l.y + l.ry * 0.3);
     }
 
     // ===== 8) РЕКА — лента через южный край (Южный Тракт упирается в неё) =====
@@ -311,6 +417,18 @@ export function drawTerrainMap(ctx) {
             ctx.beginPath();
             ctx.moveTo(wx, wy);
             ctx.quadraticCurveTo(wx + 7, wy - 3, wx + 14, wy);
+            ctx.stroke();
+        }
+        // камыши у берегов (деталь п.8)
+        ctx.strokeStyle = '#6f8a3a';
+        ctx.lineWidth = 1.1;
+        for (let i = 0; i < 10; i++) {
+            const rx2 = F + 12 + rnd() * (W - F * 2 - 40);
+            const top = rnd() < 0.5;
+            const ry2 = top ? r.y - 3 : r.y + r.h + 3;
+            ctx.beginPath();
+            ctx.moveTo(rx2, ry2 + (top ? 4 : 0));
+            ctx.lineTo(rx2 + 1, ry2 + (top ? -4 : 4));
             ctx.stroke();
         }
     }
@@ -348,43 +466,71 @@ export function drawTerrainMap(ctx) {
         ctx.lineTo(tx, T.river.y - 4);
         ctx.stroke();
         ctx.setLineDash([]);
+        // ВЕРСТОВЫЕ КАМНИ вдоль тракта (деталь п.8)
+        [[tx + 11, 90], [tx - 11, 210], [tx + 11, 330], [tx - 11, 398]].forEach(([sx, sy]) => {
+            ctx.fillStyle = '#9a9a8e';
+            ctx.beginPath();
+            ctx.arc(sx, sy, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#6b6b60';
+            ctx.lineWidth = 0.7;
+            ctx.stroke();
+        });
     }
-    // 9б. Ответвление к мельнице (справа от Северного Тракта)
+    // 9б. ВЕТКА ДОРОГИ к мельнице + отросток к погосту (справа от Сев. тракта)
     {
         const m = T.mill;
+        const branchY = m.pathY;
+        // основная ветка: тракт → мельница
         ctx.fillStyle = '#c2a878';
-        ctx.fillRect(T.tractX, m.pathY - 4.5, m.x - T.tractX, 9);
+        ctx.fillRect(T.tractX, branchY - 4.5, m.x - T.tractX, 9);
         ctx.strokeStyle = '#8a744e';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(T.tractX, m.pathY - 4.5);
-        ctx.lineTo(m.x, m.pathY - 4.5);
-        ctx.moveTo(T.tractX, m.pathY + 4.5);
-        ctx.lineTo(m.x, m.pathY + 4.5);
+        ctx.moveTo(T.tractX, branchY - 4.5);
+        ctx.lineTo(m.x, branchY - 4.5);
+        ctx.moveTo(T.tractX, branchY + 4.5);
+        ctx.lineTo(m.x, branchY + 4.5);
+        ctx.stroke();
+        // колея на ветке
+        ctx.strokeStyle = 'rgba(120, 96, 60, 0.5)';
+        ctx.setLineDash([7, 6]);
+        ctx.beginPath();
+        ctx.moveTo(T.tractX + 4, branchY);
+        ctx.lineTo(m.x - 6, branchY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // отросток к погосту (п.7): юг от ветки
+        const sp = TERRAIN_PATHS.find(p => p.to === 'pogost');
+        ctx.fillStyle = '#c2a878';
+        ctx.fillRect(sp.x1 - 3.5, branchY + 4, 7, sp.y2 - branchY - 4);
+        ctx.strokeStyle = '#8a744e';
+        ctx.beginPath();
+        ctx.moveTo(sp.x1 - 3.5, branchY + 4.5);
+        ctx.lineTo(sp.x1 - 3.5, sp.y2);
+        ctx.moveTo(sp.x1 + 3.5, branchY + 4.5);
+        ctx.lineTo(sp.x1 + 3.5, sp.y2);
         ctx.stroke();
     }
-    // 9в. Грунтовые тропы (пунктир): к погосту и к лесу (Опушка → Поляна → Густой)
+    // 9в. Грунтовые тропы (п.9): ко ВСЕЙ локациям — пунктиром
     {
         ctx.strokeStyle = '#8a744e';
         ctx.lineWidth = 1.6;
         ctx.setLineDash([6, 5]);
-        // деревня → погост
-        ctx.beginPath();
-        ctx.moveTo(T.village.x - T.village.w / 2, T.village.y + 6);
-        ctx.quadraticCurveTo(200, 292, T.pogost.x + 26, T.pogost.y + 4);
-        ctx.stroke();
-        // деревня (восточные ворота) → Опушка → Поляна → Густой лес
-        ctx.beginPath();
-        ctx.moveTo(T.village.x + T.village.w / 2, T.village.y - 6);
-        ctx.lineTo(T.forestEdge.x - T.forestEdge.rx + 6, T.forestEdge.y + 4);
-        ctx.stroke();
+        TERRAIN_PATHS.filter(p => p.kind === 'trail' && !p.chain).forEach(p => {
+            ctx.beginPath();
+            ctx.moveTo(p.x1, p.y1);
+            ctx.lineTo(p.x2, p.y2);
+            ctx.stroke();
+        });
+        // цепочка леса продолжается тропами между локациями
         ctx.beginPath();
         ctx.moveTo(T.forestEdge.x + T.forestEdge.rx - 8, T.forestEdge.y + 6);
-        ctx.quadraticCurveTo(545, 246, T.forestGlade.x - T.forestGlade.rx + 6, T.forestGlade.y + 2);
+        ctx.quadraticCurveTo(505, 316, T.forestGlade.x - T.forestGlade.rx + 6, T.forestGlade.y + 2);
         ctx.stroke();
         ctx.beginPath();
         ctx.moveTo(T.forestGlade.x + 14, T.forestGlade.y + T.forestGlade.ry - 2);
-        ctx.quadraticCurveTo(600, 300, T.forestDeep.x + 24, T.forestDeep.y - T.forestDeep.ry * 0.4);
+        ctx.quadraticCurveTo(580, 372, T.forestDeep.x + 20, T.forestDeep.y - T.forestDeep.ry * 0.4);
         ctx.stroke();
         ctx.setLineDash([]);
     }
@@ -407,7 +553,7 @@ export function drawTerrainMap(ctx) {
         ctx.fillRect(b.x + b.w / 2, r.y - 8, 3, r.h + 16);
     }
 
-    // ===== 10) ДЕРЕВНЯ В ЦЕНТРЕ (частокол, избы, церковь) =====
+    // ===== 10) ДЕРЕВНЯ В ЦЕНТРЕ (частокол, избы, церковь, колодец, дорожки) =====
     {
         const v = T.village;
         const vx = v.x - v.w / 2, vy = v.y - v.h / 2;
@@ -428,10 +574,24 @@ export function drawTerrainMap(ctx) {
             ctx.fillRect(vx - 2, y - 1.2, 5, 2.4);        // западный ряд
             ctx.fillRect(vx + v.w - 3, y - 1.2, 5, 2.4);  // восточный ряд
         }
-        // избы (малые дома с крышами)
+        // внутренние дорожки от ворот к церкви (деталь п.8)
+        ctx.strokeStyle = 'rgba(122, 98, 62, 0.7)';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(v.x, vy + 2);
+        ctx.lineTo(v.x, v.y - 10);
+        ctx.moveTo(v.x, v.y + 10);
+        ctx.lineTo(v.x, vy + v.h - 2);
+        ctx.moveTo(vx + 3, v.y);
+        ctx.lineTo(v.x - 9, v.y);
+        ctx.moveTo(vx + v.w - 3, v.y);
+        ctx.lineTo(v.x + 9, v.y);
+        ctx.stroke();
+        // избы (шесть домов двумя рядами — деталь п.8)
         const houses = [
-            [vx + 14, vy + 10], [vx + v.w - 26, vy + 10],
-            [vx + 12, vy + v.h - 20], [vx + v.w - 28, vy + v.h - 20],
+            [vx + 12, vy + 8], [vx + v.w - 24, vy + 8],
+            [vx + 10, vy + v.h - 22], [vx + v.w - 26, vy + v.h - 22],
+            [vx + 13, v.y - 5], [vx + v.w - 25, v.y - 5],
         ];
         houses.forEach(([hx, hy]) => {
             ctx.fillStyle = '#8a6a42';
@@ -444,6 +604,17 @@ export function drawTerrainMap(ctx) {
             ctx.closePath();
             ctx.fill();
         });
+        // колодец (деталь п.8): кружок с воротилом
+        ctx.fillStyle = '#9a9a8e';
+        ctx.beginPath();
+        ctx.arc(vx + v.w - 12, v.y + 16, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#5a3f24';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(vx + v.w - 15, v.y + 14);
+        ctx.lineTo(vx + v.w - 9, v.y + 14);
+        ctx.stroke();
         // церковь в центре: сруб с башенкой и крестом
         ctx.fillStyle = '#d8d0c0';
         ctx.fillRect(v.x - 6, v.y - 8, 12, 14);
@@ -464,10 +635,31 @@ export function drawTerrainMap(ctx) {
         ctx.stroke();
     }
 
-    // ===== 11) МЕЛЬНИЦА (ветряная: башня + крылья) =====
+    // ===== 11) МЕЛЬНИЦА (ветряная: башня + крылья) и САРАЙ (деталь п.8) =====
     {
         const m = T.mill;
         const mx = m.x, my = m.pathY;
+        // сарай мельника (деталь п.8) — левее мельницы
+        ctx.fillStyle = '#8a6a42';
+        ctx.fillRect(mx - 30, my - 4, 14, 9);
+        ctx.fillStyle = '#5a3f24';
+        ctx.beginPath();
+        ctx.moveTo(mx - 32, my - 4);
+        ctx.lineTo(mx - 23, my - 10);
+        ctx.lineTo(mx - 14, my - 4);
+        ctx.closePath();
+        ctx.fill();
+        // мешки зерна у сарая (деталь п.8)
+        ctx.fillStyle = '#d9b95c';
+        [[mx - 27, my + 8], [mx - 22, my + 9]].forEach(([bx, by]) => {
+            ctx.beginPath();
+            ctx.arc(bx, by, 2.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#a8862e';
+            ctx.lineWidth = 0.7;
+            ctx.stroke();
+        });
+        // башня мельницы
         ctx.fillStyle = '#8a6a42';
         ctx.beginPath();
         ctx.moveTo(mx - 7, my + 2);
@@ -497,14 +689,14 @@ export function drawTerrainMap(ctx) {
         ctx.stroke();
     }
 
-    // ===== 12) ПАСЕКА (колодные ульи) =====
+    // ===== 12) ПАСЕКА (колодные ульи, пчёлы — деталь п.8) =====
     {
         const a = T.apiary;
         ctx.fillStyle = '#b8cf8a';
         ctx.beginPath();
         ctx.ellipse(a.x, a.y, a.rx, a.ry, 0, 0, Math.PI * 2);
         ctx.fill();
-        [[a.x - 16, a.y - 2], [a.x + 2, a.y - 8], [a.x + 14, a.y + 4]].forEach(([ux, uy]) => {
+        [[a.x - 16, a.y - 2], [a.x + 2, a.y - 8], [a.x + 14, a.y + 4], [a.x - 6, a.y + 8]].forEach(([ux, uy]) => {
             ctx.fillStyle = '#7a5a34';
             ctx.beginPath();
             ctx.ellipse(ux, uy, 6, 7.5, 0, 0, Math.PI * 2);
@@ -518,15 +710,29 @@ export function drawTerrainMap(ctx) {
             ctx.lineTo(ux + 5, uy - 1);
             ctx.stroke();
         });
+        // пчёлы-точки над ульями (деталь п.8)
+        ctx.fillStyle = '#3a2a1a';
+        for (let i = 0; i < 6; i++) {
+            const bx = a.x - 20 + rnd() * 40, by = a.y - 14 - rnd() * 6;
+            ctx.fillRect(bx, by, 1.3, 1.3);
+        }
     }
 
-    // ===== 13) ПОГОСТ (часовня и кресты, слева от деревни) =====
+    // ===== 13) ПОГОСТ (часовня, кресты, ПЛЕТЕНЬ — деталь п.8) =====
     {
         const p = T.pogost;
         ctx.fillStyle = '#9db877';
         ctx.beginPath();
-        ctx.ellipse(p.x, p.y, 52, 32, 0, 0, Math.PI * 2);
+        ctx.ellipse(p.x, p.y, 44, 26, 0, 0, Math.PI * 2);
         ctx.fill();
+        // плетень по кромке (деталь п.8)
+        ctx.strokeStyle = '#7a5a34';
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([3.4, 2.6]);
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, 44, 26, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
         // часовня
         ctx.fillStyle = '#8a6a42';
         ctx.fillRect(p.x - 6, p.y - 12, 12, 14);
@@ -548,7 +754,7 @@ export function drawTerrainMap(ctx) {
         // ряды крестов
         ctx.strokeStyle = '#5a3f24';
         ctx.lineWidth = 1.4;
-        [[-34, 2], [-22, 8], [20, 4], [32, 10], [-28, 16], [26, 20]].forEach(([dx, dy]) => {
+        [[-30, 0], [-20, 7], [18, 3], [28, 9], [-24, 14], [22, 17], [-8, 16]].forEach(([dx, dy]) => {
             const cx0 = p.x + dx, cy0 = p.y + dy;
             ctx.beginPath();
             ctx.moveTo(cx0, cy0);

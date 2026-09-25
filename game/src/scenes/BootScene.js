@@ -231,7 +231,10 @@ export class BootScene extends Phaser.Scene {
         const fbHouseKeys = ['fb_church', 'fb_inn', 'fb_smithy', 'fb_elder', 'fb_manor',
             'fb_thatch_big', 'fb_thatch_small', 'fb_log_flowers', 'fb_log_thatch',
             'fb_log_big', 'fb_tudor_fl', 'fb_tudor_sm',
-            'village_gate_r65', 'village_gate_r66'];
+            // РАУНД 66.25 (приказ 3): воротня НОВОГО поколения — два слоя
+            // «створом поперёк дороги» (северная башня + южная с фонарём);
+            // профильные r64/r65/r66 удалены из репозитория как сломанные.
+            'village_gate_r67_north', 'village_gate_r67_south'];
         fbHouseKeys.forEach(k => this.load.image(k, `assets/sprites/${k}.png`));
         // Раунд 65 (п.8) → 66 (п.8): тайл ЧАСТОКОЛА — ПЕРЕДЕЛАН: один ряд
         // круглых брёвен с ЯВНЫМ остриём (tools/make_assets_r66.py)
@@ -435,9 +438,10 @@ export class BootScene extends Phaser.Scene {
         // ----- Процедурные текстуры хозяйственных построек — раунд 17 -----
         this.createVillageYardTextures();
 
-        // ----- РАУНД 65: воротня village_gate_r65 — ГОТОВЫЙ PNG из
-        // tools/make_houses_r65.py (профильный створ, проёмом к выходу).
-        // Процедурный createGateTexture (r57–r63) удалён вместе с методом.
+        // ----- РАУНД 66.25: воротня village_gate_r67 (north+south) — «створ
+        // поперёк дороги», генератор tools/make_gate_r67.py. Профильные
+        // village_gate_r64/r65/r66 удалены из репозитория и из загрузки;
+        // процедурный createGateTexture (r57–r63) удалён ещё в r65.
 
         // ----- АУДИО -----
         // SFX

@@ -52,7 +52,7 @@ ok(existsSync(join(root, 'assets/sprites/fb_church.png')), 'церковь fb_ch
 ok(!existsSync(join(root, 'assets/sprites/vh_chapel.png')), 'устаревший vh_chapel.png удалён (66.19)');
 const boot = readFileSync(join(root, 'src/scenes/BootScene.js'), 'utf8');
 // Раунды 65–66: hp_* заменены fb_* (пак Celianna), воротня — r66
-ok(boot.includes("'fb_church'") && boot.includes("'village_gate_r66'"), 'BootScene загружает дома fb_* и воротню актуального поколения');
+ok(boot.includes("'fb_church'") && boot.includes("'village_gate_r67_north'"), 'BootScene загружает дома fb_* и воротню актуального поколения (r67, 66.25)');
 ok(!boot.includes("'vh_manor'") && !boot.includes("'vh_stall'"), 'старые вырезы vh_* из загрузки убраны');
 ok(!village.includes("'vh_manor'") && !village.includes("'vh_loghouse'"), 'VillageScene не ссылается на старые вырезы');
 ok(village.includes("'fb_inn'"), 'постоялый двор — двухэтажный fb_inn (единственный, r65+)');
@@ -66,12 +66,20 @@ const valid = validateMap(grid);
 ok(valid.problems.length === 0, `BFS: все двери и ворота достижимы (${valid.problems.length || '0'} проблем)`);
 ok(grid[VILLAGE_GATE.row][MAP_W - 1] === 'G', 'ворота на восточной границе на месте');
 // Ни один спрайт дома не пересекает ОПАКУЮ зону воротни.
-// Раунды 65–66: воротня-профиль 104×118, якорь (низ) на южной кромке ряда
-// ворот; её верхняя треть прозрачна (там были вымпелы — сняты в r66), поэтому
-// проверяем нижнюю непрозрачную часть (столбы + проезд): y от gb-90 до gb.
-const GW = 104, GH = 90;
-const gx = MAP_W * ts - 44, gy = (VILLAGE_GATE.row + 1) * ts;
-const gl = gx - GW / 2, gr = gx + GW / 2, gt = gy - GH, gb = gy;
+// РАУНД 66.25: воротня нового поколения «створ поперёк дороги» — два слоя:
+//   северная башня village_gate_r67_north 48×96: брёвна x 1214..1256,
+//     y (row*ts−96)..(row*ts); глубина 4.45 (дальняя, за игроком);
+//   южная группа village_gate_r67_south 96×148: мир x (gx−48)..(gx+48),
+//     y (row*ts−24)..(row*ts+124); непрозрачные зоны — поперечина с фонарём
+//     (верхние 72px) и южная башня (нижние 76px); глубина 7.45 (ближняя).
+// Линия ворот смещена к востоку (башни x 1214..1256), чтобы дом мясника
+// (23,6) не касался башен. Проверяем зоны брёвен обеих башен; створки и
+// фонарь не считаем — они лежат НА дороге, где домов нет.
+const gx = MAP_W * ts - ts / 2;                     // 1224 — центр колонки ворот
+const gateZones = [
+    { l: gx - 10, r: gx + 32, t: VILLAGE_GATE.row * ts - 96, b: VILLAGE_GATE.row * ts },        // северная башня
+    { l: gx - 10, r: gx + 32, t: VILLAGE_GATE.row * ts + ts, b: VILLAGE_GATE.row * ts + 124 },  // южная башня
+];
 let overlap = null;
 BUILDINGS.forEach(b => {
     const tw = b.w * ts + 16, th = b.h * ts;
@@ -79,9 +87,11 @@ BUILDINGS.forEach(b => {
     const fit = Math.min((b.w * ts + 8) / tw, (b.h * ts + 6) / th);
     const dw = tw * fit, dh = th * fit;
     const l = cx - dw / 2, r = cx + dw / 2, t = cy - dh / 2, bo = cy + dh / 2;
-    if (!(r < gl || l > gr || bo < gt || t > gb)) overlap = b.interiorId;
+    for (const z of gateZones) {
+        if (!(r < z.l || l > z.r || bo < z.t || t > z.b)) overlap = b.interiorId;
+    }
 });
-ok(!overlap, `ни один спрайт не перекрыт воротней${overlap ? ' (НАРУШЕНИЕ: ' + overlap + ')' : ''}`);
+ok(!overlap, `ни один спрайт не пересекает башни воротни 66.25${overlap ? ' (НАРУШЕНИЕ: ' + overlap + ')' : ''}`);
 const st = BUILDINGS.find(b => b.interiorId === 'shop_tools');
 // Раунд 66: подход к воротам — ряд 5 (главная улица), дома не должны его занимать
 const passageFree = BUILDINGS.every(b => b.row + b.h <= 5 || b.row >= 6);

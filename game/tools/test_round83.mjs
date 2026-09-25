@@ -85,7 +85,7 @@ console.log('\n— п.2 (66.24): ТРАКТ РАЗДЕЛЁН — ЮЖНЫЙ (roa
 console.log('\n— п.3 (66.24): КАРТА МЕСТНОСТИ — ПОЛНОЦЕННАЯ, С ЦЕНТРОМ В ДЕРЕВНЕ —');
 {
     const tm = await import(join(GAME, '../src/systems/TerrainMap.js'));
-    const { TERRAIN, TERRAIN_LABELS, TERRAIN_W, TERRAIN_H, TERRAIN_FRAME, drawTerrainMap } = tm;
+    const { TERRAIN, TERRAIN_LABELS, TERRAIN_PATHS, TERRAIN_W, TERRAIN_H, TERRAIN_FRAME, drawTerrainMap } = tm;
 
     ok(TERRAIN_W === 680 && TERRAIN_H === 540, `полотно карты ${TERRAIN_W}×${TERRAIN_H}`);
     ok(TERRAIN.village.x === 300 && TERRAIN.village.y === 258, 'деревня — В ЦЕНТРЕ карты');
@@ -99,18 +99,18 @@ console.log('\n— п.3 (66.24): КАРТА МЕСТНОСТИ — ПОЛНОЦ�
         && TERRAIN.river.y > TERRAIN.village.y + TERRAIN.village.h / 2,
         'Южный Тракт идёт от деревни до реки (мост южнее деревни)');
 
-    // 2. Справа от деревни и вдоль Южного Тракта: выпас, пасека, поле
-    const vRight = TERRAIN.village.x + TERRAIN.village.w / 2;
+    // 2. 66.25 (п.5): СЛЕВА от деревни и вдоль Южного Тракта: выпас, пасека, поле
+    const vLeft = TERRAIN.village.x - TERRAIN.village.w / 2;
     const vBottom = TERRAIN.village.y + TERRAIN.village.h / 2;
     for (const [name, key] of [['Выпас', 'pasture'], ['Пасека', 'apiary'], ['Поле', 'field']]) {
         const p = TERRAIN[key];
-        ok(p.x - p.rx > vRight - 8, `${name}: справа от деревни (x=${Math.round(p.x)})`);
+        ok(p.x + p.rx < vLeft + 8, `${name}: СЛЕВА от деревни (x=${Math.round(p.x)}, 66.25 п.5)`);
         ok(p.y > vBottom && p.y + p.ry <= TERRAIN.river.y, `${name}: вдоль Южного Тракта, до реки`);
     }
     ok(TERRAIN.pasture.y < TERRAIN.apiary.y && TERRAIN.apiary.y < TERRAIN.field.y,
         'порядок вдоль тракта: выпас → пасека → поле');
 
-    // 3. Леса цепочкой на всём свободном пространстве справа
+    // 3. Леса цепочкой справа от Южного Тракта и на всём свободном пространстве
     const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     const dEdge = dist(TERRAIN.village, TERRAIN.forestEdge);
     const dGlade = dist(TERRAIN.village, TERRAIN.forestGlade);
@@ -119,21 +119,20 @@ console.log('\n— п.3 (66.24): КАРТА МЕСТНОСТИ — ПОЛНОЦ�
         `лес цепочкой от деревни: опушка(${Math.round(dEdge)}) → поляна(${Math.round(dGlade)}) → густой лес(${Math.round(dDeep)})`);
     ok(TERRAIN.forestDeep.y + TERRAIN.forestDeep.ry >= TERRAIN.river.y,
         'густой лес простирается до самой реки (всё свободное пространство)');
-    ok(TERRAIN.forestEdge.x > vRight && TERRAIN.forestGlade.x > vRight && TERRAIN.forestDeep.x > vRight,
-        'леса — справа от деревни');
+    ok(TERRAIN.forestEdge.x > TERRAIN.tractX && TERRAIN.forestGlade.x > TERRAIN.tractX && TERRAIN.forestDeep.x > TERRAIN.tractX,
+        'леса — справа от Южного Тракта');
 
-    // 4. Справа от Северного Тракта — ответвление дороги к мельнице
+    // 4. 66.25 (п.7): справа от Северного Тракта — ветка к мельнице И погосту
     const vTop = TERRAIN.village.y - TERRAIN.village.h / 2;
     ok(TERRAIN.mill.x > TERRAIN.tractX && TERRAIN.mill.pathY < vTop,
         'мельница: ответвление уходит вправо от СЕВЕРНОГО тракта');
+    ok(TERRAIN.pogost.x > TERRAIN.tractX && TERRAIN.pogost.y < vTop + 8,
+        'погост — справа от Северного Тракта, у ветки (66.25 п.7)');
 
     // 5. Справа от Северного Тракта — большая локация Озеро
     ok(TERRAIN.lake.x > TERRAIN.tractX && TERRAIN.lake.y + TERRAIN.lake.ry < vTop,
         'озеро: большая локация справа от Северного Тракта');
     ok(TERRAIN.lake.rx >= 100, `озеро крупное (rx=${TERRAIN.lake.rx})`);
-
-    // Погост — существующая локация, на карте слева от деревни
-    ok(TERRAIN.pogost.x < TERRAIN.village.x - TERRAIN.village.w / 2, 'погост — слева от деревни');
 
     // Все объекты в границах полотна
     const inBounds = (x, y) => x > TERRAIN_FRAME && x < TERRAIN_W - TERRAIN_FRAME && y > TERRAIN_FRAME && y < TERRAIN_H - TERRAIN_FRAME;
@@ -147,6 +146,20 @@ console.log('\n— п.3 (66.24): КАРТА МЕСТНОСТИ — ПОЛНОЦ�
     // Озеро не наезжает на мельницу/ответвление
     const lakeTop = TERRAIN.lake.y - TERRAIN.lake.ry;
     ok(lakeTop >= TERRAIN_FRAME, 'озеро не вылезает за рамку сверху');
+
+    // 66.25 (п.9): КО ВСЕМ локациям ведут дорожки от деревни или трактов
+    const covered = new Set(TERRAIN_PATHS.map(p => p.to));
+    const needPaths = ['pasture', 'apiary', 'field', 'forestEdge', 'forestGlade',
+        'forestDeep', 'mill', 'pogost', 'lake'];
+    const noPath = needPaths.filter(k => !covered.has(k));
+    ok(noPath.length === 0, 'дорожки ведут ко всем локациям (TERRAIN_PATHS)' + (noPath.length ? ' — нет: ' + noPath.join(', ') : ''));
+    // дорожки стартуют у тракта, у ветки к мельнице или являются продолжением
+    // лесной цепочки (Опушка → Поляна → Густой — каждая от предыдущей)
+    const fromTract = TERRAIN_PATHS.every(p =>
+        p.chain ||
+        Math.abs(p.x1 - TERRAIN.tractX) <= 7 ||
+        (Math.abs(p.y1 - TERRAIN.mill.pathY) <= 5 && p.x1 > TERRAIN.tractX && p.x1 < TERRAIN.mill.x));
+    ok(fromTract, 'все дорожки начинаются у тракта, ветки или цепочки леса');
 
     // Подписи: 14 штук, в границах, ключи уникальны
     ok(TERRAIN_LABELS.length === 14, `подписей на карте: ${TERRAIN_LABELS.length}`);
@@ -215,7 +228,7 @@ console.log('\n— п.1 (66.24): КАДРЫ СКРИНШОТОВ ЛЕНДИНГ�
 console.log('\n— sw.js: версия кэша сайта поднята —');
 {
     const sw = read('sw.js');
-    ok(/chronicles-ruthenia-v74/.test(sw), 'SW: chronicles-ruthenia-v74');
+    ok(/chronicles-ruthenia-v75/.test(sw), 'SW: chronicles-ruthenia-v75');
 }
 
 console.log('\nИТОГ: ' + pass + ' зелёных, ' + fail + ' красных');

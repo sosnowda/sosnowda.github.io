@@ -84,7 +84,7 @@ try {
 } catch (e) { ok(false, 'фон церкви int_bg_church.jpg отсутствует!'); }
 
 // ---------- 4. КРИТИЧНЫЙ ФИКС: sw.js снова парсится ----------
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v24'"), 'SW: кеш ассетов v23 (иконы церкви)');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v25'"), 'SW: кеш ассетов v25 (PNG воротни r67, 66.25)');
 ok(sw.includes('*/\n\n// ----- Журнал версий кэша'),
     'SW: заголовочный блочный комментарий закрыт ДО changelog');
 const vLines = sw.split('\n').filter(l => /^v\d+ /.test(l.trim()));
