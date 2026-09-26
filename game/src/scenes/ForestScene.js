@@ -21,6 +21,8 @@ import { dayKeyOf } from '../data/daily.js'; // раунд 66.10: daily вмес
 // Раунд 66.17 (приказы 8,10,11): готовка на костре, стрельба по дичи, мясо с туши
 import { MEAL_DURATION_MIN, canEat, registerMeal, showMealBlockedPopup } from '../systems/meal.js';
 import { addItem, removeItem, countOf, shotChance, getLootDef } from '../systems/loot.js';
+// Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
+import { getQuiver, spendArrow } from '../systems/ammo.js';
 import { createDialog } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
@@ -493,9 +495,20 @@ export class ForestScene extends Phaser.Scene {
                 [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
             return;
         }
+        // Раунд 66.28 (пп.7,8): стрельба требует стрелы В КОЛЧАНЕ; пустой —
+        // поп-ап предупреждение, время не тратится (выстрела не было)
+        if (getQuiver(player) <= 0) {
+            createDialog(this, '🪶 ' + t('Колчан пуст!'),
+                t('Стрел в колчане нет — стрелять нечем. Пачку стрел (10 шт.) продают кузнец Данила и ремесленник Аверьян. Стрелы из узла наложи в колчан на экране персонажа (Персонаж → Инвентарь).'),
+                [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+            return;
+        }
         this.busyDialog = true;
         const s = animal.sprite;
         tickTime(this.registry, 5);
+        // Раунд 66.28 (п.7): стрела уходит из колчана при КАЖДОМ выстреле (попал/промах)
+        spendArrow(player);
+        this.registry.set('player', player);
         if (this.audioManager) this.audioManager.playShoot();
 
         // Стрела — тонкая палочка, летящая от героя к зверю (160 мс)

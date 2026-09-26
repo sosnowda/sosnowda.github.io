@@ -136,13 +136,15 @@ export function campfirePos() {
 //    лук должен быть В УЗЛЕ И ЭКИПИРОВАН (player.weaponId === 'bow').
 //  • п.11: при обдире туши случайно выпадает мясо — объём по размеру
 //    зверя (meat: [мин, макс]); с убитого волка тоже (CombatScene).
+// РАУНД 66.28 (п.13): ЛЕСТНИЦА РАЗМЕРА — «ЧЕМ КРУПНЕЕ ДИЧЬ, ТЕМ БОЛЬШЕ
+// МЯСА»: заяц 1–2 < глухарь 2–3 < косуля 4–6 < волк 5–9 (CombatScene).
 // ============================================================
 export const GAME_ANIMALS = {
     hare: {
         id: 'hare', name: 'Заяц', emoji: '🐇',
         tex: 'game_hare', corpseTex: 'game_hare_dead',
         base: 45,            // базовый шанс попадания (%)
-        meat: [1, 2],        // мясо с туши (шт., случайно)
+        meat: [1, 2],        // мелкая дичь — мяса мало (п.13, лестница размера)
         fleeRadius: 120,     // ближе — ускакал
         speed: 190,
         scale: 1.6,
@@ -151,7 +153,7 @@ export const GAME_ANIMALS = {
         id: 'bird', name: 'Глухарь', emoji: '🦅',
         tex: 'game_bird', corpseTex: 'game_bird_dead',
         base: 30,            // летящую крупную птицу бить труднее
-        meat: [1, 2],
+        meat: [2, 3],        // крупная птица: больше зайца (п.13)
         fleeRadius: 95,
         speed: 250,
         scale: 1.5,
@@ -161,7 +163,7 @@ export const GAME_ANIMALS = {
         id: 'roe', name: 'Косуля', emoji: '🦌',
         tex: 'game_roe', corpseTex: 'game_roe_dead',
         base: 55,
-        meat: [3, 5],        // крупная добыча — мяса много
+        meat: [4, 6],        // крупная добыча — мяса много (п.13)
         fleeRadius: 140,
         speed: 215,
         scale: 2.0,

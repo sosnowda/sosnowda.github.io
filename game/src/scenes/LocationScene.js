@@ -8,6 +8,8 @@ import {
     isChaseActive, isThiefAt, presentThiefEncounter,
     getFootprints, examineFootprint, getChase, askNPC, worldMinutesOf,
     traceFreshness, hintFreshness,
+    // Раунд 66.28 (п.14): наводка стражника на вора
+    guardThiefHintLine,
 } from '../data/thief.js';
 import { onLocationVisited, getActiveQuests } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
@@ -20,6 +22,8 @@ import { getTime, getDayNightOverlay, tickTime, getSeason } from '../systems/Tim
 // Раунд 66.17 (п.7): рыба больше НЕ съедается на месте — улов идёт в узел;
 // сырую рыбу нельзя есть (только готовить или продавать)
 import { addItem, countOf, fishingCatchCount, shotChance, getLootDef, removeItem } from '../systems/loot.js';
+// Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
+import { getQuiver, spendArrow } from '../systems/ammo.js';
 // Раунд 66.17 (п.9): дичь на Лесной поляне — зайцы и глухари
 import { GAME_ANIMALS } from '../data/forest.js';
 // Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
@@ -869,13 +873,24 @@ export class LocationScene extends Phaser.Scene {
                 [{ text: t('Отойти тихо'), callback: close }], { singleton: false });
             return;
         }
+        // Раунд 66.28 (пп.7,8): пустой колчан — поп-ап, время не тратится
+        if (getQuiver(player) <= 0) {
+            ActionLog.add(this.registry, tf(t('Заметил {0} на поляне, но колчан пуст — стрелять нечем.'), t(cfg.name)));
+            createDialog(this, '🪶 ' + t('Колчан пуст!'),
+                t('Стрел в колчане нет — стрелять нечем. Пачку стрел (10 шт.) продают кузнец Данила и ремесленник Аверьян. Стрелы из узла наложи в колчан на экране персонажа (Персонаж → Инвентарь).'),
+                [{ text: t('Отойти тихо'), callback: close }], { singleton: false });
+            return;
+        }
 
         createDialog(this, '🏹 ' + t(cfg.name),
-            tf(t('{0} близко, но настороже. Тянуть тетиву? (шанс зависит от твоего навыка стрельбы)\nВыстрел — 5 минут времени.'), t(cfg.name)),
+            tf(t('{0} близко, но настороже. Тянуть тетиву? (шанс зависит от твоего навыка стрельбы)\nВыстрел — 5 минут времени, стрела — из колчана.'), t(cfg.name)),
             [
                 { text: tf(t('Стрелять из лука ({0})'), t(cfg.name)), callback: () => {
                     close();
                     tickTime(this.registry, 5);
+                    // Раунд 66.28 (п.7): стрела уходит из колчана при каждом выстреле
+                    spendArrow(player);
+                    this.registry.set('player', player);
                     if (this.audioManager) this.audioManager.playShoot();
                     const chance = shotChance(cfg.base, (player.skills && player.skills.bow) || 15);
                     const hit = Math.random() * 100 < chance;
@@ -974,11 +989,16 @@ export class LocationScene extends Phaser.Scene {
         }
 
         // Раунд 30 (пп.7,9): расспрос о воре доступен и на локациях —
-        // но каждый НПЦ выдаёт подсказку ЕДИНожды (строчка не повторяется)
+        // но каждый НПЦ выдаёт подсказку ЕДИНожды (строчка не повторяется).
+        // Раунд 66.28 (пп.14,15): СТРАЖНИК — особая ветка: он не «случайный
+        // свидетель» и не нападает на вора; если он ДЕРЖАЛ ОБХОД на той же
+        // локации, где сидел вор, у него есть наводка «куда тот побежал» —
+        // ею он делится при диалоге (наводка обновляется при новых встречах).
         const q = this.registry.get('quest') || {};
         const chaseActive = isChaseActive(this.registry);
+        const isGuard = npcId === 'guard';
         const alreadyAsked = (q.thiefAskedFrom || []).includes(npcId);
-        const canAsk = chaseActive && !alreadyAsked;
+        const canAsk = chaseActive && !alreadyAsked && !isGuard;
 
         const closeCb = () => { this.busyDialog = false; };
         // Раунд 58 (п.1): разговор с НПЦ — 10 минут (было 1 час, раунд 31).
@@ -989,8 +1009,23 @@ export class LocationScene extends Phaser.Scene {
             talkMinutes: TALK_MINUTES,
             talkKey: npcId + '@' + Math.floor(Date.now() / 90000),
         };
-        const choices = canAsk
-            ? [
+        const choices = [];
+        // Раунд 66.28 (п.14): у стражника своя опция — наводка на вора
+        if (isGuard && chaseActive) {
+            choices.push({
+                text: t('🧭 Спросить про вора'),
+                callback: (parentDlg) => {
+                    const line = guardThiefHintLine(this.registry, displayName)
+                        || `${displayName}: «${t('Не видел я тут никакого вора. Но глаз у меня острый — как увижу, так и скажу.')}»`;
+                    createDialog(this, displayName, line, [
+                        { text: t('Продолжить'), callback: closeCb },
+                    ], { singleton: false, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+                    if (parentDlg && parentDlg.closeDialog) parentDlg.closeDialog();
+                },
+            });
+        }
+        if (canAsk) {
+            choices.push(
                 {
                     text: t('Расспросить о воре'),
                     callback: (parentDlg) => {
@@ -1004,9 +1039,9 @@ export class LocationScene extends Phaser.Scene {
                         if (parentDlg && parentDlg.closeDialog) parentDlg.closeDialog();
                     },
                 },
-                { text: t('Продолжить'), callback: closeCb },
-            ]
-            : [{ text: t('Продолжить'), callback: closeCb }];
+            );
+        }
+        choices.push({ text: t('Продолжить'), callback: closeCb });
 
         const line = pickOutdoorLine(this.registry, npcId, t('Занят(а) своим делом. Заходи в другой раз.'));
         createDialog(this, displayName, line, choices, talkOpts);

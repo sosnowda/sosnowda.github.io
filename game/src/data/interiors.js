@@ -272,6 +272,9 @@ export const INTERIORS = {
                 { id: 'candle_w', name: 'Свеча восковая', price: 1, kind: 'heal', heal: 0, mpHeal: 1, note: '+1 MP' },
                 { id: 'amulet', name: 'Оберег от сглазу', price: 5, kind: 'heal', heal: 2, mpHeal: 2, note: '+2 HP, +2 MP' },
                 { id: 'rod', name: 'Удочка', price: 12, kind: 'gear', note: 'для рыбалки' },
+                // Раунд 66.28 (пп.9,12): стрелы в продажу — ТОЛЬКО пачками по 10
+                // (в узел слотами по ≤10; в колчан наложить на экране персонажа)
+                { id: 'arrows_pack', name: 'Пачка стрел (10 шт.)', price: 5, kind: 'ammo', note: 'стрелы в узел' },
             ],
         },
     },

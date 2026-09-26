@@ -194,7 +194,9 @@ console.log('— п.9: дичь на поляне и в лесу —');
     ok(GAME_ANIMALS.hare && GAME_ANIMALS.bird && GAME_ANIMALS.roe, 'три вида дичи: заяц, глухарь, косуля');
     ok(GAME_ANIMALS.roe.rare === true && GAME_ANIMALS.roe.maxRow === 7, 'косуля: редко (25%) и только в чаще (ряды 0..7)');
     ok(GAME_ANIMALS.bird.flying === true, 'глухарь — крупная летающая птица (спугнул — упорхнула)');
-    ok(GAME_ANIMALS.hare.meat[1] === 2 && GAME_ANIMALS.roe.meat[1] === 5, 'мясо по размеру: заяц ≤2, косуля до 5');
+    ok(GAME_ANIMALS.hare.meat[1] === 2 && GAME_ANIMALS.roe.meat[1] === 6,
+        'мясо по размеру: заяц до 2, косуля до 6 (66.28: глухарь 2–3, косуля 4–6)',
+        );
 
     // Спавн-план: только проходимые тайлы, косуля — только север
     for (let i = 0; i < 30; i++) {
@@ -242,8 +244,8 @@ console.log('— п.11: мясо с туши дичи/волка —');
     ok(forest.includes('Phaser.Math.Between(minM, maxM)'), 'количество мяса случайно (meat: [мин,макс])');
     const combat = read('game/src/scenes/CombatScene.js');
     ok(combat.includes("this.enemyKeys.includes('wolf')"), 'волк: мясо начисляется после победы');
-    ok(combat.includes("addItem(this.player, 'meat_raw', meatN)"), 'волк: 2–4 сырое мясо в узел');
-    ok(combat.includes('Phaser.Math.Between(2, 4)'), 'волк — зверь крупнее зайца: 2–4 шт.');
+    ok(combat.includes("addItem(this.player, 'meat_raw', meatN)"), 'волк: сырое мясо в узел');
+    ok(combat.includes('Phaser.Math.Between(5, 9)'), 'волк — самый крупный зверь: 5–9 шт. (66.28 п.13: заяц 1–2 < глухарь 2–3 < косуля 4–6 < волк 5–9)');
 }
 
 // ============================================================

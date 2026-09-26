@@ -16,6 +16,9 @@ import {
 // Раунд 66.17 (п.4): кнопка «Съесть» для съестных припасов узла —
 // единые правила еды (1 час, кулдаун 4 часа, «герой сытый»)
 import { getLootDef, tryEatFood } from '../systems/loot.js';
+// Раунд 66.28 (пп.5–12): колчан — отдельный слот меню персонажа, вместимость 10,
+// наложение/высыпание стрел между узлом и колчаном
+import { getQuiver, countInventoryArrows, loadQuiver, unloadQuiver, quiverWord, QUIVER_CAP } from '../systems/ammo.js';
 import { createDialog } from '../utils/ui.js';
 
 export class CharacterScene extends Phaser.Scene {
@@ -179,11 +182,12 @@ export class CharacterScene extends Phaser.Scene {
         }).setOrigin(0, 0.5);
         const weapon = WEAPONS[p.weaponId] || { name: 'Кулаки' };
         const armor = ARMORS[p.armorId] || { name: 'Без доспеха' };
+        // Раунд 66.28 (п.6): колчан — в строке снаряжения характеристик
         this.add.text(colX, top + 224, `${t('⚔ Оружие:')} ${t(weapon.name)} (${t('урон')} ${weapon.dice.min}-${weapon.dice.max}+${weapon.bonus || 0})`, {
             fontSize: '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
-        this.add.text(colX, top + 246, `${t('🛡 Доспех:')} ${t(armor.name)} (${t('защита')} ${armor.def})`, {
+        this.add.text(colX, top + 246, `${t('🛡 Доспех:')} ${t(armor.name)} (${t('защита')} ${armor.def})   ·   ${t('🪶 Колчан')}: ${getQuiver(p)}/${QUIVER_CAP}`, {
             fontSize: '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
@@ -210,7 +214,8 @@ export class CharacterScene extends Phaser.Scene {
 
         const currentWeapon = WEAPONS[p.weaponId] || { name: 'Кулаки' };
         const currentArmor = ARMORS[p.armorId] || { name: 'Без доспеха' };
-        this.add.text(width / 2, top + 30, `${t('⚔ Оружие:')} ${t(currentWeapon.name)}   ${t('🛡 Доспех:')} ${t(currentArmor.name)}`, {
+        const quiverN = getQuiver(p);
+        this.add.text(width / 2, top + 30, `${t('⚔ Оружие:')} ${t(currentWeapon.name)}   ${t('🛡 Доспех:')} ${t(currentArmor.name)}   ${t('🪶 Колчан')}: ${quiverN}/${QUIVER_CAP} (${quiverWord(quiverN)})`, {
             fontSize: '15px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5);
@@ -296,6 +301,17 @@ export class CharacterScene extends Phaser.Scene {
             count: 1,
             equipped: true,
         });
+        // Раунд 66.28 (пп.6,10): КОЛЧАН — ОТДЕЛЬНЫЙ СЛОТ меню персонажа
+        // (вместимость 10 стрел; клик — высыпать стрелы в узел)
+        equipped.push({
+            id: 'equipped_quiver',
+            name: `${t('Колчан')}: ${quiverN}/${QUIVER_CAP} (${quiverWord(quiverN)})`,
+            iconKey: null,
+            emoji: '🪶',
+            count: quiverN > 0 ? quiverN : 0,
+            equipped: true,
+            isQuiver: true,
+        });
 
         const items = equipped.concat(p.inventory || []);
         if (items.length === 0) {
@@ -328,6 +344,9 @@ export class CharacterScene extends Phaser.Scene {
                         stroke: '#000', strokeThickness: 2,
                     }).setOrigin(1, 1);
                 }
+                // Раунд 66.28 (пп.6,10,11): стрелы в узле — клик открывает
+                // карточку наложения стрел в колчан; колчан-слот — высыпание.
+                // Регистрация — ПОСЛЕ создания hitArea (см. ниже).
                 // Плашка «НАДЕТО» на экипировке
                 if (item.equipped) {
                     this.add.text(ix, iy - 24, t('НАДЕТО'), {
@@ -354,6 +373,13 @@ export class CharacterScene extends Phaser.Scene {
                         .setOrigin(0.5).setDepth(51);
                     hitArea.on('pointerup', () => this.showFoodCard(item, foodDef));
                 }
+                // Раунд 66.28 (пп.6,10,11): стрелы узла и колчан-слот — свои карточки
+                if (item.id === 'arrows' && !item.equipped) {
+                    hitArea.on('pointerup', () => this.showArrowsCard(item));
+                }
+                if (item.isQuiver) {
+                    hitArea.on('pointerup', () => this.showQuiverCard());
+                }
             });
         }
 
@@ -362,6 +388,57 @@ export class CharacterScene extends Phaser.Scene {
             fontSize: '15px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
+    }
+
+    /**
+     * Раунд 66.28 (пп.6,10,11): карточка КОЛЧАНА (отдельный слот меню):
+     * состояние и высыпание стрел обратно в узел (по слотам ≤ 10).
+     */
+    showQuiverCard() {
+        const p = this.registry.get('player');
+        const q = getQuiver(p);
+        const inv = countInventoryArrows(p);
+        const buttons = [];
+        if (q > 0) {
+            buttons.push({ text: t('⤓ Высыпать стрелы в узел'), callback: () => {
+                const n = unloadQuiver(p);
+                this.registry.set('player', p);
+                createDialog(this, '🪶 ' + t('Колчан'),
+                    tf(t('Высыпал стрелы в узел: {0} шт. Колчан пуст.'), n),
+                    [{ text: t('Понятно'), callback: () => this.scene.restart({ from: this.from, tab: 'inventory' }) }],
+                    { singleton: false });
+            } });
+        }
+        buttons.push({ text: t('Понятно'), callback: () => {} });
+        createDialog(this, '🪶 ' + t('Колчан'),
+            tf(t('В колчане: {0} из {1} стрел ({2}). В узле ещё: {3}. Стрелы в колчане тратятся при стрельбе из лука.'), q, QUIVER_CAP, quiverWord(q), inv),
+            buttons, { singleton: false });
+    }
+
+    /**
+     * Раунд 66.28 (пп.7,10,11): карточка СТРЕЛ в узле — наложить
+     * экипированные стрелы в колчан (до вместимости 10).
+     */
+    showArrowsCard(item) {
+        const p = this.registry.get('player');
+        const inv = countInventoryArrows(p);
+        const q = getQuiver(p);
+        const free = QUIVER_CAP - q;
+        const buttons = [];
+        if (inv > 0 && free > 0) {
+            buttons.push({ text: t('🪶 Наложить стрелы в колчан'), callback: () => {
+                const moved = loadQuiver(p);
+                this.registry.set('player', p);
+                createDialog(this, '🪶 ' + t('Колчан'),
+                    tf(t('Наложил стрелы в колчан: +{0}. Теперь в колчане {1}/{2}.'), moved, getQuiver(p), QUIVER_CAP),
+                    [{ text: t('Понятно'), callback: () => this.scene.restart({ from: this.from, tab: 'inventory' }) }],
+                    { singleton: false });
+            } });
+        }
+        buttons.push({ text: t('Понятно'), callback: () => {} });
+        createDialog(this, '🏹 ' + t('Стрелы'),
+            tf(t('Стрел в узле: {0} (в слоте не более {1}). В колчане: {2}/{3}. Из колчана стрелы тратятся при стрельбе; покупают их пачками по {1} у кузнеца и ремесленника.'), inv, 10, q, QUIVER_CAP),
+            buttons, { singleton: false });
     }
 
     /**

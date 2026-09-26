@@ -11,6 +11,8 @@ import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons, c
 import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd, askMoneyForHelp, askElderAdvance, isChaseActive } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
+// Раунд 66.28 (пп.9,12): стрелы в продажу — пачки по 10, слот колчана
+import { addArrowsToInventory, getQuiver, countInventoryArrows, ARROW_PACK_PRICE, ARROW_PACK_SIZE, QUIVER_CAP } from '../systems/ammo.js';
 import { makeQuestOffer, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion, onLocationVisited } from '../data/questGenerator.js';
 // Раунд 66.21 (приказ 10): срочное ночное дело (стук в дверь)
 import { hasUrgentQuestBusiness } from '../systems/NightKnock.js';
@@ -1293,6 +1295,11 @@ export class InteriorScene extends Phaser.Scene {
                         player.inventory.push({ id: item.id, name: t(item.name), count: 1, type: 'gear' });
                     }
                     logNote = t('в узел');
+                } else if (item.kind === 'ammo') {
+                    // Раунд 66.28 (пп.9,12): пачка стрел — ТОЛЬКО по 10 шт.,
+                    // ложится в узел слотами по ≤10; в колчан — с экрана персонажа.
+                    addArrowsToInventory(player, ARROW_PACK_SIZE);
+                    logNote = t('в узел');
                 } else {
                     // Еда/мелочь: эффект сразу (HP/MP), «в узел» не кладётся
                     if (item.heal) player.HP = Math.min(player.HPmax, player.HP + item.heal);
@@ -2068,7 +2075,7 @@ export class InteriorScene extends Phaser.Scene {
 
             if (tab === 'weapon') {
                 this.add.text(width / 2, height / 2 + panelH / 2 - 58,
-                    t('Мечи не продаются: меч — награда старосты. Доспех кузнец выдаёт только за самые тяжёлые поручения.'), {
+                    t('Мечи не продаются: меч — награда старосты. Доспех кузнец выдаёт только за самые тяжёлые поручения. Стрелы — пачками по 10.'), {
                     fontSize: '11px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
                 }).setOrigin(0.5).setDepth(202);
             }
@@ -2142,6 +2149,39 @@ export class InteriorScene extends Phaser.Scene {
                     fontSize: 13, padding: { left: 14, right: 14, top: 7, bottom: 7 },
                 }).setDepth(202);
             });
+
+            // Раунд 66.28 (пп.9,12): СТРЕЛЫ В ПРОДАЖУ — пачка 10 шт. у кузнеца
+            // (он же кует луки). Покупка ТОЛЬКО пачками по 10; расходник —
+            // можно покупать сколько угодно пачек.
+            if (tab === 'weapon') {
+                const packPrice = Math.max(1, Math.round(ARROW_PACK_PRICE * priceMod));
+                const canAffordPack = (player.dengas || 0) >= packPrice;
+                const qNow = getQuiver(player);
+                const invNow = countInventoryArrows(player);
+                const packDesc = tf(t('🪶 Пачка стрел ({0} шт.) — {1} {2}   ·   {3}: {4}/{5}, {6}: {7}'),
+                    ARROW_PACK_SIZE, packPrice, t('д.'), t('колчан'), qNow, QUIVER_CAP, t('в узле'), invNow);
+                createButton(this, width / 2, startY + items.length * 42, packDesc, () => {
+                    if (!canAffordPack) {
+                        createDialog(this, t('Кузница'), t('Не хватает денег!'), [
+                            { text: t('Понятно'), callback: () => {} },
+                        ], { singleton: false, portraitKey: smithPortrait });
+                        return;
+                    }
+                    player.dengas -= packPrice;
+                    this.audioManager.playGoldSpend();
+                    addArrowsToInventory(player, ARROW_PACK_SIZE);
+                    this.registry.set('player', player);
+                    ActionLog.add(this.registry, tf(t('Купил пачку стрел ({0} шт.) у кузнеца за {1} д. — стрелы легли в узел (в колчан наложишь на экране персонажа).'), ARROW_PACK_SIZE, packPrice));
+                    this.updateHUD();
+                    closeMenu();
+                    this.showBlacksmithShop('weapon');
+                }, {
+                    backgroundColor: canAffordPack ? 0x3a5a3a : 0x3a3a3a,
+                    hoverColor: canAffordPack ? 0x4a6a4a : 0x4a4a4a,
+                    textColor: canAffordPack ? RUS.text : '#888',
+                    fontSize: 13, padding: { left: 14, right: 14, top: 7, bottom: 7 },
+                }).setDepth(202);
+            }
         }
 
         // Кнопка закрытия

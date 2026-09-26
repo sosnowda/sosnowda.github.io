@@ -2,6 +2,13 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { WEAPONS } from '../config/GameConfig.js';
+// Раунд 66.28 (пп.1–12): честные надписи атаки (Удар оружием/Удар кулаком/
+// Стрельба из лука), СМЕНА ОРУЖИЯ за ход, стрелы и колчан
+import { WEAPONS as CR_WEAPONS, equipWeapon } from '../systems/Character.js';
+import {
+    getQuiver, spendArrow, loadQuiver, countInventoryArrows,
+    quiverWord, QUIVER_CAP,
+} from '../systems/ammo.js';
 import { skillCheck, rollDamage, ROLL_RESULT, applyDamage, opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
 import { spawnEnemy, spawnVillagerEnemy, VILLAGER_COMBAT } from '../data/characters.js';
 // Раунд 48 (пп.2,5 заявки): «Исследование» в бою и раскрытие мастерства оружия
@@ -201,6 +208,12 @@ export class CombatScene extends Phaser.Scene {
 
         this.createActions();
         this.drawBars();
+        // Раунд 66.28 (п.7): строка снаряжения в бою — что в руках и сколько
+        // стрел в колчане (обновляется после каждого выстрела/смены оружия)
+        this.gearStatusText = this.add.text(width / 2, height - 10, '', {
+            fontSize: '11px', color: '#c9a14a', stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5, 1).setDepth(60);
+        this.updateGearStatus();
         this.pushLog(t('Бой начинается! Приготовься, путник.'));
         // Раунд 32 (п.11): предупреждение о раненом воре (после прошлого побега игрока)
         if (this.woundedThief) {
@@ -213,7 +226,7 @@ export class CombatScene extends Phaser.Scene {
             this.busyDialog = true;
             createDialog(this, '❓ Информация по игре',
                 timeRatioInfoLine() + '\n\n' +
-                t('⚔ Бой пошаговый (BRP d100): атака, уклон, трава, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\n👁 Исследование: удачная проверка открывает параметры противника;\nпосле первого его удара видно мастерство применённого оружия.'),
+                t('⚔ Бой пошаговый (BRP d100): атака, уклон, трава, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\n👁 Исследование: удачная проверка открывает параметры противника;\nпосле первого его удара видно мастерство применённого оружия.\n🏹 Стрельба из лука тратит стрелу из колчана (вместимость 10);\nпустой колчан — выстрела не будет, стрелы носят пачками по 10.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
                 { singletonKey: 'combat-help' });
         });
@@ -238,6 +251,14 @@ export class CombatScene extends Phaser.Scene {
         }
     }
 
+    /**
+     * Раунд 66.28 (пп.1–4): ЧЕСТНЫЕ НАДПИСИ АТАКИ ПО ОРУЖИЮ В РУКАХ.
+     *  • лук в руках     — кнопка «Стрельба из лука» (п.2, прежняя «Лук»);
+     *  • иное оружие     — кнопка «Удар оружием» (п.1);
+     *  • оружия нет      — кнопка «Удар кулаком» (п.3);
+     *  • внизу всегда есть «Смена оружия» (п.4): открывает инвентарь,
+     *    смена оружия в руках тратит ОДИН ХОД.
+     */
     createActions() {
         const { width, height } = this.scale;
         const mk = (x, y, label, cb, bg, hover) => createButton(
@@ -248,20 +269,23 @@ export class CombatScene extends Phaser.Scene {
                 cornerRadius: 8,
             },
         );
-        const y = height - 50;
 
-        // Раунд 14: честные кнопки атаки. Раньше обе кнопки ("Мечом"/"Луком")
-        // били экипированным оружием — надпись врала о выборе. Теперь:
-        //  - основная кнопка = реально экипированное оружие (её имя на кнопке);
-        //  - если экипировка не кулаки — доступен честный резерв "Кулаками".
+        // Раунд 14: основная кнопка = реально экипированное оружие.
+        // Раунд 66.28: надпись теперь зависит ОТ ВИДА ОРУЖИЯ В РУКАХ:
+        // «Стрельба из лука» / «Удар оружием» / «Удар кулаком».
         const equipped = this.player.weapon || WEAPONS.fists;
         const equippedKey = equipped.id || 'fists';
+        const isBow = equippedKey === 'bow';
+        const isFists = equippedKey === 'fists';
+        const mainLabel = isBow
+            ? `🏹 ${t('Стрельба из лука')}`
+            : (isFists ? `🤜 ${t('Удар кулаком')}` : `⚔ ${t('Удар оружием')}`);
         const acts = [
-            { label: `⚔ ${t(equipped.name)}`, cb: () => this.playerAttack(equippedKey),
+            { label: mainLabel, cb: () => this.playerAttack(equippedKey),
               bg: RUS.accent, hover: RUS.accentLight },
         ];
-        if (equipped.id !== 'fists') {
-            acts.push({ label: t('🤜 Кулаками'), cb: () => this.playerAttack('fists'),
+        if (!isFists) {
+            acts.push({ label: `🤜 ${t('Удар кулаком')}`, cb: () => this.playerAttack('fists'),
               bg: 0x6a5a40, hover: 0x7a6a50 });
         }
         acts.push(
@@ -270,12 +294,124 @@ export class CombatScene extends Phaser.Scene {
             // Раунд 48 (п.2 заявки): параметры НПЦ видны ТОЛЬКО через проверку
             // «Исследование» в бою (и только при удачной проверке)
             { label: t('👁 Исследование'), cb: () => this.examineEnemy(), bg: 0x4a5a6a, hover: 0x5a6a7a },
+            // Раунд 66.28 (п.4): смена оружия за ход — инвентарь прямо в бою
+            { label: t('🎒 Смена оружия'), cb: () => this.openWeaponSwapPanel(), bg: 0x5a4a2a, hover: 0x6a5a3a },
             { label: t('🏃 Бежать'), cb: () => this.flee(), bg: 0x2a2a5a, hover: 0x3a3a6a },
         );
-        // Равномерная раскладка по центру (4 или 5 кнопок)
+        // Равномерная раскладка по центру; на узких экранах (телефон)
+        // кнопки переносятся на ВТОРОЙ РЯД, чтобы не уходили за край.
         const gap = 160;
-        const startX = width / 2 - (gap * (acts.length - 1)) / 2;
-        acts.forEach((a, i) => mk(startX + i * gap, y, a.label, a.cb, a.bg, a.hover));
+        const perRow = Math.max(2, Math.min(acts.length, Math.floor((width - 24) / gap)));
+        const rows = Math.ceil(acts.length / perRow);
+        acts.forEach((a, i) => {
+            const row = Math.floor(i / perRow);            // 0 — НИЖНИЙ ряд
+            const inRow = i % perRow;
+            const rowCount = Math.min(perRow, acts.length - row * perRow);
+            const x = width / 2 - (gap * (rowCount - 1)) / 2 + inRow * gap;
+            const y = height - 50 - row * 52;
+            mk(x, y, a.label, a.cb, a.bg, a.hover);
+        });
+    }
+
+    /** Раунд 66.28 (п.7): строка «что в руках · сколько стрел в колчане». */
+    updateGearStatus() {
+        if (!this.gearStatusText || !this.gearStatusText.active) return;
+        const w = this.player.weapon || WEAPONS.fists;
+        const q = getQuiver(this.player);
+        const parts = [`${t('В руках')}: ${t(w.name)} (${w.dice.min}-${w.dice.max}${w.bonus ? `+${w.bonus}` : ''})`];
+        parts.push(`🪶 ${t('Колчан')}: ${q}/${QUIVER_CAP}`);
+        this.gearStatusText.setText(parts.join('   ·   '));
+    }
+
+    /**
+     * Раунд 66.28 (п.4): ПАНЕЛЬ «СМЕНА ОРУЖИЯ» — инвентарь персонажа
+     * прямо в бою. Выбор оружия из узла (или кулаков) ЭКИПИРУЕТ его
+     * и тратит ОДИН ХОД (противник отвечает). Наложение стрел в колчан —
+     * тоже действие за ход. Закрытие панели — бесплатно.
+     */
+    openWeaponSwapPanel() {
+        if (this.busyDialog) return;
+        this.busyDialog = true;
+        const p = this.player;
+        const { width, height } = this.scale;
+        const panelW = Math.min(540, width - 16);
+        const panelH = Math.min(430, height - 40);
+
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.75)
+            .setOrigin(0).setInteractive().setDepth(200);
+        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
+            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+        const widgets = [overlay, panel];
+        const closePanel = () => {
+            widgets.forEach(w => { try { w.destroy(); } catch (e) { /* ок */ } });
+            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+            this.busyDialog = false;
+        };
+
+        this.add.text(width / 2, height / 2 - panelH / 2 + 26, t('🎒 Смена оружия'), {
+            fontSize: '20px', color: '#C9A961', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(202);
+        this.add.text(width / 2, height / 2 - panelH / 2 + 52,
+            t('Смена оружия в руках — один ход. Противник ответит.'), {
+            fontSize: '12px', color: RUS.textDim,
+        }).setOrigin(0.5).setDepth(202);
+
+        const startY = height / 2 - panelH / 2 + 84;
+        const step = 40;
+        // Оружие: кулаки + всё, что лежит в узле
+        const list = [CR_WEAPONS.fists].concat(
+            Object.values(CR_WEAPONS).filter(w => w.id !== 'fists'
+                && (p.inventory || []).some(it => it && it.id === w.id)));
+        list.forEach((w, i) => {
+            const isEquipped = p.weaponId === w.id;
+            const label = `${isEquipped ? '✓ ' : '   '}${t(w.name)} (${w.dice.min}-${w.dice.max}+${w.bonus || 0})`;
+            createButton(this, width / 2, startY + i * step, label, () => {
+                if (isEquipped) { closePanel(); return; } // то же оружие — ход не тратим
+                equipWeapon(p, w.id);
+                this.registry.set('player', p);
+                this.pushLog(tf(t('Ты сменил оружие в руках: теперь {0}. Потрачен ход!'), t(w.name)));
+                ActionLog.add(this.registry, tf(t('Сменил оружие в бою: {0} (потрачен ход).'), t(w.name)));
+                this.updateGearStatus();
+                closePanel();
+                this.busy = true;
+                this.time.delayedCall(600, () => this.enemyTurn());
+            }, {
+                backgroundColor: isEquipped ? 0x3a5a3a : 0x4a3520,
+                hoverColor: isEquipped ? 0x4a6a4a : 0x5a4530,
+                textColor: RUS.text, fontSize: 14,
+                padding: { left: 12, right: 12, top: 6, bottom: 6 },
+            }).setDepth(202);
+        });
+
+        // Колчан: наложить стрелы из узла (тоже ход)
+        const q = getQuiver(p);
+        const inv = countInventoryArrows(p);
+        const ammoY = startY + list.length * step + 8;
+        this.add.text(width / 2, ammoY, `🪶 ${t('Колчан')}: ${q}/${QUIVER_CAP} (${quiverWord(q)})   ·   ${t('В узле')}: ${inv}`, {
+            fontSize: '13px', color: '#c9a14a', stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setDepth(202);
+        if (inv > 0 && q < QUIVER_CAP) {
+            createButton(this, width / 2, ammoY + 34, t('🪶 Наложить стрелы в колчан (ход)'), () => {
+                const moved = loadQuiver(p);
+                this.registry.set('player', p);
+                this.pushLog(tf(t('Ты наложил стрелы в колчан: {0}. Потрачен ход!'), moved));
+                ActionLog.add(this.registry, tf(t('Наложил стрелы в колчан в бою: +{0} (потрачен ход).'), moved));
+                this.updateGearStatus();
+                closePanel();
+                this.busy = true;
+                this.time.delayedCall(600, () => this.enemyTurn());
+            }, {
+                backgroundColor: 0x4a5a3a, hoverColor: 0x5a6a4a,
+                textColor: RUS.text, fontSize: 13,
+                padding: { left: 12, right: 12, top: 6, bottom: 6 },
+            }).setDepth(202);
+        }
+
+        createButton(this, width / 2, height / 2 + panelH / 2 - 28, t('Готово (без хода)'), closePanel, {
+            backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
+            fontSize: 14, padding: { left: 18, right: 18, top: 7, bottom: 7 },
+        }).setDepth(202);
     }
 
     /**
@@ -503,13 +639,42 @@ export class CombatScene extends Phaser.Scene {
         // Раунд 14: используем оружие ВЫБРАННОЙ кнопки (а не всегда экипировку).
         // Кулаки — честный резерв с навыком brawl; экипировка передаётся своей кнопкой.
         const w = WEAPONS[weaponKey] || this.player.weapon || WEAPONS.fists;
-        // Раунд 22 (п.11): благословение батюшки усиливает ОДНУ проверку навыка
-        const skill = consumeBlessing(this.registry, this.player.skills[w.skill] || 20);
-        const res = skillCheck(skill);
         const target = this.firstAlive();
         if (!target) { this.endCombatVictory(); return; }
 
         const targetSprite = this.enemySprites.find(x => x.combatant === target).sprite;
+
+        // Раунд 66.28 (пп.7,8): СТРЕЛЬБА ИЗ ЛУКА требует стрелы В КОЛЧАНЕ.
+        // Пустой колчан — поп-ап предупреждение, ход НЕ тратится (выстрела не было).
+        if (weaponKey === 'bow') {
+            if (!spendArrow(this.player)) {
+                this.registry.set('player', this.player);
+                this.pushLog(t('В колчане нет стрел — стрелять нечем!'));
+                createDialog(this, '🪶 ' + t('Колчан пуст!'),
+                    t('Стрел в колчане нет — стрелять нечем. Пачку стрел (10 шт.) продают кузнец Данила и ремесленник Аверьян. Стрелы из узла можно наложить в колчан через «Смена оружия».'),
+                    [
+                        { text: t('🎒 Смена оружия'), callback: () => this.openWeaponSwapPanel() },
+                        { text: t('Понятно'), callback: () => {} },
+                    ],
+                    { singleton: false });
+                return;
+            }
+            this.registry.set('player', this.player);
+            this.updateGearStatus();
+        }
+
+        // Раунд 22 (п.11): благословение батюшки усиливает ОДНУ проверку навыка
+        const skill = consumeBlessing(this.registry, this.player.skills[w.skill] || 20);
+        const res = skillCheck(skill);
+
+        if (weaponKey === 'bow') {
+            // Раунд 66.28 (п.2): стрельба — стрела летит от героя к врагу,
+            // без выпада (дистанционная атака). Стрела потрачена выше.
+            if (this.audioManager) this.audioManager.playShoot();
+            this.playBowShot(this.playerSprite, targetSprite,
+                () => this.resolvePlayerAttack(w, res, target, targetSprite));
+            return;
+        }
 
         // Воспроизводим анимацию атаки рыцаря (выбираем случайно из 3 вариантов)
         const attackAnims = ['knight_attack1', 'knight_attack2', 'knight_attack_cmb'];
@@ -526,6 +691,35 @@ export class CombatScene extends Phaser.Scene {
         if (this.audioManager) this.audioManager.playWeaponSwing();
         // Анимация подхода игрока
         this.playLunge(this.playerSprite, targetSprite, () => {
+            this.resolvePlayerAttack(w, res, target, targetSprite);
+        });
+    }
+
+    /**
+     * Раунд 66.28 (п.2): полёт стрелы от героя к врагу (тонкая палочка,
+     * как в охоте ForestScene), затем разрешение атаки.
+     */
+    playBowShot(fromSprite, toSprite, onDone) {
+        const dx = toSprite.x - fromSprite.x, dy = toSprite.y - fromSprite.y;
+        const arrow = this.add.rectangle(fromSprite.x + 24, fromSprite.y - 10, 26, 2, 0xd8c8a0)
+            .setRotation(Math.atan2(dy, dx)).setDepth(45);
+        this.tweens.add({
+            targets: arrow,
+            x: toSprite.x, y: toSprite.y,
+            duration: 220, ease: 'Quad.easeOut',
+            onComplete: () => {
+                arrow.destroy();
+                if (onDone) onDone();
+            },
+        });
+    }
+
+    /**
+     * Разрешение атаки игрока (выделено из playerAttack раундом 66.28:
+     * общий код ближнего удара и выстрела из лука).
+     */
+    resolvePlayerAttack(w, res, target, targetSprite) {
+        {
             // Обработка результата после подхода
             if (res.result === ROLL_RESULT.FAIL || res.result === ROLL_RESULT.FUMBLE) {
                 this.pushLog(`${t(w.name)}: ${res.roll} — ${t('промах!')}`);
@@ -604,7 +798,7 @@ export class CombatScene extends Phaser.Scene {
             }
             this.busy = true;
             this.time.delayedCall(750, () => this.enemyTurn());
-        });
+        }
     }
 
     dodge() {
@@ -859,9 +1053,11 @@ export class CombatScene extends Phaser.Scene {
                 ? t('Кровная вина на тебе. Староста может помирить за виру.')
                 : t('Враг повержен');
             // РАУНД 66.17 (п.11): с убитого волка случайно снимают мясо —
-            // объём по размеру зверя (2–4 шт.); сырое: готовить или продавать
+            // объём ПО РАЗМЕРУ ЗВЕРЯ (раунд 66.28, п.13: чем крупнее дичь — тем
+            // больше мяса; лестница: заяц 1–2 < глухарь 2–3 < косуля 4–6 <
+            // < ВОЛК 5–9 — самый крупный зверь в боях); сырое: готовить или продавать
             if (this.enemyKeys && this.enemyKeys.includes('wolf')) {
-                const meatN = Phaser.Math.Between(2, 4);
+                const meatN = Phaser.Math.Between(5, 9);
                 addItem(this.player, 'meat_raw', meatN);
                 ActionLog.add(this.registry, tf(t('Обобрал тушу убитого волка: +{0} сырое мясо (приготовить на костре или продать).'), meatN));
             }

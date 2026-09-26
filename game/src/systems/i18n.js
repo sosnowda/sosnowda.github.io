@@ -2425,6 +2425,75 @@ const EN_KEYS = {
     '{0}: «Поутру ты уже пугал меня. Нынче — не боюсь. Уходи!»':
         '{0}: "You tried to frighten me this morning. Today I fear you not. Be gone!"',
 
+    // ----- Раунд 66.28: бой по оружию в руках, стрелы/колчан, смена оружия -----
+    'Удар оружием': 'Strike with weapon',
+    'Удар кулаком': 'Fist strike',
+    '🎒 Смена оружия': '🎒 Change weapon',
+    'Смена оружия в руках — один ход. Противник ответит.':
+        'Changing the weapon in hand costs one turn. The enemy will answer.',
+    'Готово (без хода)': 'Done (no turn)',
+    'Ты сменил оружие в руках: теперь {0}. Потрачен ход!':
+        'You changed the weapon in hand: now {0}. A turn is spent!',
+    'Сменил оружие в бою: {0} (потрачен ход).':
+        'Changed weapon in combat: {0} (a turn spent).',
+    'Колчан': 'Quiver',
+    '🪶 Колчан': '🪶 Quiver',
+    'колчан': 'quiver',
+    'В узле': 'In the sack',
+    'в узле': 'in the sack',
+    'Стрелы': 'Arrows',
+    'нет стрел': 'no arrows',
+    'стрела': 'arrow',
+    'стрелы': 'arrows',
+    'стрел': 'arrows',
+    'Колчан пуст!': 'The quiver is empty!',
+    'В колчане нет стрел — стрелять нечем!':
+        'No arrows in the quiver — nothing to shoot with!',
+    'Стрел в колчане нет — стрелять нечем. Пачку стрел (10 шт.) продают кузнец Данила и ремесленник Аверьян. Стрелы из узла можно наложить в колчан через «Смена оружия».':
+        'No arrows in the quiver — nothing to shoot with. A pack of 10 arrows is sold by smith Danila and craftsman Averyan. Arrows from the sack can be loaded into the quiver via "Change weapon".',
+    'Стрел в колчане нет — стрелять нечем. Пачку стрел (10 шт.) продают кузнец Данила и ремесленник Аверьян. Стрелы из узла наложи в колчан на экране персонажа (Персонаж → Инвентарь).':
+        'No arrows in the quiver — nothing to shoot with. A pack of 10 arrows is sold by smith Danila and craftsman Averyan. Load arrows from the sack into the quiver on the character screen (Character → Inventory).',
+    '🪶 Наложить стрелы в колчан (ход)': '🪶 Load arrows into the quiver (a turn)',
+    '🪶 Наложить стрелы в колчан': '🪶 Load arrows into the quiver',
+    'Ты наложил стрелы в колчан: {0}. Потрачен ход!':
+        'You loaded {0} arrows into the quiver. A turn is spent!',
+    'Наложил стрелы в колчан в бою: +{0} (потрачен ход).':
+        'Loaded arrows into the quiver in combat: +{0} (a turn spent).',
+    '⤓ Высыпать стрелы в узел': '⤓ Dump the arrows into the sack',
+    'Высыпал стрелы в узел: {0} шт. Колчан пуст.':
+        'Dumped {0} arrows into the sack. The quiver is empty.',
+    'Наложил стрелы в колчан: +{0}. Теперь в колчане {1}/{2}.':
+        'Loaded {0} arrows into the quiver. Now {1}/{2} in the quiver.',
+    'В колчане: {0} из {1} стрел ({2}). В узле ещё: {3}. Стрелы в колчане тратятся при стрельбе из лука.':
+        'In the quiver: {0} of {1} ({2}). Still in the sack: {3}. Quiver arrows are spent on bow shots.',
+    'Стрел в узле: {0} (в слоте не более {1}). В колчане: {2}/{3}. Из колчана стрелы тратятся при стрельбе; покупают их пачками по {1} у кузнеца и ремесленника.':
+        'Arrows in the sack: {0} (a slot holds at most {1}). In the quiver: {2}/{3}. Quiver arrows are spent on shooting; they are sold in packs of {1} by the smith and the craftsman.',
+    '🪶 Пачка стрел ({0} шт.) — {1} {2}   ·   {3}: {4}/{5}, {6}: {7}':
+        '🪶 Pack of arrows ({0} pcs.) — {1} {2}   ·   {3}: {4}/{5}, {6}: {7}',
+    'Купил пачку стрел ({0} шт.) у кузнеца за {1} д. — стрелы легли в узел (в колчан наложишь на экране персонажа).':
+        'Bought a pack of arrows ({0} pcs.) from the smith for {1} d. — the arrows went into the sack (load the quiver on the character screen).',
+    'Пачка стрел (10 шт.)': 'Pack of arrows (10 pcs.)',
+    'стрелы в узел': 'arrows into the sack',
+    'Мечи не продаются: меч — награда старосты. Доспех кузнец выдаёт только за самые тяжёлые поручения. Стрелы — пачками по 10.':
+        'Swords are not sold: a sword is the elder\'s reward. The smith grants armor only for the hardest errands. Arrows are sold in packs of 10.',
+    'Заметил {0} на поляне, но колчан пуст — стрелять нечем.':
+        'Spotted {0} in the glade, but the quiver is empty — nothing to shoot with.',
+    '{0} близко, но настороже. Тянуть тетиву? (шанс зависит от твоего навыка стрельбы)\nВыстрел — 5 минут времени, стрела — из колчана.':
+        '{0} is close but wary. Draw the string? (the chance depends on your archery skill)\nA shot takes 5 minutes and an arrow from the quiver.',
+    // ----- Раунд 66.28 (пп.14,15): стражник и вор -----
+    'Стражник': 'The guard',
+    '🧭 Спросить про вора': '🧭 Ask about the thief',
+    'Не видел я тут никакого вора. Но глаз у меня острый — как увижу, так и скажу.':
+        'I have seen no thief here. But my eye is keen — when I do, you will be the first to know.',
+    'Только что видел тут вора, у {0} — самого темного человека, как перед глазами мелькнул! Да только я мигнул — а он уже улепётывал к {1}. Ищи его там, поспеши, пока не залёг на дно!':
+        'Just saw the thief here, at {0} — the very dark man, he flashed before my eyes! I only blinked — and he was already running toward {1}. Look for him there, hurry, before he lies low!',
+    'Только что видел тут вора, у {0} — да как сорвался с места, так и был таков: ушёл в темноту, и след простыл. Куда подался — не ведаю.':
+        'Just saw the thief here, at {0} — but he bolted and was gone: vanished into the dark without a trace. Where he went, I cannot say.',
+    'Стражник поделился наводкой: {0}': 'The guard shared a tip: {0}',
+    // Обновлённая справка боя (раунд 66.28)
+    '⚔ Бой пошаговый (BRP d100): атака, уклон, трава, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\n👁 Исследование: удачная проверка открывает параметры противника;\nпосле первого его удара видно мастерство применённого оружия.\n🏹 Стрельба из лука тратит стрелу из колчана (вместимость 10);\nпустой колчан — выстрела не будет, стрелы носят пачками по 10.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.':
+        '⚔ Combat is turn-based (BRP d100): attack, dodge, herb, flee.\nSkill checks roll d100: success is within the skill,\ncrit — 1/20 of the skill (damage ×1.5), special — 1/5 (damage ×2).\n🛡 Armor absorbs the damage of every hit.\n👁 Examine: a successful check reveals the enemy\'s parameters;\nafter his first strike the mastery of the weapon used is shown.\n🏹 A bow shot spends an arrow from the quiver (capacity 10);\nan empty quiver means no shot — arrows are carried in packs of 10.\n🎒 Changing the weapon in hand costs a turn; loading arrows too.',
+
 };
 
 // ----- Месяцы / дни недели (сентябрьский стиль индексации) -----

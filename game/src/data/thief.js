@@ -769,6 +769,98 @@ function thiefWhereabouts(registry) {
 }
 
 // ============================================================
+// РАУНД 66.28 (пп.14,15 приказа владельца): СТРАЖНИК И ВОР.
+//
+//  п.14 — ЕСЛИ стражник находится НА ОДНОЙ ЛОКАЦИИ С ВОРОМ (его дневной
+//         обход выпаса/пашни совпадает с остановкой вора — оба места есть
+//         в CHASE_LOCATIONS), он ПОЛУЧАЕТ НАВОДКУ: куда вор переместится,
+//         когда уйдёт с этой локации. Этой наводкой он ДЕЛИТСЯ С ИГРОКОМ
+//         в диалоге («только что видел тут вора, но он убежал в …»).
+//         Наводка живёт NPC_HINT_VALID_HOURS (5 ч) с момента наблюдения;
+//         пока стражник видит вора — счётчик обновляется.
+//  п.15 — СТРАЖНИК НЕ НАПАДАЕТ НА ВОРА: он часовой, а не охотник. Никакой
+//         механики схватки стражника с вором нет и не заводится — вор
+//         не атакует его и не боится его; стражник ТОЛЬКО свидетель,
+//         который запомнил, в какую сторону тот побежал. Встречу вора
+//         на локации (поп-ап погони) инициирует ТОЛЬКО игрок.
+// ============================================================
+
+/**
+ * Обновить наводку стражника (вызывается на каждом тике погони и перед
+ * ответом стражника). Если стражник сейчас на одной локации с сидящим
+ * ворам — запоминает/освежает наводку на СЛЕДУЮЩУЮ локацию вора.
+ * @returns {object|null} свежая наводка { fromLocId, nextLocId, ... } или null.
+ */
+export function refreshGuardThiefTip(registry) {
+    const q = registry.get('quest');
+    if (!q) return null;
+    const now = worldMinutesOf(registry);
+    // Истёкшая наводка гаснет
+    if (q.guardThiefTip && now >= (q.guardThiefTip.expiresAtMin || 0)) {
+        q.guardThiefTip = null;
+    }
+    const c = getChase(registry);
+    if (c && c.phase === 'stay') {
+        const locId = c.route[c.stop];
+        let guardPlace = null;
+        try { guardPlace = getPresence(registry, 'guard').place; } catch (e) { guardPlace = null; }
+        if (guardPlace === locId) {
+            // Стражник ВИДИТ вора: получает/освежает наводку «куда побежит дальше».
+            // Если это ТО ЖЕ САМОЕ наблюдение (вор ещё не сменил локацию) —
+            // флаг shared сохраняется: улика в панель кладётся один раз.
+            const prev = q.guardThiefTip;
+            const nextId = c.route[c.stop + 1] || null;
+            const sameObservation = !!(prev && prev.fromLocId === locId && prev.nextLocId === nextId);
+            q.guardThiefTip = {
+                fromLocId: locId,
+                nextLocId: nextId,
+                issuedAtMin: now,
+                expiresAtMin: now + NPC_HINT_VALID_HOURS * 60,
+                shared: sameObservation ? !!prev.shared : false,
+            };
+        }
+    }
+    registry.set('quest', q);
+    return q.guardThiefTip || null;
+}
+
+/** Свежая наводка стражника (с проверкой срока и обновлением по месту). */
+export function getFreshGuardThiefTip(registry) {
+    return refreshGuardThiefTip(registry);
+}
+
+/**
+ * Реплика стражника о воре для диалога (п.14). Возвращает строку вида
+ * «{Имя}: «Только что видел тут вора… убежал к {локация}»» или null,
+ * если свежей наводки нет (тогда стражник отвечает как обычный житель).
+ */
+export function guardThiefHintLine(registry, npcName) {
+    const tip = getFreshGuardThiefTip(registry);
+    if (!tip) return null;
+    const who = npcName || t('Стражник');
+    const fromLoc = getLocationById(tip.fromLocId);
+    const fromGen = fromLoc ? tipNames(fromLoc).gen : '';
+    const nextLoc = tip.nextLocId ? getLocationById(tip.nextLocId) : null;
+    const nextDat = nextLoc ? tipNames(nextLoc).dat : null;
+    let clueText;
+    if (nextDat) {
+        clueText = tf(t('Только что видел тут вора, у {0} — самого темного человека, как перед глазами мелькнул! Да только я мигнул — а он уже улепётывал к {1}. Ищи его там, поспеши, пока не залёг на дно!'), fromGen, nextDat);
+    } else {
+        clueText = tf(t('Только что видел тут вора, у {0} — да как сорвался с места, так и был таков: ушёл в темноту, и след простыл. Куда подался — не ведаю.'), fromGen);
+    }
+    // Улика — в панель «Улики от жителей» (один раз на каждое наблюдение)
+    const q = registry.get('quest');
+    if (q && !tip.shared) {
+        if (!q.cluesGathered) q.cluesGathered = [];
+        q.cluesGathered.push({ npcId: 'guard', npcName: who, clue: clueText, whereClue: true });
+        tip.shared = true;
+        registry.set('quest', q);
+        ActionLog.add(registry, tf(t('Стражник поделился наводкой: {0}'), clueText));
+    }
+    return `${who}: «${clueText}»`;
+}
+
+// ============================================================
 // МИРОВОЕ ВРЕМЯ — ТИКИ ПОГОНИ
 // ============================================================
 
@@ -795,6 +887,10 @@ export function thiefChaseTick(registry, minutes) {
         if (q.thiefEscaped || q.thiefDefeated) { c.minutesAccum = 0; break; }
     }
     registry.set('quest', q);
+    // Раунд 66.28 (п.14): после шага вора — проверка «стражник на одной
+    // локации с ворам» (дневной обход выпаса/пашни): стражник получает
+    // наводку на следующую локацию вора, которой поделится в диалоге.
+    try { refreshGuardThiefTip(registry); } catch (e) { /* присутствие недоступно */ }
 }
 
 /**

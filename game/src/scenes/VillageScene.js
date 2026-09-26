@@ -14,6 +14,8 @@ import { VirtualControls } from '../systems/VirtualControls.js';
 import { ActionLog } from '../data/actionLog.js';
 // Раунд 58 (п.2): chaseHoursLeft — часы до побега вора (тик = 1 игровой час)
 import { checkGameEnd } from '../data/thief.js';
+// Раунд 66.28 (п.14): наводка стражника на вора в диалоге
+import { isChaseActive, guardThiefHintLine } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { createButton, createDialog, closeAllSingletonDialogs } from '../utils/ui.js';
@@ -1293,6 +1295,23 @@ export class VillageScene extends Phaser.Scene {
             const buttons = [
                 { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
             ];
+            // Раунд 66.28 (пп.14,15): СТРАЖНИК — своя опция «Спросить про вора»:
+            // он часовой, а не охотник (на вора НЕ нападает), но если держал
+            // обход на одной локации с ворам — у него есть наводка «куда тот
+            // убежал», и он делится ею при диалоге.
+            if (npcId === 'guard' && isChaseActive(this.registry)) {
+                buttons.splice(0, 0, {
+                    text: t('🧭 Спросить про вора'),
+                    callback: () => {
+                        closeAllSingletonDialogs(this);
+                        const tipLine = guardThiefHintLine(this.registry, displayName)
+                            || `${displayName}: «${t('Не видел я тут никакого вора. Но глаз у меня острый — как увижу, так и скажу.')}»`;
+                        createDialog(this, displayName, tipLine, [
+                            { text: t('Продолжить'), callback: () => { this.busyDialog = false; } },
+                        ], { singleton: false, portraitKey: (npcData && npcData.portrait) || 'portrait_villager_f' });
+                    },
+                });
+            }
             // Кнопка «Есть ли дело?» — по чистому предикату (без траты дневного
             // слота); слот сгорает только при реальном вопросе (makeQuestOffer).
             if (canOfferQuestToday(this.registry, npcId)) {

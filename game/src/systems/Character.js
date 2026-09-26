@@ -16,6 +16,8 @@
 
 import { rollCharacteristic, damageBonus } from './BRPEngine.js';
 import { AGE_DEFAULT, AGE_MIN, AGE_MAX, applyAgeModifiers, applyAgeSkillModifiers } from './AgeRules.js';
+// Раунд 66.28 (пп.5,10): стартовый колчан стрел у героев с луком
+import { QUIVER_CAP } from './ammo.js';
 
 // === ХАРАКТЕРИСТИКИ BRP ===
 export const CHARACTER_KEYS = [
@@ -381,6 +383,10 @@ export function createCharacter(name, opts = {}) {
 
     // Инвентарь
     chr.inventory = opts.inventory || [];
+    // Раунд 66.28 (пп.5,10): колчан стрел (0..10); герой со стартовым луком
+    // получает ПОЛНЫЙ колчан, остальные — пустой (стрелы продают пачками по 10)
+    chr.quiver = (opts.quiver != null) ? opts.quiver
+        : (chr.weaponId === 'bow' ? QUIVER_CAP : 0);
     
     return chr;
 }

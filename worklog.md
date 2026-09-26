@@ -1428,3 +1428,28 @@ Work Log:
 
 Stage Summary:
 - 66.27 готова к коммиту: 3/3 приказа + починка гравия трактов + мобильная карта доступна в обеих ориентациях.
+
+---
+Task ID: 66.28
+Agent: Z.ai Code (main)
+Task: Итерация 66.28 (15 приказов владельца: БОЙ/ОРУЖИЕ/СТРЕЛЫ): честные кнопки боя по оружию в руках, «Смена оружия» за ход, стрелы/колчан (10, слоты ≤10, пачки по 10, продажа), поп-ап пустого колчана, мясо по размеру дичи, стражник-свидетель с наводкой на вора, стражник не нападает.
+
+Work Log:
+- Разведка: CombatScene (createActions/playerAttack/lunge), Character.js (WEAPONS/пресеты), loot.js, CharacterScene (инвентарь), InteriorScene (кузница/рынок), ForestScene+LocationScene (охота), thief.js (маршрут вора, npcHint), npcPresence (guardPatrolPlace: pasture/field/village — обе локации есть в CHASE_LOCATIONS).
+- NEW systems/ammo.js: QUIVER_CAP=10, ARROW_SLOT_CAP=10, ARROW_PACK_SIZE=10 (5 д.); getQuiver/setQuiver/addArrowsToInventory (слоты ≤10)/loadQuiver/unloadQuiver/spendArrow/quiverWord; player.quiver 0..10, узел — слоты {id:'arrows',type:'ammo',≤10}.
+- CombatScene: createActions — надписи по оружию (bow→«Стрельба из лука», melee→«Удар оружием», fists→«Удар кулаком», резерв тоже «Удар кулаком») + кнопка «Смена оружия»; перенос кнопок на 2-й ряд на узких экранах (perRow по ширине); gearStatusText «В руках… · Колчан N/10»; playerAttack: bow → spendArrow, пусто → поп-ап «Колчан пуст!» без хода, есть → playBowShot (стрела летит) → resolvePlayerAttack (выделен общий код); openWeaponSwapPanel: оружие из узла+кулаки (выбор = экипировка + ход, то же — бесплатно), наложение стрел = ход, «Готово» бесплатно; F1-справка дополнена; волк 2–4 → 5–9 мяса.
+- ForestScene/LocationScene (охота): после проверки лука — getQuiver≤0 → поп-ап (время не тратится), иначе spendArrow при каждом выстреле.
+- CharacterScene: третья карточка снаряжения equipped_quiver («Колчан: N/10», клик — высыпать), карточка стрел узла (клик — наложить), строки снаряжения со счётчиком; фикс собственного бага: обработчики кликов регистрировались ДО создания hitArea (ReferenceError на вкладке инвентаря) — перенесены после foodDef-паттерна.
+- InteriorScene: кузнец — строка «🪶 Пачка стрел (10 шт.) — 5 д.» с покупкой (only pack, счётчики на кнопке); рынок kind:'ammo' → addArrowsToInventory(10); interiors.js: товар arrows_pack у Аверьяна.
+- Character.js: createCharacter → chr.quiver (стартовый лук → полные 10); импорт QUIVER_CAP.
+- thief.js: refreshGuardThiefTip/getFreshGuardThiefTip/guardThiefHintLine — guard place === route[stop] (stay) → quest.guardThiefTip {fromLocId, nextLocId, 5ч, shared}; вызов из thiefChaseTick; улика в cluesGathered однажды на наблюдение (sameObservation сохраняет shared); правило «СТРАЖНИК НЕ НАПАДАЕТ НА ВОРА» задокументировано.
+- VillageScene/LocationScene: у стражника кнопка «🧭 Спросить про вора» (деревня — при chase active; локация — своя ветка вместо общего askNPC, без лимита «один раз»).
+- forest.js: мясо — глухарь 2–3 (было 1–2), косуля 4–6 (было 3–5); лестница задокументирована.
+- i18n.js: +45 EN-ключей (кнопки/поп-апы/колчан/пачка/стражник/F1); найден и закрыт пропуск 'в узле' (r67/r72 аудит).
+- Тесты: test_round85 (65 assert); актуализация r79 (мясо), r67/r72 (ключи), r69–72/83/84 (SW v78); регресс 64..85 = 22 набора ЗЕЛЁНЫЕ; node --check 0 ошибок.
+- Смоук smoke_6628.mjs: 40+ проверок, 0 JS-ошибок (кнопки/ходы/колчан/поп-ап/пачка/меню/стражник-наводка/мобильный бой 4 ряда); QA-кадры r6628_*.webp (6) → game/docs.
+- Доки: АГЕНТ.md (+smoke_6628), CHANGES.md «Патч 66.28»; sw.js v78 (assets v25 не тронут); headless-глюк «Framebuffer Unsupported» — фильтруется в смоуке (среда, не игра).
+
+Stage Summary:
+- Патч 66.28 готов к коммиту: 15/15 приказов выполнены и верифицированы (юнит + живой смоук + мобильная раскладка).
+- Коммит/пуш/прод-верификация — следующим шагом (66.28-verify).
