@@ -118,7 +118,12 @@ window.addEventListener('load', function() {
             width: window.innerWidth,
             height: window.innerHeight,
             backgroundColor: '#2e2118',
-            pixelArt: false,
+            // 66.30 (хотфикс аудита): пиксель-арт БЕЗ сглаживания — ПРЯМО В РЕАЛЬНОЙ
+            // ТОЧКЕ ВХОДА. Прежде pixelArt: true жил только в зеркале src/main.js,
+            // который НЕ исполняется (BootScene импортирует сцены напрямую отсюда,
+            // минуя src/main.js), поэтому фикс «мыла» 66.29 п.6 не работал в
+            // рантайме. Спрайты при масштабах 1.5–2.5 — чёткие.
+            pixelArt: true,
             physics: {
                 default: 'arcade',
                 arcade: { gravity: { x: 0, y: 0 }, debug: false }

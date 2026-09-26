@@ -7,20 +7,15 @@ import { bindRestartOnResize } from '../utils/ui.js';
 import { timeRatioInfoLine } from '../systems/WorldClock.js';
 
 /**
- * Раунд 24: фоновый прелоадер «тяжёлой» музыки (таверна/церковь/финалы).
- * 4 трека ~9.6 МБ НЕ входят в preload игры и в кэш SW — они догружаются
- * лоадером Phaser прямо во время меню/игры, к моменту захода в таверну
- * или церковь трек уже в кэше браузера. Не блокирует запуск.
+ * 66.30 (хотфикс аудита, приказ п.4): фоновый прелоадер «тяжёлой» музыки
+ * (таверна/церковь/финалы, ~9.5 МБ) УДАЛЁН — он начинал качать все 4 трека
+ * прямо в меню, что утяжеляло мобильный запуск и сжигало трафик.
+ * Тяжёлая музыка подгружается СТРОГО по требованию:
+ *  - таверна/церковь — AudioManager.playInteriorMusic() (докачка на входе
+ *    в интерьер, механизм filecomplete из раунда 24);
+ *  - финальные треки — EndScene (докачка при показе итогов, 66.30).
+ * Из preload игры (BootScene) грузится только music_menu (0.76 МБ).
  */
-function kickoffBackgroundMusicPreload(scene) {
-    if (!scene?.load || scene.registry.get('bgMusicPreloadStarted')) return;
-    scene.registry.set('bgMusicPreloadStarted', true);
-    const tracks = ['music_town_tavern', 'music_town_church', 'music_victory', 'music_game_over'];
-    const pending = tracks.filter((k) => !scene.cache.audio.exists(k));
-    if (pending.length === 0) return;
-    pending.forEach((k) => scene.load.audio(k, `assets/audio/music/${k}.ogg`));
-    try { scene.load.start(); } catch (e) { /* лоадер недоступен — музыка просто не заиграет */ }
-}
 
 export class TitleScene extends Phaser.Scene {
     constructor() {
@@ -36,8 +31,7 @@ export class TitleScene extends Phaser.Scene {
         // Фоновая музыка главного меню
         this.audioManager.playSceneMusic('menu');
 
-        // Раунд 24: тихо догружаем музыку таверны/церкви/финалов в фоне
-        kickoffBackgroundMusicPreload(this);
+        // 66.30: тяжёлая музыка догружается по требованию (см. шапку файла)
 
         // Декор: парящие золотые точки
         for (let i = 0; i < 40; i++) {

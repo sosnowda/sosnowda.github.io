@@ -85,12 +85,13 @@ ok(is.includes('kx - 34, ky + 30') && is.includes('ffb84d'),
 ok(boot.includes("'icon_christ', 'icon_theotokos', 'icon_john', 'icon_archangel',"),
     'BootScene: загрузка 6 икон-тайлов (deco_icon_*.jpg)');
 try {
-    const bg = read('game/assets/interiors/int_bg_church.jpg');
-    ok(bg.length > 60000 && bg.length < 200000, `фон церкви: JPEG ${Math.round(bg.length / 1024)} КБ (было 135 КБ «идолов»)`);
-} catch (e) { ok(false, 'фон церкви int_bg_church.jpg отсутствует!'); }
+    // 66.30: фон церкви перекодирован в WebP (вес буста), .jpg удалён насовсем
+    const bg = read('game/assets/interiors/int_bg_church.webp');
+    ok(bg.length > 40000 && bg.length < 500000, `фон церкви: WebP ${Math.round(bg.length / 1024)} КБ (конверсия 66.30)`);
+} catch (e) { ok(false, 'фон церкви int_bg_church.webp отсутствует!'); }
 
 // ---------- 4. КРИТИЧНЫЙ ФИКС: sw.js снова парсится ----------
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v26'"), 'SW: кеш ассетов v26 (17 фонов int_bg перерисованы, 66.29)');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v27'"), 'SW: кеш ассетов v27 (webp-фоны + паковка PNG, 66.30)');
 ok(sw.includes('*/\n\n// ----- Журнал версий кэша'),
     'SW: заголовочный блочный комментарий закрыт ДО changelog');
 const vLines = sw.split('\n').filter(l => /^v\d+ /.test(l.trim()));

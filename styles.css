@@ -663,7 +663,7 @@ html,body{overflow-x:clip} /* раунд 20: карусель хроники н�
 .fund-popup-content h3{color:#C9A961;font-family:'Prata',serif;font-size:1.5rem;margin-bottom:1rem}
 .fund-popup-content p{color:#B5A88A;margin-bottom:1.5rem;line-height:1.6}
 .fund-popup-content .support-buttons{display:flex;flex-direction:column;gap:0.8rem}
-.fund-popup-close{position:absolute;top:1rem;right:1.5rem;font-size:1.8rem;color:#8A7D63;cursor:pointer;background:none;border:none}
+.fund-popup-close{position:absolute;top:1rem;right:1.5rem;font-size:1.8rem;color:#C9A961;cursor:pointer;background:none;border:none}
 
 #d100Sphere.rolling{animation:d100-3d-roll 0.8s ease-out}
 @keyframes d100-3d-roll{0%{transform:rotateX(0) rotateY(0) rotateZ(0) scale(1)}30%{transform:rotateX(360deg) rotateY(180deg) rotateZ(90deg) scale(1.15)}60%{transform:rotateX(720deg) rotateY(360deg) rotateZ(180deg) scale(1.1)}100%{transform:rotateX(1080deg) rotateY(540deg) rotateZ(270deg) scale(1)}}

@@ -23,13 +23,22 @@ export class EndScene extends Phaser.Scene {
         // Раунд 46 (п.2): убийство старосты — Проигрыш, победная музыка исключена
         // Раунд 66.11: свадьба — тоже победа (ЖЕНИТЬБА = ВЫИГРЫШ И КОНЕЦ ИГРЫ)
         const isWin = !quest.elderMurdered && (quest.thiefDefeated || quest.reputationVictory || quest.marriageVictory);
-        // Раунд 24: финальная музыка по исходу (если фоновый прелоадер успел;
-        // иначе — обычная менюшная)
+        // Финальная музыка по исходу. 66.30: трек докачивается ПО ТРЕБОВАНИЮ
+        // (преждевременный прелоад ~4.5 МБ в меню убран — вес буста),
+        // пока файл не готов — играет менюшная музыка.
         const bgMusicKey = isWin ? 'victory' : 'gameover';
         const bgMusicAsset = isWin ? 'music_victory' : 'music_game_over';
         if (this.cache.audio.exists(bgMusicAsset)) {
             this.audioManager.loadMusic();
             this.audioManager.playSceneMusic(bgMusicKey);
+        } else if (this.load) {
+            this.load.audio(bgMusicAsset, `assets/audio/music/${bgMusicAsset}.ogg`);
+            this.load.once(`filecomplete-audio-${bgMusicAsset}`, () => {
+                this.audioManager.loadMusic();
+                this.audioManager.playSceneMusic(bgMusicKey);
+            });
+            try { this.load.start(); } catch (e) { /* лоадер недоступен — менюшная */ }
+            this.audioManager.playSceneMusic('menu');
         } else {
             this.audioManager.playSceneMusic('menu');
         }

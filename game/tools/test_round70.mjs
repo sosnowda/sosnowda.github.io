@@ -10,11 +10,13 @@
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 
-// Мини-декодер PNG (RGBA/RGB 8 бит, без интерлейса) — без внешних пакетов.
+// Мини-декодер PNG (RGBA/RGB/ПАЛИТРА 8 бит, без интерлейса) — без внешних пакетов.
+// 66.30: добавлен color type 3 (палитра) — lossless-паковка ассетов перевела
+// тайлы/спрайты в палитровые PNG (браузеры/Phaser декодируют их нативно).
 function decodePNG(buf) {
     const sig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     if (!buf.subarray(0, 8).equals(sig)) return null;
-    let off = 8, w = 0, h = 0, bitDepth = 8, colorType = 6;
+    let off = 8, w = 0, h = 0, bitDepth = 8, colorType = 6, plte = null, trns = null;
     const idat = [];
     while (off < buf.length) {
         const len = buf.readUInt32BE(off);
@@ -26,11 +28,13 @@ function decodePNG(buf) {
             bitDepth = data[8];
             colorType = data[9];
         } else if (type === 'IDAT') idat.push(data);
+        else if (type === 'PLTE') plte = Buffer.from(data);
+        else if (type === 'tRNS') trns = Buffer.from(data);
         else if (type === 'IEND') break;
         off += 12 + len;
     }
-    if (bitDepth !== 8 || (colorType !== 6 && colorType !== 2)) return null;
-    const bpp = colorType === 6 ? 4 : 3;
+    if (bitDepth !== 8 || (colorType !== 6 && colorType !== 2 && colorType !== 3)) return null;
+    const bpp = colorType === 6 ? 4 : (colorType === 2 ? 3 : 1);
     const raw = inflateSync(Buffer.concat(idat));
     const stride = w * bpp;
     const out = Buffer.alloc(h * stride);
@@ -56,6 +60,10 @@ function decodePNG(buf) {
     }
     return { w, h, bpp, at: (x, y) => {
         const i = y * stride + x * bpp;
+        if (colorType === 3) {
+            const idx = out[i];
+            return [plte[idx * 3], plte[idx * 3 + 1], plte[idx * 3 + 2], trns ? (trns[idx] ?? 255) : 255];
+        }
         return [out[i], out[i + 1], out[i + 2], bpp === 4 ? out[i + 3] : 255];
     } };
 }
@@ -335,8 +343,9 @@ console.log('— п.2: ПОРУЧЕНИЯ — ВИРТУАЛЬНАЯ ДОСКА 
 // ============================================================
 console.log('— п.12: ИКОНОСТАС в церкви —');
 {
-    const jpg = ROOT + 'game/assets/interiors/int_bg_church.jpg';
-    ok(existsSync(jpg) && statSync(jpg).size > 40 * 1024, 'int_bg_church.jpg перерисован (объём вырос)');
+    // 66.30: фоны интерьеров перекодированы в WebP (вес буста), .jpg удалены насовсем
+    const webp = ROOT + 'game/assets/interiors/int_bg_church.webp';
+    ok(existsSync(webp) && statSync(webp).size > 40 * 1024, 'int_bg_church.webp на месте после конверсии 66.30 (объём)');
     const gen = read('game/tools/make_assets_r67.py');
     ok(gen.includes('def regenerate_church_interior') && gen.includes('ЦАРСКИЕ ВРАТА')
         && gen.includes('wall_kiot') && gen.includes('Голгофа'),
@@ -365,9 +374,9 @@ console.log('— п.3: СТРЕЛКИ ЛАЙТБОКСА ВСЕГДА ВИДНЫ
 console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v79'"), 'SW: сайт v77 (раунд 66.27)');
-    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v26'"),
-        'SW: game-assets-v25 (PNG воротни r67, раунд 66.25)');
+    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v80'"), 'SW: сайт v80 (66.30)');
+    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v27'"),
+        'SW: game-assets-v27 (перекодировка ассетов 66.30)');
     setLang('en');
     ok(t('☁ Что погода сулит?') === '☁ What will the weather bring?', 'i18n: вопрос о погоде EN');
     ok(t('Доска поручений') === 'Job Board', 'i18n: доска поручений EN');

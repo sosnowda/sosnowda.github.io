@@ -217,7 +217,7 @@ export class BootScene extends Phaser.Scene {
             'villager_house_1', 'villager_house_2', 'villager_house_3', 'healer_house', 'fisher_house',
             'carpenter_house', 'weaver_house', 'beekeeper_house'];
         interiorBgIds.forEach(id => {
-            this.load.image(`int_bg_${id}`, `assets/interiors/int_bg_${id}.jpg`);
+            this.load.image(`int_bg_${id}`, `assets/interiors/int_bg_${id}.webp`);
         });
 
         // ----- РАУНД 65 (п.10 прежнего приказа, вариант Б): ГОТОВЫЕ ДЕРЕВЯННЫЕ
@@ -243,7 +243,7 @@ export class BootScene extends Phaser.Scene {
         // ----- РАУНД 51/53: ТАЙЛОВЫЕ ФОНЫ ИНТЕРЬЕРОВ СЛОБОДЫ =====
         const round51BgIds = ['grocer_house', 'butcher_house', 'shop_tools', 'shoemaker_house', 'woodcutter_house'];
         round51BgIds.forEach(id => {
-            this.load.image(`int_bg_${id}`, `assets/interiors/int_bg_${id}.jpg`);
+            this.load.image(`int_bg_${id}`, `assets/interiors/int_bg_${id}.webp`);
         });
 
         // ----- ПОРТРЕТЫ (раунд 24: живописные портреты из DarklandsReborn) -----

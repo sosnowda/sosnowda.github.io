@@ -43,12 +43,17 @@ for f, d in changed:
 print(f'БЕЗ ИЗМЕНЕНИЙ: {len(same)}: {", ".join(same)}')
 
 # QA-кадры смоука 66.24 → game/docs (webp q80, как в 66.21–66.23)
+# 66.30: каталог /tmp/shots6624 существует только в сессии со смоуком 66.24 —
+# при его отсутствии просто пропускаем копирование QA-кадров (не падаем).
 qa = '/tmp/shots6624'
 docs = '/home/z/my-project/sosnowda-site/game/docs'
-for f in os.listdir(qa):
-    if f.endswith('.png'):
-        img = Image.open(os.path.join(qa, f)).convert('RGB')
-        out = os.path.join(docs, f.replace('.png', '.webp'))
-        img.save(out, 'WEBP', quality=80)
-        print(f'QA: game/docs/{f.replace(".png", ".webp")} {os.path.getsize(out)//1024} KB')
+if os.path.isdir(qa):
+    for f in os.listdir(qa):
+        if f.endswith('.png'):
+            img = Image.open(os.path.join(qa, f)).convert('RGB')
+            out = os.path.join(docs, f.replace('.png', '.webp'))
+            img.save(out, 'WEBP', quality=80)
+            print(f'QA: game/docs/{f.replace(".png", ".webp")} {os.path.getsize(out)//1024} KB')
+else:
+    print(f'QA: {qa} отсутствует — копирование QA-кадров пропущено (кадры лендинга уже заменены)')
 print('DONE')
