@@ -35,3 +35,36 @@ export function heroLooksForGender(gender) {
     }
     return HERO_LOOKS;
 }
+
+// ============================================================
+// 66.32: БОЕВЫЕ ОБЛИКИ (MVsv-листы пака «Medieval - Heroes I»).
+// Мир и деревня остаются LPC-моделями (решение р.61/62), но в CombatScene
+// герой теперь показывается боевым обликом пака: маппинг «архетип|пол» →
+// облик. Ключи совпадают с BATTLE_LOOK_SHEETS в BootScene и файлами
+// assets/sprites/battle/battle_<look>_<anim>.png (конвейер game/tools/mvsv_battle_6632.py).
+// Следопыт-мужчина → Гаэррон (единственный полноценный лучник-мужчина в паке),
+// сыщик-мужчина → Пауль, женщины → Охотница/Найя.
+// ============================================================
+export const BATTLE_LOOK_BY_PRESET = {
+    'Воин|male': 'baenor',
+    'Воин|female': 'huntress',
+    'Следопыт|male': 'gaerron',
+    'Следопыт|female': 'naia',
+    'Сыщик|male': 'paul',
+    'Сыщик|female': 'naia',
+    'Приключенец|male': 'baenor',
+    'Приключенец|female': 'huntress',
+};
+
+/**
+ * Боевой облик для игрока. Неизвестный архетип (страховка на будущие
+ * пресеты/переименования) → по полу.
+ * @param {string} archetype — p.archetype ('Воин'|'Следопыт'|'Сыщик'|'Приключенец')
+ * @param {string} gender — 'male' | 'female'
+ * @returns {string} ключ облика ('baenor'|'gaerron'|'huntress'|'naia'|'paul')
+ */
+export function battleLookFor(archetype, gender) {
+    const key = `${archetype}|${gender}`;
+    if (BATTLE_LOOK_BY_PRESET[key]) return BATTLE_LOOK_BY_PRESET[key];
+    return gender === 'female' ? 'huntress' : 'baenor';
+}

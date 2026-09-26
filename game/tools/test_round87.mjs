@@ -3,7 +3,7 @@
 // visibilitychange (MotionFX)  3) width/height всем img лендинга
 // 4) фокус-трап попапа поддержки  5) UTM-метки донат-ссылок
 // 6) кнопка «Вернуться на сайт» в меню  7) чистка i18n.js (дубли) и
-// var→const в main.js  8) интерактивный таймлайн князей. SW v81.
+// var→const в main.js  8) интерактивный таймлайн князей. SW v82.
 import { readFileSync, existsSync } from 'fs';
 
 let pass = 0, fail = 0;
@@ -135,9 +135,9 @@ ok(styles.includes('.pt-reign{transition:none}') || /prefers-reduced-motion[\s\S
     'styles.css: reduced-motion — без анимаций таймлайна');
 
 console.log('--- 9. SW и кеши ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v81';"), 'SW: site-cache v81');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v27';"), 'SW: game-assets-v27 не тронут (ассеты не менялись)');
-ok(sw.includes('// v81 — итерация 66.31'), 'SW: журнал содержит запись v81');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v82';"), 'SW: site-cache v81');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v28';"), 'SW: game-assets-v28 не тронут (ассеты не менялись)');
+ok(sw.includes('// v81 — итерация 66.31'), 'SW: журнал содержит запись v81 (история версий сохраняется)');
 
 console.log(`\nИтог: ${pass} OK, ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

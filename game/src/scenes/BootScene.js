@@ -11,6 +11,25 @@ import { ensureFemaleChestTexture, ensureHeadTextures } from '../systems/Charact
 // гарантированно исполняемый до любых сцен (см. гард SceneManager ниже).
 import { installFxGovernor } from '../systems/MotionFX.js';
 installFxGovernor();
+
+// ============================================================
+// 66.32: MVsv-боевые листы героев (пак «Medieval - Heroes I», Drive владельца).
+// 4 кадра 96×96 на полосу (384×128), ноги на нижнем крае кадра, фигуры
+// отрисованы ЛИЦОМ ВПРАВО (QA-6632, сравнение флип on/off) — в бою герой
+// слева смотрит на врага справа без флипа.
+// paul без полосы стрельбы (в паке только замах молотом) — выстрел остаётся
+// без анимации тела, только полёт стрелы (как было у рыцаря).
+// ВАЖНО: НЕ экспортировать! index.html берёт ПЕРВЫЙ экспорт модуля как
+// класс сцены (сортировка алфавитная — константа встала бы раньше default
+// и сломала регистрацию BootScene — см. сценарий r6632 «Boot not found»).
+// ============================================================
+const BATTLE_LOOK_SHEETS = {
+    baenor: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
+    gaerron: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
+    huntress: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
+    naia: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
+    paul: ['idle', 'attack1', 'attack2', 'fists', 'death', 'victory'],
+};
 // Раунд 61: systems/HouseFacade.js УДАЛЕН — плоские процедурные фасады phouse_*
 // больше не используются, все дома — целые избы-ассеты (см. VillageScene)
 
@@ -398,6 +417,14 @@ export class BootScene extends Phaser.Scene {
                 { frameWidth: 120, frameHeight: 80 });
         });
 
+        // ----- 66.32: MVsv-боевые листы героев (см. BATTLE_LOOK_SHEETS выше) -----
+        Object.entries(BATTLE_LOOK_SHEETS).forEach(([look, anims]) => {
+            anims.forEach((a) => {
+                this.load.spritesheet(`battle_${look}_${a}`, `assets/sprites/battle/battle_${look}_${a}.png`,
+                    { frameWidth: 96, frameHeight: 96 });
+            });
+        });
+
         // ----- LPC Farm Animals — для VillageScene (walk + eat) -----
         // Walk-листы: 4 направления × 7 кадров (6 walk + 1 idle) = 28 кадров, 64×64.
         const animals = ['cow', 'llama', 'pig', 'sheep', 'chicken'];
@@ -609,6 +636,8 @@ export class BootScene extends Phaser.Scene {
         // ----- Анимации Fantasy Knight (для CombatScene) -----
         this.createKnightAnimations('knight');
         this.createKnightAnimations('knight', '_c2');
+        // 66.32: боевые анимации героев из MVsv-листов
+        Object.keys(BATTLE_LOOK_SHEETS).forEach((look) => this.createBattleLookAnimations(look));
 
         // ----- Анимации LPC Wolf (combat sheet) -----
         this.createWolfAnimations();
@@ -1485,6 +1514,42 @@ export class BootScene extends Phaser.Scene {
                 frameRate: 10, repeat: 0,
             });
         }
+    }
+
+    /**
+     * 66.32: боевые анимации героя из MVsv-листов пака «Medieval - Heroes I».
+     * Полосы 4 кадра 96×96; idle — статичный нейтральный кадр, остальные —
+     * одиночные проигрыши всех 4 кадров.
+     * Имя анимации совпадает с ключом текстуры (battle_<look>_<anim>).
+     * @param {string} look — ключ облика ('baenor'|'gaerron'|'huntress'|'naia'|'paul')
+     */
+    createBattleLookAnimations(look) {
+        const anims = BATTLE_LOOK_SHEETS[look] || [];
+        anims.forEach((a) => {
+            const texKey = `battle_${look}_${a}`;
+            if (!this.textures.exists(texKey)) return;
+            const frameCount = this.textures.get(texKey).frameTotal - 1; // без __BASE
+            if (a === 'idle') {
+                // QA-6632: стойки пака — «проездные» циклы (тело гуляет по
+                // ячейке: у Найи f0 тело на x≈12, у Охотницы профиль ребром).
+                // Для пошагового боя idle = СТАТИЧНЫЙ нейтральный кадр f1 —
+                // в паке он всегда отцентрован на x=48 (замер по 5 стойкам),
+                // фигура стоит ровно у метки имени; «жизнь» даёт твин покачивания.
+                this.anims.create({
+                    key: texKey,
+                    frames: [{ key: texKey, frame: 1 }],
+                    frameRate: 1, repeat: -1,
+                });
+                return;
+            }
+            const frames = this.anims.generateFrameNumbers(texKey, { start: 0, end: frameCount - 1 });
+            const cfg = { frames, repeat: 0 };
+            if (a === 'death') cfg.frameRate = 7;
+            else if (a === 'victory') cfg.frameRate = 6;
+            else if (a === 'shoot') cfg.frameRate = 10;
+            else cfg.frameRate = 12; // attack1 / attack2 / fists
+            this.anims.create({ key: texKey, ...cfg });
+        });
     }
 
     /**

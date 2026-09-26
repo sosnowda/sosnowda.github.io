@@ -20,6 +20,8 @@ import { ActionLog } from '../data/actionLog.js';
 import { loseHeroDead, recoverStolenItem, thiefFleesFromFight, saveThiefHp, restoreThiefHp, getThiefSpriteKey, getThiefGender } from '../data/thief.js';
 // Раунд 45 (пп.3,4): последствия убийства НПЦ и перемирье после побега
 import { applyNpcMurderConsequences, setNpcTruce } from '../data/reputation.js';
+// 66.32: боевой облик героя из пака «Medieval - Heroes I» (MVsv-листы)
+import { battleLookFor } from '../data/heroes.js';
 // Раунд 46 (п.1): жители дерутся своими характеристиками
 import { findNpc } from '../data/npcNames.js';
 import { getActiveQuests, checkQuestCompletion, consumeBlessing } from '../data/questGenerator.js';
@@ -99,7 +101,13 @@ export class CombatScene extends Phaser.Scene {
         this.bgGfx = this.add.graphics();
         this.drawCombatBackground = (w, h) => {
             this.bgGfx.clear();
-            this.bgGfx.fillGradientStyle(0x1a0e08, 1, 0x0a0604, 1, 0);
+            // 66.32/QA: фон заметно светлее прежнего. ПОПУТНО ИСПРАВЛЕН СТАРЫЙ
+            // БАГ ВЫЗОВА: fillGradientStyle(c, 1, c2, 1, 0) передавал цвета и
+            // альфы вперемешку — 5-й аргумент это alphaTopLeft (=0!), т.е.
+            // верх был ПРОЗРАЧНО-ЧЁРНЫМ: сцена всегда была темнее замысла и
+            // тёмные облики MVsv (Баэнор — чёрный латник) на ней не читались.
+            // Теперь 4 цвета + 4 альфы явно: поляна на вечернем свету.
+            this.bgGfx.fillGradientStyle(0x3a2a1a, 0x332416, 0x241811, 0x1c130b, 1, 1, 1, 1);
             this.bgGfx.fillRect(0, 0, w, h);
         };
         this.drawCombatBackground(width, height);
@@ -120,15 +128,27 @@ export class CombatScene extends Phaser.Scene {
         }
 
         // ----- Игрок -----
-        // Используем Fantasy Knight (aamatniekss) — side-view рыцарь.
-        // Если у игрока есть sprite='player_custom' (создан через LPC),
-        // в бою всё равно показываем рыцаря (боевая сцена — side-view).
-        this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, 'knight_idle', 0);
-        this.playerSprite.setScale(2.5);
-        this.playerSprite.play('knight_idle');
-        // Раунд 23 (п.3): бойцы стоят ЛИЦОМ К ЛИЦУ. Рыцарь отрисов
-        // мордой ВПРАВО, враги стоят справа — флип не нужен (раньше
-        // setFlipX(true) разворачивал героя СПИНОЙ к врагам).
+        // 66.32: боевой облик из пака «Medieval - Heroes I» (MVsv-листы 96×96).
+        // QA-6632 (сравнение флип on/off): фигуры пака отрисованы ЛИЦОМ ВПРАВО
+        // (меч за спиной уходит влево) — флип НЕ нужен, герой слева смотрит на
+        // врага справа как есть. Ноги на нижнем крае кадра: origin.y = 1/6 при
+        // scale 2.5 даёт ту же линию ног, что у рыцаря (низ кадра в y + 100);
+        // подпись имени (y + 100) остаётся у ног. Fallback — Fantasy Knight.
+        this.battleLook = battleLookFor(this.player.archetype, this.player.gender);
+        const lookIdle = `battle_${this.battleLook}_idle`;
+        this.usesBattleLook = this.textures.exists(lookIdle) && this.anims.exists(lookIdle);
+        if (this.usesBattleLook) {
+            this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, lookIdle, 0);
+            this.playerSprite.setScale(2.5).setOrigin(0.5, 1 / 6);
+            this.playerSprite.play(lookIdle);
+        } else {
+            this.battleLook = null;
+            this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, 'knight_idle', 0);
+            this.playerSprite.setScale(2.5);
+            this.playerSprite.play('knight_idle');
+        }
+        // Раунд 23 (п.3): бойцы стоят ЛИЦОМ К ЛИЦУ. Рыцарь и MVsv-облики
+        // отрисованы мордой ВПРАВО, враги стоят справа — флип не нужен.
         // Лёгкое покачивание
         this.tweens.add({
             targets: this.playerSprite,
@@ -671,19 +691,25 @@ export class CombatScene extends Phaser.Scene {
             // Раунд 66.28 (п.2): стрельба — стрела летит от героя к врагу,
             // без выпада (дистанционная атака). Стрела потрачена выше.
             if (this.audioManager) this.audioManager.playShoot();
+            // 66.32: анимация стрельбы боевым обликом (у paul полосы нет —
+            // выстрел без анимации тела, как у рыцаря раньше)
+            this.playPlayerShoot();
             this.playBowShot(this.playerSprite, targetSprite,
                 () => this.resolvePlayerAttack(w, res, target, targetSprite));
             return;
         }
 
-        // Воспроизводим анимацию атаки рыцаря (выбираем случайно из 3 вариантов)
-        const attackAnims = ['knight_attack1', 'knight_attack2', 'knight_attack_cmb'];
-        const chosen = attackAnims[Math.floor(Math.random() * attackAnims.length)];
-        if (this.anims.exists(chosen)) {
+        // 66.32: анимация атаки боевым обликом (кулаки — fists-полоса),
+        // fallback — рыцарь (случайно из 3 вариантов)
+        const chosen = this.pickAttackAnim(weaponKey);
+        if (chosen && this.anims.exists(chosen)) {
             this.playerSprite.play(chosen);
-            // По завершении — возвращаемся в idle
-            this.playerSprite.once('animationcomplete', () => {
-                this.playerSprite.play('knight_idle');
+            // По завершении — возвращаемся в idle. ВАЖНО: обработчик срабатывает
+            // на ЛЮБУЮ завершившуюся анимацию спрайта — фильтруем по ключу,
+            // иначе он гасит и победную анимацию (66.32, QA-прогон).
+            this.playerSprite.once('animationcomplete', (an) => {
+                if (an && an.key && an.key !== chosen) return;
+                if (this.playerSprite.active && this.player.HP > 0) this.playPlayerIdle();
             });
         }
 
@@ -696,7 +722,7 @@ export class CombatScene extends Phaser.Scene {
     }
 
     /**
-     * Раунд 66.28 (п.2): полёт стрелы от героя к врагу (тонкая палочка,
+     * 66.32: полёт стрелы от героя к врагу (тонкая палочка,
      * как в охоте ForestScene), затем разрешение атаки.
      */
     playBowShot(fromSprite, toSprite, onDone) {
@@ -711,6 +737,46 @@ export class CombatScene extends Phaser.Scene {
                 arrow.destroy();
                 if (onDone) onDone();
             },
+        });
+    }
+
+    /**
+     * 66.32: вернуть спрайт героя в idle (боевой облик или рыцарь).
+     */
+    playPlayerIdle() {
+        const k = (this.usesBattleLook && this.anims.exists(`battle_${this.battleLook}_idle`))
+            ? `battle_${this.battleLook}_idle`
+            : 'knight_idle';
+        if (this.playerSprite && this.playerSprite.active) this.playerSprite.play(k);
+    }
+
+    /**
+     * 66.32: подобрать анимацию атаки: кулаки — fists-полоса облика,
+     * оружие — attack1/attack2 облика; fallback — рыцарь.
+     */
+    pickAttackAnim(weaponKey) {
+        if (this.usesBattleLook) {
+            const a = (weaponKey === 'fists') ? 'fists'
+                : (Math.random() < 0.5 ? 'attack1' : 'attack2');
+            const k = `battle_${this.battleLook}_${a}`;
+            if (this.anims.exists(k)) return k;
+        }
+        const pool = ['knight_attack1', 'knight_attack2', 'knight_attack_cmb'];
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    /**
+     * 66.32: анимация стрельбы боевым обликом (если есть полоса shoot;
+     * у paul её нет в паке — выстрел без анимации тела).
+     */
+    playPlayerShoot() {
+        if (!this.usesBattleLook) return;
+        const k = `battle_${this.battleLook}_shoot`;
+        if (!this.anims.exists(k)) return;
+        this.playerSprite.play(k);
+        this.playerSprite.once('animationcomplete', (an) => {
+            if (an && an.key && an.key !== k) return;
+            if (this.playerSprite.active && this.player.HP > 0) this.playPlayerIdle();
         });
     }
 
@@ -982,10 +1048,12 @@ export class CombatScene extends Phaser.Scene {
                                 else this.audioManager.playArmorHit();
                             } else {
                                 this.audioManager.playSwordHit();
-                                if (this.anims.exists('knight_hit') && this.player.HP > 0) {
+                                if (!this.usesBattleLook && this.anims.exists('knight_hit') && this.player.HP > 0) {
+                                    // 66.32: у боевого облика вздрагивание даёт красная
+                                    // заливка выше; кадр «hit» — только рыцарю
                                     this.playerSprite.play('knight_hit');
                                     this.time.delayedCall(300, () => {
-                                        if (this.playerSprite.active && this.player.HP > 0) this.playerSprite.play('knight_idle');
+                                        if (this.playerSprite.active && this.player.HP > 0) this.playPlayerIdle();
                                     });
                                 }
                             }
@@ -1019,6 +1087,11 @@ export class CombatScene extends Phaser.Scene {
     }
 
     endCombatVictory() {
+        // 66.32: победная анимация боевого облика (последний кадр остаётся)
+        if (this.usesBattleLook) {
+            const vic = `battle_${this.battleLook}_victory`;
+            if (this.anims.exists(vic)) this.playerSprite.play(vic);
+        }
         const q = this.registry.get('quest');
         // Если это был вор — победа в ПОГОНЕ, но игра продолжается (раунд 21)
         const isThiefFight = this.enemies.some(e => e.isThief) || this.npcId === 'thief';
@@ -1158,7 +1231,11 @@ export class CombatScene extends Phaser.Scene {
         this.pushLog(t('Ты пал в бою...'));
         // Раунд 23 (п.5): звук падения + анимация смерти рыцаря
         if (this.audioManager) this.audioManager.playCombatDeath();
-        if (this.anims.exists('knight_death')) {
+        // 66.32: смерть боевым обликом (падение → лежит), fallback — рыцарь
+        const lookDeath = this.usesBattleLook ? `battle_${this.battleLook}_death` : null;
+        if (lookDeath && this.anims.exists(lookDeath)) {
+            this.playerSprite.play(lookDeath);
+        } else if (this.anims.exists('knight_death')) {
             this.playerSprite.play('knight_death');
         }
         // Раунд 22 (п.6): смерть в ЛЮБОМ бою — проигрыш игры.
