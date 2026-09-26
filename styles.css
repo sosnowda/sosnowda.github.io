@@ -1092,3 +1092,43 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
 
 /* ===== Якорная навигация: цель не прячется под sticky-шапкой ===== */
 section[id]{scroll-margin-top:86px}
+
+/* ============================================================
+   66.31 (п.8): ИНТЕРАКТИВНЫЙ ТАЙМЛАЙН КНЯЗЕЙ (RU+EN)
+   Лента 1400–1505: три правления, клик — досье + подсветка
+   событий хроники. Клавиатура (aria-pressed) и reduced-motion.
+   ============================================================ */
+.princes-timeline{max-width:900px;margin:0 auto 2.5rem;padding:1.25rem 1.25rem 1rem;background:#241b15;border:1px solid #3d2f22;border-radius:14px}
+.pt-scale{display:flex;justify-content:space-between;color:#a89878;font-size:0.78rem;margin-bottom:0.35rem;font-family:'PT Serif',Georgia,serif}
+.pt-bar{position:relative;display:flex;height:64px;border-radius:10px;overflow:hidden;border:1px solid #4a3624;background:#1a1410}
+.pt-reign{position:relative;border:none;cursor:pointer;background:linear-gradient(180deg,#3a2a1a,#2e2118);color:#E8DCC4;font-family:'Prata',Georgia,serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0.25rem;transition:filter 0.2s ease,background 0.2s ease}
+.pt-reign-1{width:23.8%}
+.pt-reign-2{width:35.3%}
+.pt-reign-3{width:40.9%}
+.pt-reign+.pt-reign{border-left:1px solid #4a3624}
+.pt-reign:hover{filter:brightness(1.18)}
+.pt-reign:focus-visible{outline:2px solid #E0C078;outline-offset:-3px}
+.pt-reign-years{font-size:0.72rem;color:#a89878;white-space:nowrap}
+.pt-reign-name{font-size:0.95rem;color:#E8DCC4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.pt-reign.active{background:linear-gradient(180deg,rgba(201,169,97,0.30),rgba(201,169,97,0.10));box-shadow:inset 0 -4px 0 #C9A961}
+.pt-reign.active .pt-reign-name{color:#E0C078}
+.pt-detail{margin-top:1rem;padding:1rem 1.1rem;background:#1a1410;border:1px solid #3d2f22;border-radius:10px;min-height:5.5rem}
+.pt-detail-name{color:#C9A961;font-family:'Prata',Georgia,serif;margin:0 0 0.15rem;font-size:1.05rem}
+.pt-detail-years{color:#a89878;font-size:0.8rem;margin-bottom:0.5rem}
+.pt-detail-text{color:#cbbfa4;font-size:0.95rem;line-height:1.6;margin:0}
+/* Подсветка событий хроники внутри выбранного княженья */
+.chronicle-card.pt-hit{border-color:#C9A961;box-shadow:inset 0 0 0 1px #C9A961}
+.epoch-card[role="button"]{cursor:pointer}
+.epoch-card.active{border-color:#C9A961;box-shadow:0 0 0 1px #C9A961 inset}
+/* Клавиатурная полоска сбора средств (фокус после закрытия попапа) */
+.fund-bar:focus-visible{outline:2px solid #C9A961;outline-offset:2px}
+@media (max-width:640px){
+    .pt-bar{height:56px}
+    .pt-reign-years{font-size:0.6rem}
+    .pt-reign-name{font-size:0.76rem}
+    .princes-timeline{padding:1rem 0.9rem 0.85rem}
+}
+@media (prefers-reduced-motion: reduce){
+    .pt-reign{transition:none}
+    .chronicle-card.pt-hit{transition:none}
+}

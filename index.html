@@ -85,15 +85,15 @@
 <div class="fund-bar" onclick="document.getElementById('fundPopup').classList.add('open')">
     💰 Сбор средств на развитие проекта — нажмите, чтобы поддержать!
 </div>
-<div class="fund-popup" id="fundPopup" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="fund-popup-content">
-        <button class="fund-popup-close" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
-        <h3>Поддержите «Летописи Руси»</h3>
+        <button class="fund-popup-close" aria-label="Закрыть окно поддержки" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
+        <h3 id="fundPopupTitle">Поддержите «Летописи Руси»</h3>
         <p>Средства пойдут на оборудование для тестирования ИИ, наполнение баз знаний и разработку. Выберите удобный способ:</p>
         <div class="support-buttons">
-            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;">Boosty (подписка)</a>
-            <a href="https://yoomoney.ru/to/4100119624440650" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;">ЮMoney (перевод)</a>
-            <a href="https://vk.ru/club241165941" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;">ВКонтакте</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;">Boosty (подписка)</a>
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;">ЮMoney (перевод)</a>
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;">ВКонтакте</a>
         </div>
     </div>
 </div>
@@ -134,7 +134,7 @@
         <div class="hero-image-wrap">
             <picture>
                 <source srcset="assets/images/title.webp" type="image/webp">
-                <img src="assets/images/title.jpg" alt="Летописи Руси XV века — титульная картинка" class="hero-image" fetchpriority="high">
+                <img src="assets/images/title.jpg" alt="Летописи Руси XV века — титульная картинка" class="hero-image" width="1920" height="1097" fetchpriority="high">
             </picture>
         </div>
     </section>
@@ -213,57 +213,57 @@
                 доходят до деревни вместе с торговыми обозами.
             </p>
             <div class="chronicle-strip" role="region" aria-label="События хроники 1400–1505, прокручивается горизонтально" tabindex="0">
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1408">
                     <div class="chronicle-year">1408</div>
                     <div class="chronicle-event">Нашествие Едигея</div>
                     <div class="chronicle-text">Ордынский эмир Едигей разоряет северные земли, но Москву взять не смог.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1410">
                     <div class="chronicle-year">1410</div>
                     <div class="chronicle-event">Грюнвальдская битва</div>
                     <div class="chronicle-text">Польша и Литва разбивают Тевтонский орден. Слухи о битве доходят до Руси.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1425">
                     <div class="chronicle-year">1425</div>
                     <div class="chronicle-event">Начало феодальной войны</div>
                     <div class="chronicle-text">Смерть Василия I — спор Василия II и Юрия Звенигородского за великое княжение.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1440">
                     <div class="chronicle-year">1440</div>
                     <div class="chronicle-event">Рождение Ивана III</div>
                     <div class="chronicle-text">Будущий «Государь всея Руси» появляется на свет в год падения Византийских императоров.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1448">
                     <div class="chronicle-year">1448</div>
                     <div class="chronicle-event">Автокефалия Русской церкви</div>
                     <div class="chronicle-text">Собор русских епископов ставит митрополита Иону без Константинополя.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1453">
                     <div class="chronicle-year">1453</div>
                     <div class="chronicle-event">Падение Константинополя</div>
                     <div class="chronicle-text">Византия погибает под ударами османов. Русь осознаёт себя последней православной державой.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1462">
                     <div class="chronicle-year">1462</div>
                     <div class="chronicle-event">Иван III на престоле</div>
                     <div class="chronicle-text">Начало 43-летнего правления, изменившего карту Восточной Европы.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1471">
                     <div class="chronicle-year">1471</div>
                     <div class="chronicle-event">Битва на Шелони</div>
                     <div class="chronicle-text">Москва побеждает Новгород. Падение независимости вольного города.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1480">
                     <div class="chronicle-year">1480</div>
                     <div class="chronicle-event">Стояние на Угре</div>
                     <div class="chronicle-text">Конец Ордынского ига — 240 лет зависимости завершаются без битвы.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1497">
                     <div class="chronicle-year">1497</div>
                     <div class="chronicle-event">Судебник Ивана III</div>
                     <div class="chronicle-text">Первый единый законник Русского государства. Юрьев день для крестьян.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1505">
                     <div class="chronicle-year">1505</div>
                     <div class="chronicle-event">Конец эпохи</div>
                     <div class="chronicle-text">Смерть Ивана III. Государство, выросшее втрое, переходит к Василию III.</div>
@@ -281,18 +281,44 @@
                 Время «Собирания земли русской» вокруг Московского княжества, феодальных войн и сбрасывания Ордынского ига.
                 Три великих князя определяют эпоху.
             </p>
+            <!-- 66.31 (п.8): интерактивный таймлайн правлений — клик по отрезку
+                 подсвечивает княженье, показывает досье и события хроники этих лет -->
+            <div class="princes-timeline" id="princesTimeline">
+                <div class="pt-scale" aria-hidden="true">
+                    <span>1400</span><span>1425</span><span>1450</span><span>1475</span><span>1505</span>
+                </div>
+                <div class="pt-bar" role="group" aria-label="Правления великих князей, 1400–1505">
+                    <button type="button" class="pt-reign pt-reign-1" data-prince="vasily1" data-from="1400" data-to="1425" aria-pressed="false">
+                        <span class="pt-reign-years">1400–1425</span>
+                        <span class="pt-reign-name">Василий I</span>
+                    </button>
+                    <button type="button" class="pt-reign pt-reign-2" data-prince="vasily2" data-from="1425" data-to="1462" aria-pressed="false">
+                        <span class="pt-reign-years">1425–1462</span>
+                        <span class="pt-reign-name">Василий II «Тёмный»</span>
+                    </button>
+                    <button type="button" class="pt-reign pt-reign-3" data-prince="ivan3" data-from="1462" data-to="1505" aria-pressed="false">
+                        <span class="pt-reign-years">1462–1505</span>
+                        <span class="pt-reign-name">Иван III «Великий»</span>
+                    </button>
+                </div>
+                <div class="pt-detail">
+                    <h4 class="pt-detail-name">105 лет эпохи</h4>
+                    <div class="pt-detail-years">1400–1505</div>
+                    <p class="pt-detail-text">Выберите князя на ленте — между ними 105 лет эпохи.</p>
+                </div>
+            </div>
             <div class="epoch-grid">
-                <div class="epoch-card">
+                <div class="epoch-card" data-prince="vasily1">
                     <div class="epoch-year">1400–1425</div>
                     <div class="epoch-name">Василий I Дмитриевич</div>
                     <div class="epoch-desc">Великий князь Московский. Укрепление Московского княжества, борьба с Литвой и Ордой.</div>
                 </div>
-                <div class="epoch-card">
+                <div class="epoch-card" data-prince="vasily2">
                     <div class="epoch-year">1425–1462</div>
                     <div class="epoch-name">Василий II «Тёмный»</div>
                     <div class="epoch-desc">Эпоха феодальных войн, ослепление князя, борьба за московский престол.</div>
                 </div>
-                <div class="epoch-card">
+                <div class="epoch-card" data-prince="ivan3">
                     <div class="epoch-year">1462–1505</div>
                     <div class="epoch-name">Иван III «Великий»</div>
                     <div class="epoch-desc">Свержение Ордынского ига (1480), объединение русских земель, строительство Кремля.</div>
@@ -319,7 +345,7 @@
             <div class="map-card" style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
                 <picture>
                     <source srcset="assets/images/maps/vida_lyatsky_1542.webp" type="image/webp">
-                    <img src="assets/images/maps/vida_lyatsky_1542.jpg" alt="Карта России Антония Вида и Ивана Лятского, 1542-1555" style="width:100%;display:block;cursor:zoom-in;" loading="lazy" decoding="async">
+                    <img src="assets/images/maps/vida_lyatsky_1542.jpg" alt="Карта России Антония Вида и Ивана Лятского, 1542-1555" width="1600" height="1186" style="width:100%;display:block;cursor:zoom-in;" loading="lazy" decoding="async">
                 </picture>
                 <div style="padding:1.5rem;">
                     <h3 style="color:#c9a961;font-family:'Prata',serif;margin-bottom:0.5rem;">Карта России Антония Вида и Ивана Лятского</h3>
@@ -330,7 +356,7 @@
             <div class="map-card" style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
                 <picture>
                     <source srcset="assets/images/maps/herberstein_1550.webp" type="image/webp">
-                    <img src="assets/images/maps/herberstein_1550.jpg" alt="Карта России Сигизмунда фон Герберштейна, 1550" style="width:100%;display:block;cursor:zoom-in;" loading="lazy" decoding="async">
+                    <img src="assets/images/maps/herberstein_1550.jpg" alt="Карта России Сигизмунда фон Герберштейна, 1550" width="1600" height="1121" style="width:100%;display:block;cursor:zoom-in;" loading="lazy" decoding="async">
                 </picture>
                 <div style="padding:1.5rem;">
                     <h3 style="color:#c9a961;font-family:'Prata',serif;margin-bottom:0.5rem;">Карта России Сигизмунда фон Герберштейна</h3>
@@ -662,39 +688,39 @@
         </p>
         <div class="screenshots-grid">
             <div class="screenshot-card" data-src="assets/screenshots/01-title.webp">
-                <img src="assets/screenshots/01-title.webp" alt="Главное меню игры «Летописи Руси»" loading="lazy">
+                <img src="assets/screenshots/01-title.webp" alt="Главное меню игры «Летописи Руси»" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">1. Главное меню</div>
             </div>
             <div class="screenshot-card" data-src="assets/screenshots/02-character-select.webp">
-                <img src="assets/screenshots/02-character-select.webp" alt="Окно выбора персонажа — 8 готовых героев: следопыты, воины, сыщики, приключенцы" loading="lazy">
+                <img src="assets/screenshots/02-character-select.webp" alt="Окно выбора персонажа — 8 готовых героев: следопыты, воины, сыщики, приключенцы" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">2. Окно выбора персонажа</div>
             </div>
             <div class="screenshot-card" data-src="assets/screenshots/03-character-custom.webp">
-                <img src="assets/screenshots/03-character-custom.webp" alt="Лист готового героя — следопыт Гаврила: характеристики, навыки, оружие и доспех перед началом игры" loading="lazy">
+                <img src="assets/screenshots/03-character-custom.webp" alt="Лист готового героя — следопыт Гаврила: характеристики, навыки, оружие и доспех перед началом игры" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">3. Лист героя</div>
             </div>
             <div class="screenshot-card" data-src="assets/screenshots/04-village.webp">
-                <img src="assets/screenshots/04-village.webp" alt="Деревня за частоколом — цельные избы из пакета Fantastic Buildings, церковь и дом старосты в центре, деревья из пака Medieval Expansion, жители на улицах" loading="lazy">
+                <img src="assets/screenshots/04-village.webp" alt="Деревня за частоколом — цельные избы из пакета Fantastic Buildings, церковь и дом старосты в центре, деревья из пака Medieval Expansion, жители на улицах" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">4. Локация: Деревня</div>
             </div>
             <div class="screenshot-card" data-src="assets/screenshots/05-map.webp">
-                <img src="assets/screenshots/05-map.webp" alt="Полноценная карта местности с центром в деревне — тракт с севера через деревню и мост к реке на юге, справа выпас, пасека и поле, дальше леса цепочкой (опушка, поляна, густой лес), у Северного Тракта мельница и озеро" loading="lazy">
+                <img src="assets/screenshots/05-map.webp" alt="Полноценная карта местности с центром в деревне — тракт с севера через деревню и мост к реке на юге, справа выпас, пасека и поле, дальше леса цепочкой (опушка, поляна, густой лес), у Северного Тракта мельница и озеро" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">5. Околица — карта местности</div>
             </div>
             <div class="screenshot-card" data-src="assets/screenshots/06-elder-interior.webp">
-                <img src="assets/screenshots/06-elder-interior.webp" alt="Интерьер дома старосты — печь с живым огнём, узорный стол со стульями на ковре, шкаф, комод и напольные часы у стены, кровать и сундук" loading="lazy">
+                <img src="assets/screenshots/06-elder-interior.webp" alt="Интерьер дома старосты — печь с живым огнём, узорный стол со стульями на ковре, шкаф, комод и напольные часы у стены, кровать и сундук" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">6. Интерьер дома старосты</div>
             </div>
             <div class="screenshot-card" data-src="assets/screenshots/07-priest-dialogue.webp">
-                <img src="assets/screenshots/07-priest-dialogue.webp" alt="Церковь с иконами и скамьями — диалог со священником о краже иконы: молитва, пожертвование, осмотр киота" loading="lazy">
+                <img src="assets/screenshots/07-priest-dialogue.webp" alt="Церковь с иконами и скамьями — диалог со священником о краже иконы: молитва, пожертвование, осмотр киота" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">7. Диалог со священником</div>
             </div>
             <div class="screenshot-card" data-src="assets/screenshots/08-combat.webp">
-                <img src="assets/screenshots/08-combat.webp" alt="Окно сцены боя — пошаговый бой по BRP d100: лук, кулаками, уклон, трава, исследование, побег" loading="lazy">
+                <img src="assets/screenshots/08-combat.webp" alt="Окно сцены боя — пошаговый бой по BRP d100: лук, кулаками, уклон, трава, исследование, побег" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">8. Окно сцены боя</div>
             </div>
             <div class="screenshot-card" data-src="assets/screenshots/09-thief-encounter.webp">
-                <img src="assets/screenshots/09-thief-encounter.webp" alt="Встреча с воровкой на погосте — женский портрет злодейки, фигурка вора в стороне, выбор: напасть, убедить, оглушить или отступить" loading="lazy">
+                <img src="assets/screenshots/09-thief-encounter.webp" alt="Встреча с воровкой на погосте — женский портрет злодейки, фигурка вора в стороне, выбор: напасть, убедить, оглушить или отступить" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">9. Вор и герой — до боя</div>
             </div>
         </div>
@@ -741,15 +767,15 @@
             Средства пойдут на оборудование для тестирования ИИ, наполнение баз знаний и разработку.
         </p>
         <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem;">
-            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer"
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer"
                style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;font-size:1rem;">
                 🚀 Boosty (подписка)
             </a>
-            <a href="https://yoomoney.ru/to/4100119624440650" target="_blank" rel="noopener noreferrer"
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer"
                style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:1rem;">
                 💰 ЮMoney (перевод)
             </a>
-            <a href="https://vk.ru/club241165941" target="_blank" rel="noopener noreferrer"
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer"
                style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;font-size:1rem;">
                 👥 ВКонтакте
             </a>
@@ -791,11 +817,11 @@
     
     
         <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;font-size:0.9rem;">Boosty</a>
-            <a href="https://yoomoney.ru/to/4100119624440650" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:0.9rem;">ЮMoney</a>
-            <a href="https://vk.ru/club241165941" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;font-size:0.9rem;">ВК игры</a>
-            <a href="https://vk.ru/id521470239" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#4a76a8;color:#fff;text-decoration:none;font-size:0.9rem;">Автор ВК</a>
-            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#333;color:#C9A961;text-decoration:none;font-size:0.9rem;border:1px solid #C9A961;">🔒 Код закрыт — доступ для бета-тестеров</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;font-size:0.9rem;">Boosty</a>
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:0.9rem;">ЮMoney</a>
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;font-size:0.9rem;">ВК игры</a>
+            <a href="https://vk.ru/id521470239?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#4a76a8;color:#fff;text-decoration:none;font-size:0.9rem;">Автор ВК</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=beta_access" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#333;color:#C9A961;text-decoration:none;font-size:0.9rem;border:1px solid #C9A961;">🔒 Код закрыт — доступ для бета-тестеров</a>
         </div>
 
         <div style="margin-top:1.5rem;text-align:center;">

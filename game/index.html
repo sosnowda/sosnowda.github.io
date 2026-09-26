@@ -80,6 +80,9 @@ window.addEventListener('load', function() {
     }
 
     Promise.all([
+        // 66.31 (п.1): PreloadScene — ПЕРВАЯ сцена (золотой прогресс-бар),
+        // она сама запускает BootScene; порядок импортов важен.
+        import('./src/scenes/PreloadScene.js'),
         import('./src/scenes/BootScene.js'),
         import('./src/scenes/TitleScene.js'),
         import('./src/scenes/CharacterSelectionScene.js'),

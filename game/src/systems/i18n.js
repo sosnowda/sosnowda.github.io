@@ -64,6 +64,8 @@ const EN = {
     '⚙ Настройки': '⚙ Settings',
     'О игре': 'About',
     'ОК': 'OK',
+    // 66.31 (п.6): кнопка возврата на лендинг в главном меню
+    'Вернуться на сайт': 'Back to site',
     'Закрыть': 'Close',
     'XV век · Поход за утраченной иконой': '15th century · The quest for the stolen icon',
     '🔊 Все звуки: {0}': '🔊 All sound: {0}',
@@ -106,7 +108,6 @@ const EN = {
     'третий час': 'the third hour',
     'шестой час (обедня)': 'the sixth hour (mass)',
     'девятый час (вечерня)': 'the ninth hour (vespers)',
-    'повечерие': 'compline',
     '📜 Летопись': '📜 Chronicle',
     'Месяц: ': 'Month: ',
     'Сутки: ': 'Time of day: ',
@@ -138,17 +139,14 @@ const EN = {
     '◀ В деревню': '◀ To village',
     '🗺 Карта': '🗺 Map',
     '🏠': '🏠',
-    'Лес': 'Forest',
     // Раунд 66.19 (приказ владельца): название «Большая дорога» возвращено
     // обратно на «Тракт» (откат приказа 66.12 №3). Ключ 'Тракт' снова живой.
     'Тракт': 'Highway',
     'Река': 'River',
     'Поле': 'Field',
     'Озеро': 'Lake',
-    'Погост': 'Churchyard',
     'Мельница': 'Mill',
     'Пасека': 'Apiary',
-    'Выпас': 'Pasture',
 
     // --- Деревня (VillageScene) ---
     'Нажмите E — {0}': 'Press E — {0}',
@@ -165,7 +163,6 @@ const EN = {
     'Староста': 'Elder',
     'Таверна': 'Tavern',
     // Раунд 27 (п.12): таверна переименована владельцем в «Постоялый двор»
-    'Постоялый двор': 'The Wayside Inn',
     'Постоялый двор «У дороги»': 'The Wayside Inn',
     'Кузница': 'Smithy',
     'Амбар': 'Barn',
@@ -184,8 +181,6 @@ const EN = {
     'Таверна «У дороги»': 'The Wayfarer\'s Tavern',
     'Дом крестьянина': 'Peasant\'s house',
     'Дом вдовы': 'Widow\'s house',
-    'Пасечница Марфа': 'Marfa the Beekeeper',
-    'Мельник Авдей': 'Avdey the Miller',
     'Любава, жена старосты': 'Lyubava, the elder\'s wife',
     'Фёкла, жена пасечника': 'Fyokla, the beekeeper\'s wife',
     'Амбар общины': 'Community barn',
@@ -207,7 +202,6 @@ const EN = {
     'Плотник Микула': 'Mikula the Carpenter',
     'Матрёна, жена плотника': 'Matryona, the carpenter\'s wife',
     'Ткачиха Пелагея': 'Pelageya the Weaver',
-    'парень': 'lad',
     'Тесная мастерская: круг, стопки сырых горшков, запах глины и печного жара. Хозяин приглядывает к заготовкам, вымазанный по локти.': 'A cramped workshop: a wheel, stacks of raw pots, the smell of clay and kiln heat. The master watches over his wares, smeared to the elbows.',
     'Пахнет сушёными травами и воском. Пучки полыни и зверобоя под потолком, ступка, у печи — бабушка с внучкой перебирают коренья.': 'It smells of dried herbs and beeswax. Bundles of wormwood and St. John\'s wort hang from the ceiling; by the stove a grandmother and her granddaughter sort through roots.',
     'Сети сушатся под потолком, на лавке — плетёные верши и уды. У печи хозяйка потрошит улов.': 'Fishing nets dry from the ceiling; wicker traps and rods lie on the bench. By the stove the mistress of the house is gutting the catch.',
@@ -410,7 +404,6 @@ const EN = {
     '✨ Следы найдены!': '✨ Traces found!',
     '🔍 Поиск следов': '🔍 Searching for traces',
     'Погоня!': 'Chase!',
-    'Продолжить': 'Continue',
 
     // --- Диалоги ---
     'Понятно': 'Got it',
@@ -488,22 +481,6 @@ const EN = {
     'Путник': 'Wanderer',
 
     // --- Кнопки интерьеров (раунд 20) ---
-    '💬 Поговорить': '💬 Talk',
-    '💰 Просить денег': '💰 Ask for money',
-    '📜 Задание': '📜 Quest',
-    '🎁 Подарить': '🎁 Give a gift',
-    '👍 Похвалить': '👍 Compliment',
-    '😠 Угрожать': '😠 Threaten',
-    '💍 Свататься': '💍 Propose marriage',
-    '🍻 Угостить (20д)': '🍻 Treat everyone (20d)',
-    '🛒 Купить еды': '🛒 Buy food',
-    '🛒 Купить оружие': '🛒 Buy weapons',
-    '🙏 Помолиться': '🙏 Pray',
-    '🕯 Пожертвовать (5д)': '🕯 Donate (5d)',
-    '🔍 Осмотреть киот': '🔍 Inspect the icon case',
-    '⚒ Работать (1 час)': '⚒ Work (1 hour)',
-    '🌾 Осмотреть зерно': '🌾 Inspect the grain',
-    '🚪 Выйти': '🚪 Leave',
     '💸 Подарить 10 денег': '💸 Gift 10 dengas',
     '💸 Подарить 50 денег': '💸 Gift 50 dengas',
     'Оружие': 'Weapons',
@@ -524,7 +501,6 @@ const EN = {
     'срок: {0} ч': 'deadline: {0} h',
     'срок ≈{0} ч': 'deadline ≈{0} h',
     '≈{0} ч': '≈{0} h',
-    'Срок:': 'Deadline:',
     'Найди и поймай вора!': 'Find and catch the thief!',
     'Найди вора.': 'Find the thief.',
     'Игра началась. Вор украл чудотворную икону и бежал из деревни в неизвестном направлении.':
@@ -690,7 +666,6 @@ const EN = {
     'Не сейчас': 'Not now',
 
     // ----- Раунд 22: отдых в таверне (п.10/12) -----
-    '🛏 Отдых': '🛏 Rest',
     '🛏 Отдых в таверне': '🛏 Rest at the tavern',
     '⚠ ВНИМАНИЕ: погоня за вором продолжается! Пока ты спишь, вор уйдёт далеко. Отдых лучше отложить до победы.':
         '⚠ WARNING: the chase for the thief is still on! While you sleep, the thief will get far away. Better postpone your rest until after the victory.',
@@ -736,7 +711,6 @@ const EN = {
     // --- Раунд 27: живой мир (пп.6-13) ---
     '🌙 Здесь сейчас никого нет...': '🌙 Nobody is here right now...',
     'Найди его там — или возвращайся в другой час.': 'Find them there — or come back at another hour.',
-    '💬 Поговорить': '💬 Talk',
     'Продолжить': 'Continue',
     'на постоялом дворе': 'at the wayside inn', 'на мельнице': 'at the mill',
     'на пасеке': 'at the apiary', 'у озера': 'by the lake', 'на реке': 'at the river',
@@ -1000,7 +974,6 @@ const EN = {
     ' (скидка за добрую славу)': ' (good-repute discount)',
     ' (наценка за дурную славу)': ' (ill-repute surcharge)',
     ' 🔒 воинское': ' 🔒 warrior-grade',
-    ' 🔒': ' 🔒',
     'Продать можно лишь то, что не надето на тебя (полцены):':
         'Only what you are not wearing can be sold (half price):',
     'В узле нечего продать — всё надето или пусто.':
@@ -1038,7 +1011,6 @@ const EN = {
     'Кузнец Данила отказался торговаться с героем дурной славы (репутация ≤ −50).':
         'Smith Danila refused to trade with a hero of ill repute (reputation ≤ −50).',
     '🚪 ИЗГНАН ИЗ ДЕРЕВНИ': '🚪 EXILED FROM THE VILLAGE',
-    'Изгнан': 'Exiled',
     'Староста выгнал тебя на все четыре стороны: деревня не прощает крови и бесчестия.':
         'The elder drove you beyond the gates: the village forgives neither blood nor dishonour.',
 
@@ -1050,13 +1022,10 @@ const EN = {
     'Деревня тебя полюбила, но зваться «своим» судьбой суждено после возврата иконы и продолжения похода.':
         'The village has grown fond of you, but to be called "one of our own" is fated only after the icon is returned and the journey continues.',
     'Деревня тебя полюбила!': 'The village has grown fond of you!',
-    'Душа деревни': 'Soul of the Village',
     'Ни одной ошибки, и весь приход любит тебя. Редкий дар!':
         'Not a single mistake, and the whole parish loves you. A rare gift!',
-    'Свой человек': 'One of Our Own',
     'Тебя приняли в деревню как родного: добрые дела и честный труд дороже золота.':
         'The village has taken you in as kin: good deeds and honest labour are worth more than gold.',
-    'Долгий путь к доверию': 'A Long Road to Trust',
     'Любовь деревни снискивается годами — и ты её снискал.':
         "A village's love is earned over years — and you have earned it.",
 
@@ -1117,7 +1086,6 @@ const EN = {
     'Теперь лес да изба кормят. Полевые дни прошли до новой весны.': 'Now the forest and the hearth sustain us. The days of the field are over until the new spring.',
     'Поле спит под снегом — так ему теплее, да и семеню тоже.': 'The field sleeps under the snow — it keeps it warm, and the seed too.',
     'Зима — время прясть да сказы слушать. Поле дождётся тепла.': 'Winter is the time for spinning and for tales. The field will wait for the warmth.',
-    'Пахарь': 'Ploughman',
     'Пахарный работник': 'Plough-boy',
     'Сеятель': 'Sower',
     'Сеятельница': 'Sower-woman',
@@ -1281,7 +1249,6 @@ const EN = {
     'До свидания.': 'Farewell.',
     'Откуда скот?': 'Where does the livestock come from?',
     'Что в народе слыхал?': 'What do the people say?',
-    'Спасибо, мастер.': 'Thank you, master.',
     'Про ремесло расскажи.': 'Tell me of your craft.',
     'Кто заказывает?': 'Who is commissioning?',
     'Спасибо, мастер.': 'Thank you, master.',
@@ -1966,9 +1933,7 @@ const EN = {
         'Bought and ate "{0}" at the lodging house for {1} d. (+{2} HP, one hour of time).',
     'Ночлег {0} ч ({1} д.) {2}': 'Lodge for {0} h ({1} d.) {2}',
     'Отдохнуть {0} ч ({1} д.) {2}': 'Rest for {0} h ({1} d.) {2}',
-    '— вернёт ~{0}% здоровья': '— restores ~{0}% health',
     '— полное восстановление': '— full recovery',
-    '— сон {0} ({1} д.), ~{2}% здоровья': '— sleep {0} ({1} d.), ~{2}% health',
     '🌙 До полуночи (в 0:00)': '🌙 Until midnight (at 0:00)',
     'Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Сколько будешь отдыхать?»':
         'Fyodor wipes the counter: "The room is clean, the hay is fresh. How long will you rest?"',

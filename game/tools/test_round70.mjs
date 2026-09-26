@@ -374,7 +374,7 @@ console.log('— п.3: СТРЕЛКИ ЛАЙТБОКСА ВСЕГДА ВИДНЫ
 console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v80'"), 'SW: сайт v80 (66.30)');
+    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v81'"), 'SW: сайт v81 (66.31)');
     ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v27'"),
         'SW: game-assets-v27 (перекодировка ассетов 66.30)');
     setLang('en');

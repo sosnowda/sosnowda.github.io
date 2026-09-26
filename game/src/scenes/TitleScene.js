@@ -1,7 +1,7 @@
 // Главное меню игры — кнопки на чистом Phaser (без RexUI)
 import { RUS } from '../config/RusTheme.js';
 import AudioManager from '../systems/AudioManager.js';
-import { t, tf, tk, getLang, setLang } from '../systems/i18n.js';
+import { t, tf, tk, getLang, setLang, isEn } from '../systems/i18n.js';
 import { bindRestartOnResize } from '../utils/ui.js';
 // Раунд 32 (пп.14,15): строка о времени 1:30 в «Информации по игре» (F1)
 import { timeRatioInfoLine } from '../systems/WorldClock.js';
@@ -73,6 +73,15 @@ export class TitleScene extends Phaser.Scene {
         this.makeButton(width / 2, by + 68, t('❓ Инструкция'), 0x6b5320, 0x7d6428, () => this.showHelp());
         this.makeButton(width / 2, by + 136, t('⚙ Настройки'), 0x4f4a1e, 0x5f5a26, () => this.showSettings());
         this.makeButton(width / 2, by + 204, t('Об игре'), 0x54382a, 0x644536, () => this.about());
+
+        // 66.31 (п.6): «ВЕРНУТЬСЯ НА САЙТ» — выход из игры на лендинг.
+        // ESC из любой сцены приводит сюда (главное меню = пауза), поэтому
+        // кнопка возврата живёт ЗДЕСЬ. Не в основной стопке, а внизу экрана:
+        // компактная, видна на любых экранах (в т.ч. телефон в landscape) и
+        // не двигает привычные пункты меню.
+        this.makeSiteButton(width / 2, height - 34, t('Вернуться на сайт'), () => {
+            try { window.location.href = isEn() ? '/en/' : '/'; } catch (e) { /* noop */ }
+        });
         
         // П.26: ESC — переключение в главное меню и обратно
         this.input.keyboard.on('keydown-ESC', () => {
@@ -117,6 +126,35 @@ export class TitleScene extends Phaser.Scene {
             text.setScale(1.05);
             callback();
         });
+
+        return { bg, text };
+    }
+
+    /**
+     * 66.31 (п.6): компактная «ссылочная» кнопка внизу экрана (меньше и
+     * тише основных пунктов меню) — «Вернуться на сайт» / 'Back to site'.
+     */
+    makeSiteButton(x, y, label, callback) {
+        const w = Math.min(240, Math.max(170, label.length * 11));
+        const h = 42;
+        const bgColor = 0x35543a;      // тёмная хвоя (в тон зелени деревни)
+        const hoverColor = 0x446a4a;
+        const bg = this.add.rectangle(x, y, w, h, bgColor, 1)
+            .setStrokeStyle(1, 0xC9A961, 0.8)
+            .setInteractive({ useHandCursor: true });
+
+        const text = this.add.text(x, y, label, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '16px',
+            color: '#E8DCC4',
+            stroke: '#000',
+            strokeThickness: 2,
+        }).setOrigin(0.5);
+
+        bg.on('pointerover', () => { bg.setFillStyle(hoverColor, 1); });
+        bg.on('pointerout', () => { bg.setFillStyle(bgColor, 1); });
+        bg.on('pointerdown', () => { bg.setScale(0.96); text.setScale(0.96); });
+        bg.on('pointerup', () => { callback(); });
 
         return { bg, text };
     }

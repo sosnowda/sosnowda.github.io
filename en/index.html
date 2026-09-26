@@ -85,15 +85,15 @@
 <div class="fund-bar" onclick="document.getElementById('fundPopup').classList.add('open')">
     💰 Fundraising for the project — click to support!
 </div>
-<div class="fund-popup" id="fundPopup" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="fund-popup-content">
-        <button class="fund-popup-close" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
-        <h3>Support The Chronicles of Ruthenia</h3>
+        <button class="fund-popup-close" aria-label="Close support dialog" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
+        <h3 id="fundPopupTitle">Support The Chronicles of Ruthenia</h3>
         <p>Funds will go toward AI testing hardware, knowledge-base content and development. Choose a convenient method:</p>
         <div class="support-buttons">
-            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;">Boosty (subscription)</a>
-            <a href="https://yoomoney.ru/to/4100119624440650" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;">YuMoney (transfer)</a>
-            <a href="https://vk.ru/club241165941" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;">VKontakte</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;">Boosty (subscription)</a>
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;">YuMoney (transfer)</a>
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;">VKontakte</a>
         </div>
     </div>
 </div>
@@ -134,7 +134,7 @@
         <div class="hero-image-wrap">
             <picture>
                 <source srcset="../assets/images/title.webp" type="image/webp">
-                <img src="../assets/images/title.jpg" alt="The Chronicles of Ruthenia — title art" class="hero-image" fetchpriority="high">
+                <img src="../assets/images/title.jpg" alt="The Chronicles of Ruthenia — title art" class="hero-image" width="1920" height="1097" fetchpriority="high">
             </picture>
         </div>
     </section>
@@ -212,57 +212,57 @@
                 reach the village with the trade caravans.
             </p>
             <div class="chronicle-strip" role="region" aria-label="Chronicle events 1400–1505, horizontally scrollable" tabindex="0">
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1408">
                     <div class="chronicle-year">1408</div>
                     <div class="chronicle-event">Edigu's invasion</div>
                     <div class="chronicle-text">The Horde emir Edigu ravages the northern lands but fails to take Moscow.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1410">
                     <div class="chronicle-year">1410</div>
                     <div class="chronicle-event">Battle of Grunwald</div>
                     <div class="chronicle-text">Poland and Lithuania crush the Teutonic Order. News of the battle reaches Rus'.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1425">
                     <div class="chronicle-year">1425</div>
                     <div class="chronicle-event">Feudal war begins</div>
                     <div class="chronicle-text">Vasily I dies — Vasily II and Yuri of Zvenigorod dispute the grand princely throne.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1440">
                     <div class="chronicle-year">1440</div>
                     <div class="chronicle-event">Ivan III is born</div>
                     <div class="chronicle-text">The future &ldquo;Sovereign of All Rus'&rdquo; is born in the year the Byzantine emperors fall.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1448">
                     <div class="chronicle-year">1448</div>
                     <div class="chronicle-event">Autocephaly of the Russian Church</div>
                     <div class="chronicle-text">A council of Russian bishops installs Metropolitan Jonas without Constantinople.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1453">
                     <div class="chronicle-year">1453</div>
                     <div class="chronicle-event">Fall of Constantinople</div>
                     <div class="chronicle-text">Byzantium perishes under the Ottoman onslaught. Rus' sees itself as the last Orthodox power.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1462">
                     <div class="chronicle-year">1462</div>
                     <div class="chronicle-event">Ivan III takes the throne</div>
                     <div class="chronicle-text">The beginning of a 43-year reign that would redraw the map of Eastern Europe.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1471">
                     <div class="chronicle-year">1471</div>
                     <div class="chronicle-event">Battle of Shelon</div>
                     <div class="chronicle-text">Moscow defeats Novgorod. The independence of the free city ends.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1480">
                     <div class="chronicle-year">1480</div>
                     <div class="chronicle-event">Stand on the Ugra</div>
                     <div class="chronicle-text">The end of the Horde yoke — 240 years of dependence end without a battle.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1497">
                     <div class="chronicle-year">1497</div>
                     <div class="chronicle-event">Ivan III's Law Code (Sudebnik)</div>
                     <div class="chronicle-text">The first unified law code of the Russian state. St George's Day for peasants.</div>
                 </div>
-                <div class="chronicle-card">
+                <div class="chronicle-card" data-year="1505">
                     <div class="chronicle-year">1505</div>
                     <div class="chronicle-event">End of an era</div>
                     <div class="chronicle-text">Ivan III dies. A state grown threefold passes to Vasily III.</div>
@@ -280,18 +280,44 @@
                 The age of &ldquo;gathering of the Russian lands&rdquo; around the Principality of Moscow, of feudal wars
                 and of casting off the Horde yoke. Three grand princes define the epoch.
             </p>
+            <!-- 66.31 (item 8): interactive reigns timeline — clicking a segment
+                 highlights the reign, shows the prince's dossier and the chronicle events of those years -->
+            <div class="princes-timeline" id="princesTimeline">
+                <div class="pt-scale" aria-hidden="true">
+                    <span>1400</span><span>1425</span><span>1450</span><span>1475</span><span>1505</span>
+                </div>
+                <div class="pt-bar" role="group" aria-label="Reigns of the grand princes, 1400–1505">
+                    <button type="button" class="pt-reign pt-reign-1" data-prince="vasily1" data-from="1400" data-to="1425" aria-pressed="false">
+                        <span class="pt-reign-years">1400–1425</span>
+                        <span class="pt-reign-name">Vasily I</span>
+                    </button>
+                    <button type="button" class="pt-reign pt-reign-2" data-prince="vasily2" data-from="1425" data-to="1462" aria-pressed="false">
+                        <span class="pt-reign-years">1425–1462</span>
+                        <span class="pt-reign-name">Vasily II &ldquo;the Blind&rdquo;</span>
+                    </button>
+                    <button type="button" class="pt-reign pt-reign-3" data-prince="ivan3" data-from="1462" data-to="1505" aria-pressed="false">
+                        <span class="pt-reign-years">1462–1505</span>
+                        <span class="pt-reign-name">Ivan III &ldquo;the Great&rdquo;</span>
+                    </button>
+                </div>
+                <div class="pt-detail">
+                    <h4 class="pt-detail-name">105 years of the epoch</h4>
+                    <div class="pt-detail-years">1400–1505</div>
+                    <p class="pt-detail-text">Select a prince on the ribbon — 105 years of the era between them.</p>
+                </div>
+            </div>
             <div class="epoch-grid">
-                <div class="epoch-card">
+                <div class="epoch-card" data-prince="vasily1">
                     <div class="epoch-year">1400–1425</div>
                     <div class="epoch-name">Vasily I Dmitriyevich</div>
                     <div class="epoch-desc">Grand Prince of Moscow. Consolidation of the principality, struggle with Lithuania and the Horde.</div>
                 </div>
-                <div class="epoch-card">
+                <div class="epoch-card" data-prince="vasily2">
                     <div class="epoch-year">1425–1462</div>
                     <div class="epoch-name">Vasily II &ldquo;the Blind&rdquo;</div>
                     <div class="epoch-desc">The era of feudal wars, the prince's blinding, and the struggle for the Moscow throne.</div>
                 </div>
-                <div class="epoch-card">
+                <div class="epoch-card" data-prince="ivan3">
                     <div class="epoch-year">1462–1505</div>
                     <div class="epoch-name">Ivan III &ldquo;the Great&rdquo;</div>
                     <div class="epoch-desc">Overthrow of the Horde yoke (1480), unification of the Russian lands, construction of the Kremlin.</div>
@@ -318,7 +344,7 @@
             <div class="map-card" style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
                 <picture>
                     <source srcset="../assets/images/maps/vida_lyatsky_1542.webp" type="image/webp">
-                    <img src="../assets/images/maps/vida_lyatsky_1542.jpg" alt="Map of Russia by Anton Wied and Ivan Lyatsky, 1542-1555" style="width:100%;display:block;cursor:zoom-in;" loading="lazy" decoding="async">
+                    <img src="../assets/images/maps/vida_lyatsky_1542.jpg" alt="Map of Russia by Anton Wied and Ivan Lyatsky, 1542-1555" width="1600" height="1186" style="width:100%;display:block;cursor:zoom-in;" loading="lazy" decoding="async">
                 </picture>
                 <div style="padding:1.5rem;">
                     <h3 style="color:#c9a961;font-family:'Prata',serif;margin-bottom:0.5rem;">Map of Russia by Anton Wied and Ivan Lyatsky</h3>
@@ -329,7 +355,7 @@
             <div class="map-card" style="background:#241b15;border:1px solid #3d2f22;border-radius:14px;overflow:hidden;">
                 <picture>
                     <source srcset="../assets/images/maps/herberstein_1550.webp" type="image/webp">
-                    <img src="../assets/images/maps/herberstein_1550.jpg" alt="Map of Russia by Sigismund von Herberstein, 1550" style="width:100%;display:block;cursor:zoom-in;" loading="lazy" decoding="async">
+                    <img src="../assets/images/maps/herberstein_1550.jpg" alt="Map of Russia by Sigismund von Herberstein, 1550" width="1600" height="1121" style="width:100%;display:block;cursor:zoom-in;" loading="lazy" decoding="async">
                 </picture>
                 <div style="padding:1.5rem;">
                     <h3 style="color:#c9a961;font-family:'Prata',serif;margin-bottom:0.5rem;">Map of Russia by Sigismund von Herberstein</h3>
@@ -660,39 +686,39 @@
         </p>
         <div class="screenshots-grid">
             <div class="screenshot-card" data-src="../assets/screenshots/01-title.webp">
-                <img src="../assets/screenshots/01-title.webp" alt="Game main menu" loading="lazy">
+                <img src="../assets/screenshots/01-title.webp" alt="Game main menu" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Main menu</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/02-character-select.webp">
-                <img src="../assets/screenshots/02-character-select.webp" alt="Character selection — 8 ready heroes: rangers, warriors, sleuths" loading="lazy">
+                <img src="../assets/screenshots/02-character-select.webp" alt="Character selection — 8 ready heroes: rangers, warriors, sleuths" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Character selection</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/03-character-custom.webp">
-                <img src="../assets/screenshots/03-character-custom.webp" alt="Hero appearance — ready Medieval-Heroes figures" loading="lazy">
+                <img src="../assets/screenshots/03-character-custom.webp" alt="Hero appearance — ready Medieval-Heroes figures" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Hero appearance</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/04-village.webp">
-                <img src="../assets/screenshots/04-village.webp" alt="The village on a single screen — wooden dwelling houses, church and smithy, folk by their yards" loading="lazy">
+                <img src="../assets/screenshots/04-village.webp" alt="The village on a single screen — wooden dwelling houses, church and smithy, folk by their yards" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">The village</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/05-map.webp">
-                <img src="../assets/screenshots/05-map.webp" alt="Area map — locations around the village including the three-part forest" loading="lazy">
+                <img src="../assets/screenshots/05-map.webp" alt="Area map — locations around the village including the three-part forest" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Area map</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/06-elder-interior.webp">
-                <img src="../assets/screenshots/06-elder-interior.webp" alt="Inside the elder's house — the stove with a live fire, a carved table with chairs on a carpet, a wardrobe and a grandfather clock, a bed with a nightstand, the red corner with an icon" loading="lazy">
+                <img src="../assets/screenshots/06-elder-interior.webp" alt="Inside the elder's house — the stove with a live fire, a carved table with chairs on a carpet, a wardrobe and a grandfather clock, a bed with a nightstand, the red corner with an icon" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Elder's house</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/07-priest-dialogue.webp">
-                <img src="../assets/screenshots/07-priest-dialogue.webp" alt="The church with icons and pews — dialogue with the priest about the stolen icon: prayer, donation, shrine inspection" loading="lazy">
+                <img src="../assets/screenshots/07-priest-dialogue.webp" alt="The church with icons and pews — dialogue with the priest about the stolen icon: prayer, donation, shrine inspection" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Priest dialogue</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/08-combat.webp">
-                <img src="../assets/screenshots/08-combat.webp" alt="Combat scene — turn-based BRP d100 fight: bow, fists, dodge, herbs" loading="lazy">
+                <img src="../assets/screenshots/08-combat.webp" alt="Combat scene — turn-based BRP d100 fight: bow, fists, dodge, herbs" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Combat</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/09-thief-encounter.webp">
-                <img src="../assets/screenshots/09-thief-encounter.webp" alt="The thief encounter at the river — attack, persuade or stun" loading="lazy">
+                <img src="../assets/screenshots/09-thief-encounter.webp" alt="The thief encounter at the river — attack, persuade or stun" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">The thief</div>
             </div>
         </div>
@@ -740,15 +766,15 @@
             Funds will go toward AI testing hardware, knowledge-base content and development.
         </p>
         <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem;">
-            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer"
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer"
                style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;font-size:1rem;">
                 🚀 Boosty (subscription)
             </a>
-            <a href="https://yoomoney.ru/to/4100119624440650" target="_blank" rel="noopener noreferrer"
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer"
                style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:1rem;">
                 💰 YuMoney (transfer)
             </a>
-            <a href="https://vk.ru/club241165941" target="_blank" rel="noopener noreferrer"
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer"
                style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;font-size:1rem;">
                 👥 VKontakte
             </a>
@@ -790,11 +816,11 @@
 
 
         <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;font-size:0.9rem;">Boosty</a>
-            <a href="https://yoomoney.ru/to/4100119624440650" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:0.9rem;">YuMoney</a>
-            <a href="https://vk.ru/club241165941" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;font-size:0.9rem;">VK games</a>
-            <a href="https://vk.ru/id521470239" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#4a76a8;color:#fff;text-decoration:none;font-size:0.9rem;">Author VK</a>
-            <a href="https://boosty.to/deimosdi" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#333;color:#C9A961;text-decoration:none;font-size:0.9rem;border:1px solid #C9A961;">🔒 Closed code — beta testers access</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;font-size:0.9rem;">Boosty</a>
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:0.9rem;">YuMoney</a>
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;font-size:0.9rem;">VK games</a>
+            <a href="https://vk.ru/id521470239?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#4a76a8;color:#fff;text-decoration:none;font-size:0.9rem;">Author VK</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=beta_access" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#333;color:#C9A961;text-decoration:none;font-size:0.9rem;border:1px solid #C9A961;">🔒 Closed code — beta testers access</a>
         </div>
 
         <div style="margin-top:1.5rem;text-align:center;">

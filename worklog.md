@@ -8,7 +8,7 @@ Task: Хотфикс-аудит (приказы пп.1–5) + анализ вн�
 Work Log:
 - П.6: файл аудита скачан с Drive (11.8 КБ, Markdown, внешняя оценка 9.2/10) — проанализирован, рекомендаций сопоставлены с собственным чек-лист-аудитом; часть уже реализована (skipWaiting в sw.js, font-display=swap), часть взята в план (см. Stage Summary).
 - П.1/5 (pixelArt): подтверждено живым замером на проде (window.game.config.pixelArt=false), что фикс 66.29-п.6 не работал — применён в неисполняемом зеркале src/main.js. Исправлено: pixelArt:true в game/index.html (реальная точка входа); r86 проверяет оба файла.
-- П.4 (вес буста): замерpayload 474 запроса/28.2 МБ. TitleScene: удалён фоновый прелоадер 4 треков (~9.5 МБ в меню!) — таверна/церковь докачиваются через playInteriorMusic (filecomplete, р.24), финалы — на EndScene по требованию. 18 фонов int_bg: .jpg→.webp q85 (5392→4084 КБ), jpg удалены (tools/webp_interiors_6630.py). Lossless-паковка 450 PNG в точную палитру (16.27→14.91 МБ, tools/png_repack.py, bits=8). Аудио в бусте 12.3→~2.8 МБ; суммарно буст −~40%.
+- П.4 (вес буста): замер payload: 474 запроса/28.2 МБ. TitleScene: удалён фоновый прелоадер 4 треков (~9.5 МБ в меню!) — таверна/церковь докачиваются через playInteriorMusic (filecomplete, р.24), финалы — на EndScene по требованию. 18 фонов int_bg: .jpg→.webp q85 (5392→4084 КБ), jpg удалены (tools/webp_interiors_6630.py). Lossless-паковка 450 PNG в точную палитру (16.27→14.91 МБ, tools/png_repack.py, bits=8). Аудио в бусте 12.3→~2.8 МБ; суммарно буст −~40%.
 - П.3 (контраст): Boosty #1a1005-на-оранжевом 7.93:1, ВКонтакте фон #0062cc 5.80:1 (+кнопка шеринга), кнопка «×» попапа #C9A961 7.51:1 — RU+EN; живой замер после фикса: все ≥4.5:1 (WCAG AA).
 - П.2 (CI): вердикт по совокупности каналов (sha256 локал == GitHub raw) — branches: [main] исправен изначально; чтение «ain]» — артефакт порчи текстового вывода сессии. Правка не требовалась.
 - Тесты: r70 — декодер PNG дополнен color type 3 (палитра) + SW v80/v27; r86 — pixelArt точки входа, webp-списки фонов, отсутствие .jpg; r81 — church.webp; r69–72/83/84 — v80/v27. Регресс 64..86 = 23 набора ВСЕ ЗЕЛЁНЫЕ; node --check 12 изменённых файлов — 0 ошибок.
@@ -16,7 +16,7 @@ Work Log:
 
 Stage Summary:
 - Патч 66.30 готов к деплою: SW site-cache v80, game-assets-v27; сейвы совместимы. Буст −40% (28.2→~16.5 МБ), pixelArt реально работает, контраст AA, CI исправен.
-- План 66.31+ из внешнего аудита (смое мнение): PreloadScene с прогресс-баром, focus-trap модалок + закрытие попапа с клавиатуры, остановка canvas-частиц при hidden tab + prefers-reduced-motion, width/height для 13 img лендинга, UTM-метки донат-ссылок, «Вернуться на сайт» в паузе, разбивка main.js на модули, BEM-рефакторинг inline-стилей, интерактивный таймлайн, вычищение дублей ключей i18n.js (56 no-dupe-keys), var→let/const в main.js (66).
+- План 66.31+ из внешнего аудита (моё мнение): PreloadScene с прогресс-баром, focus-trap модалок + закрытие попапа с клавиатуры, остановка canvas-частиц при hidden tab + prefers-reduced-motion, width/height для 13 img лендинга, UTM-метки донат-ссылок, «Вернуться на сайт» в паузе, разбивка main.js на модули, BEM-рефакторинг inline-стилей, интерактивный таймлайн, вычищение дублей ключей i18n.js (56 no-dupe-keys), var→let/const в main.js (66).
 
 ---
 Task ID: 1
@@ -1526,3 +1526,32 @@ Work Log:
 Stage Summary:
 - 66.29 полностью завершена и верифицирована на проде (SW v79 / game-assets-v26).
 - Следующая итерация — 66.30: боевая анимация MVsv вместо «knight», новые герои (Гаэррон/Leyanne/LordEsther/Saurial), басты на экран выбора, интерьерные люди пака для НПЦ — нужна полная выгрузка Drive-папки (Drive лимитирует массовую выгрузку) и условия лицензии пака от владельца.
+
+---
+Task ID: 66.31
+Agent: Z.ai Code (main)
+Task: Приоритетный план владельца 66.31+ (8 пунктов): PreloadScene с золотым прогресс-баром; частицы visibilityState + reduced-motion; width/height всем img; фокус-трап попапа; UTM-метки донатов; «Вернуться на сайт» в паузе; чистка i18n.js и var→const; интерактивный таймлайн князей. Разбиение main.js на модули и BEM — отложены владельцем осознанно.
+
+Work Log:
+- Разведка: game/index.html (реальная точка входа), BootScene (1594 строки), Loading.js (старая AI-сцена, НЕ подключена — не тронута), AmbientFX/Weather/ui.js/scene-эмиттеры (16 точек add.particles), TitleScene (меню, ESC-семантика), i18n.js (структура EN 57..2055 + EN_KEYS 2058..2462), лендинги RU/EN, sw.js v80, тесты r69–86.
+- П.1 PreloadScene: новая game/src/scenes/PreloadScene.js (первая сцена, launch Boot); BootScene — прогресс в registry 'bootProgress' (своя полоска только как страховка), create() гасит Preload перед start('Title'); game/index.html — import PreloadScene ПЕРВЫМ. Золотой бар: RUS.border + блик 0xf3e2b0, честный %, подсказки RU/EN ×7, искры (выкл. при reduced-motion), виньетка, bindRestartOnResize.
+- П.2 MotionFX: новый game/src/systems/MotionFX.js — reducedMotion() (кэш + ?motion=full), патч GameObjectFactory.particles (emitting:false при reduce), реестр эмиттеров Map<scene,Set> с очисткой на shutdown, suspendFx/resumeFx по visibilitychange (pause/resume с try-guard). installFxGovernor() в шапке BootScene. Лендинг: REDUCED_MOTION гейтит частицы/параллакс, RAF-цикл замирает в скрытой вкладке.
+- П.3: RU+EN — hero 1920×1097, карты 1600×1186/1600×1121 (по webp-источникам; ratio jpg-фолбэков совпадает с точностью 0.1%), 9 скриншотов 1280×720 — 24 тега, размеры сняты PIL-ом.
+- П.4: попап fundPopup (RU+EN) — role=dialog/aria-modal/aria-labelledby (h3 id), aria-label «×», полоска role=button+tabindex+aria-haspopup+aria-expanded; main.js — openPopup/closePopup (фокус внутрь/возврат на полоску), Esc, фокус-трап Tab (offsetParent-фильтр), syncExpanded вынесен из if(bar) (ловля ReferenceError).
+- П.5: 22 ссылки (RU+EN: 3 попап + 3 support_section + 4 footer + 1 beta_access на страницу) — utm_source=sosnowda_github&utm_medium=landing&utm_campaign=…; vk share/t.me/ok.ru не тронуты; main.js — ym reachGoal 'donate_click' {campaign} по клику на boosty/yoomoney/vk club.
+- П.6: TitleScene — makeSiteButton (240×42, тёмная хвоя 0x35543a, внизу height-34, не двигает стопку), t('Вернуться на сайт') → isEn()?'/en/':'/'; i18n ключ EN 'Back to site'.
+- П.7: game/tools/dedupe_i18n_6631.py — парсер EN-объекта (границы по скобкам, extent свойства до строки с запятой): 53 дублирующихся ключа, 37 ранних односточных удалено, 17 многострочных не тронуто (SKIP), 13 пар с разными переводами легализованы (last-wins = рантайм-поведение); контрольные карты key→value до/после — 0 расхождений; повторный прогон — 0 дублей (идемпотентен). Остаточные «дубли» 'Уклонение'/'Имя:' — в РАЗНЫХ объектах EN и EN_KEYS (не дубликаты). main.js переписан var→const/let (66 объявлений, node --check OK; declare-before-use для zoom/translate — TDZ-ловушка снята), блоки собраны в initInteractivePage(reducedMotion) — выполняется и при reduced-motion/no-IO.
+- П.8: #princesTimeline (RU+EN) — pt-scale 1400..1505, pt-bar с 3 кнопками (data-from/to, aria-pressed), pt-detail (имя/годы/досье RU+EN), epoch-card data-prince (role=button+tabindex), chronicle-card data-year ×11; main.js selectPrince: подсветка .pt-hit + scrollIntoView ленты (instant при reduce); styles.css +90 строк (лента, активное правление, focus-visible, мобайл 640px, reduced-motion).
+- SW v81: журнал-запись (line-комментарий), CACHE_NAME chronicles-ruthenia-v81, game-assets-v27 не тронут (ассеты не менялись).
+- Тесты: новый test_round87.mjs (68 assert: 9 секций по всем пунктам; noscript-трекер исключён из img-чека; var-чек по коду без комментариев) — 0 FAIL; r69–72/83/84/86 актуализированы на v81 (sed, подписи «v80 (66.30)»→v81/66.31, r86 журнал-чек v81).
+- Регресс 64..86 = 23 набора ВСЕ ЗЕЛЁНЫЕ (34+67+49+42+54+105+83+69+34+35+43+69+71+32+106+122+18+31+129+67+48+65+27).
+- Живые прогоны Playwright (localhost:8765): smoke_6631.mjs (НОВЫЙ: PreloadScene регистрация/bootProgress=1/Title активен, кнопка возврата 640×686, MotionFX governor + эмит 20 частиц в норме + 0 после reload под reduced-motion (кэш reducedMotion — настройка читается при первом чтении), лендинг RU: img/атрибуты/попап-фокус-трап-Esc/таймлайн Иван III + Василий II (1425,1440,1448,1453,1462)/UTM 3+3+4, EN + reduce: без частиц, Ivan III, Close support dialog — ВСЁ ЗЕЛЁНОЕ, 0 JS-ошибок); shot_preload_6631.mjs (2 кадра прелоада — 16% и 65%); walkthrough_6627 (полный проход — ЗЕЛЁНЫЙ, 0 ошибок); smoke_6628 (ЗЕЛЁНЫЙ; первый прогон п.14 наводка стражника — флейт блуждания НПЦ, на повторе зелёный; предупреждение добавлено в АГЕНТ.md); mobile_check_6627 (ЗЕЛЁНЫЙ).
+- ERR_CERT_AUTHORITY_INVALID (mc.yandex.ru в песочнице) — исключён из счётчика JS-ошибок смоука как шум среды (транспорты задокументированы в v79).
+- Виз-подтверждения: game/docs/r6631_preload_golden_bar.webp, r6631_preload_half.webp (бар 65%, %, подсказка, искры), r6631_timeline_ivan3.webp (хроника докручена к 1462, 5 событий с золотой рамкой), r6631_timeline_mobile.webp (390px, «Василий II» активен, досье).
+- Доки: CHANGES.md «Патч 66.31» (9 блоков), АГЕНТ.md (+smoke_6631, +shot_preload_6631, ⚠ флейт п.14 smoke_6628), game/tools/dedupe_i18n_6631.py (путь к i18n.js резолвится от репо), sitemap lastmod→2026-09-27, worklog 66.31.
+- Синтаксис: node --check main.js OK; ESM-копии MotionFX/PreloadScene/BootScene/i18n через node --check (.mjs) OK; импорт i18n.js в node OK (t('Вернуться на сайт') фолбэк RU).
+
+Stage Summary:
+- 66.31 готова к коммиту: все 8 пунктов плана реализованы и подтверждены живьём; SE-поведение i18n не изменилось (last-wins сохранён), ассеты не тронуты (game-assets-v27), сейвы совместимы.
+- Прелоад: честный золотой бар вместо «голой» полоски; частицы: тише на батарее и уважают reduced-motion в игре И на лендинге; лендинг: CLS≈0 + доступный попап + донат-аналитика с UTM; меню: путь назад на сайт; i18n: 53 дубля сняты; лендинг-интерактив: таймлайн князей.
+- Следующим шагом: коммит/пуш + прод-верификация (SW v81 активен, маркеры PreloadScene/MotionFX/timeline, sha256).

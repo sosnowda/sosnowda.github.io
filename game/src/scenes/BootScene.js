@@ -6,6 +6,11 @@ import { createCharacter } from '../systems/Character.js';
 import { paletteLayerFiles } from '../systems/NpcLpc.js';
 import { isEn } from '../systems/i18n.js';  // раунд 37 (п.7): полоска загрузки по языку
 import { ensureFemaleChestTexture, ensureHeadTextures } from '../systems/CharacterAppearance.js'; // раунд 39 (п.4) + головы (р.61)
+// 66.31 (п.2): регулятор частиц — reduced-motion и пауза в скрытой вкладке
+// (батарея телефонов). Патч ставится ЗДЕСЬ: BootScene — единственный модуль,
+// гарантированно исполняемый до любых сцен (см. гард SceneManager ниже).
+import { installFxGovernor } from '../systems/MotionFX.js';
+installFxGovernor();
 // Раунд 61: systems/HouseFacade.js УДАЛЕН — плоские процедурные фасады phouse_*
 // больше не используются, все дома — целые избы-ассеты (см. VillageScene)
 
@@ -141,17 +146,33 @@ export class BootScene extends Phaser.Scene {
 
     preload() {
         // ----- Прогресс-бар -----
+        // 66.31 (п.1): ПОКА ЖИВ PreloadScene — рисуем фирменный экран с золотым
+        // баром (сцена Preload), а прогресс уходит в registry ('bootProgress').
+        // Служебная полоска ниже остаётся только как страховка, если Preload
+        // не активен (нестандартные запуски, QA-прогоны старых сборок).
         const { width, height } = this.scale;
-        this.add.rectangle(width / 2, height / 2 - 20, 400, 20, 0x000000, 0.5).setStrokeStyle(2, RUS.border);
-        const bar = this.add.rectangle(width / 2 - 200, height / 2 - 20, 4, 16, RUS.border).setOrigin(0, 0.5);
-        this.load.on('progress', (val) => {
-            bar.width = 400 * val;
-        });
+        const preloadAlive = (() => {
+            try { return this.scene.isActive('Preload'); } catch (e) { return false; }
+        })();
+        let bar = null;
+        if (preloadAlive) {
+            this.load.on('progress', (val) => {
+                this.registry.set('bootProgress', val);
+            });
+        } else {
+            this.add.rectangle(width / 2, height / 2 - 20, 400, 20, 0x000000, 0.5).setStrokeStyle(2, RUS.border);
+            bar = this.add.rectangle(width / 2 - 200, height / 2 - 20, 4, 16, RUS.border).setOrigin(0, 0.5);
+            this.load.on('progress', (val) => {
+                if (bar) bar.width = 400 * val;
+            });
+        }
         // Раунд 37 (п.7 заявки): надпись у полоски загрузки — НА ЯЗЫКЕ ИГРЫ
         // (?lang=en с EN-лендинга / localStorage 'gameLang' / <html lang>)
-        this.add.text(width / 2, height / 2 + 20, isEn() ? 'Loading…' : 'Загрузка...', {
-            fontFamily: 'Georgia, serif', fontSize: '20px', color: '#E8DCC4',
-        }).setOrigin(0.5);
+        if (!preloadAlive) {
+            this.add.text(width / 2, height / 2 + 20, isEn() ? 'Loading…' : 'Загрузка...', {
+                fontFamily: 'Georgia, serif', fontSize: '20px', color: '#E8DCC4',
+            }).setOrigin(0.5);
+        }
 
         // ----- ТАЙЛЫ -----
         // Трава
@@ -632,6 +653,12 @@ export class BootScene extends Phaser.Scene {
             });
         }
 
+        // 66.31 (п.1): ассеты готовы — гасим золотой прелоад и открываем меню.
+        // Порядок важен: сначала гасим Preload, потом стартуем Title, чтобы
+        // между ними не мелькал фон пустой сцены.
+        try {
+            if (this.scene.isActive('Preload')) this.scene.stop('Preload');
+        } catch (e) { /* noop */ }
         this.scene.start('Title');
     }
 

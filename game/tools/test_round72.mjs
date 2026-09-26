@@ -179,8 +179,8 @@ setLang('ru');
 }
 
 console.log('\n— Регрессия: SW на актуальной версии (66.19 — чистка ассетов, бамп v22) —');
-ok(read('../sw.js').includes("var CACHE_NAME = 'chronicles-ruthenia-v80';"),
-    'SW актуален (v80, 66.30)');
+ok(read('../sw.js').includes("var CACHE_NAME = 'chronicles-ruthenia-v81';"),
+    'SW актуален (v81, 66.31)');
 
 console.log(`\nИТОГО: ${pass} зелёных, ${fail} красных`);
 process.exit(fail ? 1 : 0);
