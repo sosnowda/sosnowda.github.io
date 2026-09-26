@@ -259,23 +259,27 @@ export class InteriorScene extends Phaser.Scene {
             // взрослый = 2.5 (как игрок в интерьере), подросток ×0.85, ребёнок ×0.7
             this.npcBaseScale = 2.5 * this.interiorAgeScale(this.npcData);
             this.npcSprite = this.add.sprite(width * 0.65, spawnY, finalSpriteKey).setScale(this.npcBaseScale).setDepth(5);
-            // Раунд 37 (п.21): тавернщик ВСЕГДА ЗА СТОЙКОЙ (инт. 'tavern') —
-            // стойка рисуется в (0.5w, 0.45h); хозяин стоит за ней, чуть выше
+            // Раунд 37 (п.21): тавернщик ЗА СТОЙКОЙ (инт. 'tavern').
+            // 66.29: в bg стойка — окошко выдачи у стены (320..430, 60..180);
+            // тавернщик теперь стоит НА ПОЛУ прямо под окошком (был в центре
+            // зала в отрыве от стойки). Голова ниже линии пол/стена (185).
             if (this.interiorId === 'tavern') {
-                this.npcSprite.setPosition(width * 0.5, height * 0.45 - 62);
-                this.npcSprite.setDepth(4); // за стойкой (стойка — глубина 5)
+                this.npcSprite.setPosition(width * 0.293, height * 0.435);
+                this.npcSprite.setDepth(4);
             }
             // Проверяем существование анимации
             const animKey = `${finalSpriteKey}_idle_down`;
             if (this.anims.exists(animKey)) {
                 this.npcSprite.play(animKey);
             }
-            // Лёгкое дыхание
+            // 66.29 (п.6 приказа): вместо «дыхания» деформацией масштаба
+            // (scaleX/scaleY ±2% — желе на пиксель-арте) — мягкий вертикальный
+            // bob: спрайт не деформируется, а чуть приподнимается/опускается.
+            const bobY = this.npcSprite.y;
             this.tweens.add({
                 targets: this.npcSprite,
-                scaleX: { from: this.npcBaseScale, to: this.npcBaseScale * 1.02 },
-                scaleY: { from: this.npcBaseScale, to: this.npcBaseScale * 0.98 },
-                duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                y: { from: bobY, to: bobY - 2.5 },
+                duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
             });
             // П.7: NPC интерактивен — ЛКМ запускает разговор
             this.npcSprite.setInteractive({ useHandCursor: true });
@@ -354,10 +358,11 @@ export class InteriorScene extends Phaser.Scene {
                     .setScale(secScale).setDepth(6);
                 const secAnim = `${secFinal}_idle_down`;
                 if (this.anims.exists(secAnim)) secSpr.play(secAnim);
+                // 66.29: bob вместо желейной деформации масштаба (см. выше)
+                const secBobY = secSpr.y;
                 this.tweens.add({
                     targets: secSpr,
-                    scaleX: { from: secScale, to: secScale * 1.02 },
-                    scaleY: { from: secScale, to: secScale * 0.98 },
+                    y: { from: secBobY, to: secBobY - 2.5 },
                     duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
                 });
                 secSpr.setInteractive({ useHandCursor: true });
@@ -383,7 +388,7 @@ export class InteriorScene extends Phaser.Scene {
             const visitorIds = getNpcsAtPlace(this.registry, 'tavern')
                 .filter(id => id !== 'tavernkeeper').slice(0, 3);
             const VISITOR_SPOTS = [
-                { x: 0.5, y: 0.74 }, { x: 0.84, y: 0.72 }, { x: 0.26, y: 0.44 },  // раунд 37: 3-й гость сдвинут с места тавернщика у стойки
+                { x: 0.5, y: 0.74 }, { x: 0.84, y: 0.72 }, { x: 0.60, y: 0.42 },  // 66.29: 3-й гость — из зоны окошка выдачи (там теперь тавернщик)
             ];
             visitorIds.forEach((vId, vi) => {
                 const vData = findNpc(this.registry, vId);
@@ -2788,13 +2793,48 @@ export class InteriorScene extends Phaser.Scene {
             // Аналой с иконой — на ковре перед иконостасом.
             // Раунд 66.26 (приказ 4): на аналое БОЛЬШЕ не та же икона Благовещения,
             // что на Царских вратах (видимое дублирование) — иная икона из набора.
-            if (this.textures.exists('int_deco_analogion')) {
-                this.add.image(width * 0.5, height * 0.62, 'int_deco_analogion').setScale(1.3).setDepth(5);
+            // 66.29 (п.2 приказа): аналой ПЕРЕРИСОВАН — прежний спрайт 48×56
+            // при scale 1.3 терялся ногами на красном ковре, икона «висела в
+            // воздухе». Теперь: тень + деревянный треножник-пюпитр (графика)
+            // с наклонной доской, икона ЛЕЖИТ на доске, ножки до пола.
+            {
+                const ax = width * 0.5, ay = height * 0.60;
+                const ag = this.add.graphics().setDepth(5);
+                // тень на полу
+                ag.fillStyle(0x000000, 0.28);
+                ag.fillEllipse(ax, ay + 66, 92, 20);
+                // задние ножки
+                ag.fillStyle(0x4a3420, 1);
+                ag.fillRect(ax - 30, ay - 10, 9, 74);
+                ag.fillRect(ax + 21, ay - 10, 9, 74);
+                // наклонная доска-пюпитр (трапеция, лицом к молящимся)
+                ag.fillStyle(0x5c422a, 1);
+                ag.fillPoints([
+                    { x: ax - 42, y: ay + 6 },
+                    { x: ax + 42, y: ay + 6 },
+                    { x: ax + 34, y: ay - 26 },
+                    { x: ax - 34, y: ay - 26 },
+                ], true);
+                ag.fillStyle(0x6c4e30, 1);                    // верхняя кромка доски
+                ag.fillRect(ax - 34, ay - 30, 68, 7);
+                ag.lineStyle(2, 0x2e2012, 0.9);               // контуры
+                ag.strokePoints([
+                    { x: ax - 42, y: ay + 6 },
+                    { x: ax + 42, y: ay + 6 },
+                    { x: ax + 34, y: ay - 26 },
+                    { x: ax - 34, y: ay - 26 },
+                ], true, true);
+                ag.lineStyle(2, 0xc9a14a, 0.55);              // золотая окладка доски
+                ag.strokeRoundedRect(ax - 30, ay - 22, 60, 26, 4);
+                // передняя опорная стойка
+                ag.fillStyle(0x4a3420, 1);
+                ag.fillRect(ax - 5, ay + 4, 10, 62);
+                // икона ЛЕЖИТ на наклонной доске
                 const analogIcon = this.textures.exists('int_deco_icon_wall')
                     ? 'int_deco_icon_wall' : 'int_deco_icon_annunciation';
                 if (this.textures.exists(analogIcon)) {
-                    this.add.image(width * 0.5, height * 0.585, analogIcon)
-                        .setDisplaySize(40, 53).setRotation(-0.05).setDepth(6);
+                    this.add.image(ax, ay - 12, analogIcon)
+                        .setDisplaySize(44, 50).setRotation(-0.04).setDepth(6);
                 }
             }
             // Угасающая лампада у киота — единственный огонёк после кражи
@@ -2921,7 +2961,9 @@ export class InteriorScene extends Phaser.Scene {
         const GOLD = 0xc9a14a, GOLD_D = 0x8c6c2c;
         const WOOD = 0x3a2a18, WOOD_D = 0x291c0e;
         const x0 = width * 0.17, x1 = width * 0.70;
-        const y0 = height * 0.12, y1 = height * 0.44;
+        // 66.29: верх иконостаса опущен с 0.12H до 0.165H — раньше верхняя кромка
+        // (86px) заходила под текст описания и плашку даты (60..110px)
+        const y0 = height * 0.165, y1 = height * 0.465;
         const iw = x1 - x0, ih = y1 - y0;
         const AR = 0.75; // пропорции икон-тайлов 288x384 (ширина = высота * 0.75)
 

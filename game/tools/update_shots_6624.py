@@ -6,7 +6,7 @@ import os
 from PIL import Image, ImageChops
 
 SRC = '/tmp/shots'
-DST = '/home/z/my-project/site-repo/assets/screenshots'
+DST = '/home/z/my-project/sosnowda-site/assets/screenshots'
 FRAMES = ['01-title', '02-character-select', '03-character-custom', '04-village',
           '05-map', '06-elder-interior', '07-priest-dialogue', '08-combat', '09-thief-encounter']
 
@@ -44,7 +44,7 @@ print(f'БЕЗ ИЗМЕНЕНИЙ: {len(same)}: {", ".join(same)}')
 
 # QA-кадры смоука 66.24 → game/docs (webp q80, как в 66.21–66.23)
 qa = '/tmp/shots6624'
-docs = '/home/z/my-project/site-repo/game/docs'
+docs = '/home/z/my-project/sosnowda-site/game/docs'
 for f in os.listdir(qa):
     if f.endswith('.png'):
         img = Image.open(os.path.join(qa, f)).convert('RGB')

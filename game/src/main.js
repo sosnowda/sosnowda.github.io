@@ -25,7 +25,11 @@ const config = {
     height: (typeof window !== 'undefined') ? window.innerHeight : 720,
     // П.5: Фон canvas — тёмно-коричневый (не зелёный!), чтобы избежать «зелёной сетки».
     backgroundColor: '#2e2118',
-    pixelArt: false,
+    // 66.29 (п.6 приказа): пиксель-арт (LPC-персонажи, тайлы) рисуется БЕЗ
+    // сглаживания — раньше при pixelArt: false спрайты при масштабах 1.5–2.5
+    // выглядели размытыми («мыльными»). Интерьерные фоны-картинки от этого
+    // не страдают (они отображаются в масштабе ≈1:1).
+    pixelArt: true,
     physics: {
         default: 'arcade',
         arcade: { gravity: { x: 0, y: 0 }, debug: false },

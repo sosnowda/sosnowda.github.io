@@ -2654,18 +2654,24 @@ export class LocationScene extends Phaser.Scene {
             }
 
             // Деревья по периметру (с коллизиями)
+            // 66.29 (п.5 приказа): деревья НЕ должны слипаться друг с другом
+            // (minDist поднят с 60 до 95 — ширина кроны ~83px при scale 1.3),
+            // НЕ должны налезать на часовню (deco_chapel: 0.5W ± 65, chapelY − 80..+55)
+            // и не должны стоять на могилах/дорожках.
             const placedTrees = [];
-            const hasTreeCollision = (x, y, minDist = 60) => {
+            const hasTreeCollision = (x, y, minDist = 95) => {
                 return placedTrees.some(p => Math.abs(p.x - x) < minDist && Math.abs(p.y - y) < minDist);
             };
+            const chapelCx = width / 2, chapelTop = chapelY - 80, chapelBottom = chapelY + 55;
+            const inChapelZone = (x, y) => Math.abs(x - chapelCx) < 105 && y > chapelTop && y < chapelBottom;
             for (let i = 0; i < 10; i++) {
                 let attempts = 0;
                 while (attempts < 10) {
                     const x = Math.random() * width;
                     const y = 100 + Math.random() * (height - 150);
-                    // Не на дорожке и нет коллизии с могилами
+                    // Не на дорожке, нет коллизии с могилами/часовней/деревьями
                     const onPath = Math.abs(x - width / 2) < 40;
-                    if (!onPath && !hasTreeCollision(x, y, 60) && !hasGraveCollision(x, y, 60)) {
+                    if (!onPath && !inChapelZone(x, y) && !hasTreeCollision(x, y, 95) && !hasGraveCollision(x, y, 60)) {
                         // Раунд 66 (п.10): кладбищенские деревья — новые спрайты
                         const pgTex = (i % 4 === 0)
                             ? `deco_pine_${i % 2}`

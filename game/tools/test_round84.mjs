@@ -156,8 +156,8 @@ for (const f of ['landing_shots.mjs', 'convert_shots.js', 'update_shots_6624.py'
 
 console.log('\n[5] П.4: скриншоты лендинга и SW');
 const swSrc = read('../sw.js');
-ok(swSrc.includes("var CACHE_NAME = 'chronicles-ruthenia-v78'"), 'SW: site-cache v78 (раунд 66.28)');
-ok(swSrc.includes("var GAME_ASSETS_CACHE = 'game-assets-v25'"), 'SW: game-assets-v25 (новые PNG воротни)');
+ok(swSrc.includes("var CACHE_NAME = 'chronicles-ruthenia-v79'"), 'SW: site-cache v78 (раунд 66.28)');
+ok(swSrc.includes("var GAME_ASSETS_CACHE = 'game-assets-v26'"), 'SW: game-assets-v25 (новые PNG воротни)');
 ok(existsSync(join(root, '..', 'assets/screenshots/05-map.webp')), 'кадр карты местности 05-map.webp на месте');
 
 console.log(`\nИТОГ: ${pass} ✓ / ${fail} ✗`);
