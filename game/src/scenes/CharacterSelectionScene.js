@@ -23,6 +23,8 @@ import { ageUnitWord } from '../systems/AgeRules.js';
 // возвращены — LPC-композит собирается здесь, автоматом по полу.
 // (Кастомизация по-прежнему отсутствует — пп.7,10 раунда 61.)
 import { getHeroPreset, composePlayerTexture } from '../systems/NpcLpc.js';
+// 66.33: бусты пака «Medieval - Heroes I» — портреты в карточках/превью
+import { getBustFor } from '../data/heroes.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
     constructor() {
@@ -105,6 +107,9 @@ export class CharacterSelectionScene extends Phaser.Scene {
 
     /**
      * Нарисовать карточку готового героя.
+     * 66.33: если у пресета есть буст пака (getBustFor) и карточка достаточно
+     * высокая (h≥160) — портрет над именем, описание убирается (оно в превью);
+     * иначе прежняя текстовая схема. У Сыщика-мужчины буста в паке нет.
      */
     drawHeroCard(x, y, w, h, hero, onClick) {
         const container = this.add.container(x, y);
@@ -117,25 +122,27 @@ export class CharacterSelectionScene extends Phaser.Scene {
             .setStrokeStyle(2, 0xC9A961);
         container.add(bg);
 
+        const bustKey = getBustFor(hero.archetype, hero.gender);
+        const hasBust = !!bustKey && h >= 160 && this.textures.exists(bustKey);
+
         // Заголовок-архетип
-        const title = this.add.text(0, -h / 2 + (compact ? 18 : 25), t(hero.archetype), {
-            fontSize: compact ? '17px' : '22px', color: '#C9A961', fontStyle: 'bold',
+        const title = this.add.text(0, -h / 2 + (hasBust ? (compact ? 15 : 20) : (compact ? 18 : 25)), t(hero.archetype), {
+            fontSize: hasBust ? (compact ? '15px' : '20px') : (compact ? '17px' : '22px'), color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5);
         container.add(title);
 
-        // Имя
-        // Патч 66.3: имя героя — собственное, в EN транслитерацией (t())
-        const name = this.add.text(0, -h / 2 + (compact ? 40 : 55), t(hero.name) + (hero.gender === 'female' ? ' ♀' : ' ♂'), {
-            fontSize: compact ? '13px' : '16px', color: RUS.text,
-            stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5);
-        container.add(name);
-
-        // Описание (в компактных карточках скрывается — навыки и снаряжение важнее)
+        let nameY = -h / 2 + (compact ? 40 : 55);
         let descH = 0;
-        if (!compact) {
+        if (hasBust) {
+            // Портрет-буст (квадрат, прижат к заголовку)
+            const S = compact ? 64 : 100;
+            const bustCY = -h / 2 + (compact ? 15 : 20) + 10 + S / 2;
+            container.add(this.add.image(0, bustCY, bustKey).setDisplaySize(S, S));
+            nameY = bustCY + S / 2 + (compact ? 12 : 14);
+        } else if (!compact) {
+            // Описание (в компактных карточках скрывается — навыки и снаряжение важнее)
             const desc = this.add.text(0, -h / 2 + 90, t(hero.description), {
                 fontSize: '12px', color: RUS.textDim,
                 wordWrap: { width: w - 20 }, align: 'center',
@@ -145,13 +152,24 @@ export class CharacterSelectionScene extends Phaser.Scene {
             descH = desc.height;
         }
 
-        // Ключевые навыки (3 верхних) — старт строго после фактической высоты описания
+        // Имя
+        // Патч 66.3: имя героя — собственное, в EN транслитерацией (t())
+        const name = this.add.text(0, nameY, t(hero.name) + (hero.gender === 'female' ? ' ♀' : ' ♂'), {
+            fontSize: hasBust ? (compact ? '12px' : '14px') : (compact ? '13px' : '16px'), color: RUS.text,
+            stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5);
+        container.add(name);
+
+        // Ключевые навыки (3 верхних; в буст-компакте — 2) — старт по факту раскладки
         const topSkills = Object.entries(hero.skillOverrides)
             .sort((a, b) => b[1] - a[1]).slice(0, 3);
-        const skillFont = compact ? 10 : 13;
-        const skillStep = compact ? 15 : 18;
-        let skillY = -h / 2 + (compact ? 56 : 90) + descH + 14;
-        topSkills.forEach(([key, val]) => {
+        const skillFont = hasBust ? (compact ? 10 : 12) : (compact ? 10 : 13);
+        const skillStep = hasBust ? (compact ? 13 : 16) : (compact ? 15 : 18);
+        let skillY = hasBust
+            ? nameY + (compact ? 14 : 18)
+            : -h / 2 + (compact ? 56 : 90) + descH + 14;
+        const skillCount = hasBust && compact ? 2 : 3;
+        topSkills.slice(0, skillCount).forEach(([key, val]) => {
             const skillDef = SKILLS.find(s => s.key === key);
             if (skillDef) {
                 const txt = this.add.text(0, skillY, `${t(skillDef.name)}: ${val}%`, {
@@ -163,17 +181,18 @@ export class CharacterSelectionScene extends Phaser.Scene {
             }
         });
 
-        // Стартовое снаряжение (в компактных карточках — одной строкой,
-        // чтобы не пересекалось с третьим навыком)
+        // Стартовое снаряжение (буст-карточки и компакт — одной строкой,
+        // чтобы не пересекалось с навыками)
         const armor = ARMORS[hero.startArmor];
         const weapon = WEAPONS[hero.startWeapon];
-        const gear = this.add.text(0, h / 2 - (compact ? 16 : 26),
-            compact
+        const oneLine = compact || hasBust;
+        const gear = this.add.text(0, h / 2 - (oneLine ? 16 : 26),
+            oneLine
                 ? `⚔ ${t(weapon.name)} · 🛡 ${t(armor.name)}`
                 : `⚔ ${t(weapon.name)}\n🛡 ${t(armor.name)}`, {
-            fontSize: compact ? '9px' : '12px', color: '#c9a14a', align: 'center',
+            fontSize: oneLine ? (compact ? '9px' : '11px') : '12px', color: '#c9a14a', align: 'center',
             stroke: '#000', strokeThickness: 1,
-            wordWrap: compact ? { width: w - 14 } : undefined,
+            wordWrap: oneLine ? { width: w - 14 } : undefined,
         }).setOrigin(0.5);
         container.add(gear);
 
@@ -390,6 +409,17 @@ export class CharacterSelectionScene extends Phaser.Scene {
                 fontSize: '14px', color: RUS.text,
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0, 0.5).setDepth(202);
+        }
+
+        // 66.33: буст героя в правом верхнем углу панели превью
+        // (панель ≥600px по ширине — на узких мобильных колонка навыков
+        // доходит до края, портрет не влезает без наложения)
+        const bustKey = getBustFor(hero.archetype, hero.gender);
+        if (bustKey && panelW >= 600 && this.textures.exists(bustKey)) {
+            this.add.rectangle(width / 2 + panelW / 2 - 75, top + 140, 132, 132, 0x241B15, 0.85)
+                .setStrokeStyle(2, 0xC9A961).setDepth(202);
+            this.add.image(width / 2 + panelW / 2 - 75, top + 140, bustKey)
+                .setDisplaySize(124, 124).setDepth(202);
         }
 
         // Кнопки "Начать игру" и "Отмена"

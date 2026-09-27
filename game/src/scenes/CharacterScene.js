@@ -20,6 +20,8 @@ import { getLootDef, tryEatFood } from '../systems/loot.js';
 // наложение/высыпание стрел между узлом и колчаном
 import { getQuiver, countInventoryArrows, loadQuiver, unloadQuiver, quiverWord, QUIVER_CAP } from '../systems/ammo.js';
 import { createDialog } from '../utils/ui.js';
+// 66.33: буст пака в свитке персонажа (карта heroes.js по архетипу|полу)
+import { getBustFor } from '../data/heroes.js';
 
 export class CharacterScene extends Phaser.Scene {
     constructor() {
@@ -187,16 +189,31 @@ export class CharacterScene extends Phaser.Scene {
             fontSize: '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
-        this.add.text(colX, top + 246, `${t('🛡 Доспех:')} ${t(armor.name)} (${t('защита')} ${armor.def})   ·   ${t('🪶 Колчан')}: ${getQuiver(p)}/${QUIVER_CAP}`, {
+        this.add.text(colX, top + 246, `${t('🛡 Доспех:')} ${t(armor.name)} (${t('защита')} ${armor.def})`, {
             fontSize: '14px', color: RUS.text,
+            stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0, 0.5);
+        // 66.33: колчан — отдельной строкой (строка доспеха с колчаном налезала
+        // на правую колонку навыков — QA-кадр 6633)
+        this.add.text(colX, top + 268, `${t('🪶 Колчан')}: ${getQuiver(p)}/${QUIVER_CAP}`, {
+            fontSize: '13px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
 
         // Деньги
-        this.add.text(colX, top + 276, `${t('💰 Денег:')} ${formatMoney(p.dengas || 0)}`, {
+        this.add.text(colX, top + 292, `${t('💰 Денег:')} ${formatMoney(p.dengas || 0)}`, {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
+
+        // 66.33: буст героя — портрет справа от колонки навыков (только широкие
+        // экраны: при width<900 навыки доходят до правого края — наложение)
+        const bustKey = getBustFor(p.archetype, p.gender);
+        if (bustKey && width >= 900 && this.textures.exists(bustKey)) {
+            this.add.rectangle(width - 85, top + 100, 132, 132, 0x241B15, 0.9)
+                .setStrokeStyle(2, 0xC9A961);
+            this.add.image(width - 85, top + 100, bustKey).setDisplaySize(124, 124);
+        }
     }
 
     /**

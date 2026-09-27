@@ -30,6 +30,12 @@ const BATTLE_LOOK_SHEETS = {
     naia: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
     paul: ['idle', 'attack1', 'attack2', 'fists', 'death', 'victory'],
 };
+// 66.33: бусты пака (портреты меню) — все файлы assets/sprites/busts/.
+// Локальная константа (НЕ экспортировать — см. предупреждение выше).
+const BUST_KEYS_6633 = [
+    'bust_baenor_1', 'bust_baenor_5', 'bust_huntress_1',
+    'bust_huntress_5', 'bust_gaerron', 'bust_naia',
+];
 // Раунд 61: systems/HouseFacade.js УДАЛЕН — плоские процедурные фасады phouse_*
 // больше не используются, все дома — целые избы-ассеты (см. VillageScene)
 
@@ -424,6 +430,12 @@ export class BootScene extends Phaser.Scene {
                     { frameWidth: 96, frameHeight: 96 });
             });
         });
+
+        // ----- 66.33: бусты пака «Medieval - Heroes I» (портреты меню) -----
+        // Файлы — assets/sprites/busts/ (конвейер game/tools/make_busts_6633.py),
+        // карта — BUST_BY_PRESET/getBustFor в data/heroes.js. У paul буста в паке
+        // нет — текстуру не грузим, сцены проверяют textures.exists/getBustFor.
+        BUST_KEYS_6633.forEach((k) => this.load.image(k, `assets/sprites/busts/${k}.png`));
 
         // ----- LPC Farm Animals — для VillageScene (walk + eat) -----
         // Walk-листы: 4 направления × 7 кадров (6 walk + 1 idle) = 28 кадров, 64×64.

@@ -91,7 +91,7 @@ try {
 } catch (e) { ok(false, 'фон церкви int_bg_church.webp отсутствует!'); }
 
 // ---------- 4. КРИТИЧНЫЙ ФИКС: sw.js снова парсится ----------
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v28'"), 'SW: кеш ассетов v27 (webp-фоны + паковка PNG, 66.30)');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v29'"), 'SW: кеш ассетов v29 (листы 66.33 + бусты)');
 ok(sw.includes('*/\n\n// ----- Журнал версий кэша'),
     'SW: заголовочный блочный комментарий закрыт ДО changelog');
 const vLines = sw.split('\n').filter(l => /^v\d+ /.test(l.trim()));
