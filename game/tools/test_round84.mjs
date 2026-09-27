@@ -39,15 +39,18 @@ const shop = BUILDINGS.find(b => b.interiorId === 'shop_tools');
 const healer = BUILDINGS.find(b => b.interiorId === 'healer_house');
 const butcher = BUILDINGS.find(b => b.interiorId === 'butcher_house');
 const grocer = BUILDINGS.find(b => b.interiorId === 'grocer_house');
-ok(smithy.col === 18 && smithy.row === 1, `кузница — северный ряд (18,1), была (23,1) [${smithy.col},${smithy.row}]`);
-ok(shop.col === 15 && shop.row === 1, `дом ремесленника — (15,1) [${shop.col},${shop.row}]`);
-ok(healer.col === 21 && healer.row === 1, `знахарка — (21,1) [${healer.col},${healer.row}]`);
-ok(butcher.col === 23 && butcher.row === 6, `мясник Потап — средний ряд (23,6) [${butcher.col},${butcher.row}]`);
-ok(grocer.col === 22 && grocer.row === 10 && grocer.w === 3, `Прасковья — южный ряд (22..24,10) [${grocer.col},${grocer.row},w${grocer.w}]`);
+// 66.35: планировка пересобрана (зазор ≥1 тайл от восточного частокола)
+ok(smithy.col === 18 && smithy.row === 1, `кузница — северный ряд (18,1) [66.35: ${smithy.col},${smithy.row}]`);
+ok(shop.col === 2 && shop.row === 6, `дом ремесленника — средний ряд (2,6) [66.35: ${shop.col},${shop.row}]`);
+ok(healer.col === 21 && healer.row === 1, `знахарка — (21,1) [66.35: ${healer.col},${healer.row}]`);
+ok(butcher.col === 22 && butcher.row === 6, `мясник Потап — средний ряд (22,6) [66.35: ${butcher.col},${butcher.row}]`);
+ok(grocer.col === 21 && grocer.row === 10 && grocer.w === 3, `Прасковья — южный ряд (21..23,10) [66.35: ${grocer.col},${grocer.row},w${grocer.w}]`);
+// 66.35: НИ ОДИН дом не касается колонки 24 (зазор от восточного частокола)
+ok(BUILDINGS.every(b => b.col + b.w <= 24), 'все дома ≥1 тайл от восточного частокола (66.35)');
 ok(BUILDINGS.length === 18, `зданий по-прежнему 18 (${BUILDINGS.length})`);
 
 // Северо-восточный угол пуст (колонки 23–24, ряды 1–3)
-ok(!BUILDINGS.some(b => b.col + b.w > 23 && b.row <= 3 && b.col >= 22),
+ok(!BUILDINGS.some(b => b.col + b.w > 23 && b.row <= 3 && b.col >= 23),
     'СВ угол (колонки 23–24, ряды 1–3) пуст — под планом только трава');
 // …кроме того ни один фасад не заходит в зону виджета «План деревни».
 // Виджет: экран x 1113..1275, y 59..155; мир смещён на +16 (камера 1248 на 1280)
@@ -91,9 +94,9 @@ for (let i = 0; i < BUILDINGS.length && !merged; i++) {
 ok(!merged, `зазоры ≥1 тайла между всеми домами${merged ? ' (СРАСТАНИЕ: ' + merged + ')' : ''}`);
 
 // Точки улиц для перемещённых жителей
-ok(villageSrc.includes('blacksmith: { x: 18.5, y: 4.4 }'), 'уличная точка кузнеца — у новой кузницы (18.5,4.4)');
-ok(villageSrc.includes('healer: { x: 21.5, y: 4.4 }'), 'уличная точка знахарки — у нового дома (21.5,4.4)');
-ok(!villageSrc.includes('blacksmith: { x: 23.5, y: 4.4 }'), 'старая точка кузнеца (23.5,4.4) убрана');
+ok(villageSrc.includes('blacksmith: { x: 19.5, y: 4.4 }'), 'уличная точка кузнеца — у кузницы 66.35 (19.5,4.4)');
+ok(villageSrc.includes('healer: { x: 22.5, y: 4.4 }'), 'уличная точка знахарки — у дома 66.35 (22.5,4.4)');
+ok(!villageSrc.includes('blacksmith: { x: 18.5, y: 4.4 }'), 'точка кузнеца 66.25 (18.5,4.4) убрана (там ученик)');
 
 console.log('\n[2] П.3: ворота нового поколения r67 «створ поперёк дороги»');
 const n = pngSize('assets/sprites/village_gate_r67_north.png');
@@ -133,7 +136,7 @@ const valid = validateMap(grid);
 ok(valid.problems.length === 0, 'BFS: все двери и ворота достижимы: ' + valid.problems.join('; '));
 ok(grid[VILLAGE_GATE.row][MAP_W - 1] === 'G', "ворота 'G' на (25,5) на месте");
 ok(grid[1][24] === 'T', "новое дерево у СВ угла (24,1)");
-ok(grid[1][18] !== 'T' && grid[2][22] !== 'T', 'старые деревья (18,1)/(22,2) сняты (колонки заняты домами)');
+ok(grid[1][17] === 'T' && grid[2][22] !== 'T', 'деревья 66.35: (17,1) посажено, (22,2) нет (план синхронен world.buildMap)');
 // Дорожки от новых дверей
 const doorOf = (b) => [b.col + Math.floor(b.w / 2), b.row + b.h - 1];
 const pathsOk = [smithy, shop, healer, butcher, grocer].every(b => {
@@ -156,8 +159,8 @@ for (const f of ['landing_shots.mjs', 'convert_shots.js', 'update_shots_6624.py'
 
 console.log('\n[5] П.4: скриншоты лендинга и SW');
 const swSrc = read('../sw.js');
-ok(swSrc.includes("var CACHE_NAME = 'chronicles-ruthenia-v84'"), 'SW: site-cache v84 (66.34)');
-ok(swSrc.includes("var GAME_ASSETS_CACHE = 'game-assets-v29'"), 'SW: game-assets-v29 (листы 66.33 + бусты)');
+ok(swSrc.includes("var CACHE_NAME = 'chronicles-ruthenia-v85'"), 'SW: site-cache v84 (66.34)');
+ok(swSrc.includes("var GAME_ASSETS_CACHE = 'game-assets-v30'"), 'SW: game-assets-v30 (листы 66.33 + бусты)');
 ok(existsSync(join(root, '..', 'assets/screenshots/05-map.webp')), 'кадр карты местности 05-map.webp на месте');
 
 console.log(`\nИТОГ: ${pass} ✓ / ${fail} ✗`);

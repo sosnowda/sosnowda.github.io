@@ -246,6 +246,11 @@ export class VillageScene extends Phaser.Scene {
         // труб (метаданные housesFX.js, снятые с текстур) и сделан
         // полупрозрачным, очень слабым и еле видимым (просьба владельца).
         this.doors = [];
+        // ПАТЧ 66.35 (приказ 2): зоны ПОДСКАЗОК/КЛИКА = отпечаток здания +
+        // ВИДИМЫЙ СПРАЙТ (крыша, башня церкви, свесы кровли). Раньше хит-зона
+        // была только по тайлам отпечатка: наведение на крышу/звонницу
+        // ничего не показывало — выглядело как «пропавшие» поп-апы.
+        this.houseHitRects = [];
         BUILDINGS.forEach(b => {
             const doorX = b.col + Math.floor(b.w / 2);
             const doorY = b.row + b.h - 1;
@@ -282,6 +287,16 @@ export class VillageScene extends Phaser.Scene {
                     .setDepth(bottomRow - 0.55);          // Y-сортировка: игрок ниже дома — перед домом;
                                                           // на строке двери (bottomRow-0.5) игрок тоже ПЕРЕД домом (п.15)
                 if (isChurch) houseImg.setOrigin(0.5, 1).setPosition(cx, bottomRow * ts - 4);
+                // ПАТЧ 66.35: прямоугольник видимого спрайта — для хит-теста
+                const dispW = houseImg.width * fitS;
+                const dispH = houseImg.height * fitS;
+                const topY = isChurch
+                    ? (bottomRow * ts - 4 - dispH)
+                    : (cy - dispH / 2);
+                this.houseHitRects.push({
+                    b, x0: cx - dispW / 2, y0: topY,
+                    x1: cx + dispW / 2, y1: bottomRow * ts - 2,
+                });
             } else {
                 // Fallback: старые тайлы + нарисованная дверь
                 this.add.rectangle(px, py + 4, ts * 0.44, ts * 0.68, 0x3a2417)
@@ -567,28 +582,20 @@ export class VillageScene extends Phaser.Scene {
             this.scene.start('Title');
         });
 
-        // П.16,23: ЛКМ на здании — подойти и войти
+        // П.16,23: ЛКМ на здании — подойти и войти (хит-тест 66.35:
+        // по отпечатку И по видимому спрайту — клик по крыше тоже работает)
         this.input.on('pointerdown', (pointer) => {
             if (this.busyDialog) return;
             const worldX = pointer.worldX;
             const worldY = pointer.worldY;
-            const ts = this.tileSize;
-            const tx = Math.floor(worldX / ts);
-            const ty = Math.floor(worldY / ts);
 
-            let targetBuilding = null;
-            const interiorId = doorInteriorId(tx, ty);
-            if (interiorId) {
-                targetBuilding = { interiorId, doorX: tx, doorY: ty };
-            } else {
-                for (const b of BUILDINGS) {
-                    if (tx >= b.col && tx < b.col + b.w && ty >= b.row && ty < b.row + b.h) {
-                        targetBuilding = { interiorId: b.interiorId, doorX: b.col + Math.floor(b.w / 2), doorY: b.row + b.h - 1 };
-                        break;
-                    }
-                }
-            }
-            if (targetBuilding) {
+            const hitB = this.buildingAt(worldX, worldY);
+            if (hitB) {
+                const targetBuilding = {
+                    interiorId: hitB.interiorId,
+                    doorX: hitB.col + Math.floor(hitB.w / 2),
+                    doorY: hitB.row + hitB.h - 1,
+                };
                 if (pointer.rightButtonDown()) {
                     this.showBuildingInfo(targetBuilding.interiorId);
                 } else {
@@ -599,7 +606,9 @@ export class VillageScene extends Phaser.Scene {
 
             // П.4: Клик на ворота — выход из деревни
             // Раунд 32 (п.5): перемещение между локациями — РОВНО 1 игровой час
-            if (isGate(tx, ty)) {
+            const gtx = Math.floor(worldX / this.tileSize);
+            const gty = Math.floor(worldY / this.tileSize);
+            if (isGate(gtx, gty)) {
                 tickTime(this.registry, 60);
                 this.scene.start('Fork');
                 return;
@@ -608,12 +617,7 @@ export class VillageScene extends Phaser.Scene {
 
         this.input.on('pointermove', (pointer) => {
             if (this.busyDialog) { this.hideBuildingTooltip(); return; }
-            const tx = Math.floor(pointer.worldX / this.tileSize);
-            const ty = Math.floor(pointer.worldY / this.tileSize);
-            let hoverBuilding = null;
-            for (const b of BUILDINGS) {
-                if (tx >= b.col && tx < b.col + b.w && ty >= b.row && ty < b.row + b.h) { hoverBuilding = b; break; }
-            }
+            const hoverBuilding = this.buildingAt(pointer.worldX, pointer.worldY);
             if (hoverBuilding) { this.showBuildingTooltip(hoverBuilding, pointer.x, pointer.y); }
             else { this.hideBuildingTooltip(); }
         });
@@ -1200,63 +1204,78 @@ export class VillageScene extends Phaser.Scene {
      * (храм и староста в центре, кузня на северо-востоке, ремёсла по краям;
      * улицы: ряд 5 — главная, ряд 9 — средняя, ряд 13 — задняя).
      */
+    /**
+     * ПАТЧ 66.35: здание под точкой мира — по тайлам отпечатка ИЛИ по
+     * прямоугольнику видимого спрайта (крыши/башни/свесы). Возвращает
+     * объект BUILDINGS или null.
+     */
+    buildingAt(worldX, worldY) {
+        const ts = this.tileSize;
+        const tx = Math.floor(worldX / ts);
+        const ty = Math.floor(worldY / ts);
+        for (const b of BUILDINGS) {
+            if (tx >= b.col && tx < b.col + b.w && ty >= b.row && ty < b.row + b.h) return b;
+        }
+        for (const r of (this.houseHitRects || [])) {
+            if (worldX >= r.x0 && worldX <= r.x1 && worldY >= r.y0 && worldY <= r.y1) return r.b;
+        }
+        return null;
+    }
+
     streetSpotFor(id) {
-        // РАУНД 66 (п.6): точки ПЕРЕСЧИТАНЫ под новую расстановку домов
-        // (гончар — СЗ, постоялый двор — север, плотник переехал в средний
-        // ряд, пахарь — к востоку среднего ряда, рыбак — в южный ряд,
-        // колодец теперь (18,7)); все точки — на улицах/проездах или своих
-        // дворах, ни одна не на тайле дерева/дома.
+        // ПАТЧ 66.35: точки ПЕРЕСЧИТАНЫ под планировку 66.35 (плотник —
+        // север, ремесленник — к западному проезду, колодец (17,7), мясник
+        // и Прасковья с зазором от восточного частокола); все точки — на
+        // улицах/проездах или своих дворах, ни одна не на тайле дерева/дома.
         const SPOTS = {
-            peasant1: { x: 12.5, y: 4.4 },       // Авдей — у своего дома (дверь 12,3)
-            widow: { x: 7.5, y: 9.4 },           // Марфа — у дома (дверь 7,8)
-            beekeeper1: { x: 20.5, y: 9.4 },     // Тарас — у дома (дверь 20,8)
-            beekeeper_wife: { x: 18.5, y: 9.4 }, // у колодца (18,7)
-            elder_wife: { x: 17.5, y: 9.4 },     // у колодца, со стороны старосты
-            blacksmith: { x: 18.5, y: 4.4 },     // у кузницы (дверь 19,3; 66.25 п.2 — дом перемещён)
-            healer: { x: 21.5, y: 4.4 },         // у дома знахарки (дверь 22,3; 66.25 п.2 — дом перемещён)
-            hunter: { x: 10.5, y: 9.4 },         // на средней улице, у церкви
-            fisherman: { x: 19.5, y: 13.4 },     // у дома рыбака (дверь 19,12)
-            carpenter1: { x: 3.5, y: 9.4 },      // у дома плотника (дверь 3,8)
-            carpenter_wife: { x: 2.5, y: 9.4 },  // по воду, у западного проезда
-            potter1: { x: 2.5, y: 4.4 },         // у дома гончара (сушит горшки)
+            peasant1: { x: 16.5, y: 4.4 },       // Авдей — у своего дома (дверь 16,3)
+            widow: { x: 6.5, y: 9.4 },           // Марфа — у дома (дверь 6,8)
+            beekeeper1: { x: 19.5, y: 9.4 },     // Тарас — у дома (дверь 19,8)
+            beekeeper_wife: { x: 18.5, y: 9.4 }, // у колодца (17,7), со стороны пахаря
+            elder_wife: { x: 16.5, y: 9.4 },     // у колодца, со стороны старосты
+            blacksmith: { x: 19.5, y: 4.4 },     // у кузницы (дверь 19,3)
+            healer: { x: 22.5, y: 4.4 },         // у дома знахарки (дверь 22,3)
+            hunter: { x: 11.5, y: 9.4 },         // на средней улице, у церкви
+            fisherman: { x: 18.5, y: 13.4 },     // у дома рыбака (дверь 18,12)
+            carpenter1: { x: 12.5, y: 4.4 },     // у дома плотника (дверь 12,3)
+            carpenter_wife: { x: 12.5, y: 4.4 }, // по воду, рядом с мужем
+            potter1: { x: 2.5, y: 4.4 },         // у дома гончара (дверь 2,3)
             potter_wife: { x: 3.5, y: 4.4 },     // у двора гончара
-            weaver1: { x: 3.5, y: 13.4 },        // у дома ткачихи (дверь 3,12)
-            shepherd_boy: { x: 5.5, y: 13.4 },   // при матери-ткачихе
-            peasant2: { x: 7.5, y: 13.4 },       // у дома Степана (дверь 7,12)
-            peasant2_wife: { x: 9.5, y: 13.4 },  // по воду (задняя улица)
-            fisher_wife: { x: 18.5, y: 13.4 },   // у дома рыбака
+            weaver1: { x: 2.5, y: 13.4 },        // у дома ткачихи (дверь 2,12)
+            shepherd_boy: { x: 4.5, y: 13.4 },   // при матери-ткачихе
+            peasant2: { x: 6.5, y: 13.4 },       // у дома Степана (дверь 6,12)
+            peasant2_wife: { x: 8.5, y: 13.4 },  // по воду (задняя улица)
+            fisher_wife: { x: 17.5, y: 13.4 },   // у дома рыбака
             guard: { x: 23.5, y: 5.4 },          // у ворот (25,5), чуть западнее проезда
             tavernkeeper: { x: 7.5, y: 4.4 },    // у постоялого двора (дверь 7,3)
             priest: null,                        // батюшка не гуляет — он в церкви
-            // Детские площадки — у колодца, улиц и дворов
-            kid1: { x: 5.5, y: 12.4 }, kid2: { x: 9.5, y: 10.4 },
-            kid3: { x: 17.5, y: 10.4 }, kid4: { x: 4.5, y: 13.4 },
-            kid5: { x: 21.5, y: 13.4 }, kid6: { x: 12.5, y: 13.4 },
+            // Детские площадки — на улицах и в свободных промежутках
+            kid1: { x: 4.5, y: 10.4 }, kid2: { x: 8.5, y: 10.4 },
+            kid3: { x: 16.5, y: 12.4 }, kid4: { x: 1.5, y: 13.4 },
+            kid5: { x: 20.5, y: 13.4 }, kid6: { x: 12.5, y: 13.4 },
             kid7: { x: 1.5, y: 4.4 },
-            kid8: { x: 9.5, y: 4.4 },            // дочка гончара — у дома
-            kid9: { x: 2.5, y: 13.4 },           // внучка знахарки — южная улица
-            // Раунд 66.26 (приказ 6): прежний фолбэк (12.5, 5.4) сваливал ВСЕХ
-            // неперечисленных жителей в одну точку — торговцы восточной слободы
-            // и дровосек «кучковались» у главной улицы. Теперь у КАЖДОГО своя
-            // точка у своего дома/двора.
-            grocer: { x: 23.5, y: 13.4 },        // Прасковья — у дома (22,10,w3)
-            butcher: { x: 23.5, y: 9.4 },        // Потап — под домом (23,6,w2)
-            peddler: { x: 14.5, y: 4.4 },        // Аверьян — у дома ремесленника (15,1)
-            apprentice: { x: 16.5, y: 4.4 },     // ученик — между ремесленником и кузней
-            shoemaker: { x: 13.5, y: 10.4 },     // Нефёд — у восточного края дома (10,10,w3)
-            shoemaker_wife: { x: 12.5, y: 9.4 }, // Агафья — у среднего проезда
-            woodcutter: { x: 16.5, y: 13.4 },    // Горазд — у избы (14,10,w3)
-            shepherd1: { x: 15.5, y: 10.4 },     // Сила — двор у задней улицы
-            shepherd2: { x: 19.5, y: 10.4 },     // Настасья — тот же двор, свой угол
+            kid8: { x: 3.5, y: 13.4 },           // дочка гончара — задняя улица
+            kid9: { x: 23.5, y: 13.4 },          // внучка знахарки — у восточного проезда
+            // Раунд 66.26: у КАЖДОГО жителя своя точка у своего дома/двора
+            // (пересчитаны под планировку 66.35).
+            grocer: { x: 22.5, y: 13.4 },        // Прасковья — у дома (дверь 22,12)
+            butcher: { x: 23.5, y: 9.4 },        // Потап — под домом (дверь 23,8)
+            peddler: { x: 3.5, y: 9.4 },         // Аверьян — у дома ремесленника (дверь 3,8)
+            apprentice: { x: 18.5, y: 4.4 },     // ученик — у кузни с запада
+            shoemaker: { x: 10.5, y: 13.4 },     // Нефёд — у дома (дверь 10,12)
+            shoemaker_wife: { x: 9.5, y: 9.4 },  // Агафья — на средней улице
+            woodcutter: { x: 14.5, y: 13.4 },    // Горазд — у избы (дверь 14,12)
+            shepherd1: { x: 15.5, y: 13.4 },     // Сила — задняя улица
+            shepherd2: { x: 19.5, y: 13.4 },     // Настасья — свой угол задней улицы
         };
         if (SPOTS[id]) return SPOTS[id];
         // Раунд 66.26: резерв для неперечисленных id — детерминированный
         // разброс по хэшу имени, чтобы даже незнакомые жители не сыпались
         // в одну кучу на главной улице.
         const RESERVE = [
-            { x: 12.5, y: 5.4 }, { x: 4.5, y: 4.4 }, { x: 20.5, y: 4.4 },
-            { x: 6.5, y: 9.4 }, { x: 14.5, y: 5.4 }, { x: 20.5, y: 13.4 },
-            { x: 8.5, y: 5.4 }, { x: 11.5, y: 4.4 },
+            { x: 12.5, y: 5.4 }, { x: 10.5, y: 4.4 }, { x: 17.5, y: 4.4 },
+            { x: 13.5, y: 9.4 }, { x: 14.5, y: 5.4 }, { x: 20.5, y: 13.4 },
+            { x: 8.5, y: 5.4 }, { x: 16.5, y: 4.4 },
         ];
         let h = 0;
         for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
@@ -1824,7 +1843,7 @@ export class VillageScene extends Phaser.Scene {
     // в день + одно активное поручение от одного НПЦ).
     // ================================================================
 
-        showBuildingTooltip(building, screenX, screenY) {
+    showBuildingTooltip(building, screenX, screenY) {
         if (!this.buildingTooltip) {
             this.buildingTooltip = this.add.container(0, 0).setScrollFactor(0).setDepth(200);
             const bg = this.add.rectangle(0, 0, 240, 80, 0x000000, 0.9)

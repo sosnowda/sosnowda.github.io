@@ -3,7 +3,7 @@
 // 2) Rim-light тёмных обликов (baenor/paul 1.0, gaerron 0.9, huntress 0.75; naia 0)
 // 3) Бусты пака в меню: 6 файлов, heroes.js BUST_BY_PRESET/getBustFor, BootScene,
 //    CharacterSelectionScene (карточки + превью), CharacterScene (свиток, ≥900px)
-// 4) SW v84 + game-assets-v29. Сейвы совместимы.
+// 4) SW v84 + game-assets-v30. Сейвы совместимы.
 // Запуск: cd game/tools && node test_round89.mjs
 import { readFileSync, existsSync, statSync } from 'fs';
 import { execSync } from 'child_process';
@@ -41,27 +41,27 @@ for (const a of ['attack1', 'attack2', 'fists']) {
     ok(s.w === 384 && s.h === 128, `battle_naia_${a}.png: 384×128`);
     ok(isPalettePng(p), `battle_naia_${a}.png: палитровый (color type 3)`);
 }
-// нетронутые листы Найи: в манифесте без rim и без 128er
+// 66.35: rim-light Найи ради единообразия (naia 0.6) — в манифесте +rim0.6
 const manifest = read(`${BATTLE}/MANIFEST_6633.txt`).trim().split('\n');
 const manifestBody = manifest.slice(0, 34);
 ok(manifest.length === 35, 'манифест 6633: 34 записи + итог');
 const noteOf = name => manifestBody.find(l => l.startsWith(name)) || '';
 for (const a of ['idle', 'shoot', 'death', 'victory']) {
     const n = noteOf(`battle_naia_${a}.png`);
-    ok(n.length > 0 && !n.includes('+rim') && !n.includes('128er'), `battle_naia_${a}: нетронут (источник 6632, без rim)`);
+    ok(n.length > 0 && n.includes('+rim0.6'), `battle_naia_${a}: лист с римом 0.6 (66.35) [${n}]`);
 }
 for (const a of ['attack1', 'attack2', 'fists']) {
     ok(noteOf(`battle_naia_${a}.png`).includes('Naia_MVsv 128er'), `battle_naia_${a}: манифест указывает базовый MVsv`);
 }
 
 console.log('--- 2. Rim-light тёмных обликов (п.2) ---');
-ok(/RIM = \{'baenor': 1\.0, 'gaerron': 0\.9, 'huntress': 0\.75, 'paul': 1\.0, 'naia': 0\.0\}/.test(pipe),
-    'силы rim: baenor/paul 1.0, gaerron 0.9, huntress 0.75, naia 0.0');
+ok(/RIM = \{'baenor': 1\.0, 'gaerron': 0\.9, 'huntress': 0\.75, 'paul': 1\.0, 'naia': 0\.6\}/.test(pipe),
+    'силы rim: baenor/paul 1.0, gaerron 0.9, huntress 0.75, naia 0.6 (66.35 единообразие)');
 ok(pipe.includes('RIM_COLOR = (255, 238, 196)'), 'цвет рима — тёплый пергамент (в тон золоту UI)');
 ok(pipe.includes('LIGHT = (-0.55, -0.83)'), 'свет сверху-слева (как солнце в SkyClock)');
 ok(pipe.includes('def rim_light'), 'функция rim_light в конвейере');
 const rimCount = manifestBody.filter(l => l.includes('+rim')).length;
-ok(rimCount === 27, `рим-листов 27 (baenor 7 + gaerron 7 + huntress 7 + paul 6): ${rimCount}`);
+ok(rimCount === 34, `рим-листов 34 (66.35: все облики, включая Найю): ${rimCount}`);
 
 console.log('--- 3. Бусты пака в меню (п.3) ---');
 const bustFiles = ['bust_baenor_1', 'bust_baenor_5', 'bust_huntress_1', 'bust_huntress_5', 'bust_gaerron', 'bust_naia'];
@@ -105,10 +105,10 @@ const charScene = read('../src/scenes/CharacterScene.js');
 ok(charScene.includes("import { getBustFor } from '../data/heroes.js';"), 'свиток персонажа: импорт getBustFor');
 ok(charScene.includes('width >= 900 && this.textures.exists(bustKey)'), 'свиток: буст только на экранах ≥900px');
 
-console.log('--- 4. SW v84 + game-assets-v29 (п.4) ---');
+console.log('--- 4. SW v84 + game-assets-v30 (п.4) ---');
 const sw = read('../../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v84';"), 'SW: site-cache v84');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v29';"), 'SW: game-assets-v29 (30 листов перегенерированы + 6 бустов)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v85';"), 'SW: site-cache v84');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v30';"), 'SW: game-assets-v30 (30 листов перегенерированы + 6 бустов)');
 ok(sw.includes('// v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 // game-assets кэширует /game/assets/ целиком — бусты попадают автоматически,
 // отдельный список не нужен (проверяем отсутствие хардкода бустов в sw)
