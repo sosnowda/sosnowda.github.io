@@ -856,10 +856,10 @@ const EN = {
     'Мост': 'Bridge',
     'Ты здесь': 'You are here',
     'С ↑': 'N ↑',
-    '🗺 Карта местности — деревня в центре: тракт с севера через деревню и мост к реке на юге. Справа — выпас, пасека и поле, дальше леса цепочкой (Опушка → Поляна → Густой лес), у Северного Тракта — мельница и озеро.':
-        '🗺 The terrain map — the village at the centre: the highway comes from the north, crosses the village and a bridge down to the river. To the east — the pasture, apiary and field, then the forest chain (Forest Edge → Glade → Dense Forest); by the Northern Highway — the windmill and the lake.',
-    '🗺 Околица — карта местности: выбирай локацию и в путь.\nКаждый переход по карте занимает ровно 1 игровой час.\nСледы вора живут от 12 до 24 часов — а дождь и снег смывают их и раньше.':
-        '🗺 The outskirts — a map of the area: pick a location and set out.\nEvery crossing on the map takes exactly 1 game hour.\nThe thief\'s tracks last 12 to 24 hours — and rain or snow washes them away even sooner.',
+    // 66.34: новая справка карты — «Околица» теперь и ЕСТЬ карта местности
+    // (клик-зоны), старые описания разметки 66.24/66.25 удалены.
+    '🗺 Околица — теперь карта местности: кликай локацию на карте и в путь.\nКаждый переход по карте занимает ровно 1 игровой час.\nВход в лес — только через Опушку, дальше последовательно: Поляна → Густой лес.\nСледы вора живут от 12 до 24 часов — а дождь и снег смывают их и раньше.':
+        '🗺 The outskirts is now the terrain map itself: click a location on the map and set out.\nEvery crossing on the map takes exactly 1 game hour.\nThe forest is entered only through the Forest Edge, then onward: Glade → Dense Forest.\nThe thief\'s tracks last 12 to 24 hours — and rain or snow washes them away even sooner.',
     '🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n◀ Выход — кнопка внизу.':
         '🏠 Talking to a host takes 1 game hour —\nchoose whom and what to speak about.\n◀ Leave by the button below.',
     '💬 Поговорить': '💬 Talk',
@@ -1461,8 +1461,6 @@ const EN = {
     'Тёмный лес: взаимодействие — {0}.': 'Dark Forest: interaction — {0}.',
     'Волк напал в Тёмном лесу!': 'A wolf attacked in the Dark Forest!',
     'Вернулся из Тёмного леса к околице.': 'Returned from the Dark Forest to the outskirts.',
-    '🗺 Околица — карта местности: выбирай локацию и в путь.\nКаждый переход по карте занимает ровно 1 игровой час.\nСледы вора живут от 12 до 24 часов — а дождь и снег смывают их и раньше.':
-        '🗺 The outskirts — a map of the land: choose a location and set out.\nEach crossing on the map takes exactly 1 game hour.\nThe thief\'s trails live from 12 to 24 hours — and rain and snow wash them away sooner.',
     'Игрок отправился в локацию «{0}».': 'The player set out for the location "{0}".',
     'Игрок отправился гулять в Тёмный лес.': 'The player set out to stroll in the Dark Forest.',
     '🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n◀ Выход — кнопка внизу.':

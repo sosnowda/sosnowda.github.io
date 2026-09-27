@@ -82,10 +82,10 @@ console.log('\n— п.2 (66.24): ТРАКТ РАЗДЕЛЁН — ЮЖНЫЙ (roa
         'Южный Тракт: колея к реке и деревянный мост (настил/доски/перила)');
 }
 
-console.log('\n— п.3 (66.24): КАРТА МЕСТНОСТИ — ПОЛНОЦЕННАЯ, С ЦЕНТРОМ В ДЕРЕВНЕ —');
+console.log('\n— п.3 (66.24→66.34): КАРТА МЕСТНОСТИ — НОВАЯ КОМПОНОВКА 66.34 —');
 {
     const tm = await import(join(GAME, '../src/systems/TerrainMap.js'));
-    const { TERRAIN, TERRAIN_LABELS, TERRAIN_PATHS, TERRAIN_W, TERRAIN_H, TERRAIN_FRAME, drawTerrainMap } = tm;
+    const { TERRAIN, TERRAIN_LABELS, TERRAIN_PATHS, TERRAIN_W, TERRAIN_H, TERRAIN_FRAME, TERRAIN_ZONES, zoneAt, drawTerrainMap } = tm;
 
     ok(TERRAIN_W === 680 && TERRAIN_H === 540, `полотно карты ${TERRAIN_W}×${TERRAIN_H}`);
     ok(TERRAIN.village.x === 300 && TERRAIN.village.y === 258, 'деревня — В ЦЕНТРЕ карты');
@@ -95,79 +95,73 @@ console.log('\n— п.3 (66.24): КАРТА МЕСТНОСТИ — ПОЛНОЦ�
     ok(TERRAIN.river.y > TERRAIN.village.y && TERRAIN.river.y + TERRAIN.river.h <= TERRAIN_H - TERRAIN_FRAME,
         'река — лента через южный край карты');
     ok(TERRAIN.bridge.x === TERRAIN.tractX && TERRAIN.bridge.w > 0, 'мост стоит на тракте');
-    ok(TERRAIN.bridge.x > TERRAIN_FRAME && TERRAIN.bridge.x < TERRAIN_W - TERRAIN_FRAME
-        && TERRAIN.river.y > TERRAIN.village.y + TERRAIN.village.h / 2,
-        'Южный Тракт идёт от деревни до реки (мост южнее деревни)');
 
-    // 2. 66.25 (п.5): СЛЕВА от деревни и вдоль Южного Тракта: выпас, пасека, поле
-    const vLeft = TERRAIN.village.x - TERRAIN.village.w / 2;
-    const vBottom = TERRAIN.village.y + TERRAIN.village.h / 2;
-    for (const [name, key] of [['Выпас', 'pasture'], ['Пасека', 'apiary'], ['Поле', 'field']]) {
-        const p = TERRAIN[key];
-        ok(p.x + p.rx < vLeft + 8, `${name}: СЛЕВА от деревни (x=${Math.round(p.x)}, 66.25 п.5)`);
-        ok(p.y > vBottom && p.y + p.ry <= TERRAIN.river.y, `${name}: вдоль Южного Тракта, до реки`);
-    }
-    ok(TERRAIN.pasture.y < TERRAIN.apiary.y && TERRAIN.apiary.y < TERRAIN.field.y,
-        'порядок вдоль тракта: выпас → пасека → поле');
+    // 2. 66.34 (п.7): ПОЛЕ — широкая полоса вдоль ВСЕГО левого края
+    ok(TERRAIN.field.x1 <= TERRAIN_FRAME + 2 && TERRAIN.field.x2 < 100,
+        `поле: полоса вдоль левого края (x ${TERRAIN.field.x1}..${TERRAIN.field.x2})`);
+    ok(TERRAIN.field.y2 - TERRAIN.field.y1 > 380, 'поле тянется от верха почти до реки');
 
-    // 3. Леса цепочкой справа от Южного Тракта и на всём свободном пространстве
-    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-    const dEdge = dist(TERRAIN.village, TERRAIN.forestEdge);
-    const dGlade = dist(TERRAIN.village, TERRAIN.forestGlade);
-    const dDeep = dist(TERRAIN.village, TERRAIN.forestDeep);
-    ok(dEdge < dGlade && dGlade < dDeep,
-        `лес цепочкой от деревни: опушка(${Math.round(dEdge)}) → поляна(${Math.round(dGlade)}) → густой лес(${Math.round(dDeep)})`);
-    ok(TERRAIN.forestDeep.y + TERRAIN.forestDeep.ry >= TERRAIN.river.y,
-        'густой лес простирается до самой реки (всё свободное пространство)');
-    ok(TERRAIN.forestEdge.x > TERRAIN.tractX && TERRAIN.forestGlade.x > TERRAIN.tractX && TERRAIN.forestDeep.x > TERRAIN.tractX,
-        'леса — справа от Южного Тракта');
+    // 3. 66.34 (п.9): ВЫПАС — полоса травы у поля, ОБТЕКАЕТ озеро
+    ok(TERRAIN.pasture.x1 === TERRAIN.field.x2 && TERRAIN.pasture.x2 > TERRAIN.pasture.x1 + 120,
+        'выпас — широкая полоса, прилегающая к полю');
+    ok(TERRAIN.lake.x - TERRAIN.lake.rx > TERRAIN.pasture.x1 && TERRAIN.lake.x + TERRAIN.lake.rx < TERRAIN.pasture.x2
+        && TERRAIN.lake.y - TERRAIN.lake.ry > TERRAIN.pasture.y1 && TERRAIN.lake.y + TERRAIN.lake.ry < TERRAIN.pasture.y2,
+        'выпас обтекает озеро со всех сторон (озеро целиком внутри)');
+    ok(TERRAIN.lake.x + TERRAIN.lake.rx < TERRAIN.tractX && TERRAIN.lake.y < 150,
+        'озеро — верхний ЛЕВЫЙ угол, левее Северного тракта (п.2)');
 
-    // 4. 66.25 (п.7): справа от Северного Тракта — ветка к мельнице И погосту
-    const vTop = TERRAIN.village.y - TERRAIN.village.h / 2;
-    ok(TERRAIN.mill.x > TERRAIN.tractX && TERRAIN.mill.pathY < vTop,
-        'мельница: ответвление уходит вправо от СЕВЕРНОГО тракта');
-    ok(TERRAIN.pogost.x > TERRAIN.tractX && TERRAIN.pogost.y < vTop + 8,
-        'погост — справа от Северного Тракта, у ветки (66.25 п.7)');
+    // 4. 66.34 (п.3): ЛЕС — весь правый край, три слоя без границ
+    ok(TERRAIN.forest.x1 > TERRAIN.village.x + TERRAIN.village.w / 2
+        && TERRAIN.forest.x2 >= TERRAIN_W - TERRAIN_FRAME - 4
+        && TERRAIN.forest.y1 <= TERRAIN_FRAME + 2 && TERRAIN.forest.y2 >= TERRAIN.river.y,
+        'лес — весь правый край от верха до реки');
+    ok(TERRAIN.forestEdgeX < TERRAIN.forestGladeX && TERRAIN.forestGladeX < TERRAIN.forestDeepX
+        && TERRAIN.forestEdgeX > TERRAIN.tractX,
+        'три слоя леса: опушка (у дороги) → поляна (центр) → чаща (правый край)');
 
-    // 5. Справа от Северного Тракта — большая локация Озеро
-    ok(TERRAIN.lake.x > TERRAIN.tractX && TERRAIN.lake.y + TERRAIN.lake.ry < vTop,
-        'озеро: большая локация справа от Северного Тракта');
-    ok(TERRAIN.lake.rx >= 100, `озеро крупное (rx=${TERRAIN.lake.rx})`);
+    // 5. 66.34 (п.5/п.4): мельница справа от деревни, погост около опушки
+    ok(TERRAIN.mill.x > TERRAIN.village.x + TERRAIN.village.w / 2,
+        'мельница — СПРАВА от деревни (п.5)');
+    ok(TERRAIN.pogost.y > TERRAIN.village.y && Math.abs((TERRAIN.pogost.x + TERRAIN.pogost.rx + 8) - TERRAIN.forest.x1) < 40,
+        'погост — около лесной опушки (п.4)');
 
-    // Все объекты в границах полотна
-    const inBounds = (x, y) => x > TERRAIN_FRAME && x < TERRAIN_W - TERRAIN_FRAME && y > TERRAIN_FRAME && y < TERRAIN_H - TERRAIN_FRAME;
-    const pois = [['village', TERRAIN.village], ['lake', TERRAIN.lake], ['mill', TERRAIN.mill],
-        ['pasture', TERRAIN.pasture], ['apiary', TERRAIN.apiary], ['field', TERRAIN.field],
-        ['forestEdge', TERRAIN.forestEdge], ['forestGlade', TERRAIN.forestGlade],
-        ['forestDeep', TERRAIN.forestDeep], ['pogost', TERRAIN.pogost]];
-    const out = pois.filter(([k, p]) => !inBounds(p.x, p.y)).map(([k]) => k);
-    ok(out.length === 0, 'все локации карты в границах полотна' + (out.length ? ' (нарушение: ' + out.join(', ') + ')' : ''));
-
-    // Озеро не наезжает на мельницу/ответвление
-    const lakeTop = TERRAIN.lake.y - TERRAIN.lake.ry;
-    ok(lakeTop >= TERRAIN_FRAME, 'озеро не вылезает за рамку сверху');
-
-    // 66.25 (п.9): КО ВСЕМ локациям ведут дорожки от деревни или трактов
+    // 6. 66.34 (п.8/п.10): дорожки от деревни ко всем + тропа через три леса
     const covered = new Set(TERRAIN_PATHS.map(p => p.to));
-    const needPaths = ['pasture', 'apiary', 'field', 'forestEdge', 'forestGlade',
-        'forestDeep', 'mill', 'pogost', 'lake'];
+    const needPaths = ['pasture', 'apiary', 'field', 'lake', 'mill', 'pogost',
+        'forest_edge', 'forest_glade', 'forest'];
     const noPath = needPaths.filter(k => !covered.has(k));
-    ok(noPath.length === 0, 'дорожки ведут ко всем локациям (TERRAIN_PATHS)' + (noPath.length ? ' — нет: ' + noPath.join(', ') : ''));
-    // дорожки стартуют у тракта, у ветки к мельнице или являются продолжением
-    // лесной цепочки (Опушка → Поляна → Густой — каждая от предыдущей)
-    const fromTract = TERRAIN_PATHS.every(p =>
-        p.chain ||
-        Math.abs(p.x1 - TERRAIN.tractX) <= 7 ||
-        (Math.abs(p.y1 - TERRAIN.mill.pathY) <= 5 && p.x1 > TERRAIN.tractX && p.x1 < TERRAIN.mill.x));
-    ok(fromTract, 'все дорожки начинаются у тракта, ветки или цепочки леса');
+    ok(noPath.length === 0, 'дорожки от деревни ко всем локациям (п.8)' + (noPath.length ? ' — нет: ' + noPath.join(', ') : ''));
+    const vBounds = TERRAIN.village;
+    const fromVillage = TERRAIN_PATHS.filter(p => !p.forestChain).every(p => {
+        const [sx, sy] = p.pts[0];
+        return sx > vBounds.x - vBounds.w / 2 - 6 && sx < vBounds.x + vBounds.w / 2 + 6
+            && sy > vBounds.y - vBounds.h / 2 - 6 && sy < vBounds.y + vBounds.h / 2 + 6;
+    });
+    ok(fromVillage, 'все дорожки стартуют от ворот деревни');
+    ok(TERRAIN_PATHS.filter(p => p.forestChain).length === 3, 'тропа п.10 идёт через ВСЕ три лесные локации');
+    const end = TERRAIN.forestPathEnd;
+    ok(end.x > TERRAIN.forestDeepX - 57 && end.x < TERRAIN.forestDeepX + 57 && end.y > TERRAIN.forest.y1 && end.y < TERRAIN.forest.y2,
+        'тропа п.10 заканчивается в центре Густого леса');
+
+    // 7. КЛИК-ЗОНЫ (66.34 п.1): карта — экран выбора локации
+    const zoneIds = TERRAIN_ZONES.map(z => z.id);
+    ok(zoneIds.includes('village'), 'клик-зона деревни — возврат в деревню');
+    ok(['forest_edge', 'road_south', 'road_north', 'field', 'lake', 'pogost', 'mill', 'apiary', 'pasture', 'river']
+        .every(id => zoneIds.includes(id)), 'клик-зоны покрывают все локации развилки');
+    ok(zoneAt(TERRAIN.mill.x, TERRAIN.mill.y).id === 'mill', 'приоритет: мельница поверх лесной зоны');
+    ok(zoneAt(TERRAIN.lake.x, TERRAIN.lake.y).id === 'lake', 'приоритет: озеро поверх выпаса');
+    ok(zoneAt(TERRAIN.village.x, TERRAIN.village.y).id === 'village', 'клик в центр деревни — деревня');
+    ok(zoneAt(60, 380).id === 'field', 'клик по левой полосе — поле');
+    ok(zoneAt(630, 300).id === 'forest', 'клик по правому краю — густой лес');
 
     // Подписи: 14 штук, в границах, ключи уникальны
     ok(TERRAIN_LABELS.length === 14, `подписей на карте: ${TERRAIN_LABELS.length}`);
-    ok(TERRAIN_LABELS.every(l => inBounds(l.x, l.y)), 'все подписи в границах карты');
+    ok(TERRAIN_LABELS.every(l => inBoundsLabel(l)), 'все подписи в границах карты');
     ok(new Set(TERRAIN_LABELS.map(l => l.key)).size === TERRAIN_LABELS.length, 'ключи подписей уникальны');
     ok(TERRAIN_LABELS.filter(l => ['Северный Тракт', 'Южный Тракт', 'Река', 'Мост', 'Озеро', 'Мельница',
         'Выпас', 'Пасека', 'Поле', 'Опушка', 'Лесная поляна', 'Густой лес', 'Погост', 'Деревня'].includes(l.text)).length === 14,
         'подписи покрывают все локации приказа (включая Мост)');
+    function inBoundsLabel(l) { return l.x > TERRAIN_FRAME && l.x < TERRAIN_W - TERRAIN_FRAME && l.y > TERRAIN_FRAME && l.y < TERRAIN_H - TERRAIN_FRAME; }
 
     // drawTerrainMap выполняется без ошибок на мок-контексте (без canvas)
     const calls = [];
@@ -182,14 +176,14 @@ console.log('\n— п.3 (66.24): КАРТА МЕСТНОСТИ — ПОЛНОЦ�
     try { drawTerrainMap(mockCtx); drew = true; } catch (e) { console.log('  ✗ drawTerrainMap исключение: ' + e.message); }
     ok(drew && calls.length > 300, `drawTerrainMap отрисовал карту (${calls.length} операций канвы)`);
 
-    // Подписи и метка игрока — через i18n поверх текстуры
+    // Подписи и метка игрока — через i18n поверх текстуры; карта = сам экран
     const forkSrc = read('game/src/scenes/ForkScene.js');
     ok(forkSrc.includes("from '../systems/TerrainMap.js'"), 'ForkScene использует TerrainMap');
     ok(forkSrc.includes("textures.createCanvas('terrain_map'"), 'карта рисуется один раз в canvas-текстуру');
     ok(forkSrc.includes('TERRAIN.village.x') && forkSrc.includes('Ты здесь'),
         'метка игрока стоит у деревни');
     ok(forkSrc.includes('TERRAIN_LABELS.forEach'), 'подписи накладываются из TERRAIN_LABELS');
-    ok(forkSrc.includes('killTweensOf(marker)'), 'пульс метки корректно гасится при закрытии карты');
+    ok(forkSrc.includes('tweens.add'), 'пульс метки игрока живёт на экране карты');
 }
 
 console.log('\n— i18n (66.24): переводы новых названий и подписей —');
@@ -228,7 +222,7 @@ console.log('\n— п.1 (66.24): КАДРЫ СКРИНШОТОВ ЛЕНДИНГ�
 console.log('\n— sw.js: версия кэша сайта поднята —');
 {
     const sw = read('sw.js');
-    ok(/chronicles-ruthenia-v83/.test(sw), 'SW: chronicles-ruthenia-v83');
+    ok(/chronicles-ruthenia-v84/.test(sw), 'SW: chronicles-ruthenia-v84');
 }
 
 console.log('\nИТОГ: ' + pass + ' зелёных, ' + fail + ' красных');

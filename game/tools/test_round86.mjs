@@ -71,9 +71,9 @@ for (const h of ['hero_baenor', 'hero_huntress']) {
 ok(existsSync('../docs/PACK_ANALYSIS_6629.md'), 'анализ пака Medieval - Heroes I задокументирован (game/docs/PACK_ANALYSIS_6629.md)');
 
 console.log('--- 7. SW и кеши ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v83';"), 'SW: site-cache v83');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v84';"), 'SW: site-cache v84');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v29';"), 'SW: game-assets-v29 (листы 66.33 + бусты)');
-ok(sw.includes('// v83 — итерация 66.33'), 'SW: журнал содержит запись v83');
+ok(sw.includes('// v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 
 console.log('--- 8. Телеметрия Метрики (п.1) ---');
 ok(sw.includes('Russian Trusted Sub CA'), 'SW-журнал: документирован вердикт по hdrc/mdd.yandex.net (статистика не страдает)');

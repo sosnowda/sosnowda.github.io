@@ -11,6 +11,9 @@ import { ensureFemaleChestTexture, ensureHeadTextures } from '../systems/Charact
 // гарантированно исполняемый до любых сцен (см. гард SceneManager ниже).
 import { installFxGovernor } from '../systems/MotionFX.js';
 installFxGovernor();
+// 66.34 (п.11): LINEAR-фильтр на текстурах персонажей — гладкие фигуры
+// на крупных масштабах интерьеров/локаций (в деревне ×1.125 разницы нет)
+import { applyCharacterSmoothFilter } from '../systems/SmoothSprites.js';
 
 // ============================================================
 // 66.32: MVsv-боевые листы героев (пак «Medieval - Heroes I», Drive владельца).
@@ -693,6 +696,11 @@ export class BootScene extends Phaser.Scene {
                 hoursPassed: 0,
             });
         }
+
+        // 66.34 (п.11 владельца): гладкие персонажи на крупных масштабах —
+        // LINEAR только на листах героев/жителей/воров (тайлы остаются NEAREST).
+        // Динамические композиты получают фильтр в местах сборки (SmoothSprites.js).
+        applyCharacterSmoothFilter(this);
 
         // 66.31 (п.1): ассеты готовы — гасим золотой прелоад и открываем меню.
         // Порядок важен: сначала гасим Preload, потом стартуем Title, чтобы

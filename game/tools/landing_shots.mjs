@@ -113,26 +113,16 @@ await page.evaluate(() => {
 await sleep(1500);
 await shot('04-village');
 
-// ---- 5. Околица (развилка) + ПОЛНОЦЕННАЯ КАРТА МЕСТНОСТИ (66.24) ----
+// ---- 5. КАРТА МЕСТНОСТИ = экран околицы (66.34) ----
 await page.evaluate(() => {
     const g = window.game;
     g.scene.stop('Village');
     g.scene.start('Fork');
 });
 await sleep(3500);
-// Раунд 66.24 (приказ 1/3): кадр 05 — карта местности с центром в деревне
-// (TerrainMap: тракт через деревню и мост к реке, выпас/пасека/поле,
-// леса цепочкой, мельница и озеро у Северного Тракта)
-await page.evaluate(() => {
-    const s = window.game.scene.getScene('Fork');
-    if (s && s.showMap) s.showMap();
-});
-await sleep(1500);
+// 66.34: кадр 05 — сам экран карты местности (клик-зоны, метка игрока);
+// showMap удалён — карта и есть экран развилки
 await shot('05-map');
-await page.evaluate(() => {
-    const s = window.game.scene.getScene('Fork');
-    if (s) s.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
-});
 await sleep(400);
 
 // ---- 6. Дом старосты (интерьер) ----

@@ -8,7 +8,7 @@
 //   custom     — лист готового героя (превью Следопыта Гаврилы, как по клику
 //                на карточку; раунд 66.4 — раньше здесь был генератор)
 //   village    — локация «Деревня»
-//   map        — карта местности (Fork + showMap)
+//   map        — карта местности (экран Fork; 66.34: карта = сам экран)
 //   interior   — интерьер дома старосты (Interior elder_house)
 //   priest     — начальный диалог со священником (Interior church)
 //   thief      — локация с вором и персонажем игрока (до боя)
@@ -88,10 +88,10 @@ const SCENARIOS = {
     village: async () => { await startRun(); window.game.scene.start('Village'); },
     map: async () => {
         await startRun();
+        // 66.34: карта местности — САМ экран развилки (showMap удалён)
         window.game.scene.start('Fork');
-        const fork = await waitScene('Fork');
+        await waitScene('Fork');
         await sleep(300);
-        fork.showMap();
     },
     interior: async () => { await startRun(); window.game.scene.start('Interior', { interiorId: 'elder_house', from: 'Village' }); },
     priest: async () => {

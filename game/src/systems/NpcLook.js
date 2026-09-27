@@ -132,11 +132,20 @@ function addRecoloredTexture(scene, outKey, sourceImg, look, maxSide = 0) {
             c.clearRect(0, 0, canvas.width, canvas.height);
             c.drawImage(canvas, 0, 0);
             tex.refresh();
+            // 66.34 (п.11): LINEAR для СПРАЙТОВЫХ вариантов (портреты не трогаем)
+            if (outKey && outKey.startsWith('npc_var_') && tex.setFilter) {
+                tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+            }
             return;
         }
         scene.textures.remove(outKey);
     }
     scene.textures.addCanvas(outKey, canvas);
+    // 66.34 (п.11): LINEAR для СПРАЙТОВЫХ вариантов (портреты не трогаем)
+    const tex2 = scene.textures.get(outKey);
+    if (outKey && outKey.startsWith('npc_var_') && tex2 && tex2.setFilter) {
+        tex2.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
 }
 
 /**

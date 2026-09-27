@@ -193,6 +193,9 @@ export function composeCharacterTexture(scene, appearance, textureKey = 'player_
     // Создаём спрайт-фреймы для walk-анимации (нужно для Phaser-анимаций)
     // Phaser автоматически создаст фреймы из canvas-текстуры
     const newTex = scene.textures.get(textureKey);
+    // 66.34 (п.11 владельца): LINEAR на композитах персонажей — гладкие фигуры
+    // на крупных масштабах интерьеров (см. systems/SmoothSprites.js)
+    if (newTex && newTex.setFilter) newTex.setFilter(Phaser.Textures.FilterMode.LINEAR);
     if (newTex && newTex.source && newTex.source[0]) {
         // Размечаем фреймы: 9 cols × 4 rows × 64px
         // Phaser не делает это автоматически для canvas-текстур,
