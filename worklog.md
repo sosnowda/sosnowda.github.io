@@ -1571,3 +1571,18 @@ Work Log:
 Stage Summary:
 - 66.31 полностью завершена и верифицирована на проде: site-cache v81 активен, game-assets-v27 не тронут, сейвы совместимы.
 - Все 8 пунктов приоритетного плана владельца в проде; модульный рефакторинг main.js и BEM — отложены решением владельца (зафиксировано в CHANGES.md).
+
+---
+Task ID: 66.32-verify
+Agent: Z.ai Code (main)
+Task: Пуш и прод-верификация 66.32 (коммит 6afdc13, MVsv-конвейер боевых листов).
+
+Work Log:
+- Пуш после восстановления доступа: ~/.git-credentials стёрся при пересборке платформы (credential.helper store + новый fine-grained PAT от владельца), push 10f095d..6afdc13 main -> main — fast-forward без расхождений.
+- Статика против прода (новый game/tools/verify_prod_6632.mjs, режим static): деплой-маркер MANIFEST_6632.txt бит-в-бит; /sw.js бит-в-бит, константы chronicles-ruthenia-v82 + game-assets-v28; 34/34 боевых листа sha256 прод=локал; 9/9 скриншотов лендинга sha256 прод=локал (бой 08-combat — новая версия); game/index.html, heroes.js, BootScene.js, CombatScene.js, index.html — бит-в-бит. ВСЁ ЗЕЛЁНОЕ.
+- Живой прогон (режим live): игра — PreloadScene в менеджере, bootProgress=1, Title активен; текстур battle_* ровно 34, раскладка по обликам 7/7/7/7/6 (baenor/gaerron/huntress/naia/paul — у paul нет shoot); 4/4 проверенных анимации обликов зарегистрированы; регресс 66.31 — кнопка «Вернуться на сайт» на месте. Лендинг — 08-combat.webp декодирован 1280×720 (lazy-скролл + waitForFunction), таймлайн Василий I → подсветка 1408/1410/1425. ВСЁ ЗЕЛЁНОЕ, 0 JS-ошибок.
+- Грабли скрипта (для памяти): SW сайта — /sw.js, а НЕ /service-worker.js (последний отдаёт 404-страницу с телом 404.html, 2998 байт — ловушка для sha-проверок); версии кэшей — константы CACHE_NAME='chronicles-ruthenia-v82'/GAME_ASSETS_CACHE='game-assets-v28', строка «site-cache v82» живёт только в changelog-комментарии; page.evaluate с невол settlement-промисом (img.decode() на lazy-картинке) вешает прогон намертво — только ограниченный waitForFunction; фоновые nohup-процессы в песочнице прибиваются — живые прогоны только в foreground + сторож-таймер в скрипте.
+
+Stage Summary:
+- 66.32 полностью завершена и верифицирована на проде: site-cache v82 активен, game-assets-v28 активен, MVsv-облики загружаются в боевую игру у реальных игроков, сейвы совместимы.
+- Открытые хвосты (66.33): бусты пака в меню/диалогах (512×512, у paul нет), attack-полосы Найи из базового MVsv, rim-light для тёмных обликов, решение владельца по LICENSE пака «Medieval - Heroes I».
