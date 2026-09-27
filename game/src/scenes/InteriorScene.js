@@ -24,6 +24,8 @@ import { t, tf } from '../systems/i18n.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs, getNpcFallbackName } from '../data/npcNames.js';
 import { buildNpcLookTextures, npcVariantKey, npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { ensureNpcLpcTexture } from '../systems/NpcLpc.js';
+// 66.37: калибровка масштаба мировых листов персонажей 128px (были 64)
+import { WORLD_K } from '../systems/WorldLook.js';
 import { getPresence, PLACE_NAMES, getNpcsAtPlace, NPC_DIALOGUE, ALL_NPC_IDS, pickOutdoorLine } from '../data/npcPresence.js';
 import {
     checkNpcWillingToTalk, getNpcRep, getReputationLevel,
@@ -256,8 +258,9 @@ export class InteriorScene extends Phaser.Scene {
                 this.npcPortraitKey = portraitVariant;
             }
             // Рост NPC — раунд 37 (п.4): ЕДИНЫЙ масштаб по возрасту:
-            // взрослый = 2.5 (как игрок в интерьере), подросток ×0.85, ребёнок ×0.7
-            this.npcBaseScale = 2.5 * this.interiorAgeScale(this.npcData);
+            // взрослый = как игрок, подросток ×0.85, ребёнок ×0.7
+            // 66.37: × WORLD_K (листы 128px) — фигуры прежнего размера
+            this.npcBaseScale = 2.5 * WORLD_K * this.interiorAgeScale(this.npcData);
             this.npcSprite = this.add.sprite(width * 0.65, spawnY, finalSpriteKey).setScale(this.npcBaseScale).setDepth(5);
             // Раунд 37 (п.21): тавернщик ЗА СТОЙКОЙ (инт. 'tavern').
             // 66.29: в bg стойка — окошко выдачи у стены (320..430, 60..180);
@@ -353,7 +356,7 @@ export class InteriorScene extends Phaser.Scene {
                     const secVariant = npcVariantKey(secData);
                     if (secVariant && this.textures.exists(secVariant)) secFinal = secVariant;
                 }
-                const secScale = 2.5 * this.interiorAgeScale(secData);
+                const secScale = 2.5 * WORLD_K * this.interiorAgeScale(secData);
                 const secSpr = this.add.sprite(width * 0.84, height * 0.66, secFinal)
                     .setScale(secScale).setDepth(6);
                 const secAnim = `${secFinal}_idle_down`;
@@ -406,7 +409,7 @@ export class InteriorScene extends Phaser.Scene {
                 }
                 const vx = VISITOR_SPOTS[vi].x * width;
                 const vy = VISITOR_SPOTS[vi].y * height;
-                const vSpr = this.add.sprite(vx, vy, vFinal).setScale(2.5 * this.interiorAgeScale(vData)).setDepth(7);
+                const vSpr = this.add.sprite(vx, vy, vFinal).setScale(2.5 * WORLD_K * this.interiorAgeScale(vData)).setDepth(7);
                 const vAnim = `${vFinal}_idle_down`;
                 if (this.anims.exists(vAnim)) vSpr.play(vAnim);
                 vSpr.setInteractive({ useHandCursor: true });
@@ -440,7 +443,7 @@ export class InteriorScene extends Phaser.Scene {
         const useComposite = this.player && this.player.useComposite && this.textures.exists('player_composite');
         const playerTextureKey = useComposite ? 'player_composite' : ((this.player && this.player.sprite) || 'player');
         const safePlayerKey = this.textures.exists(playerTextureKey) ? playerTextureKey : 'player';
-        this.playerSprite = this.add.sprite(width * 0.25, spawnY, safePlayerKey, 0).setScale(2.5);
+        this.playerSprite = this.add.sprite(width * 0.25, spawnY, safePlayerKey, 0).setScale(2.5 * WORLD_K);
         // П.4: Применяем tint одежды только если НЕ композит (композит уже имеет все цвета)
         if (!useComposite && this.player && this.player.appearance && this.player.appearance.jacket) {
             this.playerSprite.setTint(this.player.appearance.jacket.tint);

@@ -151,7 +151,9 @@ if (ONLY === '' || ONLY === '1') await withSession('сек1-интерьер', {
         };
     });
     ok(texInfo.player && texInfo.player.filter === 0, `игрок: LINEAR (tex=${texInfo.player && texInfo.player.tex}, scaleMode=${texInfo.player && texInfo.player.filter}, 0=LINEAR)`);
-    ok(texInfo.player && texInfo.player.scale === 2.5, 'игрок: масштаб 2.5 сохранён');
+    // 66.37: мировые листы 128px — масштаб 2.5×WORLD_K (31/88), фигуры прежнего размера
+    ok(texInfo.player && Math.abs(texInfo.player.scale - 2.5 * 31 / 88) < 0.005,
+       `игрок: масштаб 2.5×K сохранён (${texInfo.player && texInfo.player.scale})`);
     ok(texInfo.npc && texInfo.npc.filter === 0, `NPC: LINEAR (${texInfo.npc && texInfo.npc.tex})`);
     await page.screenshot({ path: `${OUT}/after_tavern_6634.png` });
     console.log('  ✓ кадр after_tavern_6634.png');

@@ -179,18 +179,21 @@ ok(!villageSrc.includes('this.smokeBuildings') && !villageSrc.includes('CHIMNEY_
    'старые идентификаторы r64 (smokeBuildings/CHIMNEY_SPRITES) не вернулись');
 // Трубы только там, где они реально есть на текстуре
 // ПАТЧ 66.36: дома пересобраны из восстановленных листов пака — трубы
-// АУТЕНТИЧНЫЕ; у Прасковьи (fb_thatch_big) и Авдея (fb_log_thatch) труб
-// в паке нет — не дымят (прежние «трубы» были чужими фрагментами листа).
+// АУТЕНТИЧНЫЕ. ПАТЧ 66.37: у Авдея (fb_log_thatch) и Прасковьи
+// (fb_thatch_big) трубы ДОРИСОВАНЫ в стиле пака (make_chimneys_6637.py,
+// доноры fb_manor/fb_thatch_small) — дым вернулся.
 ok(HOUSES_FX.fb_elder.chimneys.length === 2 && HOUSES_FX.fb_inn.chimneys.length === 1 &&
    HOUSES_FX.fb_log_big.chimneys.length === 1 && HOUSES_FX.fb_log_flowers.chimneys.length === 1 &&
    HOUSES_FX.fb_tudor_fl.chimneys.length === 1 &&
    HOUSES_FX.fb_tudor_sm.chimneys.length === 1,
    'трубы: староста×2, двор×1, пахарь×1, гончар×1, дровосек×1, знахарка×1 (дымник)');
-// 66.36: кузница/марфа/рыбак — аутентичные трубы пака; авдей/Прасковья — без труб.
+// 66.37: кузница/марфа/рыбак — аутентичные трубы пака; Авдей/Прасковья —
+// дорисованные в стиле пака (каменное тело + колпак + жерло).
 ok(HOUSES_FX.fb_smithy.chimneys.length === 1 &&
-   HOUSES_FX.fb_manor.chimneys.length === 1 && HOUSES_FX.fb_log_thatch.chimneys.length === 0 &&
-   HOUSES_FX.fb_thatch_small.chimneys.length === 1,
-   '66.36: трубы у кузницы/марфы/рыбака; у Авдея и Прасковьи труб нет (пак)');
+   HOUSES_FX.fb_manor.chimneys.length === 1 && HOUSES_FX.fb_log_thatch.chimneys.length === 1 &&
+   HOUSES_FX.fb_thatch_small.chimneys.length === 1 &&
+   HOUSES_FX.fb_thatch_big.chimneys.length === 1,
+   '66.37: трубы у кузницы/марфы/рыбака; у Авдея и Прасковьи дорисованы (стиль пака)');
 
 console.log('\n— Регрессия: аудит литеральных t()-ключей ↔ EN-словарь —');
 const srcFiles = walkSrc(join(root, 'src'));

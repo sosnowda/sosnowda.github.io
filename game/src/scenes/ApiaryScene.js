@@ -24,6 +24,8 @@ import { DialogueRunner } from '../systems/DialogueRunner.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcsAtPlace, NPC_DIALOGUE, pickOutdoorLine } from '../data/npcPresence.js';
 import { getNpcSpriteKey } from '../systems/NpcLpc.js';
+// 66.37: калибровка масштаба мировых листов персонажей 128px (были 64)
+import { WORLD_K, WORLD_BODY_PX } from '../systems/WorldLook.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
 import { attachChurchBells } from '../systems/ChurchBells.js';
@@ -432,9 +434,11 @@ export class ApiaryScene extends Phaser.Scene {
             }
             this.playerObj.play(`${this.player.sprite || 'player'}_idle_down`);
         }
-        this.playerObj.setScale(TS / 32 * 0.75);
-        // Честный хитбокс (урок раунда 7): кадр 64×64, тело 24×24 в центре
-        if (this.playerObj.body) this.playerObj.body.setSize(24, 24, true);
+        // 66.37: × WORLD_K — листы персонажей 128px, фигуры прежнего размера;
+        // WORLD_BODY_PX — прежний мировой размер тела (68px кадра 128)
+        this.playerObj.setScale(TS / 32 * 0.75 * WORLD_K);
+        // Честный хитбокс (урок раунда 7): фигура в центре кадра
+        if (this.playerObj.body) this.playerObj.body.setSize(WORLD_BODY_PX, WORLD_BODY_PX, true);
         this.playerObj.setCollideWorldBounds(true);
         this.physics.add.collider(this.playerObj, this.solids);
         this.playerObj.setDepth(this.playerObj.y / TS);
@@ -464,7 +468,7 @@ export class ApiaryScene extends Phaser.Scene {
             const x = baseX + i * 44;
             const y = baseY + i * 14;
             const spr = this.add.sprite(x, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
-                .setScale(TS / 32 * 0.85).setDepth(y / TS);
+                .setScale(TS / 32 * 0.85 * WORLD_K).setDepth(y / TS);
             const animKey = `${spr.texture.key}_idle_down`;
             if (this.anims.exists(animKey)) spr.play(animKey);
             this.tweens.add({

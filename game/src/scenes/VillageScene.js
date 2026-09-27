@@ -36,6 +36,8 @@ import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcActivity } from '../data/npcSchedules.js';
 import { getPresence, ALL_NPC_IDS, NPC_DIALOGUE, PLACE_NAMES, pickOutdoorLine } from '../data/npcPresence.js';
 import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
+// 66.37: калибровка масштаба мировых листов персонажей 128px (были 64)
+import { WORLD_K, WORLD_BODY_PX } from '../systems/WorldLook.js';
 import { attachNpcWander } from '../systems/NpcWander.js';
 import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
@@ -519,12 +521,13 @@ export class VillageScene extends Phaser.Scene {
         // п.22 — игрок ходит с анимацией, как и жители
         const startIdle = `${this.playerTexKey}_idle_down`;
         if (this.anims.exists(startIdle)) this.playerObj.play(startIdle);
-        this.playerObj.setScale(ts / 32 * 0.75);  // единый «взрослый» масштаб (у NPC тот же)
-        // ЧЕСТНЫЙ ХИТБОКС: кадр спрайта 64×64, сам персонаж занимает ~24×24 в центре.
-        // Раньше тело было равно всему кадру (72×72 при текущем масштабе) — игрок
-        // «упирался» в невидимые стены там, где визуально свободно проходил.
+        // 66.37: WORLD_K — листы персонажей теперь 128px (были 64) — фигуры
+        // прежнего визуального размера, источник втрое плотнее (WorldLook.js)
+        this.playerObj.setScale(ts / 32 * 0.75 * WORLD_K);  // единый «взрослый» масштаб (у NPC тот же)
+        // ЧЕСТНЫЙ ХИТБОКС: кадр спрайта 128×128, фигура ~26px ширины в центре.
+        // WORLD_BODY_PX = 68 даёт прежний мировой размер тела (24px старого кадра 64).
         if (this.playerObj.body) {
-            this.playerObj.body.setSize(24, 24, true);
+            this.playerObj.body.setSize(WORLD_BODY_PX, WORLD_BODY_PX, true);
         }
         this.playerObj.setCollideWorldBounds(true);
         this.physics.add.collider(this.playerObj, this.solids);
@@ -1191,7 +1194,8 @@ export class VillageScene extends Phaser.Scene {
      * ребёнок (≤12) — 0.7.
      */
     npcScaleByAge(npcData) {
-        const base = this.tileSize / 32 * 0.75;
+        // 66.37: × WORLD_K — листы жителей 128px (были 64), фигуры прежнего размера
+        const base = this.tileSize / 32 * 0.75 * WORLD_K;
         const age = (npcData && npcData.age) || 30;
         if (age <= 12) return base * 0.7;
         if (age <= 17) return base * 0.85;

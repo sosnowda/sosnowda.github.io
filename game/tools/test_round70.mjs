@@ -192,11 +192,10 @@ console.log('— п.11: ДЫМОВЫЕ ТРУБЫ — по аутентичны�
 {
     const mustHave = ['fb_smithy', 'fb_manor', 'fb_thatch_small'];
     mustHave.forEach(k => ok(HOUSES_FX[k].chimneys.length === 1, `${k}: труба задана`));
-    // 66.36: у Авдея (fb_log_thatch) и Прасковьи (fb_thatch_big) труб в паке
-    // нет (прежние «трубы» были чужими фрагментами листа) — дым честно убран
+    // 66.37: трубы Авдея/Прасковьи ДОРИСОВАНЫ в стиле пака — не дымят
+    // только церковь (у печей труб не предусмотрено)
     const noSmoke = Object.keys(HOUSES_FX).filter(k => k !== 'fb_church' && !HOUSES_FX[k].chimneys.length);
-    ok(noSmoke.length === 2 && noSmoke.includes('fb_log_thatch') && noSmoke.includes('fb_thatch_big'),
-        `без труб в паке (не дымят): ${noSmoke.join(',') || '—'}`);
+    ok(noSmoke.length === 0, `все дома с трубами дымят (66.37): пусто — ${noSmoke.join(',') || '—'}`);
 }
 
 // ============================================================
@@ -378,9 +377,9 @@ console.log('— п.3: СТРЕЛКИ ЛАЙТБОКСА ВСЕГДА ВИДНЫ
 console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v86'"), 'SW: сайт v86 (66.36)');
-    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v31'"),
-        'SW: game-assets-v31 (фасады 66.36)');
+    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v87'"), 'SW: сайт v87 (66.36)');
+    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v32'"),
+        'SW: game-assets-v32 (фасады 66.36)');
     setLang('en');
     ok(t('☁ Что погода сулит?') === '☁ What will the weather bring?', 'i18n: вопрос о погоде EN');
     ok(t('Доска поручений') === 'Job Board', 'i18n: доска поручений EN');

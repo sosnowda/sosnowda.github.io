@@ -4,7 +4,7 @@
 //     (RusTime.buildChronicleExport: датировка+месяц+время+ДЕЯНИЯ,
 //     ASCII-имя файла)  3) отдельный og:image демо (assets/images/
 //     og-demo.jpg 1200×630, ссылки в game/index.html)  4) SW v67
-//     (site-cache бамп, game-assets-v21 не тронут)  5) EN-ключи 66.8.
+//     (site-cache бамп, game-assets-v32 не тронут)  5) EN-ключи 66.8.
 // Запуск: node tools/test_round71.mjs
 
 import { readFileSync, existsSync, statSync } from 'node:fs';
@@ -130,8 +130,8 @@ ok(has(li, 'assets/images/og-image.jpg'), 'лендинг (index.html) по-пр
 // ================================= 4) SW ====================================
 console.log('\n[4] Service Worker v76');
 const sw = read('sw.js');
-ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v86'"), 'CACHE_NAME актуален (v86, 66.36)');
-ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v31'"), 'game-assets-v31 (фасады 66.36)');
+ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v87'"), 'CACHE_NAME актуален (v86, 66.36)');
+ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v32'"), 'game-assets-v32 (фасады 66.36)');
 ok(has(sw, 'v69 — раунд 66.19'), 'шапка sw.js: запись о раунде 66.19');
 ok(has(sw, 'assets/images/og-demo.jpg'), 'шапка sw.js: og-demo.jpg задокументирован');
 

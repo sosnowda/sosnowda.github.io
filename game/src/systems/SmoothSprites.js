@@ -27,6 +27,7 @@ const CHAR_PREFIXES = [
     'hero_',        // облики игрока из паков Medieval (hero_baenor, hero_paul, …)
     'npc_',         // npc_elder/merchant/soldier/bandit, npc_lpc_*, npc_var_*
     'enemy_thief',  // enemy_thief_m / enemy_thief_f (+ базовый в точном списке)
+    'world_',       // 66.37: мировые листы паков Drive (источники композитов)
 ];
 
 /** Это ключ текстуры персонажа (кандидат на гладкий фильтр)? */

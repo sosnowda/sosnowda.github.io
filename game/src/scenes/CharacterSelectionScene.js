@@ -22,7 +22,8 @@ import { ageUnitWord } from '../systems/AgeRules.js';
 // РАУНД 62 (п.1): готовые прессеты героя «Баэнор» (♂)/«Пауль» (♀)
 // возвращены — LPC-композит собирается здесь, автоматом по полу.
 // (Кастомизация по-прежнему отсутствует — пп.7,10 раунда 61.)
-import { getHeroPreset, composePlayerTexture } from '../systems/NpcLpc.js';
+import { getHeroPreset } from '../systems/NpcLpc.js';
+import { composeWorldPlayerTexture } from '../systems/WorldLook.js';
 // 66.33: бусты пака «Medieval - Heroes I» — портреты в карточках/превью
 import { getBustFor } from '../data/heroes.js';
 
@@ -519,14 +520,17 @@ export class CharacterSelectionScene extends Phaser.Scene {
                 `${startDate.day}.${((startDate.month + 8) % 12) + 1}.${startDate.yearFromChrist + (startDate.month >= 4 ? 1 : 0)}`
             )
         );
-        // РАУНД 62 (п.1 приказа владельца): ГОТОВЫЕ ПРЕССЕТЫ «Баэнор»/«Пауль»
-        // ВЕРНУЛИСЬ — LPC-композиты применяются АВТОМАТИЧЕСКИ ПО ПОЛУ:
-        // «Баэнор» — мужскому герою, «Пауль» — женскому (перекрёстно к р.60,
-        // как велел владелец). Меню облика нет, кастомизации нет (пп.7,10 р.61);
+        // РАУНД 62 (п.1 приказа владельца): готовые прессеты «Баэнор»/«Пауль»
+        // применяются АВТОМАТИЧЕСКИ ПО ПОЛУ: «Баэнор» — мужскому герою,
+        // «Пауль» — женскому. Меню облика нет, кастомизации нет (пп.7,10 р.61);
         // старая готовая модель ('player'/'npc_merchant') остаётся ЗАПАСНОЙ —
         // если композит собрать не удастся, сцены откатятся на неё сами.
+        // 66.37 (приказ владельца): ОБЛИК СОБИРАЕТСЯ ИЗ НОВЫХ ЛИСТОВ ПАКОВ
+        // GOOGLE DRIVE (WorldLook.js): male → Баэнор (Heroes I/Baenor),
+        // female → Найя (Heroes I/Naia) — кадры 128px вместо LPC 64px;
+        // геометрия = прежняя LPC ×2, все масштабы сцен без изменений.
         const preset = getHeroPreset(hero.gender, hero.age);
-        const composed = composePlayerTexture(this, preset.appearance, 'player_composite');
+        const composed = composeWorldPlayerTexture(this, hero.gender);
         hero.useComposite = composed;
         hero.lpcAppearance = preset.appearance;
         hero.presetName = preset.name;

@@ -24,6 +24,7 @@
 // ВЕРНУЛИСЬ — см. HERO_PRESETS/getHeroPreset/composePlayerTexture ниже.
 
 import { composeCharacterTexture, createCustomCharacterAnimations } from './CharacterAppearance.js';
+import { ensureWorldNpcTexture } from './WorldLook.js';
 
 // ---- «Крестьянская» палитра слоёв (все файлы существуют в assets/lpc/) ----
 export const PALETTE = {
@@ -265,15 +266,25 @@ export function npcLpcKey(npcId) {
 }
 
 /**
- * Собрать LPC-спрайт-лист жителя (один раз за игру). Все нужные слои уже
- * загружены в BootScene из палитры; если чего-то нет — вежливый отказ,
- * вызывающая сцена останется на прежнем спрайте npc_*.
+ * Собрать спрайт-лист жителя (один раз за игру).
+ * 66.37 (приказ владельца): облик собирается из НОВЫХ мировых листов паков
+ * Google Drive (WorldLook.js — кадры 128px, геометрия LPC ×2); ключ и
+ * анимации прежние — все сцены работают без изменений.
+ * Если мировые листы недоступны — прежний LPC-композит из палитры; если и
+ * он не собрался — вежливый отказ, вызывающая сцена останется на прежнем
+ * спрайте npc_*.
  * @returns {string|null} ключ текстуры или null
  */
 export function ensureNpcLpcTexture(scene, registry, npc) {
     if (!npc || !npc.id) return null;
     const key = npcLpcKey(npc.id);
     if (scene.textures.exists(key)) return key;           // уже собран
+
+    // 66.37: основной путь — мировые листы (heroes/townfolk/warfare паков)
+    const world = ensureWorldNpcTexture(scene, registry, npc);
+    if (world) return world;
+
+    // Fallback: прежний LPC-композит (слои предзагружены в BootScene)
     if (!scene.cache.json.has('lpc_manifest')) return null;
 
     const appearance = rollLpcAppearance(registry, npc);

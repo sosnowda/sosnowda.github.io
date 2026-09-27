@@ -259,6 +259,35 @@ export class BootScene extends Phaser.Scene {
             this.load.spritesheet(key, url, { frameWidth: 64, frameHeight: 64 });
         });
 
+        // ----- 66.37 (приказ владельца): МИРОВЫЕ ЛИСТЫ ПЕРСОНАЖЕЙ -----
+        // Высокоразрешённые листы паков Drive (конвейер tools/make_world_6637.py):
+        // игрок — Baenor/Naia (Heroes I), жители — базы+одежда Townfolk/
+        // Town&Country/Warfare. Кадры 128×128, 9×4 (ходьба 0..7 + idle 8,
+        // строки вниз/влево/вправо/вверх). Сборка композитов — WorldLook.js.
+        const worldSheets = [
+            'world_hero_male', 'world_hero_female',
+            'world_m_base1', 'world_m_base2', 'world_m_base3',
+            'world_m_top1', 'world_m_top2', 'world_m_top3', 'world_m_top4', 'world_m_top5',
+            'world_m_top6', 'world_m_top7', 'world_m_top8', 'world_m_top9',
+            'world_m_pants1', 'world_m_pants2', 'world_m_pants3', 'world_m_pants4', 'world_m_pants5',
+            'world_m_hair1', 'world_m_hair2', 'world_m_hair3', 'world_m_hair4', 'world_m_hair5', 'world_m_hair6',
+            'world_m_beard1', 'world_m_beard2',
+            'world_m_feet1', 'world_m_feet2', 'world_m_feet3',
+            'world_w_base1',
+            'world_w_top1', 'world_w_top2', 'world_w_top3', 'world_w_top4', 'world_w_top5', 'world_w_top6', 'world_w_top7',
+            'world_w_bottom1', 'world_w_bottom2', 'world_w_bottom3', 'world_w_bottom4',
+            'world_w_feet1', 'world_w_feet2',
+            'world_w_helm1', 'world_w_helm2', 'world_w_helm3', 'world_w_helm4',
+            'world_f_base1', 'world_f_base2', 'world_f_base3',
+            'world_f_dress1', 'world_f_dress2', 'world_f_dress3', 'world_f_dress4', 'world_f_dress5',
+            'world_f_hair1', 'world_f_hair2', 'world_f_hair3', 'world_f_hair4', 'world_f_hair5', 'world_f_hair6', 'world_f_hair7',
+            'world_f_feet1', 'world_f_feet2',
+            'world_child1', 'world_child2', 'world_child3', 'world_child4', 'world_child5', 'world_child6',
+        ];
+        worldSheets.forEach((key) => {
+            this.load.spritesheet(key, `assets/sprites/world/${key}.png`, { frameWidth: 128, frameHeight: 128 });
+        });
+
         // ----- РАУНД 50 (пп.2,4): ТАЙЛОВЫЕ ИНТЕРЬЕРЫ (пакет Medieval - Interiors) -----
         // Фоны 1280×720 собраны из листов Walls/Furniture/Church/Tavern/Profession;
         // статический декор запечён в фон, анимированный огонь/киот рисуются сценой.

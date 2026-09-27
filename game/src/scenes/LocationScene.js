@@ -56,6 +56,8 @@ import { attachRiverAmbience, playWaterSplash, RIVER_VOLUME_BY_LOCATION } from '
 import { getSeasonalWork, seasonalWorkerLine, fieldPhaseOf } from '../systems/SeasonalWork.js';
 import { showBellToast } from '../systems/ChurchBells.js';
 import { ensureNpcLpcTexture } from '../systems/NpcLpc.js';
+// 66.37: калибровка масштаба мировых листов персонажей 128px (были 64)
+import { WORLD_K } from '../systems/WorldLook.js';
 
 // Раунд 27 (п.1): прозрачные деревья без фона вместо квадратных тайлов
 const TREE_KEYS = ['deco_tree_0', 'deco_tree_1', 'deco_tree_2', 'deco_tree_3', 'deco_tree_4', 'deco_pine_0', 'deco_pine_1'];
@@ -237,7 +239,8 @@ export class LocationScene extends Phaser.Scene {
         // Раунд 68 (п.5): спавн игрока вне воды — на Реке точка (0.2w, 0.6h)
         // попадала в полосу воды; clamp выталкивает её на ближайший берег.
         const spawnPt68 = clampOutOfWater(this.locationId, width, height, width * 0.2, height * 0.6, 30);
-        this.playerSprite = this.add.sprite(spawnPt68.x, spawnPt68.y, locPlayerTex, 0).setScale(2.5).setDepth(40);
+        // 66.37: × WORLD_K — листы персонажей 128px, фигуры прежнего размера
+        this.playerSprite = this.add.sprite(spawnPt68.x, spawnPt68.y, locPlayerTex, 0).setScale(2.5 * WORLD_K).setDepth(40);
         const locIdle = useComposite50 ? 'player_composite_idle_right' : `${locPlayerTex}_idle_right`;
         this.playerSprite.play(this.anims.exists(locIdle) ? locIdle : 'player_idle_right');
         this.tweens.add({
@@ -675,7 +678,7 @@ export class LocationScene extends Phaser.Scene {
         const displayName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
         const spriteKey = getNpcSpriteKey(this, this.registry, npcId);
         const spr = this.add.sprite(x, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
-            .setScale(scale).setDepth(50);
+            .setScale(scale * WORLD_K).setDepth(50);
         const animKey = `${spr.texture.key}_idle_down`;
         if (this.anims.exists(animKey)) spr.play(animKey);
         // Дети еро́зятся — слегка «прыгают» на месте (а если рядом ещё дети — бегают)
@@ -747,7 +750,7 @@ export class LocationScene extends Phaser.Scene {
             const texKey = ensureNpcLpcTexture(this, this.registry, worker)
                 || (worker.gender === 'female' ? 'npc_villager_f' : 'npc_elder');
             const spr = this.add.sprite(spot.x, spot.y, this.textures.exists(texKey) ? texKey : 'npc_elder')
-                .setScale(scale).setDepth(50);
+                .setScale(scale * WORLD_K).setDepth(50);
             const animKey = `${spr.texture.key}_idle_down`;
             if (this.anims.exists(animKey)) spr.play(animKey);
             // лёгкий «трудовой» покачивающийся твин
