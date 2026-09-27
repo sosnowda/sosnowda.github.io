@@ -6,9 +6,10 @@
 // Запуск: node game/tools/qa_map_6634.mjs  (сервер на 8765)
 import { chromium } from '/home/z/.npm-global/lib/node_modules/playwright/index.mjs';
 import fs from 'fs';
-const OUT = '/tmp/shots6634';
+const OUT = process.env.OUT_DIR || '/tmp/shots6634';
 fs.mkdirSync(OUT, { recursive: true });
-const BASE = 'http://localhost:8765';
+// BASE_URL позволяет гонять тот же набор против прода (верификация 66.34)
+const BASE = process.env.BASE_URL || 'http://localhost:8765';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let jsErrors = 0;
