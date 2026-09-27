@@ -166,34 +166,37 @@ console.log('— п.9: ДОРОЖКИ шириной ровно в один та
 console.log('— п.10: КРЫША КОЛОКОЛЬНИ церкви не обрезана —');
 {
     const img = pngPixels('game/assets/sprites/fb_church.png');
-    // 66.35: ещё +10px сверху (достройка срезанного кончика креста) — 263x350
-    ok(!!img && img.h === 350 && img.w === 263,
-        `fb_church 263x350 (66.7: +52 шатра, 66.35: +10 креста)`);
+    // ПАТЧ 66.36: дома пересобраны из восстановленных листов пака; шатёр со
+    // звездой — АУТЕНТИЧНАЯ деталь листа, собранная на колокольню: 270x412
+    ok(!!img && img.h === 412 && img.w === 270,
+        `fb_church 270x412 (66.36: аутентичный шатёр пака) [${img && img.w}x${img && img.h}]`);
     if (img) {
-        // в НОВЫХ верхних 50px есть контент (шатёр+крест), и он НЕ сплошной
-        // по всей ширине (у старого среза контент шёл по всей строке)
-        let top = 0, cross = 0;
+        // шатёр занимает верх: y=8 — навершье (звезда), y=40 — тело пирамиды;
+        // контент НЕ сплошной по всей ширине (у старого среза шёл по всей строке)
+        let finial = 0, body40 = 0;
         for (let x = 0; x < img.w; x++) {
-            if (img.at(x, 20)[3] > 0) top++;
-            if (img.at(x, 4)[3] > 0) cross++;   // большая перекладина креста
+            if (img.at(x, 8)[3] > 0) finial++;
+            if (img.at(x, 40)[3] > 0) body40++;
         }
-        ok(top >= 10 && top < img.w * 0.5,
-            `шатёр над звонницей нарисован (px на y=20: ${top}) — не срез`);
-        ok(cross >= 8, `восьмиконечный крест над шатром (px верхней перекладины на y=4: ${cross})`);
+        ok(body40 >= 12 && body40 < img.w * 0.5,
+            `шатёр над звонницей собран (px пирамиды на y=40: ${body40}) — не срез`);
+        ok(finial >= 4, `навершье шатра на месте (px на y=8: ${finial})`);
     }
-    // окна церкви в housesFX: +52 (66.7), затем ещё +10 (66.35) = 90
+    // окно звонницы в housesFX: жерло с колоколом на новой текстуре — y=178
     const win = HOUSES_FX.fb_church.windows.find(w => w[0] === 137);
-    ok(!!win && win[1] === 90, `проём звонницы в housesFX на y=90 (+52 66.7, +10 66.35; y=${win && win[1]})`);
+    ok(!!win && win[1] === 178, `проём звонницы в housesFX на y=178 (66.36; y=${win && win[1]})`);
 }
 
 // ============================================================
-console.log('— п.11: ДЫМОВЫЕ ТРУБЫ ВСЕМ ДОМАМ —');
+console.log('— п.11: ДЫМОВЫЕ ТРУБЫ — по аутентичным трубам пака —');
 {
-    const mustHave = ['fb_smithy', 'fb_manor', 'fb_log_thatch', 'fb_thatch_small'];
+    const mustHave = ['fb_smithy', 'fb_manor', 'fb_thatch_small'];
     mustHave.forEach(k => ok(HOUSES_FX[k].chimneys.length === 1, `${k}: труба задана`));
-    // у КАЖДОГО фасада, кроме церкви, есть дым (жерло)
+    // 66.36: у Авдея (fb_log_thatch) и Прасковьи (fb_thatch_big) труб в паке
+    // нет (прежние «трубы» были чужими фрагментами листа) — дым честно убран
     const noSmoke = Object.keys(HOUSES_FX).filter(k => k !== 'fb_church' && !HOUSES_FX[k].chimneys.length);
-    ok(noSmoke.length === 0, `без дыма не осталось ни одного дома (кроме церкви): ${noSmoke.join(',') || '—'}`);
+    ok(noSmoke.length === 2 && noSmoke.includes('fb_log_thatch') && noSmoke.includes('fb_thatch_big'),
+        `без труб в паке (не дымят): ${noSmoke.join(',') || '—'}`);
 }
 
 // ============================================================
@@ -375,9 +378,9 @@ console.log('— п.3: СТРЕЛКИ ЛАЙТБОКСА ВСЕГДА ВИДНЫ
 console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v85'"), 'SW: сайт v84 (66.34)');
-    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v30'"),
-        'SW: game-assets-v30 (листы 66.33 + бусты)');
+    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v86'"), 'SW: сайт v86 (66.36)');
+    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v31'"),
+        'SW: game-assets-v31 (фасады 66.36)');
     setLang('en');
     ok(t('☁ Что погода сулит?') === '☁ What will the weather bring?', 'i18n: вопрос о погоде EN');
     ok(t('Доска поручений') === 'Job Board', 'i18n: доска поручений EN');

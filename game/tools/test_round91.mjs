@@ -1,10 +1,12 @@
-// test_round91 — ПАТЧ 66.35 (приказы владельца 1–5):
-//   1) ремонт фасадов fb_* (срезы крыш/труб/стен устранены, церковь +10px);
+// test_round91 — ПАТЧ 66.35 (приказы владельца 1–5), актуализирован 66.36:
+//   1) фасады fb_* — 66.35: ремонт срезов; 66.36: ПЕРЕСОБРАНЫ из восстановленных
+//      листов пака (владелец вернул Tilesets на Drive), церковь с аутентичным
+//      шатром пака;
 //   2) поп-апы наведения: хит-зона = отпечаток + видимый спрайт (buildingAt);
 //   3) планировка 66.35: все дома ≥1 тайл от восточного частокола, точки
 //      НПЦ на проходимых тайлах, окна/трубы housesFX в границах текстур;
 //   4) rim-light Найи 0.6 (единообразие) — детали в r89;
-//   5) SW v85 / game-assets-v30 — детали в r69–72/84/86–90.
+//   5) SW версии — детали в r69–72/84/86–90.
 import { strict as assert } from 'node:assert';
 import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -24,21 +26,21 @@ function pngSize(p) {
     return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
 }
 
-console.log('--- 1. Ремонт фасадов (оригиналы сохранены, размеры новые) ---');
+console.log('--- 1. Фасады (прежние спрайты сохранены, размеры 66.36) ---');
 const FB = ['fb_church', 'fb_inn', 'fb_smithy', 'fb_elder', 'fb_manor',
     'fb_thatch_big', 'fb_thatch_small', 'fb_log_flowers', 'fb_log_thatch',
     'fb_log_big', 'fb_tudor_fl', 'fb_tudor_sm'];
 for (const k of FB) {
     ok(existsSync(join(game, 'assets/sprites', k + '.png')), `${k}.png на месте`);
-    ok(existsSync(join(game, 'tools/fb_originals_6635', k + '.png')), `${k}: оригинал в tools/fb_originals_6635 (ремонт идемпотентен)`);
+    ok(existsSync(join(game, 'tools/fb_current_6636', k + '.png')), `${k}: прежний спрайт в tools/fb_current_6636 (откат возможен)`);
 }
-// церковь: 263x350 (66.7 +52, 66.35 +10)
+// церковь: 270x412 (66.36: аутентичный шатёр пака, собран на колокольню)
 const ch = pngSize(join(game, 'assets/sprites/fb_church.png'));
-ok(ch.w === 263 && ch.h === 350, `fb_church 263x350 [${ch.w}x${ch.h}]`);
-// конвейер ремонта в репо и заявляет идемпотентность
-const rep = readFileSync(join(game, 'tools/make_houses_repair_6635.py'), 'utf-8');
-ok(rep.includes('fb_originals_6635') && rep.includes('grow_top') && rep.includes('cap_slab'),
-    'конвейер ремонта: grow_top/cap_slab, бэкап оригиналов');
+ok(ch.w === 270 && ch.h === 412, `fb_church 270x412 [${ch.w}x${ch.h}]`);
+// конвейер 66.36 в репо: вырезка из восстановленных листов пака + сборка шатра
+const rep = readFileSync(join(game, 'tools/make_houses_6636.py'), 'utf-8');
+ok(rep.includes('fb_pack_6636') && rep.includes('SPIRE') && rep.includes('grow_top'),
+    'конвейер 66.36: листы пака + сборка шатра + зеркальная достройка краёв листа');
 
 // ---------- 2. housesFX: окна/трубы в границах новых текстур ----------
 console.log('--- 2. housesFX: окна/трубы в границах текстур (синхрон с ремонтом) ---');
@@ -52,7 +54,8 @@ for (const k of FB) {
     ok(winBad.length === 0, `${k}: все окна в границах ${w}x${h} (${winBad.length ? JSON.stringify(winBad) : 'ok'})`);
     const chimBad = (fx.chimneys || []).filter(([cx, cy]) => cx < 0 || cx > w || cy < 0 || cy > h);
     ok(chimBad.length === 0, `${k}: жерла труб в границах текстуры`);
-    ok((fx.chimneys || []).length >= 1 || k === 'fb_church', `${k}: труба задана (кроме церкви)`);
+    ok((fx.chimneys || []).length >= 1 || k === 'fb_church' || k === 'fb_log_thatch' || k === 'fb_thatch_big',
+        `${k}: труба задана (кроме церкви/Авдея/Прасковьи — в паке труб нет)`);
 }
 
 // ---------- 3. Поп-апы: хит-зона по видимому спрайту ----------
