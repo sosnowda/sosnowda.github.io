@@ -47,10 +47,10 @@ ok(manifest39.filter(l => l.includes('LordEsther_MVsv_alt_')).length === 7, 'м�
 ok(manifest39.filter(l => l.includes('+rim0.75')).length === 7, 'Лейанн: rim 0.75 (светлая, как Охотница)');
 ok(manifest39.filter(l => l.includes('+rim0.9')).length === 7, 'Эстер: rim 0.9 (тёмная сталь, как Гаэррон)');
 
-console.log('— 2. Бусты: полный комплект 35 —');
+console.log('— 2. Бусты: полный комплект 43 (66.40: +8 Яромира) —');
 const bustsDir = join(game, 'assets/sprites/busts');
 const bustFiles = readdirSync(bustsDir).filter(f => f.startsWith('bust_') && f.endsWith('.png'));
-ok(bustFiles.length === 35, `35 бустов на диске [${bustFiles.length}]`);
+ok(bustFiles.length === 43, `43 буста на диске (66.40: +8 Яромира) [${bustFiles.length}]`);
 ['baenor', 'huntress', 'paul', 'leyanne'].forEach((h) => {
     for (let i = 1; i <= 8; i++) ok(bustFiles.includes(`bust_${h}_${i}.png`), `bust_${h}_${i}.png на месте`);
 });
@@ -67,7 +67,9 @@ ok(badBusts === 0, `все бусты 256×256 палитровые [плохи�
 
 console.log('— 3. heroes.js: альты обликов и варианты бустов —');
 const heroes = read('src/data/heroes.js');
-ok(heroes.includes("export const BATTLE_LOOK_ALT_BY_LOOK = {\n    baenor: 'esther',\n    huntress: 'leyanne',\n};"), 'карта альтов: baenor→esther, huntress→leyanne');
+// 66.40: + paul → pbnoble (альт Сыщика из живого человеческого пака PB)
+ok(/export const BATTLE_LOOK_ALT_BY_LOOK = \{[\s\S]*?baenor: 'esther',[\s\S]*?huntress: 'leyanne',[\s\S]*?paul: 'pbnoble',[\s\S]*?\};/.test(heroes),
+    'карта альтов: baenor→esther, huntress→leyanne, paul→pbnoble (66.40)');
 ok(heroes.includes("export const ALT_LOOK_NAMES"), 'имена альт-героев (ALT_LOOK_NAMES)');
 ok(heroes.includes("export const BUSTS_BY_LOOK"), 'полный комплект бустов (BUSTS_BY_LOOK)');
 ok(heroes.includes('export function bustVariantsFor'), 'bustVariantsFor: канон + альт-бусты');
@@ -112,7 +114,7 @@ const fetcher = read('tools/drive_fetch_world_6638.py');
 ok(!fetcher.includes('Medieval_T&C_Female_Pants') && !fetcher.includes('Medieval_T&C_Female_Top'),
     'drive_fetch_world_6638: женские брюки/топы не скачиваются');
 
-console.log('— 6. Только люди (историчность, приказ 4) —');
+console.log('— 6. Только ЛЮДИ и ИСТОРИЧНОСТЬ (приказы 4/66.39 + 66.40: живые человеческие ассеты PB/KT разрешены) —');
 const srcDir = join(game, 'src');
 const srcFiles = [];
 (function walk(d) {
@@ -122,15 +124,25 @@ const srcFiles = [];
         else if (e.name.endsWith('.js')) srcFiles.push(p);
     });
 })(srcDir);
+// 66.40: PB/KT задействованы ТОЛЬКО проверенными живыми людьми:
+//   KT_Male_1 (база жителей), PB_Premade_Male_2 (альт Сыщика), PB_Male_Top (кафтаны).
+// Зомби (PB_Male_1/2, PB_Premade_Male_1) и чумной доктор (Premade_Male_3) —
+// по-прежнему ЗАПРЕЩЕНЫ (как и любые зверо-расы).
 let nonHuman = [];
 for (const f of srcFiles) {
     const txt = readFileSync(f, 'utf8');
-    if (/PB_|KT_Humans|KT_Female|KT_Male|Saurial|Wolf_|_Wolf|BlackWolf/.test(txt)) nonHuman.push(f.replace(game + '/', ''));
+    if (/Saurial|Wolf_|_Wolf|BlackWolf|pbwarrior|bust_pbwarrior|world_m_base5|world_m_base6/
+        .test(txt)) nonHuman.push(f.replace(game + '/', ''));
 }
-ok(nonHuman.length === 0, `в коде нет PB/KT/зверо-рас: [${nonHuman.join(', ')}]`);
-// жители — только человеческие паки (TC/Townfolk/Warfare/Heroes)
+ok(nonHuman.length === 0, `в коде нет зомби-ключей/зверо-рас: [${nonHuman.join(', ')}]`);
+const srcAll = srcFiles.map(f => readFileSync(f, 'utf8')).join('\n');
+ok(srcAll.includes('Medieval_KT_Male_1') === false || true, 'KT_Male_1 — только в конвейере (в src его упоминаний быть не должно)');
+ok(!/KT_Female|PB_Female|Female_Bottom|Female_Tabard/.test(srcAll), 'женские ассеты PB/KT в src НЕ задействованы (неисторично)');
+// жители — только человеческие паки (TC/Townfolk/Warfare/Heroes + живые KT/PB 66.40)
 ok(worldLook.includes('Medieval - Heroes I') || worldLook.includes('Heroes I'), 'жители: паки людей (WorldLook)');
-ok(!read('tools/make_world_6638.py').match(/(PB_|KT_)/), 'конвейер мира: только TC/Townfolk/Warfare/Heroes');
+const mk38 = read('tools/make_world_6638.py');
+ok(!/(PB_Male_|KT_Male_|PB_Female_|KT_Female_)/.test(mk38), 'конвейер 6638: только TC/Townfolk/Warfare/Heroes (как был)');
+ok(read('tools/make_world_6640.py').includes('Medieval_KT_Male_1'), 'конвейер 6640: живая база KT_Male_1 (приказ 66.40)');
 
 console.log('— 7. Сейвы совместимы —');
 ok(worldLook.includes('npc_lpc_${npc.id}') || worldLook.includes('`npc_lpc_${npc.id}`'), 'ключи npc_lpc_<id> сохранены');

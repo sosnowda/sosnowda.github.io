@@ -1,0 +1,8 @@
+battle_pbnoble_idle.png	3 КБ	Medieval_PB_Premade_Male_2_MVsv_alt_stance2.png +rim0.9
+battle_pbnoble_attack1.png	4 КБ	Medieval_PB_Premade_Male_2_MVsv_alt_attack1.png +rim0.9
+battle_pbnoble_attack2.png	4 КБ	Medieval_PB_Premade_Male_2_MVsv_alt_attack2.png +rim0.9
+battle_pbnoble_fists.png	4 КБ	Medieval_PB_Premade_Male_2_MVsv_alt_martialartpunch.png +rim0.9
+battle_pbnoble_shoot.png	4 КБ	Medieval_PB_Premade_Male_2_MVsv_alt_shooting.png +rim0.9
+battle_pbnoble_death.png	3 КБ	Medieval_PB_Premade_Male_2_MVsv_alt_dead1.png +rim0.9
+battle_pbnoble_victory.png	5 КБ	Medieval_PB_Premade_Male_2_MVsv_alt_victory1.png +rim0.9
+ИТОГО	7 файлов	27 КБ

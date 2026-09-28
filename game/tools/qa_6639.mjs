@@ -16,7 +16,8 @@ import { chromium } from '/home/z/.npm-global/lib/node_modules/playwright/index.
 import fs from 'fs';
 const OUT = '/tmp/qa6639';
 fs.mkdirSync(OUT, { recursive: true });
-const BASE = 'http://localhost:8765';
+// BASE_URL позволяет гонять тот же набор против прода (верификация 66.39/66.40)
+const BASE = process.env.BASE_URL || 'http://localhost:8765';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let jsErrors = 0;

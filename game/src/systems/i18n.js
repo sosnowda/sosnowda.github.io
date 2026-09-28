@@ -306,6 +306,7 @@ const EN = {
     'Портрет': 'Portrait',
     'Эстер': 'Esther',
     'Лейанн': 'Leyanne',
+    'Яромир': 'Yaromir',
     'Начать игру': 'Start Game',
     'Оружие:': 'Weapon:',
     'Доспех:': 'Armor:',

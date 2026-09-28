@@ -157,7 +157,9 @@ async function runViewport(tag, vw, vh) {
         const s = window.game.scene.getScene('Fork');
         if (!s) return { ok: false };
         const W = s.scale.width, H = s.scale.height;
-        const list = s.children.list.filter(c => c.depth >= 200 && c.visible !== false);
+        // 66.34: карта = полная сцена Fork (terrain_map depth 10 + подписи depth 14);
+        // старый оверлей depth>=200 и кнопка «Закрыть» удалены (актуализация 66.40)
+        const list = s.children.list.filter(c => c.visible !== false && (c.depth === 10 || c.depth === 14));
         const rects = [];
         for (const o of list) {
             try {
@@ -169,7 +171,7 @@ async function runViewport(tag, vw, vh) {
                 }
             } catch (e) { /* */ }
         }
-        const labels = rects.filter(r => r.kind === 'text' && r.t.length < 24 && !r.t.includes('Закрыть') && !r.t.includes('Ты здесь'));
+        const labels = rects.filter(r => r.kind === 'text' && r.t.length < 24 && !r.t.includes('Ты здесь'));
         const overlaps = [];
         for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) {
             const a = labels[i], b = labels[j];
@@ -178,30 +180,15 @@ async function runViewport(tag, vw, vh) {
             if (ox > 2 && oy > 2) overlaps.push(`${a.t} × ${b.t} (${ox.toFixed(0)}×${oy.toFixed(0)})`);
         }
         const outOfScreen = rects.filter(r => r.x < -2 || r.y < -2 || r.x + r.w > W + 2 || r.y + r.h > H + 2);
-        const close = rects.find(r => r.t.includes('Закрыть'));
-        return { ok: true, nLabels: labels.length, overlaps, outOfScreen: outOfScreen.map(r => r.t), closeOk: !!close && close.y + close.h < H && close.y > 0 };
+        return { ok: rects.some(r => r.kind === 'map'), nLabels: labels.length, overlaps, outOfScreen: outOfScreen.map(r => r.t) };
     }, vh);
     ok(mapCheck.ok, `${tag}: карта открылась`);
-    if (mapCheck.nLabels === 0) {
-        // диагностика: клик не сработал? пробуем прямой showMap()
-        console.log('  ⚠ оверлей карты пуст — прямой вызов showMap() (диагностика)');
-        await page.evaluate(() => { const s = window.game.scene.getScene('Fork'); if (s) s.showMap(); });
-        await sleep(1400);
-        const retry = await page.evaluate(() => {
-            const s = window.game.scene.getScene('Fork');
-            return { n: s.children.list.filter(c => c.depth >= 200).length };
-        });
-        console.log(`  после прямого showMap(): объектов depth>=200 = ${retry.n}`);
-        ok(retry.n > 5, `${tag}: showMap() отрисовывает панель (direct)`);
-    }
     ok(mapCheck.overlaps.length === 0, `${tag}: подписи карты не перекрываются (${mapCheck.nLabels} подписей; пересечений: ${mapCheck.overlaps.length}${mapCheck.overlaps.length ? ' — ' + mapCheck.overlaps.join('; ') : ''})`);
     ok(mapCheck.outOfScreen.length === 0, `${tag}: элементы карты в экране (вне экрана: ${mapCheck.outOfScreen.join(', ') || '—'})`);
-    ok(mapCheck.closeOk, `${tag}: кнопка «Закрыть» на месте и кликабельна`);
     await page.screenshot({ path: `${OUT}/${tag}_map.png` });
 
-    // закрыть карту и выйти на локацию (река — вода+UI)
-    await clickText('Закрыть', true, 4000);
-    await sleep(900);
+    // выйти на локацию (река — вода+UI); карта теперь сцена Fork — закрытия не требует
+    await sleep(400);
     await page.evaluate(() => {
         const s = window.game.scene.getScene('Fork');
         s.scene.start('Location', { locationId: 'river', from: 'Fork' });

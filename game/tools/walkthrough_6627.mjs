@@ -168,8 +168,12 @@ await sleep(1500);
 const mapState = await page.evaluate(() => {
     const s = window.game.scene.getScene('Fork');
     if (!s) return { ok: false };
-    const overlay = s.children.list.filter(c => c.depth >= 200);
-    return { ok: overlay.length > 5, labels: overlay.filter(c => c.text).map(c => c.text.trim()).filter(t => t && t.length < 30) };
+    // 66.34: карта местности = ПОЛНОЭКРАННАЯ сцена Fork (terrain_map + подписи
+    // depth 14), старого поп-апа-оверлея depth>=200 больше нет (актуализация 66.40)
+    const hasMap = s.children.list.some(c => c.texture && c.texture.key === 'terrain_map');
+    const labels = s.children.list.filter(c => c.text && c.depth === 14).map(c => c.text.trim())
+        .filter(t => t && t.length < 30);
+    return { ok: hasMap && labels.length >= 12, labels };
 });
 ok(mapState.ok, `карта местности открылась (${(mapState.labels || []).length} надписей)`);
 await page.screenshot({ path: `${OUT}/03_terrain_map.png` });

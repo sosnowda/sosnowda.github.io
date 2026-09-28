@@ -38,6 +38,10 @@ const BATTLE_LOOK_SHEETS = {
     // (герой.battleLookKey, см. data/heroes.js). Конвейер tools/make_battle_alts_6639.py.
     leyanne: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
     esther: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
+    // 66.40: альт Сыщика из пака PB (Medieval_PB_Premade_Male_2 — живой
+    // дворянин с мечом; конвейер tools/make_battle_alts_6640.py). У него
+    // ЕСТЬ полоса стрельбы — честный выстрел (у каноничного paul её нет).
+    pbnoble: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
 };
 // 66.33: бусты пака (портреты меню). 66.39: ПОЛНЫЙ КОМПЛЕКТ альтов пака —
 // 35 портретов: Баэнор/Охотница/Пауль/Лейанн Bust_1..8 + Гаэррон/Найя/Эстер
@@ -46,6 +50,8 @@ const BATTLE_LOOK_SHEETS = {
 const BUST_KEYS_6633 = [
     ...['baenor', 'huntress', 'paul', 'leyanne'].flatMap(h => Array.from({ length: 8 }, (_, i) => `bust_${h}_${i + 1}`)),
     'bust_gaerron', 'bust_naia', 'bust_esther',
+    // 66.40: бусты альт-Сыщика «Яромир» (пак PB, Premade_Male_2)
+    ...Array.from({ length: 8 }, (_, i) => `bust_pbnoble_${i + 1}`),
 ];
 // Раунд 61: systems/HouseFacade.js УДАЛЕН — плоские процедурные фасады phouse_*
 // больше не используются, все дома — целые избы-ассеты (см. VillageScene)
@@ -277,8 +283,12 @@ export class BootScene extends Phaser.Scene {
         const worldSheets = [
             'world_hero_male', 'world_hero_female',
             'world_m_base1', 'world_m_base2', 'world_m_base3',
+            // 66.40: человеческая база KT_Male_1 (PB_Male_1/2 — зомби, отбракованы)
+            'world_m_base4',
             'world_m_top1', 'world_m_top2', 'world_m_top3', 'world_m_top4', 'world_m_top5',
             'world_m_top6', 'world_m_top7', 'world_m_top8', 'world_m_top9',
+            // 66.40: длинные кафтаны PB (исторично для мужчин)
+            'world_m_top10', 'world_m_top11', 'world_m_top12', 'world_m_top13', 'world_m_top14',
             'world_m_pants1', 'world_m_pants2', 'world_m_pants3', 'world_m_pants4', 'world_m_pants5',
             'world_m_hair1', 'world_m_hair2', 'world_m_hair3', 'world_m_hair4', 'world_m_hair5', 'world_m_hair6',
             'world_m_hair7', 'world_m_hair8', 'world_m_hair9', 'world_m_hair10', 'world_m_hair11', 'world_m_hair12',

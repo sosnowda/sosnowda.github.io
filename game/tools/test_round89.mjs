@@ -77,11 +77,13 @@ for (const k of bustFiles) {
         bustKB += statSync(p).size;
     }
 }
-// 66.39: полный комплект — 35 файлов (Баэнор/Охотница/Пауль/Лейанн ×8 + Гаэррон/Найя/Эстер)
+// 66.39/66.40: полный комплект — 43 файла (Баэнор/Охотница/Пауль/Лейанн ×8 +
+// Гаэррон/Найя/Эстер + Яромир/pbnoble ×8 из пака PB)
 const allBusts = readdirSync(BUSTS).filter(f => f.startsWith('bust_') && f.endsWith('.png'));
-ok(allBusts.length === 35, `полный комплект альтов: 35 бустов [${allBusts.length}]`);
+ok(allBusts.length === 43, `полный комплект альтов: 43 буста [${allBusts.length}]`);
 ok(existsSync(`${BUSTS}/bust_paul_1.png`) && existsSync(`${BUSTS}/bust_leyanne_1.png`)
-    && existsSync(`${BUSTS}/bust_esther.png`), 'новые бусты 66.39: Пауль/Лейанн/Эстер на месте');
+    && existsSync(`${BUSTS}/bust_esther.png`) && existsSync(`${BUSTS}/bust_pbnoble_1.png`),
+    'новые бусты 66.39/66.40: Пауль/Лейанн/Эстер/Яромир на месте');
 ok(bustKB < 900 * 1024, `вес бустов разумный: ${Math.round(bustKB / 1024)} КБ (< 900 КБ)`);
 ok(existsSync('../tools/make_busts_6633.py'), 'tools/make_busts_6633.py в репо');
 ok(existsSync('../tools/make_busts_6639.py'), '66.39: tools/make_busts_6639.py в репо (полный комплект)');
@@ -125,10 +127,10 @@ ok(charScene.includes("import { getBustFor } from '../data/heroes.js';"), 'св�
 ok(charScene.includes('width >= 900 && this.textures.exists(bustKey)'), 'свиток: буст только на экранах ≥900px');
 ok(charScene.includes('p.bustKey || getBustFor(p.archetype, p.gender)'), '66.39: свиток показывает выбранный вариант (hero.bustKey)');
 
-console.log('--- 4. SW v89 + game-assets-v34 (п.4) ---'); // 66.39: актуализация (35 бустов + альты обликов + удаление женских брюк)
+console.log('--- 4. SW v89 + game-assets-v35 (п.4) ---'); // 66.39: актуализация (35 бустов + альты обликов + удаление женских брюк)
 const sw = read('../../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v89';"), 'SW: site-cache v89');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v34';"), 'SW: game-assets-v34 (35 бустов + 14 боевых альтов, −8 женских брюк/топов)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v90';"), 'SW: site-cache v89');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v35';"), 'SW: game-assets-v35 (35 бустов + 14 боевых альтов, −8 женских брюк/топов)');
 ok(sw.includes('// v89 — итерация 66.39'), 'SW: журнал содержит запись v89');
 // game-assets кэширует /game/assets/ целиком — бусты попадают автоматически,
 // отдельный список не нужен (проверяем отсутствие хардкода бустов в sw)

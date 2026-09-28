@@ -79,17 +79,22 @@ export function battleLookFor(archetype, gender) {
 // Вариант выбирается в превью персонажа (листалка портретов: у альтов —
 // свои бусты). Выбор пишется в героя: hero.bustKey + hero.battleLookKey
 // (аддитивные поля; старые сейвы без них → каноничный облик, как было).
-// gaerron/naia/paul альтов в паке не имеют.
+// 66.40: у paul появился альт pbnoble («Яромир», пак PB — живой человек);
+// gaerron/naia альтов в библиотеке не имеют.
 // ============================================================
 export const BATTLE_LOOK_ALT_BY_LOOK = {
     baenor: 'esther',
     huntress: 'leyanne',
+    // 66.40: альт Сыщика из человеческого пака PB (живой дворянин
+    // Medieval_PB_Premade_Male_2; зомби/чумной доктор пак-премейдов отбракованы)
+    paul: 'pbnoble',
 };
 
 // Имена альт-героев (RU — ключ t(), EN — в i18n.js)
 export const ALT_LOOK_NAMES = {
     esther: 'Эстер',
     leyanne: 'Лейанн',
+    pbnoble: 'Яромир',
 };
 
 // ============================================================
@@ -120,6 +125,8 @@ export const BUSTS_BY_LOOK = {
     gaerron: ['bust_gaerron'],
     naia: ['bust_naia'],
     esther: ['bust_esther'],
+    // 66.40: альт-Сыщик «Яромир» (пак PB — 8 официальных портретов)
+    pbnoble: Array.from({ length: 8 }, (_, i) => `bust_pbnoble_${i + 1}`),
 };
 
 // Страховка по облику (внеплановые архетипы): первый буст облика.
@@ -131,6 +138,7 @@ const BUST_BY_LOOK = {
     paul: 'bust_paul_1',
     leyanne: 'bust_leyanne_1',
     esther: 'bust_esther',
+    pbnoble: 'bust_pbnoble_1',
 };
 
 /**

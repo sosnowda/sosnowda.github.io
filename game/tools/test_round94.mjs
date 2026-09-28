@@ -5,11 +5,12 @@
 //      для Руси 15 века — приказ владельца: женщины только в длинных платьях,
 //      брюки только у мужчин) — листы и логика сняты;
 //   2) АССЕТЫ ВНЕШНЕГО ВИДА НПЦ И ИГРОКА пересобраны из НОВОЙ библиотеки
-//      Google Drive (единый источник владельца; с 66.39 — 137 листов, геометрия 66.37).
-// Проверки: конвейер (make_world_6638 + drive_fetch_world_6638), 137 листов
+//      Google Drive (единый источник владельца; с 66.40 — 143 листа: 66.39
+//      убрал 8 женских, 66.40 добавил базу KT_Male_1 и 5 кафтанов PB, геометрия 66.37).
+// Проверки: конвейер (make_world_6638 + drive_fetch_world_6638), 143 листа
 // 1152×512 в палитре ≤255, наборы листов, геометрия фигур, силуэты
 // альтов = базам (IoU ≥ 0.9), таблицы WorldLook (без женских брюк),
-// BootScene-перечень, SW v89/v34 (66.39).
+// BootScene-перечень, SW v90/v35 (66.40).
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -64,12 +65,13 @@ ok(!fetcher.includes('Medieval_T&C_Female_Pants_') && !fetcher.includes('Medieva
 ok(fetcher.includes('Medieval_Warfare_Male_Head_') && fetcher.includes('range(1, 11)'), 'fetcher: 10 шлемов Warfare');
 ok(fetcher.includes('embeddedfolderview'), 'fetcher: перечисление через embeddedfolderview');
 
-console.log('— 2. Мировые листы (137 после 66.39) —');
+console.log('— 2. Мировые листы (143 после 66.40) —');
 const worldDir = join(game, 'assets/sprites/world');
 ok(existsSync(worldDir), 'assets/sprites/world/ на месте');
 const files = readdirSync(worldDir).filter(f => f.endsWith('.png'));
-// 66.39: 137 = 145 − 8 (3 брюк + 5 топов женщин удалены)
-ok(files.length === 137, `137 мировых листов [${files.length}]`);
+// 66.40: 143 = 145 − 8 (3 брюк + 5 топов женщин удалены в 66.39)
+//       + 1 база KT_Male_1 + 5 кафтанов PB (= 8 новых в 66.40)
+ok(files.length === 143, `143 мировых листа [${files.length}]`);
 ok(!files.some(f => f.startsWith('world_f_pants') || f.startsWith('world_f_top')),
     '66.39: женских брюк/топов на диске нет (неисторично)');
 const sheetsSet = new Set(files);
@@ -173,16 +175,16 @@ ok(!boot.includes("'world_f_pants1'") && !boot.includes("'world_f_top5'"),
     '66.39: женские брюки/топы из загрузки удалены');
 const bootKeys = [...boot.matchAll(/'(world_[a-z_0-9]+)'/g)].map(m => m[1]);
 const bootUnique = [...new Set(bootKeys)];
-ok(bootUnique.length >= 137, `BootScene: перечислены все мировые листы [${bootUnique.length} ≥ 137]`);
+ok(bootUnique.length >= 143, `BootScene: перечислены все мировые листы [${bootUnique.length} ≥ 143]`);
 const missingOnDisk = bootUnique.filter(k => !sheetsSet.has(k + '.png'));
 const notInBoot = [...sheetsSet].filter(f => !bootUnique.includes(f.replace('.png', '')));
 ok(missingOnDisk.length === 0, `BootScene не грузит несуществующие [${missingOnDisk.slice(0, 5)}]`);
 ok(notInBoot.length === 0, `все листы на диске в загрузке [нет: ${notInBoot.slice(0, 5)}]`);
 
-console.log('— 5. SW: site-cache v89, game-assets-v34 (66.39) —');
+console.log('— 5. SW: site-cache v89, game-assets-v35 (66.39) —');
 const sw = read('../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v89';"), 'SW: site-cache v89');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v34';"), 'SW: game-assets-v34');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v90';"), 'SW: site-cache v89');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v35';"), 'SW: game-assets-v35');
 ok(sw.includes('v89 — итерация 66.39'), 'SW: журнал версий дополнен');
 
 console.log('');

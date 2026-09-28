@@ -119,9 +119,13 @@ console.log('\n— п.3 (66.24→66.34): КАРТА МЕСТНОСТИ — НО�
         && TERRAIN.forestEdgeX > TERRAIN.tractX,
         'три слоя леса: опушка (у дороги) → поляна (центр) → чаща (правый край)');
 
-    // 5. 66.34 (п.5/п.4): мельница справа от деревни, погост около опушки
-    ok(TERRAIN.mill.x > TERRAIN.village.x + TERRAIN.village.w / 2,
-        'мельница — СПРАВА от деревни (п.5)');
+    // 5. 66.40 (приказ): мельница РЯДОМ С ПАСЕКОЙ (прежде — справа от деревни,
+    // актуализировано 66.40 — перенесена юго-западнее, между пасекой и трактом)
+    ok(Math.abs(TERRAIN.mill.x - TERRAIN.apiary.x) < 110
+        && Math.abs(TERRAIN.mill.y - TERRAIN.apiary.y) < 60,
+        'мельница — РЯДОМ С ПАСЕКОЙ (66.40)');
+    ok(TERRAIN.mill.y > TERRAIN.village.y + TERRAIN.village.h / 2,
+        'мельница — вне отпечатка деревни, ниже её (66.40)');
     ok(TERRAIN.pogost.y > TERRAIN.village.y && Math.abs((TERRAIN.pogost.x + TERRAIN.pogost.rx + 8) - TERRAIN.forest.x1) < 40,
         'погост — около лесной опушки (п.4)');
 
@@ -222,7 +226,7 @@ console.log('\n— п.1 (66.24): КАДРЫ СКРИНШОТОВ ЛЕНДИНГ�
 console.log('\n— sw.js: версия кэша сайта поднята —');
 {
     const sw = read('sw.js');
-    ok(/chronicles-ruthenia-v89/.test(sw), 'SW: chronicles-ruthenia-v89');
+    ok(/chronicles-ruthenia-v90/.test(sw), 'SW: chronicles-ruthenia-v90');
 }
 
 console.log('\nИТОГ: ' + pass + ' зелёных, ' + fail + ' красных');

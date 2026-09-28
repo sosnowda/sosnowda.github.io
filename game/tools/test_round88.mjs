@@ -5,7 +5,7 @@
 // 3) CombatScene: боевой облик по архетипу/полу, без флипа, выстрел/смерть/победа
 // 4) heroes.js: BATTLE_LOOK_BY_PRESET (8 пресетов) + страховка по полу
 // 5) конвейер tools/mvsv_battle_6632.py с якорением по туловищу
-// 6) SW v84 + game-assets-v34 (66.34 актуализировал v83/v29). Сейвы совместимы.
+// 6) SW v84 + game-assets-v35 (66.34 актуализировал v83/v29). Сейвы совместимы.
 import { readFileSync, existsSync, readdirSync } from 'fs';
 
 let pass = 0, fail = 0;
@@ -24,10 +24,11 @@ const sw = read('../../sw.js');
 console.log('--- 1. Боевые листы: 34 файла 384×128, палитра (п.1) ---');
 const BATTLE_DIR = '../assets/sprites/battle';
 // 66.39: альты боевых обликов из пака (leyanne/esther — конвейер make_battle_alts_6639.py)
-const LOOKS = ['baenor', 'gaerron', 'huntress', 'naia', 'paul', 'leyanne', 'esther'];
+// 66.40: альт Сыщика pbnoble из PB_Premade_Male_2 (со стрельбой — см. r96)
+const LOOKS = ['baenor', 'gaerron', 'huntress', 'naia', 'paul', 'leyanne', 'esther', 'pbnoble'];
 const ANIMS = {
     baenor: 7, gaerron: 7, huntress: 7, naia: 7, paul: 6, // paul без shoot
-    leyanne: 7, esther: 7,
+    leyanne: 7, esther: 7, pbnoble: 7,
 };
 let totalFiles = 0, totalKB = 0;
 for (const look of LOOKS) {
@@ -49,7 +50,7 @@ for (const look of LOOKS) {
         ok(buf[25] === 3, `battle_${look}_${anim}.png: палитровый (color type 3)`);
     }
 }
-ok(totalFiles === 48, `итого 48 листов — 34 каноничных + 14 альтов 66.39 (фактически ${totalFiles}), суммарно ~${totalKB} КБ (< 500 КБ)`);
+ok(totalFiles === 55, `итого 55 листов — 34 каноничных + 14 альтов 66.39 + 7 pbnoble 66.40 (фактически ${totalFiles}), суммарно ~${totalKB} КБ (< 500 КБ)`);
 ok(totalKB < 400, `вес пака боевых листов разумный: ${totalKB} КБ`);
 ok(existsSync(`${BATTLE_DIR}/MANIFEST_6633.txt`), 'манифест конвейера на месте (66.33 актуализировал 6632)');
 // ноги на нижнем крае: у idle-листов контент доходит до нижних строк (y>120)
@@ -102,9 +103,9 @@ ok(pipe.includes("anchor='f1' if anim == 'idle' else 'mean'"), 'idle якори�
 ok(pipe.includes('HUNTRESS_DEAD_FRAMES'), 'смерть Охотницы собирается из Huntress_dead.png (128-сетка)');
 ok(pipe.includes('Huntress_dead.png 128er'), 'манифест помечает спец-сборку смерти');
 
-console.log('--- 6. SW v84 + game-assets-v34 (66.34) ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v89';"), 'SW: site-cache v88');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v34';"), 'SW: game-assets-v34 (перегенерированные листы + бусты)');
+console.log('--- 6. SW v84 + game-assets-v35 (66.34) ---');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v90';"), 'SW: site-cache v88');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v35';"), 'SW: game-assets-v35 (перегенерированные листы + бусты)');
 ok(sw.includes('// v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 
 console.log(`\nИТОГО: ✓ ${pass}  ✗ ${fail}`);
