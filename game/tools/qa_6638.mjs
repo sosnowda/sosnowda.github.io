@@ -13,6 +13,7 @@ import { chromium } from '/home/z/.npm-global/lib/node_modules/playwright/index.
 import fs from 'fs';
 import { readdirSync } from 'fs';
 const OUT = process.env.OUT_DIR || '/tmp/qa6638';
+const T = parseInt(process.env.QA_TIMEOUT_X || '1', 10);
 fs.mkdirSync(OUT, { recursive: true });
 const BASE = process.env.BASE_URL || 'http://localhost:8765';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -82,7 +83,7 @@ async function startGame(page) {
     await page.goto(BASE + '/game/', { waitUntil: 'load' });
     await page.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} });
     await page.reload({ waitUntil: 'load' });
-    await page.waitForFunction(() => window.game && window.game.scene && window.game.scene.scenes.length > 0, { timeout: 30000 });
+    await page.waitForFunction(() => window.game && window.game.scene && window.game.scene.scenes.length > 0, { timeout: 30000 * T });
     await sleep(1500);
     await clickText(page, 'Новая игра');
     await sleep(800);
@@ -90,7 +91,7 @@ async function startGame(page) {
     await page.waitForFunction(() => {
         const cs = window.game && window.game.scene && window.game.scene.getScene('CharacterSelection');
         return cs && !!cs._previewHero;
-    }, { timeout: 8000, polling: 200 }).catch(() => {});
+    }, { timeout: 8000 * T, polling: 200 }).catch(() => {});
     await page.evaluate(() => {
         const cs = window.game.scene.getScene('CharacterSelection');
         if (cs && cs._previewHero) cs.startGameWithHero(cs._previewHero);
@@ -98,7 +99,7 @@ async function startGame(page) {
     await page.waitForFunction(() => {
         const g = window.game;
         return g && g.scene && g.scene.isActive && g.scene.isActive('Village');
-    }, { timeout: 15000 });
+    }, { timeout: 15000 * T });
     await sleep(500);
 }
 
