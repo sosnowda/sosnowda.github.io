@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-# make_world_6638.py — ПАТЧ 66.38 (приказ владельца): 1) ВАРИАНТЫ ОДЕЖДЫ ИЗ
+# make_world_6638.py — ПАТЧ 66.38 + правка 66.39 (приказ владельца).
+# 66.39: ЖЕНСКИЕ БРЮКИ/ТОПЫ УДАЛЕНЫ ИЗ ВЫПУСКА И ИЗ assets (TC_Female_Pants/
+# TC_Female_Top) — НЕИСТОРИЧНО для Руси 15 века; женщины — только длинные
+# платья, брюки — только у мужчин (игрок, жители, стража). Выход — 137 листов.
+# 66.38 (приказ владельца): 1) ВАРИАНТЫ ОДЕЖДЫ ИЗ
 # DRIVE-ПАКОВ — гардероб жителей расширен новыми частями из той же библиотеки
 # Google Drive (папка владельца, https://drive.google.com/drive/folders/
 # 1p_tJFXiaQPEO1-EQVqg6dwnvvSyg2e3s):
@@ -7,10 +11,9 @@
 #   чёрный/рыжий/седой/каштановый — то же лицо, другой цвет волос);
 #   женские причёски 7 → 35 (та же схема Alts);
 #   бороды 2 → 10 (FacialHair_1..2 × 4 Alts);
-#   шлемы стражи 4 → 10 (Warfare_Male_Head_1..10);
-#   НОВЫЙ тип женского костюма — брючный (TC_Female_Pants_1..3 + Top_1..5).
+#   шлемы стражи 4 → 10 (Warfare_Male_Head_1..10).
 # 2) АССЕТЫ ВНЕШНЕГО ВИДА НПЦ И ИГРОКА — ПЕРЕСОБРАНЫ ИЗ НОВОЙ БИБЛИОТЕКИ
-# GOOGLE DRIVE: все 145 мировых листов запечены заново из скачанных
+# GOOGLE DRIVE: все мировые листы запечены заново из скачанных
 # источников (стейджинг — tools/drive_fetch_world_6638.py → STAGING).
 #
 # Геометрия/раскладка — БЕЗ ИЗМЕНЕНИЙ от 66.37 (systems/WorldLook.js):
@@ -79,8 +82,8 @@ SHEETS = [
     *[(f'world_f_hair{i}', 'female', n)
       for i, n in enumerate(hair_names('Medieval_TC_Female', 7), start=1)],
     *[(f'world_f_feet{i}', 'female', f'Medieval_TC_Female_Feet_{i}') for i in range(1, 3)],
-    *[(f'world_f_pants{i}', 'female', f'Medieval_TC_Female_Pants_{i}') for i in range(1, 4)],
-    *[(f'world_f_top{i}', 'female', f'Medieval_TC_Female_Top_{i}') for i in range(1, 6)],
+    # 66.39: женские брюки/топы (TC_Female_Pants_1..3/Top_1..5) УДАЛЕНЫ —
+    # неисторично; женщины носят только длинные платья (см. WorldLook.js).
     # дети (одетые, 6 вариантов)
     *[(f'world_child{i}', 'child', f'Medieval_TC_Child_{i}') for i in range(1, 5)],
     *[(f'world_child{i}', 'child', f'Medieval_Townfolk_Child_{i - 4}') for i in range(5, 7)],
@@ -147,10 +150,9 @@ def main():
         ['world_m_base1', 'world_m_top2', 'world_m_pants3', 'world_m_hair7', 'world_m_beard3', 'world_m_feet2'],
         ['world_m_base1', 'world_m_top2', 'world_m_pants3', 'world_m_hair8', 'world_m_beard7', 'world_m_feet2'],
         ['world_m_base1', 'world_m_top2', 'world_m_pants3', 'world_m_hair9', 'world_m_feet2'],
-        # женщина в брючном костюме (новинка) и в платье
-        ['world_f_base1', 'world_f_pants1', 'world_f_top1', 'world_f_hair1', 'world_f_feet1'],
-        ['world_f_base2', 'world_f_pants3', 'world_f_top5', 'world_f_hair8', 'world_f_feet2'],
-        # стражник в новом шлеме Head_10
+        # женщины в платьях (66.39: брючных костюмов больше нет)
+        ['world_f_base1', 'world_f_dress5', 'world_f_hair1', 'world_f_feet1'],
+        ['world_f_base2', 'world_f_dress2', 'world_f_hair8', 'world_f_feet2'],
         ['world_w_base1', 'world_w_top3', 'world_w_bottom1', 'world_w_feet1', 'world_w_helm10'],
     ]
     for i, layers in enumerate(combos):

@@ -1,7 +1,10 @@
-// WorldLook.js — 66.38 (приказ владельца): РАСШИРЕННЫЙ ГАРДЕРОБ ЖИТЕЛЕЙ ИЗ
-// ПАКОВ GOOGLE DRIVE + ассеты 66.37 (все листы пересобраны из новой
-// библиотеки Drive конвейером tools/make_world_6638.py; стейджинг —
-// tools/drive_fetch_world_6638.py).
+// WorldLook.js — 66.39 (приказ владельца): ЖЕНЩИНЫ — ТОЛЬКО В ДЛИННЫХ ПЛАТЬЯХ
+// (исторично для Руси 15 века; женские брюки/топы из 66.38 УДАЛЕНЫ —
+// листы сняты с диска и из предзагрузки;
+// БРЮКИ — ТОЛЬКО У МУЖЧИН: игрок-мужчина, жители-мужчины, стража).
+// 66.38: РАСШИРЕННЫЙ ГАРДЕРОБ ЖИТЕЛЕЙ ИЗ ПАКОВ GOOGLE DRIVE + ассеты 66.37
+// (все листы пересобраны из новой библиотеки Drive конвейером
+// tools/make_world_6638.py; стейджинг — tools/drive_fetch_world_6638.py).
 //
 // 66.37: ассеты внешнего вида игрока и НПЦ из паков «Medieval - Heroes I /
 // Townfolk / Town & Country / Warfare» вместо LPC-композитов 64×64.
@@ -23,9 +26,11 @@
 // 0=вниз, 1=влево, 2=вправо, 3=вверх. Та же нумерация, что у LPC-композита,
 // поэтому анимации собираются createCustomCharacterAnimations без изменений.
 //
-// 66.38: листы ВСЕ те же (145), новые — только варианты частей из тех же
-// паков: мужские/женские причёски ×5 цветов (база + Alts), бороды ×5,
-// шлемы стражи 10, НОВЫЙ женский брючный костюм (штаны+топ).
+// 66.38: листы ВСЕ те же (с 66.39 — 137: без женских брюк/топов), варианты
+// частей из тех же паков: мужские/женские причёски ×5 цветов (база + Alts),
+// бороды ×5, шлемы стражи 10. В игре только ЛЮДИ (человечьи паки библиотеки;
+// звериные/рыцарские наборы PB и KT не задействованы), внешний вид жителей
+// строго историчен.
 //
 // КЛЮЧИ СОХРАНЕНЫ: игрок — 'player_composite', жители — 'npc_lpc_<id>'
 // (единая точка getNpcSpriteKey и весь код сцен работают без правок).
@@ -74,11 +79,12 @@ const M = {
     beards: Array.from({ length: 10 }, (_, i) => `world_m_beard${i + 1}`),
     feet: ['world_m_feet1', 'world_m_feet2', 'world_m_feet3'],
 };
+// 66.39: у женщин ТОЛЬКО длинные платья (ниже колена, у пака TC — до щиколотки)
+// и обувь; штанов/топов у женщин больше нет (паки TC_Female_Pants/Top сняты —
+// неисторично для Руси 15 века).
 const F = {
     bases: ['world_f_base1', 'world_f_base2', 'world_f_base3'],
     dresses: Array.from({ length: 5 }, (_, i) => `world_f_dress${i + 1}`),
-    pants: Array.from({ length: 3 }, (_, i) => `world_f_pants${i + 1}`),
-    tops: Array.from({ length: 5 }, (_, i) => `world_f_top${i + 1}`),
     hair: Array.from({ length: 35 }, (_, i) => `world_f_hair${i + 1}`),
     feet: ['world_f_feet1', 'world_f_feet2'],
 };
@@ -112,15 +118,15 @@ const OUTFIT_M = {
     craftsman: { tops: ['world_m_top7'], pants: ['world_m_pants4'], feet: ['world_m_feet2'] },
     apprentice: { tops: ['world_m_top3'], pants: ['world_m_pants1'], feet: ['world_m_feet1'] },
 };
-// 66.38: trousers:true — профессии, которым к лицу брючный костюм
-// (штаны+топ из F.pants×F.tops, ~40% жительниц по зерну); остальным — платья.
+// Профессиональные схемы женщин — только платья (66.39: брючные костюмы
+// УДАЛЕНЫ как неисторичные; брюки носят только мужчины).
 const OUTFIT_F = {
     healer_f: { dresses: ['world_f_dress5'], feet: ['world_f_feet1'] },
-    beekeeper: { dresses: ['world_f_dress5', 'world_f_dress2'], feet: ['world_f_feet1'], trousers: true },
+    beekeeper: { dresses: ['world_f_dress5', 'world_f_dress2'], feet: ['world_f_feet1'] },
     homemaker: { dresses: ['world_f_dress3', 'world_f_dress4'], feet: ['world_f_feet1', 'world_f_feet2'] },
     weaver: { dresses: ['world_f_dress4'], feet: ['world_f_feet2'] },
-    shepherd: { dresses: ['world_f_dress3'], feet: ['world_f_feet1'], trousers: true },
-    grocer: { dresses: ['world_f_dress2', 'world_f_dress1'], feet: ['world_f_feet2'], trousers: true },
+    shepherd: { dresses: ['world_f_dress3'], feet: ['world_f_feet1'] },
+    grocer: { dresses: ['world_f_dress2', 'world_f_dress1'], feet: ['world_f_feet2'] },
 };
 
 // ---- Перекраска (механика NpcLook: hue-сдвиг одежды, кожа не трогается) ----
@@ -218,18 +224,9 @@ function rollWorldLayers(scene, registry, npc) {
     }
 
     if (female) {
+        // 66.39: женщина — ТОЛЬКО длинное платье (исторично для Руси 15 века);
+        // брючный костюм из 66.38 удалён вместе с листами TC_Female_Pants/Top.
         const o = OUTFIT_F[prof] || {};
-        // 66.38: брючный костюм (штаны+топ) — для «мужских» занятий;
-        // детерминированно по зерну (свой на каждый старт игры).
-        if (o.trousers && rnd('outfit') < 0.4) {
-            return [
-                pick(F.bases, rnd('base')),
-                pick(F.pants, rnd('fpants')),
-                pick(F.tops, rnd('ftop')),
-                pick(o.feet || F.feet, rnd('feet')),
-                pick(F.hair, rnd('hair')),
-            ];
-        }
         return [
             pick(F.bases, rnd('base')),
             pick(o.dresses || F.dresses, rnd('dress')),

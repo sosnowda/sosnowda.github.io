@@ -45,8 +45,9 @@ PARTS = {
     **{f'Medieval_T&C_Male_Feet_{i}': f'Medieval_TC_Male_Feet_{i}' for i in range(1, 4)},
     **{f'Medieval_T&C_Female_Dress_{i}': f'Medieval_TC_Female_Dress_{i}' for i in range(1, 6)},
     **{f'Medieval_T&C_Female_Feet_{i}': f'Medieval_TC_Female_Feet_{i}' for i in range(1, 3)},
-    **{f'Medieval_T&C_Female_Pants_{i}': f'Medieval_TC_Female_Pants_{i}' for i in range(1, 4)},
-    **{f'Medieval_T&C_Female_Top_{i}': f'Medieval_TC_Female_Top_{i}' for i in range(1, 6)},
+    # 66.39: женские брюки/топы (TC_Female_Pants_*/Top_*) больше НЕ скачиваются
+    # — неисторично для Руси 15 века (приказ владельца: женщины — только в
+    # длинных платьях, брюки — только у мужчин).
     # базу Warfare папка пака называет Humans/Male/Male_1 → префикс задаём явно
     'Male_1': 'Medieval_Warfare_Male_1',
     **{f'Medieval_Warfare_Male_Top_{i}': f'Medieval_Warfare_Male_Top_{i}' for i in range(1, 8)},

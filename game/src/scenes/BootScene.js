@@ -32,12 +32,20 @@ const BATTLE_LOOK_SHEETS = {
     huntress: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
     naia: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
     paul: ['idle', 'attack1', 'attack2', 'fists', 'death', 'victory'],
+    // 66.39: альты боевых обликов из пака (неиспользованные герои «Heroes I»):
+    // Лейанн — золочёная фехтовальщица (альт huntress), ЛордЭстер — рыцарь
+    // в большом шлеме (альт baenor). Выбор варианта — в превью персонажа
+    // (герой.battleLookKey, см. data/heroes.js). Конвейер tools/make_battle_alts_6639.py.
+    leyanne: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
+    esther: ['idle', 'attack1', 'attack2', 'fists', 'shoot', 'death', 'victory'],
 };
-// 66.33: бусты пака (портреты меню) — все файлы assets/sprites/busts/.
+// 66.33: бусты пака (портреты меню). 66.39: ПОЛНЫЙ КОМПЛЕКТ альтов пака —
+// 35 портретов: Баэнор/Охотница/Пауль/Лейанн Bust_1..8 + Гаэррон/Найя/Эстер
+// (единственные). У Пауля бусты ПОЯВИЛИСЬ в библиотеке (в 66.33 их не было).
 // Локальная константа (НЕ экспортировать — см. предупреждение выше).
 const BUST_KEYS_6633 = [
-    'bust_baenor_1', 'bust_baenor_5', 'bust_huntress_1',
-    'bust_huntress_5', 'bust_gaerron', 'bust_naia',
+    ...['baenor', 'huntress', 'paul', 'leyanne'].flatMap(h => Array.from({ length: 8 }, (_, i) => `bust_${h}_${i + 1}`)),
+    'bust_gaerron', 'bust_naia', 'bust_esther',
 ];
 // Раунд 61: systems/HouseFacade.js УДАЛЕН — плоские процедурные фасады phouse_*
 // больше не используются, все дома — целые избы-ассеты (см. VillageScene)
@@ -288,8 +296,8 @@ export class BootScene extends Phaser.Scene {
             'world_w_helm6', 'world_w_helm7', 'world_w_helm8', 'world_w_helm9', 'world_w_helm10',
             'world_f_base1', 'world_f_base2', 'world_f_base3',
             'world_f_dress1', 'world_f_dress2', 'world_f_dress3', 'world_f_dress4', 'world_f_dress5',
-            'world_f_pants1', 'world_f_pants2', 'world_f_pants3',
-            'world_f_top1', 'world_f_top2', 'world_f_top3', 'world_f_top4', 'world_f_top5',
+            // 66.39: женские брюки/топы (world_f_pants*/world_f_top*) УДАЛЕНЫ —
+            // неисторично для Руси 15 века; женщины — только в длинных платьях
             'world_f_hair1', 'world_f_hair2', 'world_f_hair3', 'world_f_hair4', 'world_f_hair5', 'world_f_hair6', 'world_f_hair7',
             'world_f_hair8', 'world_f_hair9', 'world_f_hair10', 'world_f_hair11', 'world_f_hair12', 'world_f_hair13', 'world_f_hair14',
             'world_f_hair15', 'world_f_hair16', 'world_f_hair17', 'world_f_hair18', 'world_f_hair19', 'world_f_hair20', 'world_f_hair21',
@@ -478,9 +486,9 @@ export class BootScene extends Phaser.Scene {
         });
 
         // ----- 66.33: бусты пака «Medieval - Heroes I» (портреты меню) -----
-        // Файлы — assets/sprites/busts/ (конвейер game/tools/make_busts_6633.py),
-        // карта — BUST_BY_PRESET/getBustFor в data/heroes.js. У paul буста в паке
-        // нет — текстуру не грузим, сцены проверяют textures.exists/getBustFor.
+        // Файлы — assets/sprites/busts/ (конвейер game/tools/make_busts_6639.py —
+        // полный комплект альтов 66.39), карта — BUST_BY_PRESET/getBustFor и
+        // варианты альтов (bustVariantsFor) в data/heroes.js.
         BUST_KEYS_6633.forEach((k) => this.load.image(k, `assets/sprites/busts/${k}.png`));
 
         // ----- LPC Farm Animals — для VillageScene (walk + eat) -----

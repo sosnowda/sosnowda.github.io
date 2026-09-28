@@ -5,7 +5,7 @@
 // 3) CombatScene: боевой облик по архетипу/полу, без флипа, выстрел/смерть/победа
 // 4) heroes.js: BATTLE_LOOK_BY_PRESET (8 пресетов) + страховка по полу
 // 5) конвейер tools/mvsv_battle_6632.py с якорением по туловищу
-// 6) SW v84 + game-assets-v33 (66.34 актуализировал v83/v29). Сейвы совместимы.
+// 6) SW v84 + game-assets-v34 (66.34 актуализировал v83/v29). Сейвы совместимы.
 import { readFileSync, existsSync, readdirSync } from 'fs';
 
 let pass = 0, fail = 0;
@@ -23,9 +23,11 @@ const sw = read('../../sw.js');
 
 console.log('--- 1. Боевые листы: 34 файла 384×128, палитра (п.1) ---');
 const BATTLE_DIR = '../assets/sprites/battle';
-const LOOKS = ['baenor', 'gaerron', 'huntress', 'naia', 'paul'];
+// 66.39: альты боевых обликов из пака (leyanne/esther — конвейер make_battle_alts_6639.py)
+const LOOKS = ['baenor', 'gaerron', 'huntress', 'naia', 'paul', 'leyanne', 'esther'];
 const ANIMS = {
     baenor: 7, gaerron: 7, huntress: 7, naia: 7, paul: 6, // paul без shoot
+    leyanne: 7, esther: 7,
 };
 let totalFiles = 0, totalKB = 0;
 for (const look of LOOKS) {
@@ -47,7 +49,7 @@ for (const look of LOOKS) {
         ok(buf[25] === 3, `battle_${look}_${anim}.png: палитровый (color type 3)`);
     }
 }
-ok(totalFiles === 34, `итого 34 листа (фактически ${totalFiles}), суммарно ~${totalKB} КБ (< 400 КБ)`);
+ok(totalFiles === 48, `итого 48 листов — 34 каноничных + 14 альтов 66.39 (фактически ${totalFiles}), суммарно ~${totalKB} КБ (< 500 КБ)`);
 ok(totalKB < 400, `вес пака боевых листов разумный: ${totalKB} КБ`);
 ok(existsSync(`${BATTLE_DIR}/MANIFEST_6633.txt`), 'манифест конвейера на месте (66.33 актуализировал 6632)');
 // ноги на нижнем крае: у idle-листов контент доходит до нижних строк (y>120)
@@ -68,7 +70,9 @@ ok(boot.includes("paul: ['idle', 'attack1', 'attack2', 'fists', 'death', 'victor
 
 console.log('--- 3. CombatScene: боевой облик в бою (п.3) ---');
 ok(combat.includes("import { battleLookFor } from '../data/heroes.js'"), 'импорт battleLookFor');
-ok(combat.includes('this.battleLook = battleLookFor(this.player.archetype, this.player.gender)'), 'облик выбирается по архетипу+полу игрока');
+ok(combat.includes('this.battleLook = (this.player.battleLookKey')
+    && combat.includes('? this.player.battleLookKey : canonicalLook'),
+    '66.39: альт-облик из превью (battleLookKey) с проверкой текстуры, иначе канон');
 ok(combat.includes('this.usesBattleLook'), 'флаг usesBattleLook (fallback на рыцаря)');
 ok(combat.includes("'knight_idle'"), 'fallback на Fantasy Knight сохранён');
 ok(!combat.includes('setOrigin(0.5, 1 / 6).setFlipX(true)'), 'флип боевого облика УБРАН (пак смотрит вправо — QA-6632)');
@@ -98,9 +102,9 @@ ok(pipe.includes("anchor='f1' if anim == 'idle' else 'mean'"), 'idle якори�
 ok(pipe.includes('HUNTRESS_DEAD_FRAMES'), 'смерть Охотницы собирается из Huntress_dead.png (128-сетка)');
 ok(pipe.includes('Huntress_dead.png 128er'), 'манифест помечает спец-сборку смерти');
 
-console.log('--- 6. SW v84 + game-assets-v33 (66.34) ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v88';"), 'SW: site-cache v88');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v33';"), 'SW: game-assets-v33 (перегенерированные листы + бусты)');
+console.log('--- 6. SW v84 + game-assets-v34 (66.34) ---');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v89';"), 'SW: site-cache v88');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v34';"), 'SW: game-assets-v34 (перегенерированные листы + бусты)');
 ok(sw.includes('// v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 
 console.log(`\nИТОГО: ✓ ${pass}  ✗ ${fail}`);

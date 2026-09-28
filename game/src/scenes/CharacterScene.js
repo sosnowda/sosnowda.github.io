@@ -208,7 +208,8 @@ export class CharacterScene extends Phaser.Scene {
 
         // 66.33: буст героя — портрет справа от колонки навыков (только широкие
         // экраны: при width<900 навыки доходят до правого края — наложение)
-        const bustKey = getBustFor(p.archetype, p.gender);
+        // 66.39: выбранный в превью вариант (hero.bustKey) — приоритетен
+        const bustKey = p.bustKey || getBustFor(p.archetype, p.gender);
         if (bustKey && width >= 900 && this.textures.exists(bustKey)) {
             this.add.rectangle(width - 85, top + 100, 132, 132, 0x241B15, 0.9)
                 .setStrokeStyle(2, 0xC9A961);

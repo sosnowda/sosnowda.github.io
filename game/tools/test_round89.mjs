@@ -5,7 +5,7 @@
 //    CharacterSelectionScene (карточки + превью), CharacterScene (свиток, ≥900px)
 // 4) SW v84 + game-assets-v33. Сейвы совместимы.
 // Запуск: cd game/tools && node test_round89.mjs
-import { readFileSync, existsSync, statSync } from 'fs';
+import { readFileSync, existsSync, statSync, readdirSync } from 'fs';
 import { execSync } from 'child_process';
 
 let pass = 0, fail = 0;
@@ -64,6 +64,7 @@ const rimCount = manifestBody.filter(l => l.includes('+rim')).length;
 ok(rimCount === 34, `рим-листов 34 (66.35: все облики, включая Найю): ${rimCount}`);
 
 console.log('--- 3. Бусты пака в меню (п.3) ---');
+// 66.39: полный комплект альтов — 35 бустов (было 6); каноничные 6 остаются на месте
 const bustFiles = ['bust_baenor_1', 'bust_baenor_5', 'bust_huntress_1', 'bust_huntress_5', 'bust_gaerron', 'bust_naia'];
 let bustKB = 0;
 for (const k of bustFiles) {
@@ -76,9 +77,16 @@ for (const k of bustFiles) {
         bustKB += statSync(p).size;
     }
 }
-ok(bustKB < 150 * 1024, `вес бустов разумный: ${Math.round(bustKB / 1024)} КБ (< 150 КБ)`);
+// 66.39: полный комплект — 35 файлов (Баэнор/Охотница/Пауль/Лейанн ×8 + Гаэррон/Найя/Эстер)
+const allBusts = readdirSync(BUSTS).filter(f => f.startsWith('bust_') && f.endsWith('.png'));
+ok(allBusts.length === 35, `полный комплект альтов: 35 бустов [${allBusts.length}]`);
+ok(existsSync(`${BUSTS}/bust_paul_1.png`) && existsSync(`${BUSTS}/bust_leyanne_1.png`)
+    && existsSync(`${BUSTS}/bust_esther.png`), 'новые бусты 66.39: Пауль/Лейанн/Эстер на месте');
+ok(bustKB < 900 * 1024, `вес бустов разумный: ${Math.round(bustKB / 1024)} КБ (< 900 КБ)`);
 ok(existsSync('../tools/make_busts_6633.py'), 'tools/make_busts_6633.py в репо');
-ok(existsSync(`${BATTLE}/MANIFEST_6633.txt`), 'манифест 6633 в репо');
+ok(existsSync('../tools/make_busts_6639.py'), '66.39: tools/make_busts_6639.py в репо (полный комплект)');
+ok(existsSync(`${BATTLE}/MANIFEST_6633.txt`), 'манифест 6633 (боевые листы) в репо');
+ok(existsSync(`${BUSTS}/MANIFEST_6639.txt`), '66.39: манифест make_busts_6639 в репо');
 
 const heroes = read('../src/data/heroes.js');
 ok(heroes.includes('export const BUST_BY_PRESET'), 'heroes.js: карта бустов по пресетам');
@@ -86,30 +94,42 @@ ok(heroes.includes("export function getBustFor"), 'heroes.js: getBustFor экс�
 for (const pair of ['Воин|male', 'Воин|female', 'Следопыт|male', 'Следопыт|female', 'Сыщик|male', 'Сыщик|female', 'Приключенец|male', 'Приключенец|female']) {
     ok(heroes.includes(`'${pair}':`), `буст-маппинг ${pair}`);
 }
-ok(/'Сыщик\|male': null/.test(heroes), 'Сыщик|male → null (буста Пауля в паке нет)');
+ok(heroes.includes("'Сыщик|male': 'bust_paul_1'"), '66.39: Сыщик|male → bust_paul_1 (бусты Пауля появились в библиотеке)');
 ok(heroes.includes('BUST_BY_LOOK'), 'страховка getBustFor по облику (BUST_BY_LOOK)');
+// 66.39: альты боевых обликов + варианты бустов
+ok(heroes.includes('export const BATTLE_LOOK_ALT_BY_LOOK'), 'heroes.js: карта альтов боевых обликов');
+ok(heroes.includes("baenor: 'esther'") && heroes.includes("huntress: 'leyanne'"), 'альты: baenor→esther, huntress→leyanne');
+ok(heroes.includes('export const BUSTS_BY_LOOK'), 'heroes.js: полный комплект бустов по облику (BUSTS_BY_LOOK)');
+ok(heroes.includes('export function bustVariantsFor'), 'heroes.js: bustVariantsFor (листалка альтов)');
 
 const boot = read('../src/scenes/BootScene.js');
 ok(boot.includes('const BUST_KEYS_6633 = ['), 'BootScene: список бустов объявлен');
 ok(!/export\s+const\s+BUST_KEYS_6633/.test(boot), 'ВАЖНО: список бустов НЕ экспортируется (первый экспорт = класс сцены)');
-for (const k of bustFiles) ok(boot.includes(`'${k}'`), `BootScene грузит ${k}`);
+for (const k of bustFiles) ok(allBusts.includes(`${k}.png`), `на диске ${k}.png`);
+// 66.39: список в BootScene генерируется (32×flatMap + 3 единственных) —
+// полнота соответствия диску проверяет test_round95
+ok(boot.includes("['baenor', 'huntress', 'paul', 'leyanne'].flatMap"), 'BootScene: бусты героев ×8 генерируются списком');
+ok(boot.includes("'bust_gaerron', 'bust_naia', 'bust_esther'"), 'BootScene: единственные бусты в списке');
 ok(boot.includes("this.load.image(k, `assets/sprites/busts/${k}.png`)"), 'BootScene: загрузка из assets/sprites/busts/');
 
 const sel = read('../src/scenes/CharacterSelectionScene.js');
-ok(sel.includes("import { getBustFor } from '../data/heroes.js';"), 'сцена выбора: импорт getBustFor');
+ok(sel.includes("import { getBustFor, bustVariantsFor, ALT_LOOK_NAMES } from '../data/heroes.js';"), '66.39: сцена выбора импортирует варианты альтов');
 ok(sel.includes('h >= 160 && this.textures.exists(bustKey)'), 'карточка: буст только при h≥160 и живой текстуре');
-ok(sel.includes('panelW >= 600 && this.textures.exists(bustKey)'), 'превью: буст только при панели ≥600px (мобильный без наложений)');
+ok(sel.includes('panelW >= 600 && this._variants.length > 0'), '66.39: превью — листалка при панели ≥600px (мобильный без наложений)');
+ok(sel.includes('cycleVariant(') && sel.includes('updateVariantLabel()'), '66.39: листалка альтов (◀/▶ + подпись)');
+ok(sel.includes('hero.bustKey = variant.bust') && sel.includes('hero.battleLookKey = variant.look'), '66.39: выбор пишется в героя (bustKey + battleLookKey)');
 ok(sel.includes('const oneLine = compact || hasBust;'), 'снаряжение буст-карточек — одной строкой (без пересечений)');
 
 const charScene = read('../src/scenes/CharacterScene.js');
 ok(charScene.includes("import { getBustFor } from '../data/heroes.js';"), 'свиток персонажа: импорт getBustFor');
 ok(charScene.includes('width >= 900 && this.textures.exists(bustKey)'), 'свиток: буст только на экранах ≥900px');
+ok(charScene.includes('p.bustKey || getBustFor(p.archetype, p.gender)'), '66.39: свиток показывает выбранный вариант (hero.bustKey)');
 
-console.log('--- 4. SW v84 + game-assets-v33 (п.4) ---');
+console.log('--- 4. SW v89 + game-assets-v34 (п.4) ---'); // 66.39: актуализация (35 бустов + альты обликов + удаление женских брюк)
 const sw = read('../../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v88';"), 'SW: site-cache v88');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v33';"), 'SW: game-assets-v33 (30 листов перегенерированы + 6 бустов)');
-ok(sw.includes('// v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v89';"), 'SW: site-cache v89');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v34';"), 'SW: game-assets-v34 (35 бустов + 14 боевых альтов, −8 женских брюк/топов)');
+ok(sw.includes('// v89 — итерация 66.39'), 'SW: журнал содержит запись v89');
 // game-assets кэширует /game/assets/ целиком — бусты попадают автоматически,
 // отдельный список не нужен (проверяем отсутствие хардкода бустов в sw)
 ok(!sw.includes('bust_baenor'), 'SW: бусты не хардкожены (кэш по префиксу /game/assets/)');

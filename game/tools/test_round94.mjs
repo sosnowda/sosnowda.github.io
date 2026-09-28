@@ -1,13 +1,15 @@
-// test_round94.mjs — ПАТЧ 66.38 (2 приказа владельца):
+// test_round94.mjs — ПАТЧ 66.38 (2 приказа владельца) + АКТУАЛИЗАЦИЯ 66.39:
 //   1) ВАРИАНТЫ ОДЕЖДЫ ИЗ DRIVE-ПАКОВ: гардероб жителей расширен частями тех же
 //      паков — мужские/женские причёски ×5 цветов (альты пака), бороды ×5,
-//      шлемы стражи 10, НОВЫЙ женский брючный костюм (штаны+топ);
+//      шлемы стражи 10; 66.39: ЖЕНСКИЙ БРЮЧНЫЙ КОСТЮМ УДАЛЕН (неисторично
+//      для Руси 15 века — приказ владельца: женщины только в длинных платьях,
+//      брюки только у мужчин) — листы и логика сняты;
 //   2) АССЕТЫ ВНЕШНЕГО ВИДА НПЦ И ИГРОКА пересобраны из НОВОЙ библиотеки
-//      Google Drive (единый источник владельца; 145 листов, геометрия 66.37).
-// Проверки: конвейер (make_world_6638 + drive_fetch_world_6638), 145 листов
-// 1152×512 в палитре ≤255, наборы новых листов, геометрия фигур, силуэты
-// альтов = базам (IoU ≥ 0.9), таблицы WorldLook (30/10/35/3/5/10), брючная
-// логика rollWorldLayers, BootScene-перечень, SW v88/v33.
+//      Google Drive (единый источник владельца; с 66.39 — 137 листов, геометрия 66.37).
+// Проверки: конвейер (make_world_6638 + drive_fetch_world_6638), 137 листов
+// 1152×512 в палитре ≤255, наборы листов, геометрия фигур, силуэты
+// альтов = базам (IoU ≥ 0.9), таблицы WorldLook (без женских брюк),
+// BootScene-перечень, SW v89/v34 (66.39).
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -56,20 +58,24 @@ ok(existsSync(join(game, 'tools/make_world_6638.py')), 'tools/make_world_6638.py
 ok(existsSync(join(game, 'tools/drive_fetch_world_6638.py')), 'tools/drive_fetch_world_6638.py в репо');
 const fetcher = read('tools/drive_fetch_world_6638.py');
 ok(fetcher.includes('1p_tJFXiaQPEO1-EQVqg6dwnvvSyg2e3s'), 'fetcher: ссылка на библиотеку владельца');
-ok(fetcher.includes('Medieval_T&C_Female_Pants_'), 'fetcher: женские брюки пака');
+// 66.39: женские брюки/топы больше НЕ скачиваются (неисторично)
+ok(!fetcher.includes('Medieval_T&C_Female_Pants_') && !fetcher.includes('Medieval_T&C_Female_Top_'),
+    '66.39: fetcher больше не качает женские брюки/топы');
 ok(fetcher.includes('Medieval_Warfare_Male_Head_') && fetcher.includes('range(1, 11)'), 'fetcher: 10 шлемов Warfare');
 ok(fetcher.includes('embeddedfolderview'), 'fetcher: перечисление через embeddedfolderview');
 
-console.log('— 2. Мировые листы 66.38 (145) —');
+console.log('— 2. Мировые листы (137 после 66.39) —');
 const worldDir = join(game, 'assets/sprites/world');
 ok(existsSync(worldDir), 'assets/sprites/world/ на месте');
 const files = readdirSync(worldDir).filter(f => f.endsWith('.png'));
-ok(files.length === 145, `145 мировых листов [${files.length}]`);
+// 66.39: 137 = 145 − 8 (3 брюк + 5 топов женщин удалены)
+ok(files.length === 137, `137 мировых листов [${files.length}]`);
+ok(!files.some(f => f.startsWith('world_f_pants') || f.startsWith('world_f_top')),
+    '66.39: женских брюк/топов на диске нет (неисторично)');
 const sheetsSet = new Set(files);
-// полнота новых наборов
+// полнота наборов (66.39: без женских брюк/топов)
 const mustRanges = [
-    ['world_m_hair', 30], ['world_m_beard', 10], ['world_f_hair', 35],
-    ['world_f_pants', 3], ['world_f_top', 5], ['world_w_helm', 10],
+    ['world_m_hair', 30], ['world_m_beard', 10], ['world_f_hair', 35], ['world_w_helm', 10],
 ];
 mustRanges.forEach(([pre, n]) => {
     for (let i = 1; i <= n; i++) {
@@ -102,13 +108,6 @@ function frameBbox(f) {
     ok(b.h >= 85 && b.h <= 95, `${f}: рост фигуры 85..95 [${b.h}]`);
     ok(b.y1 >= 120 && b.y1 <= 128, `${f}: ноги у y=126 [${b.y1}]`);
     ok(b.cx >= 52 && b.cx <= 76, `${f}: фигура по центру ячейки [cx=${b.cx.toFixed(1)}]`);
-});
-// новые части тела сидят в кадре: штаны — от бёдер до низа фигуры, топ — торс
-[['world_f_pants1.png', 60, 80, 100, 128], ['world_f_pants3.png', 60, 80, 100, 128],
- ['world_f_top1.png', 40, 70, 70, 110], ['world_f_top5.png', 40, 70, 70, 110]].forEach(([f, a, b, c, d]) => {
-    const bb = frameBbox(f);
-    ok(bb.y0 >= a && bb.y0 <= b, `${f}: верх в полосе ${a}..${b} [${bb.y0}]`);
-    ok(bb.y1 >= c && bb.y1 <= d, `${f}: низ в полосе ${c}..${d} [${bb.y1}]`);
 });
 // шлемы — область головы (верх 25..45, низ ≤ 70)
 ['world_w_helm1.png', 'world_w_helm10.png'].forEach(f => {
@@ -145,17 +144,17 @@ ok(colorDiffers('world_m_hair1.png', 'world_m_hair7.png'), 'world_m_hair7: цв�
 ok(colorDiffers('world_m_hair1.png', 'world_m_hair8.png'), 'world_m_hair8: цвет отличается от hair1');
 ok(colorDiffers('world_m_hair1.png', 'world_m_hair9.png'), 'world_m_hair9: цвет отличается от hair1');
 
-console.log('— 3. WorldLook.js: таблицы 66.38 —');
+console.log('— 3. WorldLook.js: таблицы (66.39: женщины — только платья) —');
 const worldLook = read('src/systems/WorldLook.js');
 ok(worldLook.includes("length: 30 }, (_, i) => `world_m_hair${i + 1}`"), 'M.hair: 30 причёсок');
 ok(worldLook.includes("length: 10 }, (_, i) => `world_m_beard${i + 1}`"), 'M.beards: 10 бород');
 ok(worldLook.includes("length: 35 }, (_, i) => `world_f_hair${i + 1}`"), 'F.hair: 35 причёсок');
-ok(worldLook.includes("length: 3 }, (_, i) => `world_f_pants${i + 1}`"), 'F.pants: 3 брюк (новое)');
-ok(worldLook.includes("length: 5 }, (_, i) => `world_f_top${i + 1}`"), 'F.tops: 5 топов (новое)');
 ok(worldLook.includes("length: 10 }, (_, i) => `world_w_helm${i + 1}`"), 'W.helms: 10 шлемов');
-ok(worldLook.includes('trousers: true'), 'OUTFIT_F: профессии с брючным костюмом');
-ok(worldLook.includes("rnd('outfit') < 0.4"), 'брючный костюм ~40% по зерну (детерминированный)');
-ok(worldLook.includes("rnd('fpants')") && worldLook.includes("rnd('ftop')"), 'слои брюк/топа роллятся отдельно');
+// 66.39: женских брюк/топов и брючной логики БОЛЬШЕ НЕТ
+ok(!worldLook.includes('trousers'), '66.39: флаг trousers удалён (неисторично)');
+ok(!worldLook.includes('world_f_pants') && !worldLook.includes('world_f_top'),
+    '66.39: в WorldLook нет ссылок на женские брюки/топы');
+ok(worldLook.includes('длинное платье'), '66.39: в комментарии — только длинные платья');
 // прежние контракты не тронуты
 ok(worldLook.includes('export const WORLD_K = 31 / 88;'), 'WORLD_K = 31/88 сохранён');
 ok(worldLook.includes('export const WORLD_BODY_PX = 68;'), 'WORLD_BODY_PX = 68 сохранён');
@@ -165,24 +164,26 @@ const keyRefs = [...worldLook.matchAll(/world_[a-z_]+\d+/g)].map(m => m[0]);
 const missingRefs = [...new Set(keyRefs)].filter(k => !sheetsSet.has(k + '.png'));
 ok(missingRefs.length === 0, `все ключи WorldLook существуют на диске [нет: ${missingRefs.slice(0, 5)}]`);
 
-console.log('— 4. BootScene: предзагрузка 145 листов —');
+console.log('— 4. BootScene: предзагрузка 137 листов —');
 const boot = read('src/scenes/BootScene.js');
 ok(/frameWidth:\s*128/.test(boot), 'кадры мировых листов 128px');
-['world_m_hair30', 'world_m_beard10', 'world_f_hair35', 'world_f_pants1', 'world_f_top5', 'world_w_helm10']
+['world_m_hair30', 'world_m_beard10', 'world_f_hair35', 'world_w_helm10']
     .forEach(k => ok(boot.includes(`'${k}'`), `BootScene: ${k} в загрузке`));
+ok(!boot.includes("'world_f_pants1'") && !boot.includes("'world_f_top5'"),
+    '66.39: женские брюки/топы из загрузки удалены');
 const bootKeys = [...boot.matchAll(/'(world_[a-z_0-9]+)'/g)].map(m => m[1]);
 const bootUnique = [...new Set(bootKeys)];
-ok(bootUnique.length >= 145, `BootScene: перечислены все мировые листы [${bootUnique.length} ≥ 145]`);
+ok(bootUnique.length >= 137, `BootScene: перечислены все мировые листы [${bootUnique.length} ≥ 137]`);
 const missingOnDisk = bootUnique.filter(k => !sheetsSet.has(k + '.png'));
 const notInBoot = [...sheetsSet].filter(f => !bootUnique.includes(f.replace('.png', '')));
 ok(missingOnDisk.length === 0, `BootScene не грузит несуществующие [${missingOnDisk.slice(0, 5)}]`);
 ok(notInBoot.length === 0, `все листы на диске в загрузке [нет: ${notInBoot.slice(0, 5)}]`);
 
-console.log('— 5. SW: site-cache v88, game-assets-v33 —');
+console.log('— 5. SW: site-cache v89, game-assets-v34 (66.39) —');
 const sw = read('../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v88';"), 'SW: site-cache v88');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v33';"), 'SW: game-assets-v33');
-ok(sw.includes('v88 — итерация 66.38'), 'SW: журнал версий дополнен');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v89';"), 'SW: site-cache v89');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v34';"), 'SW: game-assets-v34');
+ok(sw.includes('v89 — итерация 66.39'), 'SW: журнал версий дополнен');
 
 console.log('');
 console.log(`=== ИТОГ: ${pass} OK, ${fail} FAIL ===`);

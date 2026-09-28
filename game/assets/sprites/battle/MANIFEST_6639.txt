@@ -1,0 +1,15 @@
+battle_leyanne_idle.png	3 КБ	Leyanne_MVsv_alt_stance2.png +rim0.75
+battle_leyanne_attack1.png	5 КБ	Leyanne_MVsv_alt_attack1.png +rim0.75
+battle_leyanne_attack2.png	5 КБ	Leyanne_MVsv_alt_attack2.png +rim0.75
+battle_leyanne_fists.png	5 КБ	Leyanne_MVsv_alt_martialartpunch.png +rim0.75
+battle_leyanne_shoot.png	4 КБ	Leyanne_MVsv_alt_shooting.png +rim0.75
+battle_leyanne_death.png	3 КБ	Leyanne_MVsv_alt_dead1.png +rim0.75
+battle_leyanne_victory.png	5 КБ	Leyanne_MVsv_alt_victory1.png +rim0.75
+battle_esther_idle.png	4 КБ	LordEsther_MVsv_alt_stance2.png +rim0.9
+battle_esther_attack1.png	7 КБ	LordEsther_MVsv_alt_attack1.png +rim0.9
+battle_esther_attack2.png	7 КБ	LordEsther_MVsv_alt_attack2.png +rim0.9
+battle_esther_fists.png	7 КБ	LordEsther_MVsv_alt_martialartpunch.png +rim0.9
+battle_esther_shoot.png	6 КБ	LordEsther_MVsv_alt_shooting.png +rim0.9
+battle_esther_death.png	3 КБ	LordEsther_MVsv_alt_dead1.png +rim0.9
+battle_esther_victory.png	7 КБ	LordEsther_MVsv_alt_victory1.png +rim0.9
+ИТОГО	14 файлов	71 КБ

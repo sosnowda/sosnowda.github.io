@@ -24,8 +24,11 @@ import { ageUnitWord } from '../systems/AgeRules.js';
 // (Кастомизация по-прежнему отсутствует — пп.7,10 раунда 61.)
 import { getHeroPreset } from '../systems/NpcLpc.js';
 import { composeWorldPlayerTexture } from '../systems/WorldLook.js';
-// 66.33: бусты пака «Medieval - Heroes I» — портреты в карточках/превью
-import { getBustFor } from '../data/heroes.js';
+// 66.33: бусты пака «Medieval - Heroes I» — портреты в карточках/превью.
+// 66.39: АЛЬТЫ внешности — листалка портретов в превью (полный комплект
+// бустов героя + альт-герой боевого облика: Эстер/Лейанн); выбор пишется
+// в героя (bustKey + battleLookKey)
+import { getBustFor, bustVariantsFor, ALT_LOOK_NAMES } from '../data/heroes.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
     constructor() {
@@ -415,12 +418,36 @@ export class CharacterSelectionScene extends Phaser.Scene {
         // 66.33: буст героя в правом верхнем углу панели превью
         // (панель ≥600px по ширине — на узких мобильных колонка навыков
         // доходит до края, портрет не влезает без наложения)
-        const bustKey = getBustFor(hero.archetype, hero.gender);
-        if (bustKey && panelW >= 600 && this.textures.exists(bustKey)) {
-            this.add.rectangle(width / 2 + panelW / 2 - 75, top + 140, 132, 132, 0x241B15, 0.85)
+        // 66.39: с листалкой альтов — полный комплект бустов героя + альт-герой
+        // (если у облика есть альт в паке): ◀/▶ по бокам рамки, подпись
+        // «Портрет N/M» (для альтов — имя альт-героя). Выбор сохраняется в героя
+        // при старте игры (bustKey + battleLookKey).
+        const canonicalBust = getBustFor(hero.archetype, hero.gender);
+        this._variants = bustVariantsFor(hero.archetype, hero.gender)
+            .filter(v => this.textures.exists(v.bust));
+        this._variantIdx = Math.max(0, this._variants.findIndex(v => v.bust === canonicalBust));
+        if (canonicalBust && panelW >= 600 && this._variants.length > 0) {
+            const bx = width / 2 + panelW / 2 - 75;
+            const by = top + 140;
+            this.add.rectangle(bx, by, 132, 132, 0x241B15, 0.85)
                 .setStrokeStyle(2, 0xC9A961).setDepth(202);
-            this.add.image(width / 2 + panelW / 2 - 75, top + 140, bustKey)
+            this._bustImage = this.add.image(bx, by, this._variants[this._variantIdx].bust)
                 .setDisplaySize(124, 124).setDepth(202);
+            if (this._variants.length > 1) {
+                createButton(this, bx - 75, by, '◀', () => this.cycleVariant(-1), {
+                    backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
+                    fontSize: 16, padding: { left: 8, right: 8, top: 4, bottom: 4 },
+                }).setDepth(202);
+                createButton(this, bx + 75, by, '▶', () => this.cycleVariant(1), {
+                    backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
+                    fontSize: 16, padding: { left: 8, right: 8, top: 4, bottom: 4 },
+                }).setDepth(202);
+            }
+            this._bustLabel = this.add.text(bx, by + 74, '', {
+                fontSize: '11px', color: RUS.textDim,
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0.5).setDepth(202);
+            this.updateVariantLabel();
         }
 
         // Кнопки "Начать игру" и "Отмена"
@@ -441,6 +468,26 @@ export class CharacterSelectionScene extends Phaser.Scene {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
             fontSize: compact ? 15 : 18, padding: { left: 20, right: 20, top: 10, bottom: 10 },
         }).setDepth(202);
+    }
+
+    /** 66.39: листалка альтов внешности (портрет + боевой облик). */
+    cycleVariant(dir) {
+        if (!this._variants || this._variants.length < 2) return;
+        const n = this._variants.length;
+        this._variantIdx = (this._variantIdx + dir + n) % n;
+        const v = this._variants[this._variantIdx];
+        if (this._bustImage) this._bustImage.setTexture(v.bust);
+        this.updateVariantLabel();
+    }
+
+    /** 66.39: подпись под портретом — номер и имя альт-героя (если альт). */
+    updateVariantLabel() {
+        if (!this._bustLabel || !this._variants) return;
+        const v = this._variants[this._variantIdx];
+        const altName = v.alt && ALT_LOOK_NAMES[v.look] ? t(ALT_LOOK_NAMES[v.look]) : null;
+        this._bustLabel.setText(altName
+            ? `${t('Портрет')} ${this._variantIdx + 1}/${this._variants.length} · ${altName}`
+            : `${t('Портрет')} ${this._variantIdx + 1}/${this._variants.length}`);
     }
 
     cleanupPreview() {
@@ -465,6 +512,14 @@ export class CharacterSelectionScene extends Phaser.Scene {
     }
 
     startGameWithHero(hero) {
+        // 66.39: выбранный в превью вариант внешности (портрет + боевой облик)
+        // — пишется здесь, чтобы любой путь старта (кнопка, прямой вызов)
+        // учитывал листалку; по умолчанию — канон (старые партии как прежде).
+        const variant = this._variants && this._variants[this._variantIdx || 0];
+        if (variant) {
+            hero.bustKey = variant.bust;
+            hero.battleLookKey = variant.look;
+        }
         // Сбрасываем название деревни для новой сессии
         resetVillageName();
         const villageName = getVillageName();

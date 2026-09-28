@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 # Раунд 66.24 (приказ 1): сравнение свежих кадров /tmp/shots/*.png с кадрами
 # на сайте assets/screenshots/*.webp; замена ТОЛЬКО изменившихся кадров.
+# 66.39: путь репо — автоопределение (после пересборки платформы клон
+# называется sosnowda.github.io); режим FORCE=1 — заменить ВСЕ кадры
+# (приказ владельца: «переснять и заменить все скриншоты»).
 # Дополнительно: QA-кадры смоука 66.24 → game/docs/*.webp (q80).
 import os
 from PIL import Image, ImageChops
 
 SRC = '/tmp/shots'
-DST = '/home/z/my-project/sosnowda-site/assets/screenshots'
+_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DST = os.environ.get('SHOTS_DST') or os.path.join(_ROOT, 'assets', 'screenshots')
+FORCE = os.environ.get('FORCE') == '1'
 FRAMES = ['01-title', '02-character-select', '03-character-custom', '04-village',
           '05-map', '06-elder-interior', '07-priest-dialogue', '08-combat', '09-thief-encounter']
 
@@ -22,6 +27,10 @@ for f in FRAMES:
     png = os.path.join(SRC, f + '.png')
     old = os.path.join(DST, f + '.webp')
     tmp, img_new = webp_bytes(png)
+    if FORCE or not os.path.exists(old):
+        os.replace(tmp, old)
+        changed.append((f, 100.0 if FORCE else 'НОВЫЙ'))
+        continue
     img_old = Image.open(old).convert('RGB')
     if img_old.size != img_new.size:
         diff_pct = 100.0

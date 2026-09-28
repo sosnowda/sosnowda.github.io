@@ -134,7 +134,13 @@ export class CombatScene extends Phaser.Scene {
         // врага справа как есть. Ноги на нижнем крае кадра: origin.y = 1/6 при
         // scale 2.5 даёт ту же линию ног, что у рыцаря (низ кадра в y + 100);
         // подпись имени (y + 100) остаётся у ног. Fallback — Fantasy Knight.
-        this.battleLook = battleLookFor(this.player.archetype, this.player.gender);
+        // 66.39: альт боевого облика (выбор в превью персонажа, hero.battleLookKey)
+        // — только если его листы на месте; иначе каноничный облик по архетипу+полу.
+        const canonicalLook = battleLookFor(this.player.archetype, this.player.gender);
+        this.battleLook = (this.player.battleLookKey
+            && this.textures.exists(`battle_${this.player.battleLookKey}_idle`)
+            && this.anims.exists(`battle_${this.player.battleLookKey}_idle`))
+            ? this.player.battleLookKey : canonicalLook;
         const lookIdle = `battle_${this.battleLook}_idle`;
         this.usesBattleLook = this.textures.exists(lookIdle) && this.anims.exists(lookIdle);
         if (this.usesBattleLook) {
