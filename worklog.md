@@ -1818,3 +1818,19 @@ Work Log:
 
 Stage Summary:
 - Все 13 приказов выполнены (п.13 — анализ размеров выдан владельцу отдельными выводами); итерация 66.41 готова к коммиту и пушу
+
+---
+Task ID: 66.41-прод
+Agent: Super Z (main)
+Task: Прод-верификация патча 66.41 после деплоя
+
+Work Log:
+- Pages: built 0b53103 без ошибок (билд ~45 c)
+- Прод: sw.js отдаёт var CACHE_NAME = chronicles-ruthenia-v91, GAME_ASSETS_CACHE = game-assets-v36
+- Скрин 05-map.webp новый (39472 байта); 01-title.webp/og-image.jpg/promo.webm — 200
+- Удалённые файлы на проде: icons.svg/_config.yml/intro.mp4/ScoreManager.js — 404 (как задумано)
+- Лендинг RU: preload первого скриншота (fetchpriority=low) присутствует
+- Живой qa_map_6634 против прода (BASE_URL) — ВСЁ ЗЕЛЁНОЕ, 0 JS-ошибок, 0 провалов
+
+Stage Summary:
+- Все 13 приказов итерации 66.41 выполнены и верифицированы на проде https://sosnowda.github.io
