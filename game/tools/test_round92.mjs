@@ -6,7 +6,7 @@
 //   3) housesFX: окна по стеклу, трубы аутентичные (у Авдея и Прасковьи
 //      труб в паке нет);
 //   4) поп-апы/планировка 66.35 не тронуты;
-//   5) SW: game-assets-v32 (текстуры изменились), site-cache v87.
+//   5) SW: game-assets-v33 (текстуры изменились), site-cache v88.
 import { strict as assert } from 'node:assert';
 import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -162,10 +162,10 @@ ok(BUILDINGS.every(b => b.col + b.w <= 24), 'все дома col+w ≤ 24 (≥1 
 ok(BUILDINGS.every(b => b.col >= 1), 'все дома ≥1 тайл от западной кромки');
 
 // ---------- 5. SW: кэши подняты ----------
-console.log('--- 5. SW: game-assets-v32 / site-cache v87 ---');
+console.log('--- 5. SW: game-assets-v33 / site-cache v88 ---');
 const sw = readFileSync(join(root, 'sw.js'), 'utf-8');
-ok(sw.includes("game-assets-v32"), 'SW: game-assets-v32 (текстуры fb_* изменились)');
-ok(sw.includes("'chronicles-ruthenia-v87'"), 'SW: site-cache v87');
+ok(sw.includes("game-assets-v33"), 'SW: game-assets-v33 (текстуры fb_* изменились)');
+ok(sw.includes("'chronicles-ruthenia-v88'"), 'SW: site-cache v88');
 
 console.log(`\n=== ИТОГ: ${passed} зелёных, ${failed} красных ===`);
 process.exit(failed ? 1 : 0);

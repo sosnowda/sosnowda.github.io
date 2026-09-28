@@ -126,7 +126,7 @@ ok(existsSync(join(game, 'tools/make_world_6637.py')), 'tools/make_world_6637.py
 const worldDir = join(game, 'assets/sprites/world');
 ok(existsSync(worldDir), 'assets/sprites/world/ на месте');
 const files = readdirSync(worldDir).filter(f => f.endsWith('.png'));
-ok(files.length === 71, `71 мировой лист [${files.length}]`);
+ok(files.length === 145, `145 мировых листов [${files.length}]`);
 const MUST = ['world_hero_male.png', 'world_hero_female.png',
     'world_m_base1.png', 'world_m_top9.png', 'world_m_pants5.png', 'world_m_hair6.png',
     'world_m_beard1.png', 'world_m_beard2.png', 'world_m_feet3.png',
@@ -175,7 +175,7 @@ const boot = read('src/scenes/BootScene.js');
 ok(boot.includes("'world_hero_male'") && boot.includes("'world_child6'"), 'BootScene: мировые листы в загрузке');
 ok(/frameWidth:\s*128/.test(boot), 'BootScene: кадры мировых листов 128px');
 const bootWorldCount = (boot.match(/world_/g) || []).length;
-ok(bootWorldCount >= 71, `BootScene: перечислены все мировые листы [${bootWorldCount} ≥ 71]`);
+ok(bootWorldCount >= 145, `BootScene: перечислены все мировые листы [${bootWorldCount} ≥ 145]`);
 // NpcLpc — делегирование на WorldLook с LPC-фолбэком
 const npcLpc = read('src/systems/NpcLpc.js');
 ok(npcLpc.includes('ensureWorldNpcTexture(scene, registry, npc)'), 'NpcLpc: основной путь — мировые листы');
@@ -209,10 +209,10 @@ ok(apiary.includes('TS / 32 * 0.75 * WORLD_K') && apiary.includes('body.setSize(
    'ApiaryScene: игрок и жители × WORLD_K + физтело');
 
 // ============================================================
-console.log('— 5. SW: site-cache v87, game-assets-v32 —');
+console.log('— 5. SW: site-cache v88, game-assets-v33 —');
 const sw = read('../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v87';"), 'SW: site-cache v87');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v32';"), 'SW: game-assets-v32');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v88';"), 'SW: site-cache v88');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v33';"), 'SW: game-assets-v33');
 ok(sw.includes('// v87 — итерация 66.37'), 'SW: журнал содержит запись v87');
 ok(sw.includes('// v86 — итерация 66.36'), 'SW: журнал хранит v86');
 
