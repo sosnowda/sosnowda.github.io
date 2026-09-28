@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+
+# ═══════════════ ИСТОРИЧЕСКИЙ КОНВЕЙЕР (помечено 66.41) ═══════════════
+# заменён make_world_6638 (новая библиотека Drive, 66.38).
+# НЕ запускать без необходимости: актуальные конвейеры — см. АУДИТ
+# (АУДИТ_sosnowda_github_io_66.40.pdf, §5) и АГЕНТ.md.
+
 # make_world_6637.py — ПАТЧ 66.37 (приказ владельца): НОВЫЕ АССЕТЫ ВНЕШНЕГО
 # ВИДА ИГРОКА И НПЦ ИЗ ПАКОВ GOOGLE DRIVE («Medieval - Heroes I»,
 # «Medieval - Townfolk», «Medieval - Town & Country», «Medieval - Warfare»).

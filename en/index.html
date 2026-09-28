@@ -45,6 +45,9 @@
 
     <!-- Critical resource preload -->
     <link rel="preload" href="../assets/images/title.webp" as="image" fetchpriority="high">
+    <!-- 66.41 (audit 66.40 §3): first gallery screenshot — instant render on scroll;
+         low priority so it never competes with the hero image -->
+    <link rel="preload" href="../assets/screenshots/01-title.webp" as="image" fetchpriority="low">
     <link rel="preload" href="../styles.css" as="style">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -702,7 +705,7 @@
                 <div class="screenshot-caption">The village</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/05-map.webp">
-                <img src="../assets/screenshots/05-map.webp" alt="Area map — locations around the village including the three-part forest; the mill has been moved next to the apiary (66.40)" width="1280" height="720" loading="lazy">
+                <img src="../assets/screenshots/05-map.webp" alt="Area map — locations around the village, three-part forest with a ROUND Forest Glade at its center, mill next to the apiary, lake by the north tract (66.41)" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Area map</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/06-elder-interior.webp">
