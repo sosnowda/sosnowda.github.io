@@ -1783,3 +1783,18 @@ Work Log:
 
 Stage Summary:
 - Все 6 приказов выполнены; итерация 66.40 закоммичена и запушена; прод-верификация по чек-листу §5 АГЕНТ.md
+
+---
+Task ID: 66.40-прод
+Agent: Super Z (main)
+Task: Прод-верификация патча 66.40 после деплоя
+
+Work Log:
+- Pages: built ec0064f33 без ошибок
+- Прод: SW chronicles-ruthenia-v90 / game-assets-v35; новые ассеты 200 (world_m_base4, world_m_top14, battle_pbnoble_idle, bust_pbnoble_1); скрин 05-map.webp новый (15:14 GMT)
+- Живой qa_6640 против прода (BASE_URL) — ВСЁ ЗЕЛЁНОЕ, 0 JS-ошибок
+- Лендинг: alt «мельница перенесена рядом с пасекой (66.40)» на проде; АУДИТ.md доступен (200)
+- PDF-копия аудита для владельца: download/АУДИТ_sosnowda_github_io_66.40.pdf
+
+Stage Summary:
+- Все 6 приказов итерации 66.40 выполнены и верифицированы на проде https://sosnowda.github.io
