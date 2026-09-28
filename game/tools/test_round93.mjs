@@ -115,10 +115,10 @@ ok(HOUSES_FX.fb_thatch_big.chimneys.length === 1 &&
 // остальные дома по-прежнему с аутентичными трубами
 ok(HOUSES_FX.fb_elder.chimneys.length === 2 && HOUSES_FX.fb_inn.chimneys.length === 1 &&
    HOUSES_FX.fb_smithy.chimneys.length === 1 && HOUSES_FX.fb_manor.chimneys.length === 1 &&
-   HOUSES_FX.fb_log_big.chimneys.length === 1 && HOUSES_FX.fb_log_flowers.chimneys.length === 1 &&
+   HOUSES_FX.fb_log_big.chimneys.length === 1 && HOUSES_FX.fb_log_flowers.chimneys.length === 2 &&
    HOUSES_FX.fb_thatch_small.chimneys.length === 1 && HOUSES_FX.fb_tudor_fl.chimneys.length === 1 &&
    HOUSES_FX.fb_tudor_sm.chimneys.length === 1 && HOUSES_FX.fb_church.chimneys.length === 0,
-   'остальные дома: аутентичные трубы пака без изменений');
+   'остальные дома: аутентичные трубы пака без изменений (66.42: гончар×2)');
 
 // ============================================================
 console.log('— 2. Мировые листы (assets/sprites/world/) —');
@@ -211,10 +211,10 @@ ok(apiary.includes('TS / 32 * 0.75 * WORLD_K') && apiary.includes('body.setSize(
    'ApiaryScene: игрок и жители × WORLD_K + физтело');
 
 // ============================================================
-console.log('— 5. SW: site-cache v88, game-assets-v36 —');
+console.log('— 5. SW: site-cache v88, game-assets-v37 —');
 const sw = read('../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v91';"), 'SW: site-cache v88');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v36';"), 'SW: game-assets-v36');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v92';"), 'SW: site-cache v88');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v37';"), 'SW: game-assets-v37');
 ok(sw.includes('// v87 — итерация 66.37'), 'SW: журнал содержит запись v87');
 ok(sw.includes('// v86 — итерация 66.36'), 'SW: журнал хранит v86');
 

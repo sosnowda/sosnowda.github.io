@@ -6,7 +6,7 @@
 //   3) housesFX: окна по стеклу, трубы аутентичные (у Авдея и Прасковьи
 //      труб в паке нет);
 //   4) поп-апы/планировка 66.35 не тронуты;
-//   5) SW: game-assets-v36 (текстуры изменились), site-cache v88.
+//   5) SW: game-assets-v37 (текстуры изменились), site-cache v88.
 import { strict as assert } from 'node:assert';
 import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -129,10 +129,10 @@ ok(HOUSES_FX.fb_log_thatch.chimneys.length === 1 &&
 ok(HOUSES_FX.fb_church.chimneys.length === 0, 'у церкви трубы нет');
 ok(HOUSES_FX.fb_elder.chimneys.length === 2 && HOUSES_FX.fb_inn.chimneys.length === 1 &&
    HOUSES_FX.fb_smithy.chimneys.length === 1 && HOUSES_FX.fb_manor.chimneys.length === 1 &&
-   HOUSES_FX.fb_log_big.chimneys.length === 1 && HOUSES_FX.fb_log_flowers.chimneys.length === 1 &&
+   HOUSES_FX.fb_log_big.chimneys.length === 1 && HOUSES_FX.fb_log_flowers.chimneys.length === 2 &&
    HOUSES_FX.fb_thatch_small.chimneys.length === 1 && HOUSES_FX.fb_tudor_fl.chimneys.length === 1 &&
    HOUSES_FX.fb_tudor_sm.chimneys.length === 1,
-   'трубы: староста×2, двор/кузница/марфа/пахарь/гончар/рыбак/дровосек/знахарка×1');
+   'трубы: староста×2, двор/кузница/марфа/пахарь/рыбак/дровосек/знахарка×1, гончар×2 (66.42)');
 
 // ---------- 3. Жерла труб — на камнях/дереве трубы, не в воздухе ----------
 console.log('--- 3. Жерла труб сидят на текстуре трубы ---');
@@ -162,10 +162,10 @@ ok(BUILDINGS.every(b => b.col + b.w <= 24), 'все дома col+w ≤ 24 (≥1 
 ok(BUILDINGS.every(b => b.col >= 1), 'все дома ≥1 тайл от западной кромки');
 
 // ---------- 5. SW: кэши подняты ----------
-console.log('--- 5. SW: game-assets-v36 / site-cache v88 ---');
+console.log('--- 5. SW: game-assets-v37 / site-cache v88 ---');
 const sw = readFileSync(join(root, 'sw.js'), 'utf-8');
-ok(sw.includes("game-assets-v36"), 'SW: game-assets-v36 (текстуры fb_* изменились)');
-ok(sw.includes("'chronicles-ruthenia-v91'"), 'SW: site-cache v88');
+ok(sw.includes("game-assets-v37"), 'SW: game-assets-v37 (текстуры fb_* изменились)');
+ok(sw.includes("'chronicles-ruthenia-v92'"), 'SW: site-cache v88');
 
 console.log(`\n=== ИТОГ: ${passed} зелёных, ${failed} красных ===`);
 process.exit(failed ? 1 : 0);

@@ -183,10 +183,10 @@ ok(!villageSrc.includes('this.smokeBuildings') && !villageSrc.includes('CHIMNEY_
 // (fb_thatch_big) трубы ДОРИСОВАНЫ в стиле пака (make_chimneys_6637.py,
 // доноры fb_manor/fb_thatch_small) — дым вернулся.
 ok(HOUSES_FX.fb_elder.chimneys.length === 2 && HOUSES_FX.fb_inn.chimneys.length === 1 &&
-   HOUSES_FX.fb_log_big.chimneys.length === 1 && HOUSES_FX.fb_log_flowers.chimneys.length === 1 &&
+   HOUSES_FX.fb_log_big.chimneys.length === 1 && HOUSES_FX.fb_log_flowers.chimneys.length === 2 &&
    HOUSES_FX.fb_tudor_fl.chimneys.length === 1 &&
    HOUSES_FX.fb_tudor_sm.chimneys.length === 1,
-   'трубы: староста×2, двор×1, пахарь×1, гончар×1, дровосек×1, знахарка×1 (дымник)');
+   'трубы: староста×2, двор×1, пахарь×1, гончар×2 (66.42), дровосек×1, знахарка×1 (труба 66.42)');
 // 66.37: кузница/марфа/рыбак — аутентичные трубы пака; Авдей/Прасковья —
 // дорисованные в стиле пака (каменное тело + колпак + жерло).
 ok(HOUSES_FX.fb_smithy.chimneys.length === 1 &&

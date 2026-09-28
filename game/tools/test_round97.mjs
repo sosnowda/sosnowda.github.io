@@ -12,7 +12,7 @@
 //      писателя gameScoreData больше нет в game/src;
 //   5) ИСТОРИЧЕСКИЕ КОНВЕЙЕРЫ: 10 make_*/repair_* помечены маркером,
 //      актуальные (6640/6638/6636/6635/6637/6633/6639/6624) — БЕЗ маркера;
-//   6) SW v91 / game-assets-v36; аудио — lazy-cache (нет precache-списка).
+//   6) SW v92 / game-assets-v37; аудио — lazy-cache (нет precache-списка).
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -145,13 +145,14 @@ ok(!/og:image" content="\//.test(ru), 'OG:image не относительный'
 
 console.log('— 9. Исторические конвейеры (приказ 11) —');
 const historical = ['make_assets_r66.py', 'make_assets_r67.py', 'make_gate_r67.py',
+    'mvsv_battle_6632.py', 'mvsv_battle_6633.py',
     'make_houses_r64.py', 'make_houses_r65.py', 'make_thief_sprite.py', 'make_trees.py',
     'make_world_6637.py', 'repair_interiors_6629.py', 'make_og_demo_r68.py'];
 for (const f of historical) {
     ok(read(`game/tools/${f}`).includes('ИСТОРИЧЕСКИЙ КОНВЕЙЕР'), `${f} помечен историческим`);
 }
 const actual = ['make_world_6638.py', 'make_world_6640.py', 'drive_fetch_world_6638.py',
-    'drive_fetch_pbkt_6640.py', 'mvsv_battle_6632.py', 'mvsv_battle_6633.py',
+    'drive_fetch_pbkt_6640.py',
     'make_battle_alts_6639.py', 'make_battle_alts_6640.py', 'make_busts_6633.py',
     'make_busts_6639.py', 'make_busts_6640.py', 'make_houses_6636.py',
     'make_houses_repair_6635.py', 'make_chimneys_6637.py', 'update_shots_6624.py'];
@@ -159,10 +160,10 @@ for (const f of actual) {
     ok(!read(`game/tools/${f}`).includes('ИСТОРИЧЕСКИЙ КОНВЕЙЕР'), `${f} — актуальный, без маркера`);
 }
 
-console.log('— 10. SW v91 + аудио lazy-cache —');
+console.log('— 10. SW v92 + аудио lazy-cache —');
 const sw = read('sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v91';"), 'SW: site-cache v91');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v36';"), 'SW: game-assets-v36');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v92';"), 'SW: site-cache v92');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v37';"), 'SW: game-assets-v37');
 ok(sw.includes('66.41'), 'SW-журнал: запись 66.41 есть');
 ok(!sw.includes('addAll'), 'SW: precache-списка нет (аудио кэшируется лениво по запросу)');
 ok(!/\.ogg/.test(sw.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '')),

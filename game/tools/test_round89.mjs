@@ -127,10 +127,10 @@ ok(charScene.includes("import { getBustFor } from '../data/heroes.js';"), 'св�
 ok(charScene.includes('width >= 900 && this.textures.exists(bustKey)'), 'свиток: буст только на экранах ≥900px');
 ok(charScene.includes('p.bustKey || getBustFor(p.archetype, p.gender)'), '66.39: свиток показывает выбранный вариант (hero.bustKey)');
 
-console.log('--- 4. SW v89 + game-assets-v36 (п.4) ---'); // 66.39: актуализация (35 бустов + альты обликов + удаление женских брюк)
+console.log('--- 4. SW v89 + game-assets-v37 (п.4) ---'); // 66.39: актуализация (35 бустов + альты обликов + удаление женских брюк)
 const sw = read('../../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v91';"), 'SW: site-cache v89');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v36';"), 'SW: game-assets-v36 (35 бустов + 14 боевых альтов, −8 женских брюк/топов)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v92';"), 'SW: site-cache v89');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v37';"), 'SW: game-assets-v37 (35 бустов + 14 боевых альтов, −8 женских брюк/топов)');
 ok(sw.includes('// v89 — итерация 66.39'), 'SW: журнал содержит запись v89');
 // game-assets кэширует /game/assets/ целиком — бусты попадают автоматически,
 // отдельный список не нужен (проверяем отсутствие хардкода бустов в sw)
