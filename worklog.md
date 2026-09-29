@@ -1887,3 +1887,18 @@ Stage Summary:
 - Патч 66.43: частокол-стена вместо «бочек», новая боковая боевая модель вора/воровки с иконой и кинжалом, герой лицом к врагу, дорожки подтверждены тестом, все 9 кадров сайта пересняты (первый — главное меню). SW: site-cache v93, game-assets-v38; сейвы совместимы.
 - Артефакты: make_palisade_6643.py, make_thief_battle_6643.py, take_shots_6643.mjs, convert_shots_6643.py, reshoot_one_6643.mjs, qa_battle_thief_6643.mjs, test_round99.mjs, QA_ROUND66_43_PALISADE_THIEF_BATTLE_FACING_SHOTS.md.
 - Уроки: (1) Playwright waitForFunction — сигнатура (fn, arg, options): объект опций вторым аргументом молча даёт дефолтный таймаут 30 c; (2) тайпрайтер createDialog кладёт полный текст до печати — съёмочные проверки диалогов должны подтверждать устойчивость; (3) декодер PNG в тестах обязан реконструировать фильтры 1-4.
+
+---
+Task ID: 66.43-прод
+Agent: Z.ai Code (main)
+Task: Прод-верификация пуша 66.43.
+
+Work Log:
+- Пуш: origin/main c739e20..55390af (patоч 66.43, 48 файлов, +1041/−76); Pages built.
+- Прод-пинги: /game/ → 200; sw.js отдаёт site-cache v93 + game-assets-v38.
+- Новые/изменённые ассеты на проде: palisade_0.png, battle_thiefm_idle.png, 01-title.webp → HTTP 200.
+- Хэш-сверка локал ↔ прод (sha256, бит-в-бит): palisade_0.png ffcc6da4…, battle_thiefm_idle.png fdd82d42…, 01-title.webp cf1a2082… — СОВПАДАЮТ.
+- Живой кадр ?shot=menu на проде: ГЛАВНОЕ МЕНЮ (кнопки Новая игра/Инструкция/Настройки/Об игре) — бар загрузки в первом кадре сайта устранён.
+
+Stage Summary:
+- Патч 66.43 полностью на проде: SW v93/v38 активны, ассеты бит-в-бит, первый кадр сайта — главное меню.
