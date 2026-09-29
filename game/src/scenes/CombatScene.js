@@ -56,6 +56,14 @@ export class CombatScene extends Phaser.Scene {
      *   или fromScene (Forest — тёмный лес; Location — тракт-фолбэк).
      * Возвращает ключ группы ('forest'/'field'/'lake'/'river'/'pogost'/'mill'
      * /'apiary'/'road'/'interior') или null — рисовать прежний градиент.
+     *
+     * 66.46 (приказы 4–5): КОНТРАКТ СУХОСТИ. У водных фонов ('lake'/'river')
+     * вода — только в средней дистанции; кромка берега поднимается выше ног
+     * всех боевых стоек (герой 320,596 · враги 891..951, 332..588 · волк
+     * 921,539). Проверено автотестом генератора (check_dry в
+     * tools/make_battle_bg_6646.py) и живыми кадрами qa_6646 — персонажи
+     * и NPC не стоят на воде. При риске НОВЫХ водных фонов точки суши
+     * обязаны покрываться DRY_POINTS генератора.
      */
     combatBackgroundGroup() {
         if (this.npcId && this.npcId.endsWith('_hostile')) return 'interior';

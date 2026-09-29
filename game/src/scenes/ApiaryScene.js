@@ -27,6 +27,8 @@ import { getNpcSpriteKey } from '../systems/NpcLpc.js';
 // 66.37: калибровка масштаба мировых листов персонажей 128px (были 64)
 import { WORLD_K, WORLD_BODY_PX } from '../systems/WorldLook.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
+// Патч 66.46 (приказ 2): ход солнца — тени и смена освещения
+import { attachSunLight } from '../systems/SunLight.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
@@ -107,6 +109,27 @@ export class ApiaryScene extends Phaser.Scene {
         this.weather = getWeather(this.registry);
 
         this.drawApiary();
+        // Патч 66.46 (приказ 2): солнечный свет пасеки — до спавна героя
+        this.sunLight = attachSunLight(this, { shadowDepth: 0.35, overlayDepth: 92.5 });
+        this.sunLight.addCaster(() => {
+            const pts = [];
+            for (let y = 0; y < APIARY_ROWS; y++) {
+                for (let x = 0; x < APIARY_COLS; x++) {
+                    const tc = apiaryTileAt(x, y);
+                    if (tc === 'T') {
+                        const jx = ((x * 37 + y * 61) % 13) - 6;
+                        pts.push({ x: x * TS + TS / 2 + jx, y: y * TS + TS * 1.02, rx: 15, ry: 5, k: 0.95 });
+                    } else if (tc === 't') {
+                        const jx = ((x * 53 + y * 29) % 11) - 5;
+                        pts.push({ x: x * TS + TS / 2 + jx, y: y * TS + TS * 0.84, rx: 11, ry: 4, k: 0.7 });
+                    }
+                }
+            }
+            (this.hiveEntries || []).forEach(hv => {
+                if (hv && hv.img && hv.img.scene) pts.push({ x: hv.img.x, y: hv.img.y + 12, rx: 11, ry: 4, k: 0.8 });
+            });
+            return pts;
+        });
         this.spawnHives();
         this.spawnSmudgeAndHut();
         this.drawExitMarker();
@@ -444,8 +467,8 @@ export class ApiaryScene extends Phaser.Scene {
         this.playerObj.setDepth(this.playerObj.y / TS);
         this.cameras.main.startFollow(this.playerObj, true, 0.1, 0.1);
 
-        // Тень под ногами
-        this.add.ellipse(pos.x, pos.y + 14, 22, 8, 0x000000, 0.3).setDepth(0.05);
+        // Тень под ногами — патч 66.46: СЛЕДЯЩАЯ, по солнцу
+        if (this.sunLight) this.sunLight.follow(this.playerObj, 12, 4.2, 1);
 
         // ----- Раунд 27 (пп.6,8): ЖИТЕЛИ НА ПАСЕКЕ -----
         // Пасечник Тарас (и иногда Марфа с травами) — по системе присутствия.
@@ -710,6 +733,9 @@ export class ApiaryScene extends Phaser.Scene {
             return;
         }
 
+        // Патч 66.46 (приказ 2): тень героя следует за ним каждый кадр
+        if (this.sunLight) this.sunLight.updateFollowers();
+
         const endState = checkGameEnd(this.registry);
         // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
         if (endState) {
@@ -868,6 +894,8 @@ export class ApiaryScene extends Phaser.Scene {
             if (this.dayNightOverlay) {
                 this.dayNightOverlay.setFillStyle(overlay.color, overlay.alpha);
             }
+            // Патч 66.46 (приказ 2): ход солнца — тени и тёплый свет
+            if (this.sunLight) this.sunLight.update(timeState);
             const h = timeState.hour;
             let dark = 0;
             if (h >= 21 || h < 5) dark = 1;

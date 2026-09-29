@@ -828,8 +828,11 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     // «Отдохнуть 1 час (4 д.) — лечение ~1/3») сжимались в один ряд,
     // НАКЛАДЫВАЛИСЬ друг на друга и вылезали за панель. Теперь кнопки
     // упаковываются в ряды по фактической ширине (жадная упаковка).
+    // Патч 66.46 (приказ 3): и по ВЫСОТЕ. Ряд считался фиксированными 50px,
+    // а фактическая высота кнопки (текст 20px bold + паддинги 15/15) — ~54px:
+    // строки кнопок НАЛЕЗАЛИ друг на друга (у священника 5 вариантов — 4 ряда).
+    // Теперь высота ряда = фактическая высота самой высокой кнопки + зазор.
     const BTN_ROW_GAP = 12;
-    const BTN_ROW_H = 50;
     const getBtnWidth = (btn) => {
         try {
             const bg = btn.getElement ? btn.getElement('background') : null;
@@ -841,6 +844,18 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             return (total > 10) ? total : 120;
         } catch (e) { return 120; }
     };
+    const getBtnHeight = (btn) => {
+        try {
+            const bg = btn.getElement ? btn.getElement('background') : null;
+            const h = bg ? (bg.height || 0) * Math.abs(bg.scaleY || 1) : 0;
+            const cs = (typeof btn.scale === 'number' && btn.scale > 0) ? btn.scale : 1;
+            return (h * cs > 8) ? h * cs : 40;
+        } catch (e) { return 40; }
+    };
+    // Высота ряда: самая высокая кнопка + вертикальный зазор (и запас на
+    // hover-масштаб 1.05 — чтобы при наведении кнопки не задевали соседей)
+    const btnRowH = () => Math.max(46,
+        Math.max(0, ...actionContainers.map(getBtnHeight)) * 1.06 + BTN_ROW_GAP);
     const packButtonRows = () => {
         const n = actionContainers.length;
         if (n === 0) return [];
@@ -900,8 +915,10 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             const contentH = contentText.height || 60;
             let th = pad.top + titleH + pad.title + contentH + pad.content;
             if (actionContainers.length > 0) {
+                // Патч 66.46: высота блока кнопок — из ФАКТИЧЕСКОЙ высоты ряда
+                const rowH = btnRowH();
                 const rowsCount = packButtonRows().length;
-                th += pad.action + 50 + (rowsCount - 1) * BTN_ROW_H;
+                th += pad.action + rowH + (rowsCount - 1) * rowH;
             }
             th += pad.bottom;
             return th;
@@ -960,8 +977,9 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         const totalH = Math.min(naturalH, availH);
         const contentTop = -totalH / 2 + pad.top + titleH + pad.title;
         const btnRows = packButtonRows();
+        const rowH = btnRowH();   // патч 66.46: фактическая высота ряда кнопок
         const btnBlockH = actionContainers.length > 0
-            ? pad.action + 50 + (btnRows.length - 1) * BTN_ROW_H
+            ? pad.action + rowH + (btnRows.length - 1) * rowH
             : 0;
         const maxContentH = Math.max(60,
             totalH - (pad.top + titleH + pad.title) - (pad.content + pad.bottom + btnBlockH));
@@ -982,10 +1000,13 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         panelBg.clear();
         if (hasParchment && parchmentImg) {
             // Фаза 1: живописный пергамент под размер панели (с запасом на «тёмные» края текстуры)
-            parchmentImg.setDisplaySize(dialogWidth + 36, totalH + 32);
+            // Патч 66.46 (QA мобайл): пергамент не шире экрана — раньше на узких
+            // окнах (390px) «запас на тёмные края» +36px вылезал за экран.
+            const parchW = Math.min(dialogWidth + 36, Math.max(240, cam.width - 8));
+            parchmentImg.setDisplaySize(parchW, totalH + 32);
             // Graphics остаётся только тонкой тёмной рамкой поверх пергамента
             panelBg.lineStyle(2, 0x120a05, 0.9);
-            panelBg.strokeRoundedRect(-dialogWidth / 2 - 15, -totalH / 2 - 14, dialogWidth + 30, totalH + 28, DIALOG_STYLES.cornerRadius);
+            panelBg.strokeRoundedRect(-parchW / 2 + 2, -totalH / 2 - 14, parchW - 4, totalH + 28, DIALOG_STYLES.cornerRadius);
         } else {
             // Основная заливка пергамента
             panelBg.fillStyle(0xe8d7a8, 1);
@@ -1038,13 +1059,16 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
 
         // Кнопки — внизу; ряды упакованы по фактической ширине кнопок
         // (раунд 39: без наложений и выхода за панель при любых подписях)
+        // Патч 66.46 (приказ 3): и по ВЫСОТЕ ряда — от фактической высоты
+        // кнопки, а не фиксированных 50px (ряды больше не налезают друг на
+        // друга ни в одном диалоге).
         if (btnRows.length > 0) {
-            const rowH = BTN_ROW_H;
             // ФИКС аудита UI: центр первого ряда должен отступать от низа
             // панели на (rows-1) ПОЛНЫХ высоты ряда, иначе при 3+ рядах
             // последний ряд выезжает за нижний край пергамента
             // (наблюдалось: диалог священника, 5 вариантов — 4 ряда).
-            const btnYBase = totalH / 2 - pad.bottom - 25 - (btnRows.length - 1) * rowH;
+            const btnH = Math.max(0, ...actionContainers.map(getBtnHeight));
+            const btnYBase = totalH / 2 - pad.bottom - btnH / 2 - (btnRows.length - 1) * rowH;
             btnRows.forEach((rowIdxs, r) => {
                 const y = btnYBase + r * rowH;
                 const rowW = rowIdxs.reduce((s, bi) => s + getBtnWidth(actionContainers[bi]), 0)

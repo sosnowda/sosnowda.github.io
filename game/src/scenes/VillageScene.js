@@ -41,9 +41,13 @@ import { WORLD_K, WORLD_BODY_PX } from '../systems/WorldLook.js';
 import { attachNpcWander } from '../systems/NpcWander.js';
 import { npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
-// Раунд 66.23 (приказ владельца): визуальные часы рассвета/заката —
-// солнце/луна по дуге над деревней по солнечному расписанию (SkyClock.js)
-import { attachSkyClock } from '../systems/SkyClock.js';
+// Патч 66.46 (приказ 2): ход солнца — тени и смена освещения у всех локаций
+import { attachSunLight } from '../systems/SunLight.js';
+// Патч 66.46 (приказ 1): виджет-«небесная полоска» с солнцем/луной над
+// деревней УДАЛЕН по приказу владельца («удалить ненужный виджет с солнцем»).
+// Ход солнца теперь показывается ЧЕСТНО — тенями и сменой освещения
+// (systems/SunLight.js: направление/длина теней домов и деревьев, тёплый
+// свет зари, сумерки, ночь), а не служебной плашкой в HUD.
 // Патч 66.3: честные окна и трубы фасадов fb_* (свечение ночью + дымок из труб)
 import { HOUSES_FX } from '../data/housesFX.js';
 // Раунд 66.21 (приказы 2, 9–11): виртуальная доска поручений, ночные запоры,
@@ -675,12 +679,45 @@ export class VillageScene extends Phaser.Scene {
         // День/ночь 90 → затемнение 92, осадки 96; HUD 100+ остаётся поверх.
         applyWeatherVisuals(this, { tintDepth: 92, precipDepth: 96 });
 
-        // ----- РАУНД 66.23 (приказ владельца): ВИЗУАЛЬНЫЕ ЧАСЫ РАССВЕТА/ЗАКАТА.
-        // Небесная полоска вверху по центру: солнце и луна идут по дуге по
-        // НАСТОЯЩЕМУ расписанию солнца (AccessHours.sunTimes по дате — 66.22);
-        // полоска окрашена фазой (заря/день/закат/ночь), при наведении —
-        // время рассвета, заката и длина светового дня. Обновляется в updateHUD.
-        this.skyClock = attachSkyClock(this, { depth: 103 });
+        // ----- ПАТЧ 66.46 (приказы 1–2): ХОД СОЛНЦА ТЕНЯМИ И СВЕТОМ.
+        // Виджет-«небесная полоска» снят (приказ 1); вместо него — система
+        // SunLight: тени домов/деревьев тянутся и поворачивают по солнцу
+        // (утром на восток, в полдень под ноги, вечером на запад), заря
+        // красит сцену тёплым светом, ночь остужает. Детали — systems/SunLight.js.
+        this.sunLight = attachSunLight(this, { shadowDepth: 0.35, overlayDepth: 89 });
+        // Отбрасыватели — ДОМА (из BUILDINGS: тень у подошвы фасада)
+        this.sunLight.addCaster(() => BUILDINGS.map(b => ({
+            x: b.col * ts + b.w * ts / 2,
+            y: (b.row + b.h) * ts - 4,
+            rx: b.w * ts * 0.42, ry: ts * 0.24, k: 1.15,
+        })));
+        // Отбрасыватели — ДЕРЕВЬЯ ('T'), КОЛОДЕЦ ('W') и ВОРОТА
+        this.sunLight.addCaster(() => {
+            const pts = [];
+            for (let ty = 0; ty < MAP_H; ty++) {
+                for (let tx = 0; tx < MAP_W; tx++) {
+                    const tc = this.map[ty][tx];
+                    if (tc === 'T') pts.push({ x: tx * ts + ts / 2, y: ty * ts + ts * 0.9, rx: 13, ry: 4.5, k: 0.9 });
+                    else if (tc === 'W') pts.push({ x: tx * ts + ts / 2, y: ty * ts + ts * 0.8, rx: 11, ry: 4, k: 0.9 });
+                }
+            }
+            return pts;
+        });
+        // Живые тени: герой, уличные НПЦ и гуляющий староста
+        this.sunLight.follow(this.playerObj, 12, 4.2, 1);
+        this.sunLight.addCaster(() => {
+            const pts = [];
+            (this.streetNpcs || []).forEach(e => {
+                if (e && e.spr && e.spr.scene) {
+                    pts.push({ x: e.spr.x, y: e.spr.y + (e.spr.displayHeight || 50) * 0.46, rx: 10.5, ry: 3.4, k: 0.95 });
+                }
+            });
+            if (this.elderWalker && this.elderWalker.spr && this.elderWalker.spr.scene) {
+                const s = this.elderWalker.spr;
+                pts.push({ x: s.x, y: s.y + (s.displayHeight || 50) * 0.46, rx: 10.5, ry: 3.4, k: 0.95 });
+            }
+            return pts;
+        });
 
         // ----- Кнопки меню сверху (Пункт 9) -----
         this.createTopMenu();
@@ -919,6 +956,9 @@ export class VillageScene extends Phaser.Scene {
     update() {
         // Пока открыт диалог — не перебиваем его концом игры (раунд 21)
         if (this.busyDialog) return;
+
+        // Патч 66.46 (приказ 2): живые тени героя/НПЦ следуют за спрайтами
+        if (this.sunLight) this.sunLight.updateFollowers();
 
         // Раунд 66.8: метка игрока на плане деревни (виджет/панель)
         if (this.miniMap) this.miniMap.update();
@@ -1558,8 +1598,8 @@ export class VillageScene extends Phaser.Scene {
             if (this.dayNightOverlay) {
                 this.dayNightOverlay.setFillStyle(overlay.color, overlay.alpha);
             }
-            // Раунд 66.23: небесные часы — солнце/луна по сезонному расписанию
-            if (this.skyClock) this.skyClock.update(timeState);
+            // Патч 66.46 (приказ 2): ход солнца — тени и тёплый свет
+            if (this.sunLight) this.sunLight.update(timeState);
         }
 
         // Ночное свечение окон: чем темнее, тем ярче тёплый свет в окнах.

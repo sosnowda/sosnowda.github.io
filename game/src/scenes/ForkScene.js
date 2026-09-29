@@ -16,6 +16,8 @@ import { getLocationById } from '../data/mapLocations.js';
 // 66.24: полноценная карта местности; 66.34: + клик-зоны (TERRAIN_ZONES)
 import { drawTerrainMap, TERRAIN_W, TERRAIN_H, TERRAIN, TERRAIN_LABELS, TERRAIN_ZONES } from '../systems/TerrainMap.js';
 import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
+// Патч 66.46 (приказ 2): тёплый свет зари/заката на карте местности
+import { attachSunLight } from '../systems/SunLight.js';
 // Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
 export const MAP_TRAVEL_MINUTES = 60;
 import { getWeather } from '../systems/Weather.js';
@@ -287,6 +289,10 @@ export class ForkScene extends Phaser.Scene {
             this.add.rectangle(0, 0, width, height, overlay.color, overlay.alpha)
                 .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY);
         }
+
+        // ----- Патч 66.46 (приказ 2): тёплый слой солнца на карте (без
+        // теней — карта абстрактна): заря/закат читаются и здесь.
+        this.sunLight = attachSunLight(this, { shadowDepth: 9.5, overlayDepth: 93 });
     }
 
     // 66.34: переход по клику-зоне карты.

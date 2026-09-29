@@ -33,6 +33,8 @@ import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel } fro
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
+// Патч 66.46 (приказ 2): ход солнца — тени и смена освещения на локациях
+import { attachSunLight } from '../systems/SunLight.js';
 // Раунд 31 (п.2): стадо и пастухи на водопое
 import { getHerdState } from '../data/herd.js';
 import { getWeather, applyWeatherVisuals, isRainy } from '../systems/Weather.js';
@@ -143,13 +145,23 @@ export class LocationScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor(LOCATION_BG[this.locationId] || 0x1a2a1a);
         this.drawLocationBackground(this.locationId, width, height);
 
-        // ----- Overlay дня/ночи (п.5) -----
+        // ----- Overlay дня/ночи (п.5) — патч 66.46: ссылка хранится,
+        // updateHUD() обновляет цвет/альфу, пока герой на локации -----
         const timeState = getTime(this.registry);
         if (timeState) {
             const overlay = getDayNightOverlay(timeState);
-            this.add.rectangle(0, 0, width, height, overlay.color, overlay.alpha)
+            this.dayNightOverlay = this.add.rectangle(0, 0, width, height, overlay.color, overlay.alpha)
                 .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY);
         }
+
+        // ----- Патч 66.46 (приказы 1–2): ХОД СОЛНЦА — тени и тёплый свет.
+        // Тени лежат на земле (0.5): выше фона, ниже деревьев погоста (2+).
+        // Тени деревьев регистрируются лениво (this.pogostTrees заполняется
+        // позже — поставщик перечитывается при каждом update).
+        this.sunLight = attachSunLight(this, { shadowDepth: 0.5, overlayDepth: 93.5 });
+        this.sunLight.addCaster(() => (this.pogostTrees || [])
+            .filter(p => p && p.img && p.img.scene)
+            .map(p => ({ x: p.img.x, y: p.img.y + 10, rx: 15, ry: 5, k: 0.9 })));
 
         // ----- Погода (раунд 14): дождь/снег над текстовой локацией -----
         applyWeatherVisuals(this, { tintDepth: 94, precipDepth: 96 });
@@ -241,6 +253,8 @@ export class LocationScene extends Phaser.Scene {
         const spawnPt68 = clampOutOfWater(this.locationId, width, height, width * 0.2, height * 0.6, 30);
         // 66.37: × WORLD_K — листы персонажей 128px, фигуры прежнего размера
         this.playerSprite = this.add.sprite(spawnPt68.x, spawnPt68.y, locPlayerTex, 0).setScale(2.5 * WORLD_K).setDepth(40);
+        // Патч 66.46 (приказ 2): тень героя на локации — по солнцу
+        if (this.sunLight) this.sunLight.follow(this.playerSprite, 14, 5, 1);
         const locIdle = useComposite50 ? 'player_composite_idle_right' : `${locPlayerTex}_idle_right`;
         this.playerSprite.play(this.anims.exists(locIdle) ? locIdle : 'player_idle_right');
         this.tweens.add({
@@ -1054,9 +1068,28 @@ export class LocationScene extends Phaser.Scene {
     update() {
         // Раунд 21: побег вора закрывает поход (пока открыт диалог — ждём)
         if (this.busyDialog) return;
+        // Патч 66.46 (приказ 2): тень героя дышит вместе с покачиванием спрайта
+        if (this.sunLight) this.sunLight.updateFollowers();
         // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
         const endState = checkGameEnd(this.registry);
         if (endState && !this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
+    }
+
+    /**
+     * Патч 66.46 (приказ 2): ЖИВАЯ СМЕНА ОСВЕЩЕНИЯ на локации.
+     * Раньше overlay дня/ночи рисовался один раз при входе и больше не
+     * менялся (а вызов this.updateHUD() вообще падал — метода не было);
+     * теперь час, проведённый на локации, честно меняет свет: multiply-
+     * оверлей дня/ночи + тёплый слой и тени системы SunLight.
+     */
+    updateHUD() {
+        const timeState = getTime(this.registry);
+        if (!timeState) return;
+        if (this.dayNightOverlay && this.dayNightOverlay.scene) {
+            const overlay = getDayNightOverlay(timeState);
+            this.dayNightOverlay.setFillStyle(overlay.color, overlay.alpha);
+        }
+        if (this.sunLight) this.sunLight.update(timeState);
     }
 
     // ============================================================
@@ -2689,6 +2722,8 @@ export class LocationScene extends Phaser.Scene {
                     attempts++;
                 }
             }
+            // Патч 66.46: деревья погоста — отбрасыватели солнечных теней
+            this.pogostTrees = placedTrees;
 
             // ----- Раунд 17: голуби на погосте (живность, НЕ монстры) -----
             // Клюют, перепархивают между могилами; в снег прячутся.

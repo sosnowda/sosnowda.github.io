@@ -13,6 +13,8 @@ import {
 import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals, isRainy } from '../systems/Weather.js';
 import { addMorningFog } from '../systems/AmbientFX.js';
+// Патч 66.46 (приказ 2): ход солнца — тени и смена освещения
+import { attachSunLight } from '../systems/SunLight.js';
 import { checkGameEnd } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
@@ -100,6 +102,26 @@ export class ForestScene extends Phaser.Scene {
         this.stepInterval = 350;
 
         this.drawForest();
+        // Патч 66.46 (приказ 2): солнечный свет — ДО спавна героя (он станет
+        // «следящей» тенью). Тени лежат на земле (0.35): выше тайлов/кустов (0.1),
+        // ниже деревьев (y+0.55); тёплый слой — под вечной мглой (94).
+        this.sunLight = attachSunLight(this, { shadowDepth: 0.35, overlayDepth: 92.5 });
+        this.sunLight.addCaster(() => {
+            const pts = [];
+            for (let y = 0; y < FOREST_ROWS; y++) {
+                for (let x = 0; x < FOREST_COLS; x++) {
+                    const tc = forestTileAt(x, y);
+                    if (tc === 'T') {
+                        const jx = ((x * 37 + y * 61) % 13) - 6;
+                        pts.push({ x: x * TS + TS / 2 + jx, y: y * TS + TS * 1.02, rx: 15, ry: 5, k: 0.95 });
+                    } else if (tc === 't') {
+                        const jx = ((x * 53 + y * 29) % 11) - 5;
+                        pts.push({ x: x * TS + TS / 2 + jx, y: y * TS + TS * 0.84, rx: 11, ry: 4, k: 0.7 });
+                    }
+                }
+            }
+            return pts;
+        });
         this.spawnGatherSpots();
         this.spawnCampfire();
         this.drawExitMarker();
@@ -337,8 +359,9 @@ export class ForestScene extends Phaser.Scene {
         this.playerObj.setDepth(this.playerObj.y / TS);
         this.cameras.main.startFollow(this.playerObj, true, 0.1, 0.1);
 
-        // Тень под ногами
-        this.add.ellipse(pos.x, pos.y + 14, 22, 8, 0x000000, 0.3).setDepth(0.05);
+        // Тень под ногами — патч 66.46: СЛЕДЯЩАЯ, по солнцу (раньше —
+        // статичный овал на точке спавна, герой «выходил» из неё)
+        if (this.sunLight) this.sunLight.follow(this.playerObj, 12, 4.2, 1);
     }
 
     spawnWolves() {
@@ -750,6 +773,9 @@ export class ForestScene extends Phaser.Scene {
             return;
         }
 
+        // Патч 66.46 (приказ 2): тень героя следует за ним каждый кадр
+        if (this.sunLight) this.sunLight.updateFollowers();
+
         const endState = checkGameEnd(this.registry);
         // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
         if (endState) {
@@ -1127,6 +1153,8 @@ export class ForestScene extends Phaser.Scene {
             if (this.dayNightOverlay) {
                 this.dayNightOverlay.setFillStyle(overlay.color, overlay.alpha);
             }
+            // Патч 66.46 (приказ 2): ход солнца — тени и тёплый свет
+            if (this.sunLight) this.sunLight.update(timeState);
             const h = timeState.hour;
             let dark = 0;
             if (h >= 21 || h < 5) dark = 1;

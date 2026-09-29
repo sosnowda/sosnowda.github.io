@@ -19,6 +19,8 @@ import { hasUrgentQuestBusiness } from '../systems/NightKnock.js';
 // Раунд 66.21 (приказы 13-14): пожертвование церкви (меню сумм)
 import { showDonationMenu } from '../systems/ChurchDonation.js';
 import { getTime, formatTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
+// Патч 66.46 (приказ 2): тёплый свет зари/заката через окна интерьера
+import { attachSunLight } from '../systems/SunLight.js';
 import { getWeather } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs, getNpcFallbackName } from '../data/npcNames.js';
@@ -479,6 +481,10 @@ export class InteriorScene extends Phaser.Scene {
             this.add.rectangle(0, 0, width, height, overlay.color, ovlAlpha)
                 .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY);
         }
+
+        // ----- Патч 66.46 (приказ 2): тёплый слой солнца (без теней — под
+        // крышей): заря красит избу золотым через окна, закат — багрянцем.
+        this.sunLight = attachSunLight(this, { shadowDepth: 0.2, overlayDepth: 94.5 });
 
         // ----- HUD -----
         // Раунд 9: y = height-88 — НАД рядом кнопок (при 7 кнопках строка кнопок
@@ -3165,5 +3171,7 @@ export class InteriorScene extends Phaser.Scene {
         const p = this.player;
         // Раунд 46 (п.8 заявки): из статус-бара удалён «✦ Воля» (MP)
         this.hud.setText(`❤ ${p.HP}/${p.HPmax}  💰 ${formatMoney(p.dengas || 0)}`);
+        // Патч 66.46 (приказ 2): тёплый свет зари/заката живой
+        if (this.sunLight) this.sunLight.update(getTime(this.registry));
     }
 }

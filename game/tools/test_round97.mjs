@@ -12,7 +12,7 @@
 //      писателя gameScoreData больше нет в game/src;
 //   5) ИСТОРИЧЕСКИЕ КОНВЕЙЕРЫ: 10 make_*/repair_* помечены маркером,
 //      актуальные (6640/6638/6636/6635/6637/6633/6639/6624) — БЕЗ маркера;
-//   6) SW v92 / game-assets-v40; аудио — lazy-cache (нет precache-списка).
+//   6) SW v92 / game-assets-v41; аудио — lazy-cache (нет precache-списка).
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -165,8 +165,8 @@ for (const f of actual) {
 
 console.log('— 10. SW v92 + аудио lazy-cache —');
 const sw = read('sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v95';"), 'SW: site-cache v95');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v40';"), 'SW: game-assets-v40');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v96';"), 'SW: site-cache v96');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41');
 ok(sw.includes('66.41'), 'SW-журнал: запись 66.41 есть');
 ok(!sw.includes('addAll'), 'SW: precache-списка нет (аудио кэшируется лениво по запросу)');
 ok(!/\.ogg/.test(sw.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '')),

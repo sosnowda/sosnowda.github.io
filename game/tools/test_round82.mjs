@@ -481,9 +481,13 @@ console.log('\n— 66.23: НЕБО ПО СОЛНЦУ — ОВЕРЛЕЙ, ТЬМ�
     ok(th.includes("from '../systems/AccessHours.js'") && th.includes('solarIsNightHour(ts.hour, ts)'),
         'вор: ночная проверка следов — по солнцу текущей даты (66.23)');
     // проводка в сцене
+    // Патч 66.46 (приказ 1): виджет «небесная полоска» СНЯТ с деревни по
+    // приказу владельца; ход солнца теперь показывают тени и свет (SunLight)
     const vs = read('game/src/scenes/VillageScene.js');
-    ok(vs.includes('attachSkyClock') && vs.includes('this.skyClock.update(timeState)'),
-        'деревня: небесные часы подключены и обновляются');
+    ok(!vs.includes('attachSkyClock') && !vs.includes('this.skyClock'),
+        'деревня: виджет с солнцем снят (66.46)');
+    ok(vs.includes('attachSunLight') && vs.includes('sunLight.update(timeState)'),
+        'деревня: ход солнца — тени и свет (SunLight, 66.46)');
     ok(vs.includes('getDarknessFactor(timeState)'), 'окна домов светятся по сезонной тьме');
     const tsys = read('game/src/systems/TimeSystem.js');
     ok(tsys.includes("from './AccessHours.js'") && tsys.includes('export function solarSkyPhase'),

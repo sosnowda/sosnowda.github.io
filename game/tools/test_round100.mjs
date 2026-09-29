@@ -276,8 +276,8 @@ console.log('r100: патч 66.44 — 14 приказов');
 // ---- 10) SW-версии ----
 {
     const sw = readFileSync(path.join(REPO, 'sw.js'), 'utf8');
-    ok(sw.includes("CACHE_NAME = 'chronicles-ruthenia-v95'"), '10: site-cache v95');
-    ok(sw.includes("GAME_ASSETS_CACHE = 'game-assets-v40'"), '10: game-assets v39');
+    ok(sw.includes("CACHE_NAME = 'chronicles-ruthenia-v96'"), '10: site-cache v96');
+    ok(sw.includes("GAME_ASSETS_CACHE = 'game-assets-v41'"), '10: game-assets v39');
     ok(sw.includes('итерация 66.44'), '10: журнал версий дополнен');
 }
 

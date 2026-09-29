@@ -12,7 +12,7 @@
 //      фигуры пака смотрят влево, без флипа герой стоял спиной к вору.
 //   5) ПЕРЕСЪЁМКА (приказы 2+3): __shotReady у ScreenshotDirector, оседание
 //      кадра меню, глушение туториала; 9 webp на месте.
-//   6) SW v93 / game-assets-v40.
+//   6) SW v93 / game-assets-v41.
 import { readFileSync, existsSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -206,11 +206,11 @@ console.log('— 5. Пересъёмка скриншотов (приказы 2+
     }
 }
 
-console.log('— 6. SW v93 / game-assets-v40 —');
+console.log('— 6. SW v93 / game-assets-v41 —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v95';"), 'SW: site-cache v95');
-    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v40';"), 'SW: game-assets-v40 (новые листы вора + тайл частокола)');
+    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v96';"), 'SW: site-cache v96');
+    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 (новые листы вора + тайл частокола)');
     ok(sw.includes('итерация 66.43'), 'SW-журнал: запись 66.43 есть');
 }
 

@@ -211,10 +211,10 @@ ok(apiary.includes('TS / 32 * 0.75 * WORLD_K') && apiary.includes('body.setSize(
    'ApiaryScene: игрок и жители × WORLD_K + физтело');
 
 // ============================================================
-console.log('— 5. SW: site-cache v95, game-assets-v40 —');
+console.log('— 5. SW: site-cache v96, game-assets-v41 —');
 const sw = read('../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v95';"), 'SW: site-cache v95');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v40';"), 'SW: game-assets-v40');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v96';"), 'SW: site-cache v96');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41');
 ok(sw.includes('// v87 — итерация 66.37'), 'SW: журнал содержит запись v87');
 ok(sw.includes('// v86 — итерация 66.36'), 'SW: журнал хранит v86');
 
