@@ -129,11 +129,13 @@ export class CombatScene extends Phaser.Scene {
 
         // ----- Игрок -----
         // 66.32: боевой облик из пака «Medieval - Heroes I» (MVsv-листы 96×96).
-        // QA-6632 (сравнение флип on/off): фигуры пака отрисованы ЛИЦОМ ВПРАВО
-        // (меч за спиной уходит влево) — флип НЕ нужен, герой слева смотрит на
-        // врага справа как есть. Ноги на нижнем крае кадра: origin.y = 1/6 при
-        // scale 2.5 даёт ту же линию ног, что у рыцаря (низ кадра в y + 100);
-        // подпись имени (y + 100) остаётся у ног. Fallback — Fantasy Knight.
+        // 66.43 (приказ 4): ПЕРЕСМОТР ВЕРДИКТА QA-6632 — живая сверка всех 8
+        // idle-листов пака показала: фигуры отрисованы ПРОФИЛЕМ ВЛЕВО (копья/
+        // клинки/взгляды направлены влево), герой слева стоял СПИНОЙ к врагу
+        // справа. Включаем флипX — герой ЛИЦОМ к врагу (рыцарь-fallback и так
+        // смотрит вправо — его не трогаем). Ноги на нижнем крае кадра:
+        // origin.y = 1/6 при scale 2.5 даёт ту же линию ног, что у рыцаря
+        // (низ кадра в y + 100); подпись имени (y + 100) остаётся у ног.
         // 66.39: альт боевого облика (выбор в превью персонажа, hero.battleLookKey)
         // — только если его листы на месте; иначе каноничный облик по архетипу+полу.
         const canonicalLook = battleLookFor(this.player.archetype, this.player.gender);
@@ -147,15 +149,17 @@ export class CombatScene extends Phaser.Scene {
             this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, lookIdle, 0);
             this.playerSprite.setScale(2.5).setOrigin(0.5, 1 / 6);
             this.playerSprite.play(lookIdle);
+            // 66.43 (приказ 4): фигуры пака смотрят влево — разворачиваем к врагу
+            this.playerSprite.setFlipX(true);
         } else {
             this.battleLook = null;
             this.playerSprite = this.add.sprite(width * 0.25, height * 0.55, 'knight_idle', 0);
             this.playerSprite.setScale(2.5);
             this.playerSprite.play('knight_idle');
         }
-        // Раунд 23 (п.3): бойцы стоят ЛИЦОМ К ЛИЦУ. Рыцарь и MVsv-облики
-        // отрисованы мордой ВПРАВО, враги стоят справа — флип не нужен.
-        // Лёгкое покачивание
+        // Раунд 23 (п.3): бойцы стоят ЛИЦОМ К ЛИЦУ. Рыцарь смотрит вправо как
+        // есть; MVsv-облики с 66.43 флипаются (см. выше), враги справа смотрят
+        // влево. Лёгкое покачивание
         this.tweens.add({
             targets: this.playerSprite,
             y: { from: height * 0.55, to: height * 0.55 - 3 },
@@ -182,7 +186,21 @@ export class CombatScene extends Phaser.Scene {
             const x = width * 0.72 + (n > 1 ? (i % 2) * 60 - 30 : 0);
             let sp;
             let isWolf = false;
-            if (e.spriteKey === 'enemy_wolf' && this.anims.exists('wolf_side_idle')) {
+            // 66.43 (приказ 7): НОВАЯ МОДЕЛЬ ВОРА В БОЮ — боковые боевые листы
+            // battle_thiefm/thieff в формате листов героев (пак MVsv), фигура
+            // ПРОФИЛЕМ ВЛЕВО — на игрока. Вор стоит на ОДНОЙ ЛИНИИ НОГ с героем
+            // (origin 1/6, y = 0.55h), а не парит выше, как прежний топ-даун
+            // спрайт погони 4×4@64. Листы нет — откат на прежние ветки ниже.
+            const thiefLook = (e.spriteKey === 'enemy_thief_m') ? 'thiefm'
+                : (e.spriteKey === 'enemy_thief_f') ? 'thieff' : null;
+            if (thiefLook && this.textures.exists(`battle_${thiefLook}_idle`)
+                && this.anims.exists(`battle_${thiefLook}_idle`)) {
+                const groundY = height * 0.55;
+                sp = this.add.sprite(x, groundY, `battle_${thiefLook}_idle`, 1)
+                    .setScale(2.5).setOrigin(0.5, 1 / 6);
+                sp.play(`battle_${thiefLook}_idle`);
+                e.battleLookKey = thiefLook;   // атаки/стойка — см. playEnemyAttackAnim
+            } else if (e.spriteKey === 'enemy_wolf' && this.anims.exists('wolf_side_idle')) {
                 // Раунд 23: боковой вид волка (мордой вправо) — флипаем,
                 // чтобы морда была направлена ВЛЕВО, на игрока.
                 // Фаза 1 ФИКС: одиночный кадр стойки (frame 5) вместо «двойного» 15;
@@ -210,10 +228,11 @@ export class CombatScene extends Phaser.Scene {
                 sp = this.add.sprite(x, y, 'knight_idle_c2', 0).setScale(2.5);
                 sp.play('knight_c2_idle');
             }
-            // Покачивание врага
+            // Покачивание врага (66.43: от ФАКТИЧЕСКОЙ y спрайта — у вора на
+            // боевых листах она иная, чем расчётная y веток выше)
             this.tweens.add({
                 targets: sp,
-                y: { from: y, to: y - 4 },
+                y: { from: sp.y, to: sp.y - 4 },
                 duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
                 delay: i * 200,
             });
@@ -221,7 +240,7 @@ export class CombatScene extends Phaser.Scene {
                 fontSize: '15px', color: '#ffb3a0',
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(20);
-            this.enemySprites.push({ sprite: sp, combatant: e, label: nm, baseY: y, isWolf });
+            this.enemySprites.push({ sprite: sp, combatant: e, label: nm, baseY: sp.y, isWolf });
         });
 
         // ----- Журнал боя (раунд 20: анкор-центр при ресайзе) -----
@@ -644,7 +663,10 @@ export class CombatScene extends Phaser.Scene {
             if (this.anims.exists('wolf_side_attack')) sp.play('wolf_side_attack');
         } else {
             const key = rec.combatant.spriteKey;
-            if (this.anims.exists(`${key}_walk_left`)) sp.play(`${key}_walk_left`);
+            // 66.43: у вора на боевых листах — честный ВЫПАД кинжалом
+            if (rec.combatant.battleLookKey && this.anims.exists(`battle_${rec.combatant.battleLookKey}_attack1`)) {
+                sp.play(`battle_${rec.combatant.battleLookKey}_attack1`);
+            } else if (this.anims.exists(`${key}_walk_left`)) sp.play(`${key}_walk_left`);
         }
     }
 
@@ -657,7 +679,10 @@ export class CombatScene extends Phaser.Scene {
             if (this.anims.exists('wolf_side_idle')) rec.sprite.play('wolf_side_idle');
         } else {
             const key = rec.combatant.spriteKey;
-            if (this.anims.exists(`${key}_idle_left`)) rec.sprite.play(`${key}_idle_left`);
+            // 66.43: возврат вора в новую боковую стойку
+            if (rec.combatant.battleLookKey && this.anims.exists(`battle_${rec.combatant.battleLookKey}_idle`)) {
+                rec.sprite.play(`battle_${rec.combatant.battleLookKey}_idle`);
+            } else if (this.anims.exists(`${key}_idle_left`)) rec.sprite.play(`${key}_idle_left`);
         }
     }
 

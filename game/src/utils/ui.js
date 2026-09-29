@@ -580,7 +580,10 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     const singleton = opts.singleton !== false;
     const singletonKey = opts.singletonKey || `dialog:${title}`;
     const portraitKey = opts.portraitKey || null;
-    const useTyping = !!opts.typing;
+    // 66.43 (пересъёмка): в съёмочных сессиях (?shot=…) тайпрайтер отключается —
+    // при 3-4 fps headless печать реплики растягивается на минуты. Флаг ставит
+    // ScreenshotDirector; в обычной игре всегда false — поведение не меняется.
+    const useTyping = !!opts.typing && !window.__shotsNoTyping;
     const typingSpeed = Math.max(10, Number(opts.typingSpeed) || 30);
 
     // Фаза 1: живописный пергамент (DarklandsReborn) вместо плоской заливки +

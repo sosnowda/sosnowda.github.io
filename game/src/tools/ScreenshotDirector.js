@@ -39,6 +39,50 @@ function waitScene(key, timeoutMs = 10000) {
     });
 }
 
+/** 66.43: найти текстовые объекты сцены по подстроке (включая контейнеры). */
+function findTexts(scene, substr) {
+    const found = [];
+    const walk = (obj) => {
+        if (!obj) return;
+        if (obj.list) { obj.list.forEach(walk); return; }
+        if (obj.text && typeof obj.text === 'string' && obj.text.trim && obj.text.includes(substr)) found.push(obj);
+    };
+    (scene.children && scene.children.list || []).forEach(walk);
+    return found;
+}
+
+/** 66.43: универсальное ожидание конца печати диалога на сцене.
+ * Жизненный цикл контента: ПОЛНЫЙ текст (layout до печати) → сброс в '' →
+ * монотонный рост до той же длины. Готово = длина вернулась к максимуму,
+ * был замечен сброс, и длина не меняется ~2.4 c. Если печати не было
+ * (короткие реплики) — дожидаемся капа и выходим без ошибки. */
+async function waitDialogTextDone(scene, capMs = 120000) {
+    if (window.__shotsNoTyping) return true;   // печати нет — текст полный сразу
+    let maxLen = 0, sawReset = false, last = -1, stable = 0;
+    const t0 = Date.now();
+    while (Date.now() - t0 < capMs) {
+        let len = 0;
+        const walk = (obj) => {
+            if (!obj) return;
+            if (obj.list) { obj.list.forEach(walk); return; }
+            if (obj.text && typeof obj.text === 'string' && obj.text.trim) len = Math.max(len, obj.text.length);
+        };
+        (scene.children && scene.children.list || []).forEach(walk);
+        if (maxLen > 40 && len < maxLen * 0.25) sawReset = true;
+        if (sawReset && len >= maxLen && len === last) {
+            stable++;
+            // 6 c без роста: при 3-4 fps паузы печати случаются, 2.4 c мало
+            if (stable >= 20) return true;
+        } else {
+            stable = 0;
+        }
+        maxLen = Math.max(maxLen, len);
+        last = len;
+        await sleep(300);
+    }
+    return false;
+}
+
 /** Инициализировать прогон: герой-воин + погоня за вором (как при старте игры). */
 async function startRun() {
     window.game.scene.start('CharacterSelection');
@@ -46,6 +90,13 @@ async function startRun() {
     const hero = createPresetHero('warrior_m', 'Добрыня');
     sel.startGameWithHero(hero); // → CharacterAppearance (инициализирует время/погоню/репутацию)
     await sleep(700);
+    // 66.43 (пересъёмка): обучающие подсказки (Туторial, 4 шага ~20 c)
+    // НЕ должны попадать в кадры сайта — помечаем туториал пройденным.
+    const q0 = window.game.registry.get('quest');
+    if (q0 && q0.tutorialStep !== undefined) {
+        q0.tutorialStep = 3;
+        window.game.registry.set('quest', q0);
+    }
     // Скриншоты снимаем «июльским утром в 10:00» при ясной погоде: ночью НПЦ
     // спят (священник гонит прочь), дождь/снег портят кадр (раунд 28: старт
     // игры = реальное время игрока — для съёмки фиксируем красивый день)
@@ -75,7 +126,9 @@ async function stageThiefAtRiver() {
 }
 
 const SCENARIOS = {
-    menu: async () => { await waitScene('Title', 15000); },
+    // 66.43 (приказ 3): кадр меню — ДОЖИДАЕМСЯ оседания сцены: у Титула есть
+    // фейд-ин/анимации, и прежний съёмщик иногда снимал полосу загрузки.
+    menu: async () => { await waitScene('Title', 20000); await sleep(2000); },
     select: async () => { await waitScene('Title', 15000); window.game.scene.start('CharacterSelection'); },
     custom: async () => { // раунд 66.4: лист готового героя — превью Следопыта Гаврилы
         // (как при клике на карточку в выборе персонажа; соответствует alt на сайте)
@@ -100,12 +153,47 @@ const SCENARIOS = {
         const church = await waitScene('Interior');
         await sleep(400);
         church.talkToNpc(church.interior);
+        // 66.43 (пересъёмка): ждём конец печати реплики — иначе в кадре
+        // оборванная фраза «Ох…» вместо полного диалога.
+        await waitDialogTextDone(church);
+        await sleep(400);
     },
     thief: async () => {
         await stageThiefAtRiver();
         window.game.scene.start('Location', { locationId: 'river', from: 'Fork' });
-        await waitScene('Location');
+        const loc = await waitScene('Location');
         await sleep(1600); // ждём presentThiefEncounter (delayedCall 400 + анимации)
+        // 66.43 (пересъёмка): в headless первые кадры страницы тормозят —
+        // delayedCall(400) догорает позже wall-времени, а тайпрайтер печатает
+        // ~1 символ/кадр. Ждём появления диалога, затем КОНЦА печати.
+        const t0 = Date.now();
+        while (Date.now() - t0 < 20000 && !findTexts(loc, 'Встреча с воро').length) {
+            await sleep(200);
+        }
+        // …и ждём КОНЕЦ печати. НЮАНС (66.43): до старта тайпрайтера layout()
+        // кладёт в текст ПОЛНЫЙ контент, затем печать сбрасывает его в '' и
+        // растит заново — поэтому одиночной проверки мало. Паттерн «нашёл →
+        // через 2.5 c проверил снова»: у завершённой печати «проверка Драки»
+        // остаётся навсегда (substring монотонно растёт), у окна — сбрасывается.
+        const t1 = Date.now();
+        let typingDone = false;
+        while (Date.now() - t1 < 150000 && !typingDone) {
+            if (findTexts(loc, 'проверка Драки').length) {
+                await sleep(2500);
+                typingDone = findTexts(loc, 'проверка Драки').length > 0;
+            } else {
+                await sleep(300);
+            }
+        }
+        // 66.43 (приказ 4): герой ЛИЦОМ к вору (idle_right уже играет) и на
+        // открытом месте: стартовая точка (0.2w, 0.6h) у Реки прячется за
+        // кроной жёлтого дерева — ставим героя на чистую траву у низа кадра.
+        // Твин покачивания перезаписывает y — гасим его перед перестановкой.
+        if (loc.playerSprite && loc.playerSprite.active) {
+            loc.tweens.killTweensOf(loc.playerSprite);
+            loc.playerSprite.setPosition(300, 668).setDepth(40);
+        }
+        await sleep(400);
     },
     combat: async () => {
         await stageThiefAtRiver();
@@ -125,6 +213,12 @@ export function bootScreenshotDirector() {
     const params = new URLSearchParams(window.location.search);
     const shot = params.get('shot');
     if (!shot || !SCENARIOS[shot]) return;
+    // 66.43: флаг готовности кадра для съёмщика — сценарий выполнен, сцена
+    // осела. Съёмщик ждёт window.__shotReady и снимает ПОСЛЕ него.
+    window.__shotReady = false;
+    // 66.43: тайпрайтер диалогов в съёмочных сессиях отключён (см. utils/ui.js) —
+    // при троттлинге headless печать реплики растягивается на минуты.
+    window.__shotsNoTyping = true;
     // Ждём полной загрузки игры (window.game создан в index.html) и запускаем
     const t0 = Date.now();
     const tryStart = () => {
@@ -134,10 +228,19 @@ export function bootScreenshotDirector() {
         // созданы, и вор в бою отрисовывался запасным рыцарем (как у игрока).
         const title = window.game && window.game.scene && window.game.scene.getScene('Title');
         if (title && title.scene.isActive()) {
-            SCENARIOS[shot]().catch(err => console.error('[shots] scenario failed:', shot, err));
+            SCENARIOS[shot]()
+                .then(() => { window.__shotReady = true; })
+                .catch(err => {
+                    console.error('[shots] scenario failed:', shot, err);
+                    window.__shotError = String(err && err.message || err);
+                });
             return;
         }
-        if (Date.now() - t0 > 30000) { console.error('[shots] boot timeout'); return; }
+        if (Date.now() - t0 > 30000) {
+            console.error('[shots] boot timeout');
+            window.__shotError = 'boot timeout';
+            return;
+        }
         setTimeout(tryStart, 200);
     };
     tryStart();
