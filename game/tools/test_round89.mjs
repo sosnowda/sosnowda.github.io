@@ -3,7 +3,7 @@
 // 2) Rim-light тёмных обликов (baenor/paul 1.0, gaerron 0.9, huntress 0.75; naia 0)
 // 3) Бусты пака в меню: 6 файлов, heroes.js BUST_BY_PRESET/getBustFor, BootScene,
 //    CharacterSelectionScene (карточки + превью), CharacterScene (свиток, ≥900px)
-// 4) SW v84 + game-assets-v33. Сейвы совместимы.
+// 4) SW v84 + game-assets-v40. Сейвы совместимы.
 // Запуск: cd game/tools && node test_round89.mjs
 import { readFileSync, existsSync, statSync, readdirSync } from 'fs';
 import { execSync } from 'child_process';
@@ -127,10 +127,10 @@ ok(charScene.includes("import { getBustFor } from '../data/heroes.js';"), 'св�
 ok(charScene.includes('width >= 900 && this.textures.exists(bustKey)'), 'свиток: буст только на экранах ≥900px');
 ok(charScene.includes('p.bustKey || getBustFor(p.archetype, p.gender)'), '66.39: свиток показывает выбранный вариант (hero.bustKey)');
 
-console.log('--- 4. SW v89 + game-assets-v39 (п.4) ---'); // 66.39: актуализация (35 бустов + альты обликов + удаление женских брюк)
+console.log('--- 4. SW v89 + game-assets-v40 (п.4) ---'); // 66.39: актуализация (35 бустов + альты обликов + удаление женских брюк)
 const sw = read('../../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v94';"), 'SW: site-cache v89');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v39';"), 'SW: game-assets-v39 (35 бустов + 14 боевых альтов, −8 женских брюк/топов)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v95';"), 'SW: site-cache v95');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v40';"), 'SW: game-assets-v40 (35 бустов + 14 боевых альтов, −8 женских брюк/топов)');
 ok(sw.includes('// v89 — итерация 66.39'), 'SW: журнал содержит запись v89');
 // game-assets кэширует /game/assets/ целиком — бусты попадают автоматически,
 // отдельный список не нужен (проверяем отсутствие хардкода бустов в sw)

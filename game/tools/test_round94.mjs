@@ -181,10 +181,10 @@ const notInBoot = [...sheetsSet].filter(f => !bootUnique.includes(f.replace('.pn
 ok(missingOnDisk.length === 0, `BootScene не грузит несуществующие [${missingOnDisk.slice(0, 5)}]`);
 ok(notInBoot.length === 0, `все листы на диске в загрузке [нет: ${notInBoot.slice(0, 5)}]`);
 
-console.log('— 5. SW: site-cache v89, game-assets-v39 (66.39) —');
+console.log('— 5. SW: site-cache v95, game-assets-v40 (66.39) —');
 const sw = read('../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v94';"), 'SW: site-cache v89');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v39';"), 'SW: game-assets-v39');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v95';"), 'SW: site-cache v95');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v40';"), 'SW: game-assets-v40');
 ok(sw.includes('v89 — итерация 66.39'), 'SW: журнал версий дополнен');
 
 console.log('');

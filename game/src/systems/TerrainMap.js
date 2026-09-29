@@ -358,17 +358,31 @@ export function drawTerrainMap(ctx) {
             const dx = x - glade.x, dy = y - glade.y;
             return dx * dx + dy * dy <= (glade.r + pad) * (glade.r + pad);
         };
-        for (let i = 0; i < 150; i++) {
-            // плотнее к правому краю (степень 0.8); отступ от рамки — кроны
-            // деревьев (r*2.25 вверх) не должны налезать на пергаментный кант
-            const tx = fo.x1 + 6 + Math.pow(rnd(), 0.8) * (fw - 14);
+        // 66.45 (приказ владельца): ЛЕС ГУЩЕ — 150→240 деревьев, плотность
+        // смещена к чаще (степень 0.8→0.62), кроны чуть крупнее в глубине;
+        // тропа и подписи рисуются ПОВЕРХ леса (секция 9) — читаемость карты
+        // не страдает; поляна/река по-прежнему без деревьев.
+        for (let i = 0; i < 240; i++) {
+            const tx = fo.x1 + 6 + Math.pow(rnd(), 0.62) * (fw - 14);
             const ty = fo.y1 + 18 + rnd() * (fh - 40);
             if (ty > T.river.y - 10) continue;              // не сажаем в реку
             if (inGlade(tx, ty)) continue;                  // поляна без хаоса
             const t = (tx - fo.x1) / fw;                    // 0 у дороги … 1 у края
             const crown = lerpColor('#5f9448', '#24451d', t);
             const dark = lerpColor('#3f6b34', '#16300f', t);
-            drawTree(ctx, tx, ty, 3.6 + t * 2.2 + rnd() * 1.3, crown, dark);
+            drawTree(ctx, tx, ty, 3.8 + t * 2.6 + rnd() * 1.4, crown, dark);
+        }
+        // 66.45: ПОДЛЕСОК — мелкие тёмные кроны-кусты между деревьями
+        // (добавляют густоту без «каши»: рисуются темнее фона своей полосы)
+        for (let i = 0; i < 110; i++) {
+            const tx = fo.x1 + 8 + Math.pow(rnd(), 0.62) * (fw - 18);
+            const ty = fo.y1 + 22 + rnd() * (fh - 48);
+            if (ty > T.river.y - 10) continue;
+            if (inGlade(tx, ty)) continue;
+            const t = (tx - fo.x1) / fw;
+            drawTree(ctx, tx, ty, 1.6 + t * 1.4 + rnd() * 0.9,
+                lerpColor('#4f8040', '#1d3a17', t),
+                lerpColor('#33582a', '#122509', t));
         }
 
         // 6а. ОПУШКА — ягодные кусты-бусины у светлой кромки (деталь п.8 66.25)
