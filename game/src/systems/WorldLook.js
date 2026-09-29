@@ -331,19 +331,106 @@ function registerWorldTexture(scene, key, canvas) {
 /**
  * Собрать текстуру ИГРОКА 'player_composite' из мировых листов героев
  * (male → world_hero_male/Baenor, female → world_hero_female/Naia).
+ * 66.44 (приказ 9): можно передать ЯВНЫЙ список слоёв (layers) — уникальный
+ * облик конкретного героя (HERO_WORLD_LOOKS) или случайную сборку; без layers
+ * — прежнее поведение (мастер-лист по полу).
  * @returns {boolean} true — текстура собрана
  */
-export function composeWorldPlayerTexture(scene, gender) {
-    const srcKey = gender === 'female' ? 'world_hero_female' : 'world_hero_male';
-    if (!scene.textures.exists(srcKey)) {
-        console.warn(`[WorldLook] ${srcKey} не загружен`);
-        return false;
+export function composeWorldPlayerTexture(scene, gender, layers = null) {
+    let srcKeys = layers;
+    if (!srcKeys || !srcKeys.length) {
+        srcKeys = [gender === 'female' ? 'world_hero_female' : 'world_hero_male'];
+    }
+    for (const k of srcKeys) {
+        if (!scene.textures.exists(k)) {
+            console.warn(`[WorldLook] слой не загружен: ${k}`);
+            return false;
+        }
     }
     const canvas = document.createElement('canvas');
     canvas.width = WORLD_COLS * WORLD_FRAME;
     canvas.height = WORLD_ROWS * WORLD_FRAME;
-    if (!drawWorldComposite(scene, canvas, [srcKey])) return false;
+    if (!drawWorldComposite(scene, canvas, srcKeys)) return false;
     return registerWorldTexture(scene, 'player_composite', canvas);
+}
+
+// ------------------------------------------------------------------
+// 66.44 (приказ 9): УНИКАЛЬНЫЕ ОБЛИКИ 8 ГОТОВЫХ ГЕРОЕВ.
+// Прежде все 4 мужчины собирались из одного мастер-листа «Баэнор», все
+// 4 женщины — «Пауль»: в меню «Создание персонажа» были клоны. Теперь у
+// каждого прегена — СВОЯ сборка из гардероба мировых листов (базы/верх/
+// штаны или платья/причёски/бороды/обувь; те же листы, что у жителей).
+// Порядок слоёв — как в rollWorldLayers (base → низ → верх → обувь →
+// волосы → борода).
+// ------------------------------------------------------------------
+export const HERO_WORLD_LOOKS = {
+    ranger_m: {
+        name: 'Охотничий кафтан',
+        layers: ['world_m_base1', 'world_m_pants3', 'world_m_top4', 'world_m_feet2', 'world_m_hair2', 'world_m_beard1'],
+    },
+    warrior_m: {
+        name: 'Ратный терлик',
+        layers: ['world_m_base2', 'world_m_pants1', 'world_m_top2', 'world_m_feet1', 'world_m_hair1', 'world_m_beard2'],
+    },
+    detective_m: {
+        name: 'Городское платье',
+        layers: ['world_m_base4', 'world_m_pants4', 'world_m_top12', 'world_m_feet3', 'world_m_hair5', 'world_m_beard3'],
+    },
+    adventurer_m: {
+        name: 'Тёмный кафтан',
+        layers: ['world_m_base3', 'world_m_pants5', 'world_m_top13', 'world_m_feet2', 'world_m_hair3', 'world_m_beard4'],
+    },
+    ranger_f: {
+        name: 'Оранжевый сарафан',
+        layers: ['world_f_base1', 'world_f_dress2', 'world_f_feet1', 'world_f_hair4'],
+    },
+    warrior_f: {
+        name: 'Синий сарафан',
+        layers: ['world_f_base2', 'world_f_dress1', 'world_f_feet2', 'world_f_hair1'],
+    },
+    detective_f: {
+        name: 'Домашнее платье',
+        layers: ['world_f_base3', 'world_f_dress3', 'world_f_feet1', 'world_f_hair12'],
+    },
+    adventurer_f: {
+        name: 'Тёмный сарафан',
+        layers: ['world_f_base1', 'world_f_dress5', 'world_f_feet2', 'world_f_hair6'],
+    },
+};
+
+/**
+ * 66.44 (приказ 9): случайная СБОРКА облика для случайно сгенерированного
+ * героя (без повторов прегенов не требуется — герой один; главное — сборка
+ * из историчного гардероба). Возрастные правила те же, что у жителей:
+ * мужчины 25+ — борода, 50+ — седые волосы (серые Alts: муж. hair19..24,
+ * жен. hair22..28).
+ * @param {string} gender — 'male' | 'female'
+ * @param {number} [age=30]
+ * @returns {string[]} список листов для composeWorldPlayerTexture
+ */
+export function rollHeroWorldLook(gender, age = 30) {
+    const r = (n) => 1 + Math.floor(Math.random() * n);
+    if (gender === 'female') {
+        let hair = r(35);
+        if (age >= 50) hair = 21 + r(7);           // серые Alts баз 1..7
+        return [
+            `world_f_base${r(3)}`,
+            `world_f_dress${r(5)}`,
+            `world_f_feet${r(2)}`,
+            `world_f_hair${hair}`,
+        ];
+    }
+    let hair = r(30);
+    if (age >= 50) hair = 18 + r(6);               // серые Alts баз 1..6
+    const layers = [
+        `world_m_base${r(4)}`,
+        `world_m_pants${r(5)}`,
+        `world_m_top${r(14)}`,
+        `world_m_feet${r(3)}`,
+        `world_m_hair${hair}`,
+    ];
+    if (age >= 25) layers.push(`world_m_beard${r(10)}`);
+    return layers;
 }
 
 /**

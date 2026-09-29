@@ -29,6 +29,8 @@ import { composeWorldPlayerTexture } from '../systems/WorldLook.js';
 // бустов героя + альт-герой боевого облика: Эстер/Лейанн); выбор пишется
 // в героя (bustKey + battleLookKey)
 import { getBustFor, bustVariantsFor, ALT_LOOK_NAMES } from '../data/heroes.js';
+// 66.44 (приказ 9): УНИКАЛЬНЫЕ облики 8 прегенов + случайная сборка
+import { HERO_WORLD_LOOKS, rollHeroWorldLook } from '../systems/WorldLook.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
     constructor() {
@@ -575,23 +577,32 @@ export class CharacterSelectionScene extends Phaser.Scene {
                 `${startDate.day}.${((startDate.month + 8) % 12) + 1}.${startDate.yearFromChrist + (startDate.month >= 4 ? 1 : 0)}`
             )
         );
-        // РАУНД 62 (п.1 приказа владельца): готовые прессеты «Баэнор»/«Пауль»
-        // применяются АВТОМАТИЧЕСКИ ПО ПОЛУ: «Баэнор» — мужскому герою,
-        // «Пауль» — женскому. Меню облика нет, кастомизации нет (пп.7,10 р.61);
-        // старая готовая модель ('player'/'npc_merchant') остаётся ЗАПАСНОЙ —
-        // если композит собрать не удастся, сцены откатятся на неё сами.
+        // РАУНД 62 (п.1 приказа владельца): готовые прессеты применяются
+        // АВТОМАТИЧЕСКИ ПО ПОЛУ; старая готовая модель ('player'/'npc_merchant')
+        // остаётся ЗАПАСНОЙ — если композит собрать не удастся, сцены откатятся
+        // на неё сами.
         // 66.37 (приказ владельца): ОБЛИК СОБИРАЕТСЯ ИЗ НОВЫХ ЛИСТОВ ПАКОВ
         // GOOGLE DRIVE (WorldLook.js): male → Баэнор (Heroes I/Baenor),
         // female → Найя (Heroes I/Naia) — кадры 128px вместо LPC 64px;
         // геометрия = прежняя LPC ×2, все масштабы сцен без изменений.
+        // 66.44 (приказ 9): БОЛЬШЕ НЕ КЛОНЫ — у каждого прегена СВОЯ сборка
+        // (HERO_WORLD_LOOKS по hero.presetId), у случайного героя — случайная
+        // (rollHeroWorldLook, с возрастными правилами бороды/седины).
+        const presetLook = hero.presetId ? HERO_WORLD_LOOKS[hero.presetId] : null;
+        const worldLookLayers = presetLook ? presetLook.layers : rollHeroWorldLook(hero.gender, hero.age);
+        const lookName = presetLook ? presetLook.name : 'случайная сборка';
         const preset = getHeroPreset(hero.gender, hero.age);
-        const composed = composeWorldPlayerTexture(this, hero.gender);
-        hero.useComposite = composed;
+        const composed = composeWorldPlayerTexture(this, hero.gender, worldLookLayers);
+        if (!composed && presetLook) {
+            // Страховка: не хватило листа уникальной сборки — мастер-лист по полу
+            composeWorldPlayerTexture(this, hero.gender);
+        }
+        hero.useComposite = composed || this.textures.exists('player_composite');
         hero.lpcAppearance = preset.appearance;
         hero.presetName = preset.name;
-        if (composed) hero.sprite = 'player_composite';
+        if (hero.useComposite) hero.sprite = 'player_composite';
         ActionLog.add(this.registry,
-            tf(t('Облик героя: «{0}» избран по обычаю — по полу героя.'), t(preset.name)));
+            tf(t('Облик героя: «{0}».'), t(lookName)));
         this.scene.start('Village');
     }
 }

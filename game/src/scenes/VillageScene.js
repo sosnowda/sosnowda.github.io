@@ -171,8 +171,13 @@ export class VillageScene extends Phaser.Scene {
                     const idx = (x * 7 + y * 13) % 5;
                     const treeTex = `deco_tree_${idx}`;
                     if (this.textures.exists(treeTex)) {
+                        // 66.44 (приказ 5): деревья у домов МЕНЬШЕ — прежние 1.3
+                        // нависали кроной на фасады и крыши так, что дома
+                        // «прятались» в листве. Возле зданий (крона достаёт до
+                        // их тайлов) — 0.78, на открытом месте — 1.05.
+                        const treeScale = this.treeNearHouse(x, y) ? 0.78 : 1.05;
                         const tree = this.add.image(px, py + 10, treeTex)
-                            .setScale(1.3).setOrigin(0.5, 0.9);
+                            .setScale(treeScale).setOrigin(0.5, 0.9);
                         tree.setDepth(y + 0.4);
                     } else {
                         // Страховка: нет спрайтов — старый тайл с фоном
@@ -533,7 +538,11 @@ export class VillageScene extends Phaser.Scene {
         this.physics.add.collider(this.playerObj, this.solids);
         // Псевдо-2.5D: глубина игрока зависит от Y — за домами/деревьями он ЗА,
         // перед ними — ПЕРЕД (Y-сортировка)
-        this.playerObj.setDepth(this.playerObj.y / ts);
+        // 66.44 (приказ 10): герой и НПЦ ПОВЕРХ домов и деревьев — постоянный
+        // буст +20 ставит фигуры ВЫШЕ всех статичных спрайтов (макс. глубина
+        // дома ≈ 13.45, дерева ≈ 13.4): проходя ОКОЛО тайлов домов и деревьев,
+        // персонаж перекрывает их собой, а не прячется за кроной/крышей.
+        this.playerObj.setDepth(this.playerObj.y / ts + 20);
         this.cameras.main.startFollow(this.playerObj, true, 0.1, 0.1);
         // РАУНД 52 (п.5): деревня 26×15 при тайле 48 = 1248×720 — на окнах
         // 1280×720 она влезает ЦЕЛИКОМ: камера переходит в режим «вся деревня
@@ -1032,7 +1041,8 @@ export class VillageScene extends Phaser.Scene {
         }
         this.playerObj.setVelocity(v.x, v.y);
         // Псевдо-2.5D: обновляем глубину игрока по его Y-позиции каждый кадр
-        this.playerObj.setDepth(this.playerObj.y / this.tileSize);
+        // 66.44 (приказ 10): буст +20 — герой поверх домов/деревьев (см. create)
+        this.playerObj.setDepth(this.playerObj.y / this.tileSize + 20);
 
         this.updateNearestInteractable();
         // Раунд 64: updateBirds удалён вместе с воробьями (пп.2,5 приказа).
@@ -1094,18 +1104,18 @@ export class VillageScene extends Phaser.Scene {
             const kid = isChildNpc(npcData);
             const spr = this.add.sprite(x, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
                 .setScale(this.npcScaleByAge(npcData))
-                .setDepth(y / ts + 0.3);
+                .setDepth(y / ts + 20.3);   // 66.44 (п.10): поверх домов/деревьев
             const animKey = `${spr.texture.key}_idle_down`;
             if (this.anims.exists(animKey)) spr.play(animKey);
             const label = this.add.text(x, y + 36, displayName, {
                 fontSize: '12px', color: RUS.text,
                 backgroundColor: '#000000aa', padding: { x: 5, y: 2 },
                 stroke: '#000', strokeThickness: 2,
-            }).setOrigin(0.5).setDepth(y / ts + 0.5);
+            }).setOrigin(0.5).setDepth(y / ts + 20.5);   // 66.44 (п.10)
             const hint = this.add.text(x, y - 40, t('💬 Поговорить'), {
                 fontSize: '10px', color: '#c9a14a',
                 backgroundColor: '#00000088', padding: { x: 4, y: 2 },
-            }).setOrigin(0.5).setDepth(y / ts + 0.5);
+            }).setOrigin(0.5).setDepth(y / ts + 20.5);   // 66.44 (п.10)
             spr.setInteractive({ useHandCursor: true });
             spr.on('pointerdown', (pointer) => {
                 if (pointer.leftButtonDown() && !this.busyDialog) this.talkToStreetNpc(id);
@@ -1148,7 +1158,7 @@ export class VillageScene extends Phaser.Scene {
             const startX = minX + Math.random() * (maxX - minX);
             const spr = this.add.sprite(startX, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
                 .setScale(this.npcScaleByAge(npcData))
-                .setDepth(y / ts + 0.3);
+                .setDepth(y / ts + 20.3);   // 66.44 (п.10): поверх домов/деревьев
             const walkKey = `${spr.texture.key}_walk_right`;
             if (this.anims.exists(walkKey)) spr.play(walkKey);
             const targetX = Math.random() < 0.5 ? minX : maxX;
@@ -1167,7 +1177,7 @@ export class VillageScene extends Phaser.Scene {
                 fontSize: '12px', color: '#ffd700',
                 backgroundColor: '#000000cc', padding: { x: 5, y: 2 },
                 stroke: '#000', strokeThickness: 2,
-            }).setOrigin(0.5).setDepth(y / ts + 0.5);
+            }).setOrigin(0.5).setDepth(y / ts + 20.5);   // 66.44 (п.10)
             // Подпись ходит вместе со старостой
             this.tweens.add({
                 targets: label,
@@ -1178,13 +1188,27 @@ export class VillageScene extends Phaser.Scene {
             const hint = this.add.text(startX, y - 40, t('💬 Поговорить'), {
                 fontSize: '10px', color: '#c9a14a',
                 backgroundColor: '#00000088', padding: { x: 4, y: 2 },
-            }).setOrigin(0.5).setDepth(y / ts + 0.5);
+            }).setOrigin(0.5).setDepth(y / ts + 20.5);   // 66.44 (п.10)
             spr.setInteractive({ useHandCursor: true });
             spr.on('pointerdown', (pointer) => {
                 if (pointer.leftButtonDown() && !this.busyDialog) this.talkToStreetNpc('elder');
             });
             this.elderWalker = { spr, label, hint };
         }
+    }
+
+    /**
+     * 66.44 (приказ 5): стоит ли дерево ТАК, что его крона достаёт до тайлов
+     * дома? Крона тянется ВВЕРХ от якоря (~2.4 тайла при scale 1) и чуть вниз,
+     * в стороны ~1.2 тайла. Значит «закрывает дом» = дерево в пределах ширины
+     * здания (±1 тайл) И в диапазоне строк от верха дома до 2 строк НИЖЕ его
+     * подошвы (крона нависает сверху).
+     */
+    treeNearHouse(tc, tr) {
+        return BUILDINGS.some(b => (
+            tc >= b.col - 1 && tc <= b.col + b.w &&
+            tr >= b.row && tr <= b.row + b.h + 2
+        ));
     }
 
     /**

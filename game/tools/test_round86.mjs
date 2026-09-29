@@ -2,7 +2,7 @@
 // Проверки: телеметрия (задокументирована), ремонт 17 фонов интерьеров,
 // аналой-пюпитр, иконостас 0.165H, тавернщик у окошка, деревья погоста
 // (minDist 95 + зона часовни), pixelArt: true, bob вместо желе, конвейер
-// walk-листов героев, SW v82 / game-assets-v38. 66.30: pixelArt проверяется
+// walk-листов героев, SW v82 / game-assets-v39. 66.30: pixelArt проверяется
 // в РЕАЛЬНОЙ точке входа (game/index.html), а не только в зеркале src/main.js.
 import { readFileSync, existsSync, statSync } from 'fs';
 
@@ -71,8 +71,8 @@ for (const h of ['hero_baenor', 'hero_huntress']) {
 ok(existsSync('../docs/PACK_ANALYSIS_6629.md'), 'анализ пака Medieval - Heroes I задокументирован (game/docs/PACK_ANALYSIS_6629.md)');
 
 console.log('--- 7. SW и кеши ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v93';"), 'SW: site-cache v88');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v38';"), 'SW: game-assets-v38 (листы 66.33 + бусты)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v94';"), 'SW: site-cache v88');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v39';"), 'SW: game-assets-v39 (листы 66.33 + бусты)');
 ok(sw.includes('// v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 
 console.log('--- 8. Телеметрия Метрики (п.1) ---');

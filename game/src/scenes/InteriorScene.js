@@ -2854,6 +2854,23 @@ export class InteriorScene extends Phaser.Scene {
                 });
                 this._lightSources.push({ x: kx - 30, y: ky + 46, w: 80, h: 40, a: 0.5 });
             }
+
+            // === 66.44 (приказ 3): ЦЕРКОВНЫЕ ПРЕДМЕТЫ вместо снятого фона ===
+            // int_bg_church (фотореалистичный «зал с красным ковром») удалён —
+            // интерьер теперь на общих тайлах избы; убранство добирают ПРЕДМЕТЫ:
+            // лавки для прихожан вдоль прохода и стоячие подсвечники
+            // (киот/иконостас/аналой/лампада рисуются выше всегда).
+            // Лавки — по ЛЕВУЮ и ПРАВУЮ руку от прохода к аналою, лицом к горнему месту.
+            if (this.textures.exists('int_deco_bench')) {
+                [[0.16, 0.70], [0.26, 0.82], [0.78, 0.72], [0.68, 0.85]].forEach(([ux, uy]) => {
+                    const bench = this.add.image(width * ux, height * uy, 'int_deco_bench')
+                        .setScale(1.05).setDepth(5);
+                    bench.setFlipX(ux > 0.5);   // правый ряд развёрнут к центру
+                });
+            }
+            // Стоячие подсвечники — у киота и перед местным рядом иконостаса
+            this.drawChurchCandleStand(width * 0.795, height * 0.58);
+            this.drawChurchCandleStand(width * 0.40, height * 0.52);
         } else if (interior.id === 'villager_house_1' && !hasBg) {
             // Дом крестьянина Авдея: стол, лавка, кровать, поленница, стог сена, ПЕЧЬ,
             // КРАСНЫЙ УГОЛ (раунд 9)
@@ -2959,6 +2976,55 @@ export class InteriorScene extends Phaser.Scene {
      * Правый край (0.70W) по-прежнему не касается сюжетного пустого киота
      * (0.86W) — святыню не перекрываем.
      */
+    /**
+     * 66.44 (приказ 3): СТОЯЧИЙ ЦЕРКОВНЫЙ ПОДСВЕЧНИК — бронзовая тумба
+     * с наклонной чашей, три свечи с живыми огоньками (мерцание + тёплый свет).
+     */
+    drawChurchCandleStand(x, y) {
+        const g = this.add.graphics().setDepth(6);
+        // тень на полу
+        g.fillStyle(0x000000, 0.3);
+        g.fillEllipse(x, y + 4, 46, 12);
+        // тумба-столб (бронза/тёмная бронза)
+        g.fillStyle(0x5c4a22, 1);
+        g.fillRect(x - 4, y - 58, 8, 58);
+        g.fillStyle(0x7a6230, 1);
+        g.fillRect(x - 4, y - 58, 3, 58);
+        // основание
+        g.fillStyle(0x5c4a22, 1);
+        g.fillEllipse(x, y, 34, 10);
+        g.fillStyle(0x8a6f38, 1);
+        g.fillEllipse(x, y - 3, 26, 7);
+        // чаша с песком
+        g.fillStyle(0x6e5728, 1);
+        g.fillEllipse(x, y - 60, 44, 12);
+        g.fillStyle(0x8a6f38, 1);
+        g.fillEllipse(x, y - 62, 38, 9);
+        // три свечи разной высоты (восковые, с оплывками)
+        [[-12, 34], [0, 44], [12, 28]].forEach(([dx, hh]) => {
+            g.fillStyle(0xe8ddc0, 1);
+            g.fillRect(x + dx - 3, y - 62 - hh, 6, hh);
+            g.fillStyle(0xcabf9e, 1);
+            g.fillRect(x + dx + 1, y - 62 - hh, 2, hh);
+            g.fillStyle(0xf4ecd8, 1);
+            g.fillRect(x + dx - 3, y - 62 - hh, 6, 3);
+            // огонёк — живой (мерцает)
+            const fx = x + dx, fy = y - 66 - hh;
+            const flame = this.add.image(fx, fy, 'particle_spark')
+                .setTint(0xffc24d).setBlendMode(Phaser.BlendModes.ADD)
+                .setDepth(7).setScale(0.3);
+            this.tweens.add({
+                targets: flame,
+                alpha: { from: 0.55, to: 0.95 },
+                scale: { from: 0.26, to: 0.38 },
+                duration: Phaser.Math.Between(320, 520),
+                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+        });
+        // тёплый свет подсвечника
+        this._lightSources.push({ x, y: y - 70, w: 120, h: 70, a: 0.45 });
+    }
+
     drawIconostasisWithIcons(width, height) {
         const g = this.add.graphics().setDepth(4);
         const GOLD = 0xc9a14a, GOLD_D = 0x8c6c2c;

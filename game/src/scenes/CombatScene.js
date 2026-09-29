@@ -9,10 +9,12 @@ import {
     getQuiver, spendArrow, loadQuiver, countInventoryArrows,
     quiverWord, QUIVER_CAP,
 } from '../systems/ammo.js';
-import { skillCheck, rollDamage, ROLL_RESULT, applyDamage, opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
+import { skillCheck, rollDamage, ROLL_RESULT, applyDamage } from '../systems/BRPEngine.js';
 import { spawnEnemy, spawnVillagerEnemy, VILLAGER_COMBAT } from '../data/characters.js';
-// Раунд 48 (пп.2,5 заявки): «Исследование» в бою и раскрытие мастерства оружия
-import { getNpcOpposition, formatNpcStatsLine, ruSkillName } from '../data/npcStats.js';
+// 66.44 (приказ 12): кнопки «Трава» и «Исследование» с нижней панели боя
+// УДАЛЕНЫ (методы useHerb/examineEnemy сняты вместе с ними); раскрытие
+// мастерства оружия после первого удара противника сохранено в enemyTurn.
+import { ruSkillName } from '../data/npcStats.js';
 import { createButton, createDialog, createFloatingText, registerAnchoredUI, onSceneResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
@@ -46,6 +48,33 @@ export class CombatScene extends Phaser.Scene {
         this.fromScene = (data && data.fromScene) || null;
     }
 
+    /**
+     * 66.44 (приказ 2): ГРУППА ФОНА БОЯ ПО ЛОКАЦИИ.
+     * Бой должен идти на фоне ТОЙ местности, где он случился:
+     *   • драка с враждебным жителем — в избе (интерьер);
+     *   • вор/волк/разбойник — по fromLocation (из thief.js/LocationScene)
+     *   или fromScene (Forest — тёмный лес; Location — тракт-фолбэк).
+     * Возвращает ключ группы ('forest'/'field'/'lake'/'river'/'pogost'/'mill'
+     * /'apiary'/'road'/'interior') или null — рисовать прежний градиент.
+     */
+    combatBackgroundGroup() {
+        if (this.npcId && this.npcId.endsWith('_hostile')) return 'interior';
+        const loc = this.fromLocation;
+        if (loc) {
+            if (['forest', 'forest_edge', 'forest_glade'].includes(loc)) return 'forest';
+            if (['field', 'pasture'].includes(loc)) return 'field';
+            if (loc === 'lake') return 'lake';
+            if (loc === 'river') return 'river';
+            if (loc === 'pogost') return 'pogost';
+            if (loc === 'mill') return 'mill';
+            if (loc === 'apiary') return 'apiary';
+            if (['road', 'road_south', 'road_north'].includes(loc)) return 'road';
+        }
+        if (this.fromScene === 'Forest') return 'forest';
+        if (this.fromScene === 'Location') return 'road';
+        return null;
+    }
+
     create() {
         const { width, height } = this.scale;
         this.cameras.main.setBackgroundColor(0x140d0a);
@@ -63,15 +92,11 @@ export class CombatScene extends Phaser.Scene {
             ? this.npcId.slice(0, -'_hostile'.length)
             : null;
         const villagerNpc = villagerId ? findNpc(this.registry, villagerId) : null;
-        // Раунд 48 (пп.2,5): для «Исследования» и раскрытия мастерства оружия
-        this.villagerNpc = villagerNpc;
-        this.villagerCombatTpl = villagerNpc ? (VILLAGER_COMBAT[villagerNpc.id] || VILLAGER_COMBAT.default) : null;
-        // П.5: после ПЕРВОГО удара противника герой узнаёт ТОЧНЫЙ параметр
-        // навыка применённого в бою оружия (и только его).
+        // Раунд 48 (п.5): после ПЕРВОГО удара противника герой узнаёт ТОЧНЫЙ
+        // параметр навыка применённого в бою оружия (и только его).
         this.weaponSkillRevealed = false;
-        // П.2: параметры противника открываются только удачным «Исследованием»
-        this.intelRevealed = false;
-        this.intelText = null;
+        // Шаблон боевых параметров жителя — для строки мастерства в enemyTurn
+        this.villagerCombatTpl = villagerNpc ? (VILLAGER_COMBAT[villagerNpc.id] || VILLAGER_COMBAT.default) : null;
         this.enemies = villagerNpc
             ? [spawnVillagerEnemy(villagerNpc)]
             : this.enemyKeys.map(k => spawnEnemy(k));
@@ -97,34 +122,49 @@ export class CombatScene extends Phaser.Scene {
         this.logLines = [];
         this.barGfx = this.add.graphics().setDepth(50);
 
-        // ----- Фон боевой сцены — тёмный лес (раунд 20: перерисовка при ресайзе) -----
-        this.bgGfx = this.add.graphics();
-        this.drawCombatBackground = (w, h) => {
-            this.bgGfx.clear();
-            // 66.32/QA: фон заметно светлее прежнего. ПОПУТНО ИСПРАВЛЕН СТАРЫЙ
-            // БАГ ВЫЗОВА: fillGradientStyle(c, 1, c2, 1, 0) передавал цвета и
-            // альфы вперемешку — 5-й аргумент это alphaTopLeft (=0!), т.е.
-            // верх был ПРОЗРАЧНО-ЧЁРНЫМ: сцена всегда была темнее замысла и
-            // тёмные облики MVsv (Баэнор — чёрный латник) на ней не читались.
-            // Теперь 4 цвета + 4 альфы явно: поляна на вечернем свету.
-            this.bgGfx.fillGradientStyle(0x3a2a1a, 0x332416, 0x241811, 0x1c130b, 1, 1, 1, 1);
-            this.bgGfx.fillRect(0, 0, w, h);
-        };
-        this.drawCombatBackground(width, height);
-        onSceneResize(this, (w, h) => this.drawCombatBackground(w, h));
+        // ----- Фон боевой сцены — ПО ЛОКАЦИИ БОЯ (66.44, приказ 2) -----
+        // Раньше — один градиент «поляна на вечернем свету» с восемью ёлками,
+        // где бы ни случился бой. Теперь у каждой группы локаций своя живописная
+        // сцена (battle_bg_*); градиент с ёлками остаётся фолбэком.
+        const bgGroup = this.combatBackgroundGroup();
+        const bgKey = bgGroup ? `battle_bg_${bgGroup}` : null;
+        if (bgKey && this.textures.exists(bgKey)) {
+            const bgImg = this.add.image(0, 0, bgKey).setOrigin(0, 0).setDepth(-2);
+            const fitBg = (w, h) => {
+                if (bgImg.active) bgImg.setDisplaySize(w, h);
+            };
+            fitBg(width, height);
+            onSceneResize(this, fitBg);
+        } else {
+            this.bgGfx = this.add.graphics();
+            this.drawCombatBackground = (w, h) => {
+                this.bgGfx.clear();
+                // 66.32/QA: фон заметно светлее прежнего. ПОПУТНО ИСПРАВЛЕН СТАРЫЙ
+                // БАГ ВЫЗОВА: fillGradientStyle(c, 1, c2, 1, 0) передавал цвета и
+                // альфы вперемешку — 5-й аргумент это alphaTopLeft (=0!), т.е.
+                // верх был ПРОЗРАЧНО-ЧЁРНЫМ: сцена всегда была темнее замысла и
+                // тёмные облики MVsv (Баэнор — чёрный латник) на ней не читались.
+                // Теперь 4 цвета + 4 альфы явно: поляна на вечернем свету.
+                this.bgGfx.fillGradientStyle(0x3a2a1a, 0x332416, 0x241811, 0x1c130b, 1, 1, 1, 1);
+                this.bgGfx.fillRect(0, 0, w, h);
+            };
+            this.drawCombatBackground(width, height);
+            onSceneResize(this, (w, h) => this.drawCombatBackground(w, h));
 
-        // Деревья на фоне (декоративные) — раунд 66 (п.10): новые спрайты
-        for (let i = 0; i < 8; i++) {
-            const x = (i + 0.5) * (width / 8) + (Math.random() - 0.5) * 40;
-            const y = 60 + Math.random() * 30;
-            const cbTex = (i % 3 === 0)
-                ? `deco_pine_${i % 2}`
-                : `deco_tree_${i % 5}`;
-            const tree = this.textures.exists(cbTex)
-                ? this.add.image(x, y, cbTex).setScale(1.4).setAlpha(0.55)
-                : this.add.image(x, y, `tile_forest_${i % 2}`).setScale(2.5).setAlpha(0.4);
-            tree.setOrigin(0.5, 0.9);
-            tree.setDepth(0);
+            // Деревья на фоне (декоративные) — раунд 66 (п.10): новые спрайты
+            // (только на градиентном фолбэке — у живописных фонов деревья уже нарисованы)
+            for (let i = 0; i < 8; i++) {
+                const x = (i + 0.5) * (width / 8) + (Math.random() - 0.5) * 40;
+                const y = 60 + Math.random() * 30;
+                const cbTex = (i % 3 === 0)
+                    ? `deco_pine_${i % 2}`
+                    : `deco_tree_${i % 5}`;
+                const tree = this.textures.exists(cbTex)
+                    ? this.add.image(x, y, cbTex).setScale(1.4).setAlpha(0.55)
+                    : this.add.image(x, y, `tile_forest_${i % 2}`).setScale(2.5).setAlpha(0.4);
+                tree.setOrigin(0.5, 0.9);
+                tree.setDepth(0);
+            }
         }
 
         // ----- Игрок -----
@@ -271,7 +311,7 @@ export class CombatScene extends Phaser.Scene {
             this.busyDialog = true;
             createDialog(this, '❓ Информация по игре',
                 timeRatioInfoLine() + '\n\n' +
-                t('⚔ Бой пошаговый (BRP d100): атака, уклон, трава, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\n👁 Исследование: удачная проверка открывает параметры противника;\nпосле первого его удара видно мастерство применённого оружия.\n🏹 Стрельба из лука тратит стрелу из колчана (вместимость 10);\nпустой колчан — выстрела не будет, стрелы носят пачками по 10.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.'),
+                t('⚔ Бой пошаговый (BRP d100): атака, уклон, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\nПосле первого удара противника видно мастерство его оружия.\n🏹 Стрельба из лука тратит стрелу из колчана (вместимость 10);\nпустой колчан — выстрела не будет, стрелы носят пачками по 10.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
                 { singletonKey: 'combat-help' });
         });
@@ -335,10 +375,8 @@ export class CombatScene extends Phaser.Scene {
         }
         acts.push(
             { label: t('Уклон'), cb: () => this.dodge(), bg: 0x4a6a4a, hover: 0x5a7a5a },
-            { label: t('Трава'), cb: () => this.useHerb(), bg: 0x6a5a2a, hover: 0x7a6a3a },
-            // Раунд 48 (п.2 заявки): параметры НПЦ видны ТОЛЬКО через проверку
-            // «Исследование» в бою (и только при удачной проверке)
-            { label: t('👁 Исследование'), cb: () => this.examineEnemy(), bg: 0x4a5a6a, hover: 0x5a6a7a },
+            // 66.44 (приказ 12): кнопки «Трава» и «Исследование» сняты с панели —
+            // осталось: атака, уклон, смена оружия, побег.
             // Раунд 66.28 (п.4): смена оружия за ход — инвентарь прямо в бою
             { label: t('🎒 Смена оружия'), cb: () => this.openWeaponSwapPanel(), bg: 0x5a4a2a, hover: 0x6a5a3a },
             { label: t('🏃 Бежать'), cb: () => this.flee(), bg: 0x2a2a5a, hover: 0x3a3a6a },
@@ -905,116 +943,7 @@ export class CombatScene extends Phaser.Scene {
         this.time.delayedCall(500, () => this.enemyTurn());
     }
 
-    /**
-     * Раунд 48 (п.2 заявки): ИССЛЕДОВАНИЕ противника в бою.
-     * Параметры НПЦ игроку больше не показываются просто так — единственный
-     * способ узнать их: удачная проверка навыка «Исследование».
-     * Проверка — по общему правилу раунда 48: НАВЫК ПРОТИВ НАВЫКА
- * («Исследование» героя против Внимательности жителя; у чужаков —
-     * Интеллект). Удача: раскрываются параметры противника. Неудача: ход
-     * потрачен впустую, противник отвечает.
-     */
-    examineEnemy() {
-        if (this.intelRevealed) {
-            this.pushLog(t('Ты уже изучил этого противника.'));
-            return; // ход не тратится
-        }
-        const target = this.firstAlive();
-        if (!target) { this.endCombatVictory(); return; }
-        this.busy = true;
-        // Раунд 22: благословение батюшки усиливает ОДНУ проверку навыка
-        const skill = consumeBlessing(this.registry, (this.player.skills && this.player.skills.investigate) || 25);
-        // Сопротивление: Внимательность жителя (навык против навыка);
-        // у чужаков (вор/волк/разбойник) — от Интеллекта (характеристика).
-        const opp = this.villagerNpc
-            ? getNpcOpposition(this.villagerNpc, 'spot')
-            : { value: Math.max(10, Math.min(70, Math.round((target.INT || 40) / 5) * 5)), ruName: 'Интеллект', ruNameGen: 'Интеллекта' };
-        const res = opposedSkillCheck(skill, opp.value, 0);
-        const checkLine = formatOpposedCheck(res, 'Исследование', `${opp.ruNameGen || opp.ruName} противника`);
-        if (res.won) {
-            this.intelRevealed = true;
-            const intel = this.buildIntelLine(target);
-            this.pushLog(tf('👁 Ты изучил противника: {0}', intel));
-            this.pushLog(checkLine);
-            // Постоянная памятка в бою — под именем противника
-            if (this.intelText) { try { this.intelText.destroy(); } catch (e) { /* ок */ } }
-            const rec = this.enemySprites.find(x => x.combatant === target) || this.enemySprites[0];
-            if (rec) {
-                this.intelText = this.add.text(rec.sprite.x, rec.sprite.y + 108, intel, {
-                    fontSize: '9px', color: '#c9a14a', align: 'center',
-                    fontFamily: 'Georgia, serif', lineSpacing: 2,
-                    backgroundColor: '#000000aa', padding: { x: 5, y: 3 },
-                    stroke: '#000', strokeThickness: 1,
-                    wordWrap: { width: 220 },
-                }).setOrigin(0.5, 0).setDepth(20);
-            }
-            ActionLog.add(this.registry, tf(t('Изучил противника в бою ({0}). {1}.'), intel, checkLine));
-            this.time.delayedCall(900, () => this.enemyTurn());
-        } else {
-            this.pushLog(tf('👁 Ты всматривался в противника, но ничего не понял ({0}).', checkLine));
-            ActionLog.add(this.registry, tf(t('Не сумел изучить противника в бою ({0}).'), checkLine));
-            this.time.delayedCall(900, () => this.enemyTurn());
-        }
-    }
-
-    /** Строка раскрытых параметров (житель — его база; чужак — боевые значения). */
-    buildIntelLine(target) {
-        if (this.villagerNpc) {
-            const line = formatNpcStatsLine(this.villagerNpc);
-            if (line) return line.replace(/\n/g, ' ');
-        }
-        const atk = target.attackSkill != null ? target.attackSkill : '?';
-        const dod = (target.skills && target.skills.dodge) || target.dodge || '?';
-        return `❤${target.HP}/${target.HPmax} ${t('СИЛ')} ${target.STR} ${t('ТЕЛ')} ${target.CON} ${t('РАЗ')} ${target.SIZ} ${t('ЛОВ')} ${target.DEX} — ${t(target.weapon.name)} ${atk}%, уклон ${dod}%`;
-    }
-
-    useHerb() {
-        const q = this.registry.get('quest');
-        const p = this.player;
-        // Раунд 35 (QA-фикс HIGH): кнопка «Трава» смотрела только на флаг
-        // q.hasHerb (выдаётся одному архетипу при создании), а целебная трава
-        // лежит у КАЖДОГО героя в инвентаре (стартовый предмет «herb»).
-        // Теперь трава расходуется из инвентаря; флаг остался запасным
-        // источником для совместимости со старыми сохранениями.
-        let invSlot = null;
-        if (Array.isArray(p.inventory)) {
-            invSlot = p.inventory.find(i => i && i.id === 'herb' && (i.count || 0) > 0);
-        }
-        if (invSlot) {
-            invSlot.count -= 1;
-            if (invSlot.count <= 0) {
-                p.inventory = p.inventory.filter(i => i !== invSlot);
-            }
-            this.registry.set('player', p);
-        } else if (q && q.hasHerb) {
-            q.hasHerb = false;
-            this.registry.set('quest', q);
-        } else {
-            this.pushLog(t('У тебя нет целебной травы.'));
-            return;
-        }
-        const heal = 3 + Math.floor(Math.random() * 4) + Math.floor(this.player.CON / 10);
-        this.player.HP = Math.min(this.player.HPmax, this.player.HP + heal);
-        createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `+${heal}`, '#7CFC00');
-        this.pushLog(tf('Ты принял траву и восстановил {0} здоровья.', heal));
-        if (this.audioManager) this.audioManager.playHeal();
-        // Эффект исцеления — зелёные частицы
-        const emitter = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
-            speed: { min: -80, max: 80 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 1.5, end: 0 },
-            lifespan: 600,
-            blendMode: 'ADD',
-            tint: 0x60ff60,
-        });
-        emitter.explode(15);
-        this.time.delayedCall(700, () => emitter.destroy());
-        this.drawBars();
-        this.autosave();
-        this.busy = true;
-        this.time.delayedCall(600, () => this.enemyTurn());
-    }
-
+    /** Ход противника: атаки всех живых врагов, затем — ход игрока. */
     enemyTurn() {
         this.playerDodging = false;
         const alive = this.enemySprites.filter(e => e.combatant.HP > 0);

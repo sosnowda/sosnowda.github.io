@@ -13,7 +13,7 @@
 //        КРИТИЧНЫЙ ФИКС — sw.js не парсился с релиза 66.19: строка changelog
 //        содержала «*/» (vh_*/wood_house_*), закрывающую блочный комментарий:
 //        Service Worker НЕ РЕГИСТРИРОВАЛСЯ на проде. Changelog → line-строки.
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -31,8 +31,8 @@ const sw = read('sw.js');
 const i18n = read('game/src/systems/i18n.js');
 
 // ---------- 1. Динамический кегль диалогов (best-fit без скролла) ----------
-ok(style.includes('fontMax: 26') && style.includes('fontMin: 13') && style.includes('fontHardMin: 11'),
-    'StyleConfig: границы кегля fontMax 26 / fontMin 13 / fontHardMin 11');
+ok(style.includes('fontMax: 28') && style.includes('fontMin: 13') && style.includes('fontHardMin: 11'),
+    'StyleConfig: границы кегля fontMax 28 / fontMin 13 / fontHardMin 11 (66.44)');
 ok(style.includes("fontSize: '26px'"), 'StyleConfig: реплики 26px (было 21px)');
 ok(ui.includes('const fontMax = Number(DIALOG_STYLES.content.fontMax) || 26'),
     'createDialog: кегль берётся из DIALOG_STYLES (fontMax)');
@@ -42,9 +42,9 @@ ok(/while \(nh > availH && fp > fontMin\)/.test(ui),
     'createDialog: основной цикл — до обычного пола fontMin');
 ok(/Аварийный дожим ниже обычного пола[\s\S]*?while \(nh > availH && fp > fontHardMin\)/.test(ui),
     'createDialog: аварийный дожим до fontHardMin перед включением скролла');
-ok(ui.includes('maxW = Math.min(760') && ui.includes('best.fp < 15'),
-    'createDialog: панель расширяется до 760px при кегле ниже 15px (длинные реплики)');
-ok(ui.includes("fontSize: (DIALOG_STYLES.content.fontMax || 26) + 'px'"),
+ok(ui.includes('maxW = Math.min(1160') && ui.includes('best.fp < 15'),
+    'createDialog: панель расширяется до 1160px при кегле ниже 15px (66.44)');
+ok(ui.includes("fontSize: (DIALOG_STYLES.content.fontMax || 28) + 'px'"),
     'createDialog: стартовый кегль контента = fontMax');
 ok(ui.includes('layoutOverflow > 2') && ui.includes("scene.input.on('wheel'"),
     'маска/скролл сохранены как аварийный предохранитель');
@@ -84,14 +84,11 @@ ok(is.includes('kx - 34, ky + 30') && is.includes('ffb84d'),
     'лампада у киота — единственный огонёк после кражи');
 ok(boot.includes("'icon_christ', 'icon_theotokos', 'icon_john', 'icon_archangel',"),
     'BootScene: загрузка 6 икон-тайлов (deco_icon_*.jpg)');
-try {
-    // 66.30: фон церкви перекодирован в WebP (вес буста), .jpg удалён насовсем
-    const bg = read('game/assets/interiors/int_bg_church.webp');
-    ok(bg.length > 40000 && bg.length < 500000, `фон церкви: WebP ${Math.round(bg.length / 1024)} КБ (конверсия 66.30)`);
-} catch (e) { ok(false, 'фон церкви int_bg_church.webp отсутствует!'); }
+// 66.44 (приказ 3): фон церкви удалён насовсем — интерьер на тайлах + предметы
+ok(!existsSync(ROOT + 'game/assets/interiors/int_bg_church.webp'), 'фон церкви удалён (66.44, приказ 3)');
 
 // ---------- 4. КРИТИЧНЫЙ ФИКС: sw.js снова парсится ----------
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v38'"), 'SW: кеш ассетов v31 (фасады 66.36)');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v39'"), 'SW: кеш ассетов v31 (фасады 66.36)');
 ok(sw.includes('*/\n\n// ----- Журнал версий кэша'),
     'SW: заголовочный блочный комментарий закрыт ДО changelog');
 const vLines = sw.split('\n').filter(l => /^v\d+ /.test(l.trim()));

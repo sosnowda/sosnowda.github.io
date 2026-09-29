@@ -135,8 +135,8 @@ ok(styles.includes('.pt-reign{transition:none}') || /prefers-reduced-motion[\s\S
     'styles.css: reduced-motion — без анимаций таймлайна');
 
 console.log('--- 9. SW и кеши ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v93';"), 'SW: site-cache v88');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v38';"), 'SW: game-assets-v38 (66.33: листы+бусты)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v94';"), 'SW: site-cache v88');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v39';"), 'SW: game-assets-v39 (66.33: листы+бусты)');
 ok(sw.includes('// v84 — итерация 66.34'), 'SW: журнал содержит запись v84 (история версий сохраняется)');
 
 console.log(`\nИтог: ${pass} OK, ${fail} FAIL`);

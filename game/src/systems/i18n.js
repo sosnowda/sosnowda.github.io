@@ -1402,8 +1402,17 @@ const EN = {
     'Имя, класс, возраст, пол — облик выбирается автоматически по полу: «Пауль» ♂ / «Баэнора» ♀.':
         'Name, class, age, gender — the look is picked automatically by gender: "Paul" ♂ / "Baenora" ♀.',
     // Раунд 62 (п.1): перекрёстное сопоставление прессетов по полу
-    'Облик героя: «{0}» избран по обычаю — по полу героя.':
-        'Hero\'s look: the "{0}" preset was picked automatically by gender (round 62).',
+    // 66.44 (приказ 9): уникальные облики прегенов
+    'Облик героя: «{0}».': 'Hero\'s look: "{0}".',
+    'случайная сборка': 'random outfit',
+    'Охотничий кафтан': 'Hunting kaftan',
+    'Ратный терлик': 'Warrior\'s terlik',
+    'Городское платье': 'Town attire',
+    'Тёмный кафтан': 'Dark kaftan',
+    'Оранжевый сарафан': 'Orange sarafan',
+    'Синий сарафан': 'Blue sarafan',
+    'Домашнее платье': 'House dress',
+    'Тёмный сарафан': 'Dark sarafan',
     'Облик': 'Look',
     'Пауль': 'Paul',
     'Баэнор': 'Baenor',
@@ -2459,8 +2468,9 @@ const EN_KEYS = {
         'Just saw the thief here, at {0} — but he bolted and was gone: vanished into the dark without a trace. Where he went, I cannot say.',
     'Стражник поделился наводкой: {0}': 'The guard shared a tip: {0}',
     // Обновлённая справка боя (раунд 66.28)
-    '⚔ Бой пошаговый (BRP d100): атака, уклон, трава, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\n👁 Исследование: удачная проверка открывает параметры противника;\nпосле первого его удара видно мастерство применённого оружия.\n🏹 Стрельба из лука тратит стрелу из колчана (вместимость 10);\nпустой колчан — выстрела не будет, стрелы носят пачками по 10.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.':
-        '⚔ Combat is turn-based (BRP d100): attack, dodge, herb, flee.\nSkill checks roll d100: success is within the skill,\ncrit — 1/20 of the skill (damage ×1.5), special — 1/5 (damage ×2).\n🛡 Armor absorbs the damage of every hit.\n👁 Examine: a successful check reveals the enemy\'s parameters;\nafter his first strike the mastery of the weapon used is shown.\n🏹 A bow shot spends an arrow from the quiver (capacity 10);\nan empty quiver means no shot — arrows are carried in packs of 10.\n🎒 Changing the weapon in hand costs a turn; loading arrows too.',
+    // 66.44 (приказ 12): справка без «Травы»/«Исследования» (кнопки сняты)
+    '⚔ Бой пошаговый (BRP d100): атака, уклон, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\nПосле первого удара противника видно мастерство его оружия.\n🏹 Стрельба из лука тратит стрелу из колчана (вместимость 10);\nпустой колчан — выстрела не будет, стрелы носят пачками по 10.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.':
+        '⚔ Combat is turn-based (BRP d100): attack, dodge, flee.\nSkill checks roll d100: success is within the skill,\ncrit — 1/20 of the skill (damage ×1.5), special — 1/5 (damage ×2).\n🛡 Armor absorbs the damage of every hit.\nAfter the enemy\'s first strike the mastery of his weapon is shown.\n🏹 A bow shot spends an arrow from the quiver (capacity 10);\nan empty quiver means no shot — arrows are carried in packs of 10.\n🎒 Changing the weapon in hand costs a turn; loading arrows too.',
 
 };
 

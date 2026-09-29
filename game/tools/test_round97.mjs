@@ -12,7 +12,7 @@
 //      писателя gameScoreData больше нет в game/src;
 //   5) ИСТОРИЧЕСКИЕ КОНВЕЙЕРЫ: 10 make_*/repair_* помечены маркером,
 //      актуальные (6640/6638/6636/6635/6637/6633/6639/6624) — БЕЗ маркера;
-//   6) SW v92 / game-assets-v38; аудио — lazy-cache (нет precache-списка).
+//   6) SW v92 / game-assets-v39; аудио — lazy-cache (нет precache-списка).
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -109,7 +109,10 @@ ok(existsSync(join(root, 'game/assets/effects/fire_0.png'))
 ok(existsSync(join(root, 'assets/video/promo.webp')) || existsSync(join(root, 'assets/video/promo.webm')),
     'используемое промо-видимо на месте (promo.webm/mp4)');
 const docsLeft = readdirSync(join(root, 'game/docs'));
-ok(docsLeft.every(f => f.endsWith('.md')), 'game/docs: остались только MD-отчёты (QA-кадры удалены)');
+// 66.42+ : конвейер QA-кадров ВЕРНУЛСЯ (webp q80, имена r66NN_*); 66.41
+// был разовой чисткой. Текущая норма: только MD-отчёты и QA-кадры r66*.
+ok(docsLeft.every(f => f.endsWith('.md') || /^r6\d{3}_.*\.webp$/.test(f)),
+    'game/docs: только MD-отчёты и QA-кадры r66NN_* (норма 66.42+)');
 ok(docsLeft.some(f => f.startsWith('QA_ROUND')), 'MD-отчёты QA сохранены');
 
 console.log('— 7. Сейвы не нужны (приказ 6) —');
@@ -162,8 +165,8 @@ for (const f of actual) {
 
 console.log('— 10. SW v92 + аудио lazy-cache —');
 const sw = read('sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v93';"), 'SW: site-cache v92');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v38';"), 'SW: game-assets-v38');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v94';"), 'SW: site-cache v92');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v39';"), 'SW: game-assets-v39');
 ok(sw.includes('66.41'), 'SW-журнал: запись 66.41 есть');
 ok(!sw.includes('addAll'), 'SW: precache-списка нет (аудио кэшируется лениво по запросу)');
 ok(!/\.ogg/.test(sw.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '')),

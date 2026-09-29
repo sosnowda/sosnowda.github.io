@@ -347,8 +347,9 @@ console.log('— п.2: ПОРУЧЕНИЯ — ВИРТУАЛЬНАЯ ДОСКА 
 console.log('— п.12: ИКОНОСТАС в церкви —');
 {
     // 66.30: фоны интерьеров перекодированы в WebP (вес буста), .jpg удалены насовсем
+    // 66.44 (приказ 3): фон церкви СНЯТ с диска (фотореалистичный, вне стиля)
     const webp = ROOT + 'game/assets/interiors/int_bg_church.webp';
-    ok(existsSync(webp) && statSync(webp).size > 40 * 1024, 'int_bg_church.webp на месте после конверсии 66.30 (объём)');
+    ok(!existsSync(webp), 'int_bg_church.webp удалён (66.44, приказ 3)');
     const gen = read('game/tools/make_assets_r67.py');
     ok(gen.includes('def regenerate_church_interior') && gen.includes('ЦАРСКИЕ ВРАТА')
         && gen.includes('wall_kiot') && gen.includes('Голгофа'),
@@ -377,9 +378,9 @@ console.log('— п.3: СТРЕЛКИ ЛАЙТБОКСА ВСЕГДА ВИДНЫ
 console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v93'"), 'SW: сайт v87 (66.36)');
-    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v38'"),
-        'SW: game-assets-v38 (фасады 66.36)');
+    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v94'"), 'SW: сайт v87 (66.36)');
+    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v39'"),
+        'SW: game-assets-v39 (фасады 66.36)');
     setLang('en');
     ok(t('☁ Что погода сулит?') === '☁ What will the weather bring?', 'i18n: вопрос о погоде EN');
     ok(t('Доска поручений') === 'Job Board', 'i18n: доска поручений EN');

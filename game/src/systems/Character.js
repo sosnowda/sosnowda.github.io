@@ -338,6 +338,8 @@ export function createCharacter(name, opts = {}) {
     chr.gender = opts.gender || (Math.random() < 0.5 ? 'male' : 'female');
     chr.archetype = opts.archetype || 'Случайный';
     chr.sprite = opts.sprite || 'player';
+    // 66.44 (приказ 9): id прегена — ключ уникального облика в WorldLook.HERO_WORLD_LOOKS
+    chr.presetId = opts.presetId || null;
 
     // Возраст (раунд 44): 15..50, выбирается в генераторе персонажа.
     // Возрастные модификаторы BRP SRD применяются к характеристикам, затем
@@ -401,6 +403,7 @@ export function createPresetHero(presetId, customName) {
         archetype: preset.archetype,
         gender: preset.gender,
         sprite: preset.sprite,
+        presetId: preset.id, // 66.44 (п.9): уникальный облик каждого прегена
         skillOverrides: preset.skillOverrides,
         armorId: preset.startArmor,
         weaponId: preset.startWeapon,

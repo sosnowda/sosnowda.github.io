@@ -139,7 +139,7 @@ console.log('— п.2: анахронизмы вычищены —');
     const ts = read('game/src/scenes/TitleScene.js');
     ok(!ts.includes('О игре') && ts.includes('Об игре'), '«Об игре» (грамматика)');
     const cs = stripComments(read('game/src/scenes/CharacterSelectionScene.js'));
-    ok(!cs.includes('прессет') && cs.includes('избран по обычаю'), 'метатекст «(раунд 62)» и жаргон вычищены');
+    ok(!cs.includes('прессет') && cs.includes('Облик героя:'), 'метатекст и жаргон вычищены (66.44: уникальные облики)');
 }
 
 // ---------- П.3: имена и топонимы ----------

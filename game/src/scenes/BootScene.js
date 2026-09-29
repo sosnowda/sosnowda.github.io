@@ -329,7 +329,11 @@ export class BootScene extends Phaser.Scene {
         // ----- РАУНД 50 (пп.2,4): ТАЙЛОВЫЕ ИНТЕРЬЕРЫ (пакет Medieval - Interiors) -----
         // Фоны 1280×720 собраны из листов Walls/Furniture/Church/Tavern/Profession;
         // статический декор запечён в фон, анимированный огонь/киот рисуются сценой.
-        const interiorBgIds = ['tavern', 'blacksmith', 'elder_house', 'potter_house', 'church',
+        // 66.44 (приказ 3): int_bg_church СНЯТ с загрузки и с диска —
+        // фотореалистичный «зал с красным ковром» выбивался из стилистики;
+        // церковь теперь на общих тайлах (стены/пол/окна) + церковные предметы
+        // кодом (киот, иконостас, аналой, подсвечники — InteriorScene).
+        const interiorBgIds = ['tavern', 'blacksmith', 'elder_house', 'potter_house',
             'villager_house_1', 'villager_house_2', 'villager_house_3', 'healer_house', 'fisher_house',
             'carpenter_house', 'weaver_house', 'beekeeper_house'];
         interiorBgIds.forEach(id => {
@@ -412,6 +416,14 @@ export class BootScene extends Phaser.Scene {
         });
         // Анимированный огонь (4 кадра)
         for (let f = 0; f < 4; f++) this.load.image(`int_fire_${f}`, `assets/effects/fire_${f}.png`);
+
+        // ----- 66.44 (приказ 2): ФОНЫ ПОЛЯ БОЯ ПО ЛОКАЦИИ -----
+        // 9 живописных сцен (make_battle_bg_6644.py): лес/поле/озеро/река/
+        // погост/мельница/пасека/тракт/изба. CombatScene выбирает группу
+        // по fromLocation/fromScene/npcId (combatBackgroundGroup); прежний
+        // градиент остаётся фолбэком, если текстуры нет.
+        ['forest', 'field', 'lake', 'river', 'pogost', 'mill', 'apiary', 'road', 'interior']
+            .forEach((g) => this.load.image(`battle_bg_${g}`, `assets/sprites/battle/battle_bg_${g}.webp`));
 
         // ----- Фаза 1: живописные фоны интерьеров (DarklandsReborn, файлы как есть) -----
         // РАУНД 52: таверна теперь на новом тайловом фоне (загружен выше из

@@ -261,7 +261,8 @@ export class LocationScene extends Phaser.Scene {
                 qq.combat && qq.enemyKeys && qq.enemyKeys.includes('bandit'));
             if (banditQuest && Math.random() < 0.6) {
                 ActionLog.add(this.registry, t('На большом тракте тебе преградили путь лихие люди!'));
-                this.time.delayedCall(500, () => this.scene.start('Combat', { enemyKeys: ['bandit'], fromScene: 'Location' }));
+                // 66.44 (приказ 2): fromLocation — бой рисуется на фоне тракта
+                this.time.delayedCall(500, () => this.scene.start('Combat', { enemyKeys: ['bandit'], fromScene: 'Location', fromLocation: this.locationId }));
                 return;
             }
         }

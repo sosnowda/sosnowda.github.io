@@ -674,8 +674,9 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     // Раунд 20: на узких экранах диалог не шире окна (поля по 12px)
     // РАУНД 66.20: let — для длинных реплик панель расширяется в layout()
     // (см. «динамическое расширение панели»), чтобы кегль оставался крупным.
+    // 66.44 (приказ 8): окно диалога увеличено ×2 (880; с портретом 1120).
     let dialogWidth = Math.min(
-        portraitKey ? 560 : DIALOG_STYLES.width,
+        portraitKey ? 1120 : DIALOG_STYLES.width,
         Math.max(240, cam.width - 24)
     );
     const pad = DIALOG_STYLES.padding;
@@ -708,11 +709,11 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     // реплики получают крупный шрифт, длинные автоматически ужинаются БЕЗ
     // скролла. Ширина переноса строк считается в layout() от ширины панели.
     const contentStyle = {
-        fontSize: (DIALOG_STYLES.content.fontMax || 26) + 'px',
+        fontSize: (DIALOG_STYLES.content.fontMax || 28) + 'px',
         color: inkColor,
         fontFamily: 'Georgia, serif',
         align: 'left',
-        wordWrap: { width: portraitKey ? 400 : DIALOG_STYLES.content.wrapWidth }
+        wordWrap: { width: portraitKey ? 900 : DIALOG_STYLES.content.wrapWidth }
     };
     if (hasParchment) {
         contentStyle.stroke = '#1d1208';
@@ -939,7 +940,9 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         let best = tryFit();
         let bestW = dialogWidth;
         if (best.fp < 15) {
-            const maxW = Math.min(760, Math.max(240, cam.width - 24));
+            // 66.44: потолок динамического расширения поднят 760 → 1160
+            // (базовая ширина теперь 880/1120)
+            const maxW = Math.min(1160, Math.max(240, cam.width - 24));
             let w = dialogWidth + 60;
             while (w <= maxW && best.fp < 15) {
                 dialogWidth = w;

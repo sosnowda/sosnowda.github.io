@@ -129,7 +129,10 @@ export const BUTTON_STYLES = {
 export const DIALOG_STYLES = {
     // Базовые размеры
     // РАУНД 66 (п.5): ширина 440 — под крупный шрифт реплик
-    width: 440,
+    // 66.44 (приказ 8): окно диалога УВЕЛИЧЕНО ВДВОЕ (440 → 880; с портретом
+    // 560 → 1120) — читаемость реплик на десктопе; на узких экранах ширина
+    // по-прежнему ограничена cam.width - 24 (мобайл не страдает).
+    width: 880,
     cornerRadius: 20,
     strokeWidth: 3,
 
@@ -148,9 +151,9 @@ export const DIALOG_STYLES = {
     // fontHardMin). Перенос строк — от фактической ширины панели: текст НЕ
     // вылезает за рамки окна и кнопок ни на десктопе, ни на мобайле.
     content: {
-        fontSize: '26px',
-        wrapWidth: 400,
-        fontMax: 26,
+        fontSize: '28px',
+        wrapWidth: 800,
+        fontMax: 28,
         fontMin: 13,
         fontHardMin: 11
     },
