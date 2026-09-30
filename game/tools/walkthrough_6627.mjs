@@ -18,6 +18,23 @@ const ok = (cond, name) => { console.log((cond ? '  ✓ ' : '  ✗ ') + name); i
 
 const browser = await chromium.launch({ headless: true, args: ['--mute-audio', '--disable-web-security'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+// 66.50-диагностика (временная): след всех scene.start/launch с источником
+await page.addInitScript(() => {
+    window.__sceneLog = [];
+    const patch = () => {
+        if (!window.Phaser || !window.Phaser.Scenes || !window.Phaser.Scenes.ScenePlugin) { setTimeout(patch, 50); return; }
+        const SP = window.Phaser.Scenes.ScenePlugin.prototype;
+        for (const m of ['start', 'launch', 'run']) {
+            const orig = SP[m];
+            SP[m] = function (key) {
+                const from = this.scene ? this.scene.scene.key : '?';
+                window.__sceneLog.push(m + ': ' + from + ' -> ' + key + ' @' + Math.round(performance.now()) + 'ms');
+                return orig.apply(this, arguments);
+            };
+        }
+    };
+    patch();
+});
 page.on('pageerror', e => { jsErrors++; jsErrList.push(String(e).slice(0, 220)); console.log('PAGEERROR:', String(e).slice(0, 200)); });
 page.on('console', m => { if (m.type() === 'error') { jsErrors++; jsErrList.push(m.text().slice(0, 220)); console.log('CONSOLE-ERR:', m.text().slice(0, 160)); } });
 
@@ -177,7 +194,11 @@ const mapState = await page.evaluate(() => {
 });
 ok(mapState.ok, `карта местности открылась (${(mapState.labels || []).length} надписей)`);
 await page.screenshot({ path: `${OUT}/03_terrain_map.png` });
-await page.mouse.click(640, 360); // по карте/оверлею → закрытие
+// 66.50 (урок прогона): прежний «закрыть оверлей» кликом по центру (640,360)
+// на пол-экранной карте 66.34 попадает в КЛИК-ЗОНУ ДЕРЕВНИ → travelTo('village')
+// стартует фантомную Village поверх всего дальнейшего маршрута (двойные
+// активные сцены; кадры пасеки вместо леса/деревни). Оверлея больше нет —
+// клик-заглушку убираем, чистка depth>=200 оставлена как безвредная.
 await sleep(900);
 await page.evaluate(() => {
     const s = window.game.scene.getScene('Fork');
@@ -235,24 +256,58 @@ for (const [lid, kind] of VISITS) {
 ok(locOk === VISITS.length, `все локации открылись (${locOk}/${VISITS.length})`);
 
 console.log('--- 6. Тёмный лес (прогулка) ---');
-await page.evaluate(() => {
-    const s = window.game.scene.scenes.find(s => s.scene.isActive());
-    if (s) s.scene.start('Forest', { from: 'Fork' });
+// 66.50: выход из пасеки КАК У ИГРОКА — телепорт на выходной тайл + клик
+// интерактивной кнопки «Вернуться к околице» (leaveApiary → Fork, карта).
+// Прежний программный scene.start('Forest') из остановленной сцены оставлял
+// пасеку активной поверх Forest (кадр-артефакт). С карты — кнопка леса.
+const exitApiary = await page.evaluate(() => {
+    const a = window.game.scene.getScene('Apiary');
+    if (!a || !a.playerObj) return false;
+    const label = a.children.list.find(c => c.text && c.text.trim && c.text.trim().includes('К ОКОЛИЦЕ'));
+    if (!label) return false;
+    a.playerObj.setPosition(label.x, label.y + 48 * 1.6); // метка на TS*1.6 выше тайла, TS=48
+    return true;
 });
-await sleep(3000);
-ok(await activeScene() === 'Forest', 'Тёмный лес (ForestScene) активен');
+ok(exitApiary, 'игрок телепортирован к выходному тайлу пасеки');
+await sleep(1500);
+// 66.50: выход из пасеки/леса — интерактив по клавише E (промпт «Нажмите E — …»),
+// кликабельной кнопки нет. Жмём E, стоя на выходном тайле.
+await page.keyboard.press('e');
+await sleep(2500);
+await clickText('Тёмный лес — прогулка', false, 8000);
+// headless троттлит rAF — даём Forest нарисовать первый кадр
+await sleep(7000);
+const sceneAfterForest = await activeScene();
+console.log('  [diag] activeScene после леса:', sceneAfterForest, '| все активные:', await page.evaluate(() => JSON.stringify(window.game.scene.scenes.filter(s => s.scene.isActive()).map(s => ({ k: s.scene.key, st: s.scene.status })))));
+ok(sceneAfterForest === 'Forest', 'Тёмный лес (ForestScene) активен');
+await page.screenshot({ path: `${OUT}/loc_darkforest.png` });
+await sleep(2500);
 await page.screenshot({ path: `${OUT}/loc_darkforest.png` });
 
 console.log('--- 7. Возврат в деревню ---');
-await page.evaluate(() => {
-    const s = window.game.scene.scenes.find(s => s.scene.isActive());
-    if (s) s.scene.start('Village');
+// 66.50: тоже UI-путь — из леса к выходному тайлу → «Вернуться к околице» →
+// с карты «◀ Вернуться в деревню».
+const exitForest = await page.evaluate(() => {
+    const f = window.game.scene.getScene('Forest');
+    if (!f || !f.playerObj) return false;
+    const label = f.children.list.find(c => c.text && c.text.trim && c.text.trim().includes('К ОКОЛИЦЕ'));
+    if (!label) return false;
+    f.playerObj.setPosition(label.x, label.y + 48 * 1.6); // TS=48
+    return true;
 });
+ok(exitForest, 'игрок телепортирован к выходному тайлу леса');
+await sleep(1500);
+await page.keyboard.press('e'); // «Нажмите E — Вернуться к околице»
 await sleep(2500);
-ok(await activeScene() === 'Village', 'возврат в деревню');
+await clickText('Вернуться в деревню', false, 8000);
+await sleep(4500);
+const sceneAfterVillage = await activeScene();
+console.log('  [diag] activeScene после возврата:', sceneAfterVillage, '| все активные:', await page.evaluate(() => JSON.stringify(window.game.scene.scenes.filter(s => s.scene.isActive()).map(s => ({ k: s.scene.key, st: s.scene.status })))));
+ok(sceneAfterVillage === 'Village', 'возврат в деревню');
 await page.screenshot({ path: `${OUT}/04_village_back.png` });
 
 console.log('--- Итог ---');
+try { const sl = await page.evaluate(() => (window.__sceneLog || []).slice(-30)); console.log('=== СЦЕНОВЫЙ ЖУРНАЛ (последние 30) ==='); sl.forEach(l => console.log('  ' + l)); } catch (e) {}
 console.log('JS errors:', jsErrors, jsErrList.length ? '\n  ' + jsErrList.join('\n  ') : '');
 console.log(fails.length ? `ПРОВАЛЕНО: ${fails.length}\n- ${fails.join('\n- ')}` : 'ВСЕ ПРОВЕРКИ ЗЕЛЁНЫЕ');
 await browser.close();

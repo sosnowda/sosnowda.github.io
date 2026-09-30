@@ -9,9 +9,12 @@
      инлайн-лоадер сцен и глушитель F1 ниже по коду; cdn.jsdelivr.net —
      Phaser 3.88.2 (единственный внешний скрипт); import() сцен — 'self';
      style 'unsafe-inline' — инлайн-блок разметки и errorEl.innerHTML.
-     Лендинги уже защищены с 66.47; frame-ancestors в meta не работает
-     по спецификации и потому не указан -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+     66.50: img-src + blob: — Phaser 3.88 грузит ВСЕ картинки через
+     XHR→createObjectURL→<img> (внутренний конвейер лоадера), без blob:
+     каждая текстура «Failed to process file» и игра стартует без спрайтов
+     (TypeError setCurrentFrame в цикле). Лендинги уже защищены с 66.47;
+     frame-ancestors в meta не работает по спецификации и потому не указан -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
 <!-- Раунд 66.6: G-теги (Open Graph / Twitter / JSON-LD) — корректные
      превью при шеринге ссылки на браузерное демо.
      Раунд 66.8: ОТДЕЛЬНЫЙ og:image для демо (og-demo.jpg 1200×630:

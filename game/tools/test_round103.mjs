@@ -55,5 +55,12 @@ ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v
 ok(swlog.includes('- v100 — итерация 66.50'), 'SW-журнал: запись v100 добавлена');
 ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 на месте');
 
+console.log('--- 5. CSP игры (66.50: img-src + blob: — прогон 66.50 поймал блокировку текстур) ---');
+const gameHtml = read('game/index.html');
+ok(gameHtml.includes("img-src 'self' data: blob:"), 'game: CSP img-src допускает blob: (Phaser 3.88 грузит картинки через createObjectURL)');
+ok(!gameHtml.includes("img-src 'self' data:;"), 'game: старый img-src без blob: убран');
+ok(gameHtml.includes("media-src 'self' blob:"), 'game: media-src blob: на месте (аудио)');
+ok(gameHtml.includes("script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net"), 'game: script-src без изменений (Phaser + инлайн-лоадер)');
+
 console.log('\nИтог: ' + pass + ' проверок пройдено, ' + fail + ' провалено');
 process.exit(fail ? 1 : 0);
