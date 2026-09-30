@@ -2059,3 +2059,19 @@ Work Log:
 
 Stage Summary:
 - SW: site-cache v98, game-assets-v41 (без изменений); сейвы совместимы. Все 3 отложенных пункта аудита закрыты; инлайн-стилей на лендингах больше нет; клиент лендинга — ES-модули; game/ под CSP. Свежие скриншоты лендинга снимаются с прода после пуша (RU/EN desktop full + RU mobile).
+---
+Task ID: 66.48-прод
+Agent: Super Z (main)
+Task: Прод-верификация пуша 66.48 (7a02160) на https://sosnowda.github.io + свежие скриншоты лендинга.
+
+Work Log:
+- Пуш: origin/main 80b5ea1..7a02160 (32 файла: js/main.js + 8 модулей, удалён main.js, лендинги RU/EN, styles.css, game/index.html CSP, sw.js v98, docs/SW_CHANGELOG.md, test_round102, 19 актуализированных наборов, CHANGES/АГЕНТ/worklog, QA-отчёт).
+- Pages: built @7a02160 (API pages/builds/latest, ~80 c).
+- Прод-пинги: / /en/ /game/ /js/main.js /js/modules/ui.js /js/modules/gallery.js /styles.css /sw.js /docs/SW_CHANGELOG.md — все 200.
+- sw.js на проде = chronicles-ruthenia-v98.
+- sha256 бит-в-бит прод==локал (14 файлов): точка входа + все 8 модулей, styles.css, index.html, en/index.html, game/index.html, sw.js — ВСЕ СОВПАДАЮТ.
+- Живой смоук прода (agent-browser 1440×900): js-флаг, частицы, fund-bar=BUTTON, d100 кликом «77 / Успех (выпало 77 из 100)», консоль 0 ошибок.
+- Свежие скриншоты лендинга с ПРОДА → /home/z/my-project/download/screenshots_6648/: 01 RU hero 1440×900; 02 RU fullpage desktop; 03 EN fullpage desktop; 04 RU fullpage mobile 390×844. Тонкость съёмки: перед --full форс reveal + content-visibility:visible + img.loading=eager + прокрутка вниз/вверх (иначе IO-анимации и lazy-карты дают пустые секции).
+
+Stage Summary:
+- 66.48 полностью на проде: клиент лендинга — ES-модули (site-cache v98), game/ под CSP, инлайн-стилей на RU/EN нет. Все 3 отложенных пункта аудита закрыты; скриншоты переданы владельцу. Регресс 64–102 зелёный.
