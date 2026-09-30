@@ -152,7 +152,7 @@ console.log('\n[5] САЙТ: 10-й скриншот кузницы удалён 
     ok(!en.includes('10-blacksmith'), 'en/index.html не ссылается на 10-blacksmith');
     ok(!existsSync(join(root, 'assets/screenshots/10-blacksmith.webp')), 'файл assets/screenshots/10-blacksmith.webp удалён');
     ok(ru.includes('09-thief-encounter.webp') && en.includes('09-thief-encounter.webp'), 'галерея сохраняет кадры 01–09');
-    // 66.50: версия достигла v100 (три знака) — регекс расширен на \d{3,};
+    // 66.50: версия достигла v101 (три знака) — регекс расширен на \d{3,};
     // интент проверки прежний: версия не ниже v64, кеш инвалидируется при изменениях.
     ok(/CACHE_NAME = 'chronicles-ruthenia-v(6[4-9]|[7-9]\d|\d{3,})/.test(read('../sw.js')), 'SW версии не ниже v64 (сайт-кеш инвалидируется при изменениях сайта)');
 }

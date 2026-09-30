@@ -6,9 +6,10 @@
 //    (t()), формулы размера под EN-длину в TitleScene и PreloadScene.
 //    Меню (Инструкция/Настройки/Об игре/выбор персонажа) уже были
 //    локализованы — проверено живыми скриншотами ?lang=en.
-// 3) SW: БЕЗ повышения версии — правки только в /game/src/, который
-//    SW пропускает напрямую (св. sw.js:70 «сцены обновляются часто»),
-//    значит site-cache остаётся v100, game-assets v41.
+// 3) SW: в 66.52 БЕЗ повышения версии — правки только в /game/src/, который
+//    SW пропускает напрямую (св. sw.js:70 «сцены обновляются часто»);
+//    ассерты ниже отслеживают АКТУАЛЬНУЮ версию: после 66.53 (офлайн-фолбэк
+//    P2-1) site-cache v101, game-assets v41.
 // Запуск из корня репозитория: node game/tools/test_round104.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -58,7 +59,7 @@ ok(audit.includes('ВНЕДРЕНО в патче 66.52'), 'AUDIT: пометк�
 ok(audit.includes('Находок не несёт') || audit.includes('## Проверено и БЕЗ замечаний'), 'AUDIT: зелёная зона описана');
 
 console.log('--- 5. SW без повышения (правки только /game/src/) ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v100';"), 'sw.js: site-cache остаётся v100 (/game/src/ идёт в обход SW)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v101';"), 'sw.js: site-cache обновлён до v101 (/game/src/ идёт в обход SW)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets остаётся v41');
 ok(sw.includes("url.pathname.startsWith('/game/src/')"), 'sw.js: /game/src/ пропускается напрямую — сцены всегда свежие');
 

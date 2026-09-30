@@ -77,5 +77,18 @@
             <a class="btn" href="/game/">Играть в демо ⚔️</a>
         </div>
     </main>
+    <script>
+    // Аудит P2-2: GitHub Pages отдаёт корневой 404.html на ЛЮБОЙ отсутствующий
+    // путь, включая /en/… — для EN-посетителей подменяем тексты на лету.
+    (function () {
+        if (!/^\/en(\/|$)/.test(location.pathname)) return;
+        document.documentElement.lang = 'en';
+        document.title = '404 — The scroll is lost | The Chronicles of Ruthenia';
+        document.querySelector('h1').textContent = 'The scroll is lost';
+        document.querySelector('p').textContent = 'The page you are looking for has vanished from the chronicles — perhaps the winds of the Horde have carried it away, or perhaps the chronicler never wrote it at all.';
+        document.querySelector('a.btn.primary').textContent = '← Back to the front page';
+        document.querySelector('a.btn:not(.primary)').textContent = 'Play the demo \u2694\uFE0F';
+    })();
+    </script>
 </body>
 </html>

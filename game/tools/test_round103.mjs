@@ -2,7 +2,8 @@
 // 1) СЛОВАРЬ ЛЕНДИНГА: js/modules/l10n.js — единый словарь строк клиента RU/EN;
 //    таймлайн князей (подсказка + досье) в словаре, ui.js без inline-тернарников строк.
 // 2) РЕЛИЗ: JSON-LD softwareVersion 0.3.0-alpha (RU+EN) под релиз v0.3.0-alpha.
-// 3) SW: site-cache v100, запись v100 в журнале.
+// 3) SW: в 66.50 — site-cache v100, запись v100 в журнале
+//    (ассерты ниже отслеживают АКТУАЛЬНУЮ версию: после 66.53 — v101).
 // Запуск из корня репозитория: node game/tools/test_round103.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -49,10 +50,10 @@ ok(ru.includes('id="princesTimeline"') && en.includes('id="princesTimeline"'), '
 ok(ru.includes("softwareVersion\":\"0.3.0-alpha"), 'RU: JSON-LD softwareVersion 0.3.0-alpha');
 ok(en.includes("softwareVersion\":\"0.3.0-alpha"), 'EN: JSON-LD softwareVersion 0.3.0-alpha');
 
-console.log('--- 4. SW v100 и журнал ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v100';"), 'SW: site-cache v100');
+console.log('--- 4. SW v101 и журнал ---');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v101';"), 'SW: site-cache v101');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 не менялся');
-ok(swlog.includes('- v100 — итерация 66.50'), 'SW-журнал: запись v100 добавлена');
+ok(swlog.includes('- v101 — итерация 66.53'), 'SW-журнал: запись v101 добавлена');
 ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 на месте');
 
 console.log('--- 5. CSP игры (66.50: img-src + blob: — прогон 66.50 поймал блокировку текстур) ---');
