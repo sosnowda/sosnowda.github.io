@@ -2042,3 +2042,20 @@ Work Log:
 
 Stage Summary:
 - 66.47 полностью на проде: SW site-cache v97 (sw.js 3,2 КБ), CSP активна, fund-bar — нативная кнопка, тост вместо alert, журнал версий в docs/. Все 20 пунктов аудита закрыты (14 реализовано + 6 подтверждено в 66.31); отложены 3 стратегических (модули main.js, CSP для game/, партия 2 inline-стилей). Регресс 64–101 зелёный; первые два релиза проекта опубликованы.
+---
+Task ID: 66.48
+Agent: Super Z (main, Z.ai)
+Task: Закрыть 3 отложенных пункта аудита лендинга — №12 (модули main.js), №18 (CSP для game/), №11 партия 2 (inline-стили → классы) — и снять свежие скриншоты лендинга.
+
+Work Log:
+- №12: монолит main.js (~890 строк) разбит на js/main.js (точка входа: js-флаг, регистрация SW, bootPage по DOMContentLoaded) + 8 модулей js/modules/: state (REDUCED_MOTION, IS_EN_PAGE), reveal, scrollspy (якоря+коррекция+spy+параллакс), lightbox (карты), gallery (скриншоты), particles, ui (гамбургер/попап/тост/d100/таймлайн), analytics. node --check всем.
+- №12-следствие: inline onclick/onkeydown дайса d100 сняты (RU+EN) — слушатели клика и Enter/Space в ui.js; role/tabindex/aria-label сохранены.
+- №18: CSP meta в game/index.html — script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net (инлайн-лоадер + Phaser), import() сцен из 'self', connect/img/media/font/worker минимально, object-src none, base-uri self, form-action none, без unsafe-eval.
+- №11 партия 2: ВСЕ остатки inline-стилей RU+EN (~54 × 2) переведены в классы styles.css (блок «66.48»): .section-intro*, .maps-*, .map-card*, .d100-*, .brand-*, .lead-block, .alpha-banner, .tech-cards-grid, .models-list, .game-start-*, .history-note, .cta-meta, .footer-*, .metric-pixel, .gold-bright, .container--maps; скрытый h1 → .sr-only; .map-card получил position:relative (::after-виньетка легла на карточку). Скрипт замен patch_6648_html.py с проверкой точного числа вхождений каждой замены.
+- Тесты: новый test_round102.mjs (88 assert); r69/r81/r87 актуализированы на модули (конкатенация точки входа + модулей), 19 наборов — SW v98; восстановлена пропущенная в 66.47 запись v97 в docs/SW_CHANGELOG.md; АГЕНТ.md: r86–89 запускаются из game/tools (89 — находка итерации).
+- РЕГРЕСС 64–102 = 39 наборов ВСЕ ЗЕЛЁНЫЕ (r64–85 и r90–102 из корня; r86–89 из game/tools).
+- Живой смоук :8090 (agent-browser): RU — js-флаг, частицы, d100 клик (49/Успех) и Enter, лайтбокс галереи (открытие/→/Esc), попап (открытие/Esc), 0 ошибок; EN — d100 «43 / Success (rolled 43 of 100)»; game/?renderer=canvas — Title-сцена поднялась под CSP, 0 CSP-нарушений.
+- Доки: CHANGES.md (66.48), docs/SW_CHANGELOG.md (v98 + v97), АГЕНТ.md (CWD r89).
+
+Stage Summary:
+- SW: site-cache v98, game-assets-v41 (без изменений); сейвы совместимы. Все 3 отложенных пункта аудита закрыты; инлайн-стилей на лендингах больше нет; клиент лендинга — ES-модули; game/ под CSP. Свежие скриншоты лендинга снимаются с прода после пуша (RU/EN desktop full + RU mobile).

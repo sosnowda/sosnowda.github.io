@@ -100,7 +100,7 @@ ok(swlog.includes('v70 — раунд 66.20'), 'SW_CHANGELOG.md: запись v7
 ok(!existsSync('sw.js.bak') && sw.length < 8000, 'SW: файл лёгкий (<8 КБ, журнал вынесен)');
 
 // ---------- 5. Регресс: main.js без «aref»-мусора ----------
-ok(!read('main.js').includes('aref'), 'main.js: селекторов-опечаток «aref» нет');
+ok(!['js/main.js', 'js/modules/state.js', 'js/modules/reveal.js', 'js/modules/scrollspy.js', 'js/modules/lightbox.js', 'js/modules/gallery.js', 'js/modules/particles.js', 'js/modules/ui.js', 'js/modules/analytics.js'].map(read).join('\n').includes('aref'), 'main.js: селекторов-опечаток «aref» нет');
 
 console.log(`\n=== ИТОГ: ${pass} зелёных, ${fail} красных ===`);
 process.exit(fail ? 1 : 0);

@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%94%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <title>Летописи Руси — Браузерное демо</title>
+<!-- 66.48 (аудит №18): CSP страницы игры. 'unsafe-inline' в script-src —
+     инлайн-лоадер сцен и глушитель F1 ниже по коду; cdn.jsdelivr.net —
+     Phaser 3.88.2 (единственный внешний скрипт); import() сцен — 'self';
+     style 'unsafe-inline' — инлайн-блок разметки и errorEl.innerHTML.
+     Лендинги уже защищены с 66.47; frame-ancestors в meta не работает
+     по спецификации и потому не указан -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
 <!-- Раунд 66.6: G-теги (Open Graph / Twitter / JSON-LD) — корректные
      превью при шеринге ссылки на браузерное демо.
      Раунд 66.8: ОТДЕЛЬНЫЙ og:image для демо (og-demo.jpg 1200×630:

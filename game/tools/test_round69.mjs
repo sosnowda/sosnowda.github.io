@@ -35,6 +35,9 @@ const ok = (cond, name) => {
     else { fail++; console.log('  ✗ FAIL:', name); }
 };
 const read = (p) => readFileSync(join(root, p), 'utf8');
+// 66.48: монолит main.js разбит на ES-модули — лендинг-ассерты гоняем
+// по конкатенации точки входа и всех модулей.
+const LANDING_JS = ['../js/main.js', '../js/modules/state.js', '../js/modules/reveal.js', '../js/modules/scrollspy.js', '../js/modules/lightbox.js', '../js/modules/gallery.js', '../js/modules/particles.js', '../js/modules/ui.js', '../js/modules/analytics.js'].map(read).join('\n');
 
 // Мок registry Phaser
 function mockRegistry(data = {}) {
@@ -200,7 +203,7 @@ console.log('\n[4] СЛУХИ-НАВОДКИ В ТАВЕРНЕ (п.4)');
 
 console.log('\n[5] ЛАЙТБОКС СО СТРЕЛКАМИ (п.5)');
 {
-    const main = read('../main.js');
+    const main = LANDING_JS;
     ok(main.includes('slb-prev') && main.includes('slb-next'), 'main.js: кнопки-стрелки ‹ ›');
     ok(main.includes("ArrowLeft") && main.includes("ArrowRight"), 'main.js: листание клавишами ←/→');
     ok(main.includes("e.key === 'Escape'") || main.includes("key === 'Escape'"), 'main.js: закрытие по Esc');
@@ -252,7 +255,7 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     const sw = read('../sw.js');
     // 66.47: записи журнала живут в docs/SW_CHANGELOG.md
     const swlog = read('../docs/SW_CHANGELOG.md');
-    ok(sw.includes("chronicles-ruthenia-v97"), 'SW: версия сайта актуальна');
+    ok(sw.includes("chronicles-ruthenia-v98"), 'SW: версия сайта актуальна');
     ok(sw.includes("game-assets-v41"), 'SW: кеш ассетов актуален');
     ok(swlog.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи
@@ -261,7 +264,7 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     ok(i18n.includes("'Погода меняется': 'The weather is turning'"), 'i18n: EN-ключ погоды');
     ok(i18n.includes("'🗣 Что слыхал нового? (слухи)':"), 'i18n: EN-ключ пункта слухов');
     // старый лайтбокс-класс больше не ссылается на мёртвый селектор
-    ok(!read('../main.js').includes("querySelectorAll('aref"), 'main.js: нет невалидных селекторов');
+    ok(!LANDING_JS.includes("querySelectorAll('aref"), 'main.js: нет невалидных селекторов');
 }
 
 console.log(`\n=== ИТОГ: ${pass} успешно, ${fail} провалено ===`);
