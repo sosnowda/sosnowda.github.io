@@ -2,6 +2,8 @@
 // Вынесено из монолита main.js: полноэкранный просмотр, зум колесом,
 // перетаскивание, повторный клик — возврат 1:1, Esc закрывает.
 // 66.47 (аудит №16): фокус уходит в кнопку закрытия, при закрытии — назад.
+// 66.55 (аудит 66.52 P3-4): img лайтбокса создаётся через createElement —
+// пустой src в innerHTML-шаблоне оставлял мусорный атрибут в DOM.
 import { IS_EN_PAGE } from './state.js';
 
 export function initMapLightbox() {
@@ -9,11 +11,15 @@ export function initMapLightbox() {
     const lightbox = document.createElement('div');
     lightbox.id = 'mapLightbox';
     lightbox.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;padding:2rem;';
-    lightbox.innerHTML = '<img src="" alt="" style="max-width:95%;max-height:95%;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.8);">'
-        + '<button type="button" class="mlb-close" aria-label="' + (IS_EN_PAGE ? 'Close map preview (Esc)' : 'Закрыть просмотр карты (Esc)') + '" style="position:absolute;top:1rem;right:2rem;background:none;border:none;color:#c9a961;font-size:2rem;cursor:pointer;padding:0 0.6rem;line-height:1;">×</button>';
+    lightbox.innerHTML = '<button type="button" class="mlb-close" aria-label="' + (IS_EN_PAGE ? 'Close map preview (Esc)' : 'Закрыть просмотр карты (Esc)') + '" style="position:absolute;top:1rem;right:2rem;background:none;border:none;color:#c9a961;font-size:2rem;cursor:pointer;padding:0 0.6rem;line-height:1;">×</button>';
+    // P3-4 (аудит 66.52): реальный src выставляет openLightbox(); порядок DOM
+    // прежний — img первым ребёнком контейнера, до кнопки закрытия.
+    const lbImg = document.createElement('img');
+    lbImg.alt = '';
+    lbImg.style.cssText = 'max-width:95%;max-height:95%;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.8);';
+    lightbox.insertBefore(lbImg, lightbox.firstChild);
     document.body.appendChild(lightbox);
 
-    const lbImg = lightbox.querySelector('img');
     const lbClose = lightbox.querySelector('.mlb-close');
     // Заявлены ДО обработчиков (66.31: const/let — у var была всплыть-магия)
     let zoomLevel = 1;

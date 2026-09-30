@@ -3,6 +3,8 @@
 // стрелки ‹ › и клавиши ←/→ листают кадры, Esc закрывает, свайп работает
 // на тач-экранах; счётчик «3 / 9»; подпись берётся из карточки
 // (автоматически локализуется на EN-версии страницы).
+// 66.55 (аудит 66.52 P3-4): img скриншот-лайтбокса создаётся через createElement —
+// пустой src в innerHTML-шаблоне оставлял мусорный атрибут в DOM.
 import { IS_EN_PAGE } from './state.js';
 
 export function initGallery() {
@@ -24,14 +26,17 @@ export function initGallery() {
         + '<button type="button" class="slb-btn slb-close" aria-label="' + L10N.close + '">×</button>'
         + '<button type="button" class="slb-btn slb-prev" aria-label="' + L10N.prev + '">‹</button>'
         + '<figure class="slb-figure">'
-        +   '<img src="" alt="">'
         +   '<figcaption class="slb-caption"></figcaption>'
         + '</figure>'
         + '<button type="button" class="slb-btn slb-next" aria-label="' + L10N.next + '">›</button>'
         + '<div class="slb-counter" aria-live="polite"></div>';
     document.body.appendChild(slb);
 
-    const slbImg = slb.querySelector('img');
+    // P3-4 (аудит 66.52): src/alt выставляет slbShow() при открытии/листании;
+    // порядок DOM прежний — img перед подписью (figcaption), внутри .slb-figure.
+    const slbImg = document.createElement('img');
+    slbImg.alt = '';
+    slb.querySelector('.slb-figure').insertBefore(slbImg, slb.querySelector('.slb-caption'));
     const slbCaption = slb.querySelector('.slb-caption');
     const slbCounter = slb.querySelector('.slb-counter');
     let slbIndex = 0;
