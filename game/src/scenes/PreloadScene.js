@@ -19,7 +19,7 @@
 //
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
-import { isEn } from '../systems/i18n.js';
+import { isEn, t } from '../systems/i18n.js';
 import { reducedMotion } from '../systems/MotionFX.js';
 import { bindRestartOnResize } from '../utils/ui.js';
 
@@ -78,8 +78,16 @@ export class PreloadScene extends Phaser.Scene {
         }
 
         // ----- Заголовок (масштаб под ширину — как в TitleScene) -----
-        const titleSize = Math.max(26, Math.min(58, Math.round(width / 13)));
-        this.add.text(cx, Math.round(height * 0.26), 'ЛЕТОПИСИ РУСИ', {
+        // 66.52 (приказ 2 + аудит P2-3): бренд локализован через словарь
+        // (t('ЛЕТОПИСИ РУСИ') → 'THE CHRONICLES OF RUTHENIA'); EN-строка вдвое
+        // длиннее — отдельная формула width/17, кламп [20,48], без переполнения
+        // на мобильной ширине.
+        const preloadBrand = t('ЛЕТОПИСИ РУСИ');
+        const isEnBrand = preloadBrand !== 'ЛЕТОПИСИ РУСИ';
+        const titleSize = isEnBrand
+            ? Math.max(20, Math.min(48, Math.round(width / 17)))
+            : Math.max(26, Math.min(58, Math.round(width / 13)));
+        this.add.text(cx, Math.round(height * 0.26), preloadBrand, {
             fontFamily: 'Georgia, serif', fontSize: titleSize + 'px', color: '#E8DCC4',
             fontStyle: 'bold', stroke: '#000000', strokeThickness: 4,
         }).setOrigin(0.5).setDepth(2);

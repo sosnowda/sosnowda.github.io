@@ -53,8 +53,16 @@ export class TitleScene extends Phaser.Scene {
         }
 
         // Раунд 20: заголовок масштабируется под ширину окна (на телефоне не выпирает)
-        const titleSize = Math.max(30, Math.min(66, Math.round(width / 12)));
-        this.add.text(width / 2, 110, 'ЛЕТОПИСИ РУСИ', {
+        // 66.52 (приказ 2 + аудит P2-3): бренд-титул локализован через словарь
+        // (t('ЛЕТОПИСИ РУСИ') → 'THE CHRONICLES OF RUTHENIA'). EN-строка вдвое
+        // длиннее (26 против 13 символов) — отдельная формула размера: width/17,
+        // кламп [20,52], чтобы на мобильной ширине (320–720) не переполнять экран.
+        const brand = t('ЛЕТОПИСИ РУСИ');
+        const isEnBrand = brand !== 'ЛЕТОПИСИ РУСИ';
+        const titleSize = isEnBrand
+            ? Math.max(20, Math.min(52, Math.round(width / 17)))
+            : Math.max(30, Math.min(66, Math.round(width / 12)));
+        this.add.text(width / 2, 110, brand, {
             fontFamily: 'Georgia, serif', fontSize: titleSize + 'px', color: '#E8DCC4',
             fontStyle: 'bold', stroke: '#000', strokeThickness: 4,
         }).setOrigin(0.5);
