@@ -3,7 +3,8 @@
 // (Esc + фокус-трап), тост копирования ссылки, интерактивный d100,
 // интерактивный таймлайн князей. Выполняется и при reduced-motion,
 // и при отсутствии IntersectionObserver.
-import { REDUCED_MOTION, IS_EN_PAGE } from './state.js';
+import { REDUCED_MOTION } from './state.js';
+import { STR } from './l10n.js';
 
 export function initInteractivePage(reducedMotion) {
     initMobileMenu();
@@ -81,7 +82,7 @@ function initFundPopup() {
         });
     }
     if (closeBtn) {
-        closeBtn.setAttribute('aria-label', IS_EN_PAGE ? 'Close support dialog' : 'Закрыть окно поддержки');
+        closeBtn.setAttribute('aria-label', STR.popup.closeAria);
         closeBtn.addEventListener('click', function () { closePopup(); syncExpanded(false); });
     }
     popup.setAttribute('role', 'dialog');
@@ -149,10 +150,8 @@ function initCopyToast() {
     document.querySelectorAll('.btn-share--copy').forEach(function (btn) {
         btn.addEventListener('click', function () {
             const url = btn.getAttribute('data-url') || location.origin + location.pathname;
-            const okMsg = btn.getAttribute('data-toast') || (IS_EN_PAGE ? 'Link copied!' : 'Ссылка скопирована!');
-            const errMsg = IS_EN_PAGE
-                ? 'Could not copy — please copy the address from the browser bar'
-                : 'Не удалось скопировать — скопируйте адрес из строки браузера';
+            const okMsg = btn.getAttribute('data-toast') || STR.toast.copied;
+            const errMsg = STR.toast.failed;
             function fallbackCopy() {
                 // Фолбэк: старые браузеры / контексты без clipboard API
                 try {
@@ -186,9 +185,8 @@ function initCopyToast() {
 // (onclick/onkeydown в разметке) сняты — ES-модули не экспортируют
 // глобальные функции; здесь же клавиатура Enter/Space (a11y).
 // ============================================================
-const D100_I18N = (document.documentElement.lang || 'ru').toLowerCase().indexOf('ru') === 0
-    ? { rolling: 'Бросаем…', luck: 'Удача!', special: 'Особый!', success: 'Успех', fail: 'Провал!', tail: ' (выпало {r} из 100)' }
-    : { rolling: 'Rolling…', luck: 'Luck!', special: 'Special!', success: 'Success', fail: 'Failure!', tail: ' (rolled {r} of 100)' };
+// 66.50 (приказ 1): строки d100 переехали в словарь js/modules/l10n.js (UI_DICT.ru/en.d100)
+const D100_I18N = STR.d100;
 let d100IsRolling = false;
 
 function rollD100() {
@@ -256,47 +254,11 @@ function initPrincesTimeline(reducedMotion) {
     const timeline = document.getElementById('princesTimeline');
     if (!timeline) return;
 
-    const T = IS_EN_PAGE ? {
-        hint: 'Select a prince on the ribbon — 105 years of the era between them.',
-        reignLabel: 'Reign',
-        eventsHit: { one: '1 chronicle event highlighted', many: '{n} chronicle events highlighted' },
-        none: 'No chronicle events in these years — they are recorded in the village legends.',
-    } : {
-        hint: 'Выберите князя на ленте — между ними 105 лет эпохи.',
-        reignLabel: 'Правление',
-        eventsHit: { one: 'Подсвечено 1 событие хроники', many: 'Подсвечено событий: {n}' },
-        none: 'В эти годы хроника молчит — они записаны в деревенских преданиях.',
-    };
-
-    const DOSIER = {
-        vasily1: IS_EN_PAGE ? {
-            name: 'Vasily I Dmitriyevich',
-            years: 'Grand Prince 1389–1425',
-            text: 'Continued gathering the lands: Nizhny Novgorod joined Moscow (1392). Withstood Edigu\u2019s raid (1408) and fortified Moscow with a new kremlin. Rus\u2019 still paid tribute to the Horde, but already chose which khan to carry it to.'
-        } : {
-            name: 'Василий I Дмитриевич',
-            years: 'Великий князь 1389–1425',
-            text: 'Продолжил собирание земель: Нижний Новгород присоединён к Москве (1392). Отразил нашествие Едигея (1408), укрепил Москву новым кремлём. Дань Орде Русь платит, но уже сама выбирает, какому из ханов её везти.'
-        },
-        vasily2: IS_EN_PAGE ? {
-            name: 'Vasily II the Dark',
-            years: 'Grand Prince 1425–1462',
-            text: 'The feudal war of 1425–1453: struggle against Yuri of Zvenigorod and Vasily the Cross-Eyed for the throne. Blinded in 1446, yet kept the grand princedom; in 1448 the Russian Church became autocephalous. Passed the throne to his son Ivan III.'
-        } : {
-            name: 'Василий II «Тёмный»',
-            years: 'Великий князь 1425–1462',
-            text: 'Феодальная война 1425–1453: борьба с Юрием Звенигородским и Василием Косым за престол. Ослеплён в 1446 году, но удержал великое княжение; в 1448 Русская церковь стала автокефальной. Престол передал сыну Ивану III.'
-        },
-        ivan3: IS_EN_PAGE ? {
-            name: 'Ivan III the Great',
-            years: 'Grand Prince 1462–1505',
-            text: 'Cast off the Horde yoke (Stand on the Ugra, 1480), annexed Novgorod (1478), issued the Law Code of 1497 and raised the new Moscow Kremlin. First «Sovereign of All Rus\u2019».'
-        } : {
-            name: 'Иван III «Великий»',
-            years: 'Великий князь 1462–1505',
-            text: 'Сверг ордынское иго (Стояние на Угре, 1480), присоединил Новгород (1478), издал Судебник (1497) и поставил новый Московский Кремль. Первый «Государь всея Руси».'
-        },
-    };
+    // 66.50 (приказ 1: «таймлайн в EN-словаре»): строки таймлайна — в
+    // едином словаре js/modules/l10n.js (UI_DICT.ru/en.timeline), здесь —
+    // только ссылки на активную локаль.
+    const T = STR.timeline;
+    const DOSIER = T.dosier;
 
     const reignBtns = Array.prototype.slice.call(timeline.querySelectorAll('.pt-reign'));
     const detail = timeline.querySelector('.pt-detail');

@@ -37,7 +37,7 @@ const ok = (cond, name) => {
 const read = (p) => readFileSync(join(root, p), 'utf8');
 // 66.48: монолит main.js разбит на ES-модули — лендинг-ассерты гоняем
 // по конкатенации точки входа и всех модулей.
-const LANDING_JS = ['../js/main.js', '../js/modules/state.js', '../js/modules/reveal.js', '../js/modules/scrollspy.js', '../js/modules/lightbox.js', '../js/modules/gallery.js', '../js/modules/particles.js', '../js/modules/ui.js', '../js/modules/analytics.js'].map(read).join('\n');
+const LANDING_JS = ['../js/main.js', '../js/modules/state.js', '../js/modules/l10n.js', '../js/modules/reveal.js', '../js/modules/scrollspy.js', '../js/modules/lightbox.js', '../js/modules/gallery.js', '../js/modules/particles.js', '../js/modules/ui.js', '../js/modules/analytics.js'].map(read).join('\n');
 
 // Мок registry Phaser
 function mockRegistry(data = {}) {
@@ -255,7 +255,7 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     const sw = read('../sw.js');
     // 66.47: записи журнала живут в docs/SW_CHANGELOG.md
     const swlog = read('../docs/SW_CHANGELOG.md');
-    ok(sw.includes("chronicles-ruthenia-v99"), 'SW: версия сайта актуальна');
+    ok(sw.includes("chronicles-ruthenia-v100"), 'SW: версия сайта актуальна');
     ok(sw.includes("game-assets-v41"), 'SW: кеш ассетов актуален');
     ok(swlog.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи

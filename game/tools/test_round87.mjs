@@ -20,7 +20,7 @@ const swlog = read('../../docs/SW_CHANGELOG.md'); // 66.47: журнал пер�
 const landingRU = read('../../index.html');
 const landingEN = read('../../en/index.html');
 // 66.48: монолит main.js разбит на ES-модули — ассерты гоняем по конкатенации
-const mainJs = ['../../js/main.js', '../../js/modules/state.js', '../../js/modules/reveal.js', '../../js/modules/scrollspy.js', '../../js/modules/lightbox.js', '../../js/modules/gallery.js', '../../js/modules/particles.js', '../../js/modules/ui.js', '../../js/modules/analytics.js'].map(read).join('\n');
+const mainJs = ['../../js/main.js', '../../js/modules/state.js', '../../js/modules/l10n.js', '../../js/modules/reveal.js', '../../js/modules/scrollspy.js', '../../js/modules/lightbox.js', '../../js/modules/gallery.js', '../../js/modules/particles.js', '../../js/modules/ui.js', '../../js/modules/analytics.js'].map(read).join('\n');
 const i18n = read('../src/systems/i18n.js');
 const title = read('../src/scenes/TitleScene.js');
 const styles = read('../../styles.css');
@@ -140,7 +140,7 @@ ok(styles.includes('.pt-reign{transition:none}') || /prefers-reduced-motion[\s\S
     'styles.css: reduced-motion — без анимаций таймлайна');
 
 console.log('--- 9. SW и кеши ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v99';"), 'SW: site-cache v96');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v100';"), 'SW: site-cache v96');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 (66.33: листы+бусты)');
 ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84 (история версий сохраняется)');
 
