@@ -2092,3 +2092,19 @@ Work Log:
 
 Stage Summary:
 - Патч 66.49: последние два микро-пункта аудита закрыты — d100 без reflow-хака (WAAPI + reduced-motion), styles.css без дублей .hero*. SW v99, сейвы совместимы. Пуш и прод-верификация — следующим шагом.
+
+---
+Task ID: 66.49-прод
+Agent: Super Z (main, Z.ai)
+Task: Прод-верификация пуша 66.49 (b1e7e0d) на https://sosnowda.github.io + пересъёмка свежих скриншотов лендинга.
+
+Work Log:
+- Пуш: origin/main 28517d0..b1e7e0d (26 файлов: ui.js, styles.css, sw.js v99, docs/SW_CHANGELOG.md, 20 тест-наборов актуализированы, CHANGES/worklog).
+- Pages: built @b1e7e0d (API pages/builds/latest, ~45 c).
+- Прод-пинги: / /en/ /game/ — все 200; sw.js на проде = chronicles-ruthenia-v99.
+- sha256 бит-в-бит прод==локал (5 файлов): js/modules/ui.js, styles.css, index.html, en/index.html, sw.js — ВСЕ СОВПАДАЮТ.
+- Живой смоук прода (agent-browser): js-флаг, fund-bar=BUTTON, copyright 2025–2026, d100 кликом «92 / Успех (выпало 92 из 100)» — WAAPI работает на проде, консоль/ошибки — 0.
+- Свежие скриншоты лендинга с ПРОДА (66.49) → /home/z/my-project/download/screenshots_6649/: 01 RU hero 1440×900; 02 RU fullpage desktop (1440×12841); 03 EN fullpage desktop; 04 RU fullpage mobile 390×844. Методика 66.48 сохранена: форс reveal + content-visibility + eager + прокрутка вниз/вверх перед --full; контрольные срезы fullpage проверены — все секции с контентом.
+
+Stage Summary:
+- 66.49 на проде: аудит закрыт ПОЛНОСТЬЮ (20 пунктов 66.47 + 3 отложенных 66.48 + микро-пункты 2.2/2.4 в 66.49). Клиент лендинга — ES-модули без reflow-хаков, styles.css без дублей .hero*, game/ под CSP, SW site-cache v99, сейвы совместимы. Скриншоты 66.49 переданы владельцу. Регресс 64–102 зелёный.
