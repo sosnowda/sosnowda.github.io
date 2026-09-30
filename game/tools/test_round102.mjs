@@ -7,7 +7,7 @@
 //   №11  партия 2: index.html и en/index.html свободны от инлайн-стилей
 //        (ложное срабатывание SVG font-style отфильтровывается), новые классы
 //        на месте в styles.css;
-//   SW   site-cache v98, журнал версий в docs/SW_CHANGELOG.md (v97 и v98).
+//   SW   site-cache v99, журнал версий в docs/SW_CHANGELOG.md (v97 и v98).
 import { readFileSync, existsSync } from 'fs';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -98,11 +98,12 @@ ok(ru.includes('class="map-card">') && en.includes('class="map-card">'), 'RU/EN:
 ok(ru.includes('class="d100-sphere"') && en.includes('class="d100-sphere"'), 'RU/EN: сфера d100 на классе');
 ok(styles.includes('.sr-only'), 'styles.css: .sr-only существует (скрытый h1 переиспользует)');
 
-console.log('--- 5. Service Worker v98 и журнал ---');
+console.log('--- 5. Service Worker v99 и журнал ---');
 const sw = read('sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v98';"), 'SW: site-cache v98');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v99';"), 'SW: site-cache v99');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 не менялся (ассеты не трогали)');
 const swlog = read('docs/SW_CHANGELOG.md');
+ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 добавлена');
 ok(swlog.includes('- v98 — итерация 66.48'), 'SW-журнал: запись v98 добавлена');
 ok(swlog.includes('- v97 — итерация 66.47'), 'SW-журнал: пропущенная запись v97 восстановлена');
 

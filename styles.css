@@ -637,8 +637,7 @@ html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель 
 .img-placeholder{width:100%;border-radius:12px;overflow:hidden;margin:1rem 0}
 .img-placeholder svg{width:100%;height:auto;display:block}
 
-.hero-image-wrap{width:100%;max-width:1180px;margin:0 auto;padding:0}
-.hero-image{width:100%;height:auto;display:block;border-radius:0;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+/* (66.49, аудит 2.4) дубли .hero-image-wrap/.hero-image сняты — единственный блок ниже, раздел «HERO — титульная картинка» */
 .hero-text{padding:3rem 24px 4rem;text-align:center}
 .hero-text h1{font-size:clamp(2.5rem,6vw,4rem);font-family:'Prata',serif;color:var(--gold);margin-bottom:0.5rem}
 
@@ -669,10 +668,11 @@ html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель 
 @keyframes d100-3d-roll{0%{transform:rotateX(0) rotateY(0) rotateZ(0) scale(1)}30%{transform:rotateX(360deg) rotateY(180deg) rotateZ(90deg) scale(1.15)}60%{transform:rotateX(720deg) rotateY(360deg) rotateZ(180deg) scale(1.1)}100%{transform:rotateX(1080deg) rotateY(540deg) rotateZ(270deg) scale(1)}}
 #d100Dice:hover #d100Sphere{transform:scale(1.05);box-shadow:0 16px 48px rgba(0,0,0,0.6)}
 
-/* HERO — титульная картинка */
+/* HERO — титульная картинка (66.49, аудит 2.4: три дубля .hero* консолидированы
+   в один блок; значения = итог прежнего каскада, рендер не изменён) */
 .hero{padding:0;margin:0;background:none;overflow:visible}
-.hero-image-wrap{width:100%;margin:0;padding:0;position:relative;z-index:1}
-.hero-image{width:100%;height:auto;display:block;border-radius:0;box-shadow:0 4px 24px rgba(0,0,0,0.4);position:relative;z-index:1}
+.hero-image-wrap{width:100%;max-width:1180px;margin:0;padding:0;position:relative;z-index:1;overflow:hidden}
+.hero-image{width:100%;height:auto;display:block;border-radius:0;box-shadow:0 4px 24px rgba(0,0,0,0.4);position:relative;z-index:1;will-change:transform;transition:transform 0.1s linear}
 
 /* ===================== СРЕДНЕВЕКОВЫЙ СТИЛЬ ===================== */
 
@@ -1032,16 +1032,6 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
 #trailer video {
     width: 100%;
     display: block;
-}
-
-/* Параллакс hero */
-.hero-image-wrap {
-    overflow: hidden;
-    position: relative;
-}
-.hero-image {
-    will-change: transform;
-    transition: transform 0.1s linear;
 }
 
 /* Демо iframe */

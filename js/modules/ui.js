@@ -198,9 +198,23 @@ function rollD100() {
     const result = document.getElementById('d100Result');
     const degree = document.getElementById('d100Degree');
     if (!sphere || !result || !degree) { d100IsRolling = false; return; }
+    // Аудит 2.2 (66.49): перезапуск ролла БЕЗ reflow-хака void offsetWidth —
+    // Web Animations API (те же кадры, что у CSS d100-3d-roll; длительность 700 мс
+    // совпадает с таймером результата). При prefers-reduced-motion анимация
+    // схлопывается в 1 мс. CSS-класс .rolling оставлен фолбэком для браузеров
+    // без element.animate.
     sphere.classList.remove('rolling');
-    void sphere.offsetWidth;
-    sphere.classList.add('rolling');
+    if (typeof sphere.animate === 'function') {
+        sphere.animate([
+            { transform: 'rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1)' },
+            { transform: 'rotateX(360deg) rotateY(180deg) rotateZ(90deg) scale(1.15)', offset: 0.3 },
+            { transform: 'rotateX(720deg) rotateY(360deg) rotateZ(180deg) scale(1.1)', offset: 0.6 },
+            { transform: 'rotateX(1080deg) rotateY(540deg) rotateZ(270deg) scale(1)' }
+        ], { duration: REDUCED_MOTION ? 1 : 700, easing: 'ease-out' });
+    } else {
+        void sphere.offsetWidth; // фолбэк: перезапуск CSS-анимации #d100Sphere.rolling
+        sphere.classList.add('rolling');
+    }
     result.textContent = '?';
     degree.textContent = D100_I18N.rolling;
     degree.style.color = '';
