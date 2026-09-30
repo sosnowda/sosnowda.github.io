@@ -2155,3 +2155,26 @@ Work Log:
 
 Stage Summary:
 - Все 3 приказа владельца выполнены: (1) таймлайн в EN-словаре — js/modules/l10n.js; (2) GitHub Releases-нотификации — релиз v0.3.0-alpha опубликован; (3) полный прогон игры со скриншотами и проверкой — зелёный, попутно НАЙДЕН И ЗАКРЫТ критический CSP-баг текстур прода. Регресс 64–103 зелёный, прод синхронен.
+
+---
+Task ID: 66.52-аудит
+Agent: Super Z (main, Z.ai)
+Task: Повторный аудит владельца (12 пунктов, «© 2025», aria-label, частицы, UTM, pageYOffset, дубли CSS, video, CSP, модульность, focus trap, прогресс-бар) — сверка с актуальным продом 1074b88.
+
+Work Log:
+- Сверка репо: origin/main == HEAD == 1074b88 (66.51), чисто; Pages built @3a8ddf3. sha256 бит-в-бит прод==локал: index.html, js/main.js, gallery.js, particles.js, styles.css, game/index.html.
+- П.1 © 2025–2026: index.html:815 и en/index.html:814 «© 2025–2026 …»; живой DOM прод-лендинга RU — «© 2025–2026 Летописи Руси XV века…». ЗАКРЫТ (66.47).
+- П.2 aria-локализация: gallery.js L10N {open:'Open screenshot: '/'Открыть скриншот: '} на IS_EN_PAGE (state.js); прод EN — aria-label карточки «Open screenshot: Main menu», лайтбокс «Screenshot 1 of 9», кнопки «Close (Esc)»; RU — «Открыть скриншот: 1. Главное меню». ЗАКРЫТ (66.47/66.48).
+- П.3 частицы: particles.js — проверка document.visibilityState в КАЖДОМ кадре + visibilitychange с cancelAnimationFrame и рестартом; при prefers-reduced-motion частиц нет вовсе (initParticles выходит до создания canvas); прод — #particles-canvas живой. ЗАКРЫТ (66.31/66.48, сильнее аудита).
+- П.4 UTM: все boosty-ссылки RU и EN с utm_campaign=fund_popup/support_section/footer; прод-футер RU href подтверждён в DOM. ЗАКРЫТ (66.47).
+- П.5 pageYOffset: в js/ не встречается; scrollspy.js использует window.scrollY. ЗАКРЫТ (66.47/66.48).
+- П.6/10 дубли .hero*: после 66.49 верхнеуровневые .hero/.hero-image-wrap/.hero-image — по одному каноническому блоку (styles.css 673–675); .hero-text/.hero-buttons — другие селекторы, не дубли. ЗАКРЫТ.
+- П.7 video: index.html:680 / en/index.html:679 — width="1920" height="1080" + poster; прод-DOM {w:1920,h:1080,poster:true}. ЗАКРЫТ (66.47).
+- П.8 CSP RU: meta CSP в index.html:15 (script/style/font/img/media/connect-src, form-action boosty/yoomoney/vk); прод-DOM cspMeta=true. ЗАКРЫТ (66.48); game/index.html дополнительно blob: с 66.51.
+- П.9 модульность: js/main.js = 46 строк, 8 импортов; модули analytics/gallery/l10n/lightbox/particles/reveal/scrollspy/state/ui. ЗАКРЫТ (66.48).
+- П.11 focus trap: gallery.js — Tab замкнут на кнопки лайтбокса (66.47, аудит №16); прод: фокус при открытии на .slb-close, role=dialog/aria-modal. ЗАКРЫТ.
+- П.12 прогресс-бар: PreloadScene — ПЕРВАЯ сцена (game/index.html:95), золотой бар от реального прогресса загрузчика, % и подсказки; текст «Загрузка...» в BootScene:220 — только фолбэк без Preload. Живая съёмка чистой сессии (сброс SW+кэшей): 8 кадров, бар монотонно 20%→35% (пиксельная проверка gold_px 320→560), затем Title; 0 ошибок. ЗАКРЫТ (66.31).
+- Кадры-доказательства → download/screenshots_6652/ (12_boot_1..8, 12_boot_title, 12_now).
+
+Stage Summary:
+- Все 12 пунктов повторного аудита УЖЕ закрыты патчами 66.47–66.51 и подтверждены на живом проде (DOM + sha256 + скриншоты). Новых правок кода не требуется; SW v100 без изменений, сейвы совместимы. Вывод: аудит составлен по состоянию до 66.47.
