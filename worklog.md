@@ -2026,3 +2026,19 @@ Work Log:
 
 Stage Summary:
 - SW: site-cache v97, game-assets-v41 (без изменений); сейвы совместимы. 14 пунктов аудита реализовано, 6 подтверждены как выполненные, 3 отложены с обоснованием (модули main.js, CSP для game/, вторая партия inline-стилей). Урок: перед реализацией аудита сверять пункты с текущим кодом — треть аудита уже была закрыта в 66.31.
+
+---
+Task ID: 66.47-прод
+Agent: Super Z (main)
+Task: Прод-верификация пуша 66.47 (f3474e2) на https://sosnowda.github.io
+
+Work Log:
+- Пуш: origin/main 9c05b04..f3474e2 (30 файлов: лендинги RU/EN, styles.css, main.js, sw.js v97, docs/SW_CHANGELOG.md, QA-отчёт, 13 актуализированных юнит-наборов, CHANGES/АГЕНТ/worklog).
+- Pages: built @f3474e2 (API pages/builds/latest, сборка ~25 c).
+- Прод-пинги: / → 200; /en/ → 200; sw.js на проде = 3502 байта с указателем «журнал перенесён в docs/SW_CHANGELOG.md»; /docs/SW_CHANGELOG.md → 200.
+- sha256 бит-в-бит прод==локал: sw.js, main.js, styles.css, index.html, en/index.html, docs/SW_CHANGELOG.md — ВСЕ СОВПАДАЮТ.
+- Живые проверки HTML прода: fund-bar = <button type="button" class="fund-bar"> (1), «2025–2026» в подвале, CSP meta присутствует.
+- GitHub Releases созданы (аудит №15): v0.1.0-alpha @ 9c05b04 (66.46) и v0.2.0-alpha @ f3474e2 (66.47), pre-release с release-notes; урок: API принимает только ПОЛНЫЙ SHA в target_commitish (короткий даёт 422).
+
+Stage Summary:
+- 66.47 полностью на проде: SW site-cache v97 (sw.js 3,2 КБ), CSP активна, fund-bar — нативная кнопка, тост вместо alert, журнал версий в docs/. Все 20 пунктов аудита закрыты (14 реализовано + 6 подтверждено в 66.31); отложены 3 стратегических (модули main.js, CSP для game/, партия 2 inline-стилей). Регресс 64–101 зелёный; первые два релиза проекта опубликованы.
