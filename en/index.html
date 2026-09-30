@@ -9,6 +9,10 @@
     <meta name="author" content="sosnowda">
     <meta name="theme-color" content="#1A1410">
     <meta name="robots" content="index, follow">
+    <!-- 66.47 (audit #18): basic landing CSP. script-src keeps 'unsafe-inline' —
+         otherwise the inline Yandex.Metrika counter and onclick handlers break;
+         the policy cuts object/frame/form-action/base-uri and foreign hosts -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://mc.yandex.ru; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://mc.yandex.ru https://*.mc.yandex.ru; media-src 'self'; connect-src 'self' https://mc.yandex.ru https://*.mc.yandex.ru wss://mc.yandex.ru wss://*.mc.yandex.ru; frame-src 'self' https://mc.yandex.ru; object-src 'none'; base-uri 'self'; form-action 'self' https://boosty.to https://yoomoney.ru https://vk.ru">
 
     <!-- Favicon -->
     <link rel="icon" href="../favicon.ico" type="image/x-icon">
@@ -58,7 +62,7 @@
 
     <!-- JSON-LD -->
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"VideoGame","name":"The Chronicles of Ruthenia — 15th-Century Rus'","description":"AI-narrative RPG set in Rus', 1400-1505.","genre":["RPG","Historical","AI"],"applicationCategory":"Game","operatingSystem":"Web Browser, Windows","url":"https://sosnowda.github.io/en/","image":"https://sosnowda.github.io/assets/images/og-image.jpg","author":{"@type":"Person","name":"sosnowda"},"softwareVersion":"0.1.0-alpha","inLanguage":["en","ru"],"offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"}}
+    {"@context":"https://schema.org","@type":"VideoGame","name":"The Chronicles of Ruthenia — 15th-Century Rus'","description":"AI-narrative RPG set in Rus', 1400-1505.","genre":["RPG","Historical","AI"],"applicationCategory":"Game","operatingSystem":"Web Browser, Windows","url":"https://sosnowda.github.io/en/","image":"https://sosnowda.github.io/assets/images/og-image.jpg","author":{"@type":"Person","name":"sosnowda"},"softwareVersion":"0.2.0-alpha","inLanguage":["en","ru"],"offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"}}
     </script>
 
     <link rel="stylesheet" href="../styles.css">
@@ -85,18 +89,19 @@
     <!-- HEADER -->
 
 <!-- FUNDRAISING BAR -->
-<div class="fund-bar" onclick="document.getElementById('fundPopup').classList.add('open')">
+<!-- 66.47 (audit #20): div → a real <button> — accessibility without role shims -->
+<button type="button" class="fund-bar" aria-haspopup="dialog" aria-controls="fundPopup" onclick="document.getElementById('fundPopup').classList.add('open')">
     💰 Fundraising for the project — click to support!
-</div>
+</button>
 <div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="fund-popup-content">
         <button class="fund-popup-close" aria-label="Close support dialog" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
         <h3 id="fundPopupTitle">Support The Chronicles of Ruthenia</h3>
         <p>Funds will go toward AI testing hardware, knowledge-base content and development. Choose a convenient method:</p>
         <div class="support-buttons">
-            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;">Boosty (subscription)</a>
-            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;">YuMoney (transfer)</a>
-            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.8rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;">VKontakte</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--boosty">Boosty (subscription)</a>
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--yoomoney">YuMoney (transfer)</a>
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--vk">VKontakte</a>
         </div>
     </div>
 </div>
@@ -386,20 +391,20 @@
                 </a>
             </div>
 
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:2rem;">
-                <div class="feature-card" style="text-align:center;padding:1rem;">
-                    <h3 style="color:var(--gold);margin-bottom:0.5rem;font-size:0.95rem;">d100 success levels</h3>
-                    <ul style="list-style:none;padding:0;color:var(--text-dim);font-size:0.8rem;line-height:1.6;">
-                        <li><strong style="color:var(--gold-bright);">Luck</strong> — 1/20</li>
-                        <li><strong style="color:var(--gold-bright);">Special</strong> — 1/5</li>
-                        <li><strong style="color:var(--gold-bright);">Success</strong> — ≤ skill</li>
-                        <li><strong style="color:var(--gold-bright);">Failure</strong> — &gt; skill</li>
-                        <li><strong style="color:#c44;">Fumble</strong> — 96+</li>
+            <div class="grid--brp-4col">
+                <div class="feature-card">
+                    <h3>d100 success levels</h3>
+                    <ul>
+                        <li><strong>Luck</strong> — 1/20</li>
+                        <li><strong>Special</strong> — 1/5</li>
+                        <li><strong>Success</strong> — ≤ skill</li>
+                        <li><strong>Failure</strong> — &gt; skill</li>
+                        <li><strong class="crit">Fumble</strong> — 96+</li>
                     </ul>
                 </div>
-                <div class="feature-card" style="text-align:center;padding:1rem;">
-                    <h3 style="color:var(--gold);margin-bottom:0.5rem;font-size:0.95rem;">Hit locations (d20)</h3>
-                    <ul style="list-style:none;padding:0;color:var(--text-dim);font-size:0.8rem;line-height:1.6;">
+                <div class="feature-card">
+                    <h3>Hit locations (d20)</h3>
+                    <ul>
                         <li>1–4: Right leg</li>
                         <li>5–8: Left leg</li>
                         <li>9–11: Abdomen</li>
@@ -409,9 +414,9 @@
                         <li>19–20: Head</li>
                     </ul>
                 </div>
-                <div class="feature-card" style="text-align:center;padding:1rem;">
-                    <h3 style="color:var(--gold);margin-bottom:0.5rem;font-size:0.95rem;">Damage bonus</h3>
-                    <ul style="list-style:none;padding:0;color:var(--text-dim);font-size:0.8rem;line-height:1.6;">
+                <div class="feature-card">
+                    <h3>Damage bonus</h3>
+                    <ul>
                         <li>STR+SIZ 2–12: −1D6</li>
                         <li>STR+SIZ 13–16: −1D4</li>
                         <li>STR+SIZ 17–24: none</li>
@@ -421,9 +426,9 @@
                         <li>STR+SIZ 57+: +3D6+</li>
                     </ul>
                 </div>
-                <div class="feature-card" style="text-align:center;padding:1rem;">
-                    <h3 style="color:var(--gold);margin-bottom:0.5rem;font-size:0.95rem;">Major wound (d100)</h3>
-                    <p style="color:var(--text-dim);font-size:0.8rem;line-height:1.5;">Damage ≥ ½ HP triggers a d100 table with stat loss by body zone. Knockout &ldquo;take alive&rdquo; — a captive yields ransom under the 1497 Sudebnik.</p>
+                <div class="feature-card">
+                    <h3>Major wound (d100)</h3>
+                    <p>Damage ≥ ½ HP triggers a d100 table with stat loss by body zone. Knockout &ldquo;take alive&rdquo; — a captive yields ransom under the 1497 Sudebnik.</p>
                 </div>
             </div>
 
@@ -466,7 +471,6 @@
 <strong>Built-in embedding model</strong> — mxbai-embed-large-v1 · Q5_K_M · dim 1024 · cosine search. A second neural network for the RAG knowledge base.</li>
                     <li>
 <strong>Rolling Summary + State Injection</strong> — intelligent context-window management that prevents overflow while preserving key events.</li>
-                </ul>
                     <li><strong>Full list of neural network models:</strong>
                     <ul style="margin:.5rem 0;padding-left:1.5rem;">
                         <li><strong>Local:</strong> Saiga Llama 3 8B (Q2_K/Q4_K_M/Q8_0), Saiga Gemma 3 12B (Q3_K_M/Q4_K_M/Q6), Vikhr-Nemo 12B (Q4_K_M/Q5_K_M/Q6), Vikhr-YandexGPT 5 Lite 8B (Q4_K_M), Gemma-4 E4B-Uncensored (Q4_K_M)</li>
@@ -474,6 +478,7 @@
                         <li><strong>Embedder (knowledge base):</strong> mxbai-embed-large-v1 · Q5_K_M · dim 1024 · cosine search</li>
                     </ul>
                     </li>
+                </ul>
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
                 <div class="feature-card" style="text-align: center;">
@@ -669,8 +674,8 @@
         <p style="text-align:center;color:var(--text-dim);max-width:700px;margin:0 auto 2rem;">
             A short promo video about The Chronicles of Ruthenia — concept, atmosphere, gameplay.
         </p>
-        <div style="max-width:900px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);border:2px solid var(--gold);">
-            <video controls preload="none" poster="../assets/images/title.webp" style="width:100%;display:block;">
+        <div class="video-frame">
+            <video controls preload="none" poster="../assets/images/title.webp" width="1920" height="1080">
                 <source src="../assets/video/promo.webm" type="video/webm">
                 <source src="../assets/video/promo.mp4" type="video/mp4">
                 Your browser does not support video. <a href="../assets/video/promo.mp4">Download the promo</a>.
@@ -745,11 +750,9 @@
 
         <!-- Game start button — opens a separate screen -->
         <div style="text-align:center;padding:2rem 0;">
+            <!-- 66.47 (audit #7): hover effect moved to CSS (.btn-game-start) -->
             <a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer"
-               id="game-start-btn"
-               style="display:inline-block;padding:1.4rem 3.5rem;font-size:1.4rem;font-family:'Prata',serif;color:#1A1410;background:linear-gradient(135deg,#E0C078,#C9A961,#8B6914);border:2px solid #5A4015;border-radius:12px;text-decoration:none;box-shadow:0 8px 32px rgba(0,0,0,0.5);transition:transform 0.2s,box-shadow 0.2s;text-shadow:0 1px 1px rgba(255,255,255,0.2);"
-               onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(0,0,0,0.6),0 0 20px rgba(201,169,97,0.3)';"
-               onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(0,0,0,0.5)';">
+               id="game-start-btn" class="btn-game-start">
                 ⚔️ Launch the game
             </a>
             <p style="margin-top:1.5rem;color:var(--text-muted);font-size:0.9rem;">
@@ -761,34 +764,32 @@
 </section>
 
 <!-- SUPPORT THE PROJECT -->
-<section class="section" id="support" style="text-align:center;">
+<section class="section section--support" id="support">
     <div class="container">
         <div class="section-label">Support</div>
         <h2>Support the project</h2>
         <p style="text-align:center;color:var(--text-dim);max-width:700px;margin:0 auto 2rem;">
             Funds will go toward AI testing hardware, knowledge-base content and development.
         </p>
-        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem;">
-            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer"
-               style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;font-size:1rem;">
+        <div class="support-row">
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--boosty">
                 🚀 Boosty (subscription)
             </a>
-            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer"
-               style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:1rem;">
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--yoomoney">
                 💰 YuMoney (transfer)
             </a>
-            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer"
-               style="display:inline-block;padding:0.8rem 2rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;font-size:1rem;">
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--vk">
                 👥 VKontakte
             </a>
         </div>
-        <div style="border-top:1px solid rgba(201,169,97,0.2);padding-top:1.5rem;">
-            <h4 style="color:#c9a961;margin-bottom:1rem;font-family:'Prata',serif;">Share this site</h4>
-            <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
-                <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;font-size:0.85rem;">VK</a>
-                <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=The Chronicles of Ruthenia — AI-narrative RPG" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#0088cc;color:#fff;text-decoration:none;font-size:0.85rem;">Telegram</a>
-                <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" style="padding:0.5rem 1.2rem;border-radius:8px;background:#ee8208;color:#fff;text-decoration:none;font-size:0.85rem;">OK</a>
-                <button onclick="navigator.clipboard.writeText('https://sosnowda.github.io').then(()=>{alert('Link copied!')})" style="padding:0.5rem 1.2rem;border-radius:8px;background:#333;color:#fff;border:none;cursor:pointer;font-size:0.85rem;">📋 Copy</button>
+        <div class="share-block">
+            <h4>Share this site</h4>
+            <div class="share-row">
+                <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--vk">VK</a>
+                <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=The Chronicles of Ruthenia — AI-narrative RPG" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--tg">Telegram</a>
+                <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--ok">OK</a>
+                <!-- 66.47 (audit #4): alert() → site-styled toast + .catch with fallback (main.js) -->
+                <button type="button" class="btn-share btn-share--copy" data-url="https://sosnowda.github.io/en/" data-toast="Link copied!">📋 Copy</button>
             </div>
         </div>
     </div>
@@ -809,7 +810,7 @@
                 <li><a href="/">Русская версия</a></li>
             </ul>
             <p>
-                &copy; 2025 The Chronicles of Ruthenia (Летописи Руси XV века).<br>
+                &copy; 2025–2026 The Chronicles of Ruthenia (Летописи Руси XV века).<br>
                 All historical data is based on real sources. The BRP system — Chaosium Inc.
             </p>
             <p style="margin-top: 0.8rem; font-size: 0.78rem; color: var(--text-muted);">
@@ -818,12 +819,12 @@
         </div>
 
 
-        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#ff8a00;color:#1a1005;text-decoration:none;font-size:0.9rem;">Boosty</a>
-            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#8b3dff;color:#fff;text-decoration:none;font-size:0.9rem;">YuMoney</a>
-            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#0062cc;color:#fff;text-decoration:none;font-size:0.9rem;">VK games</a>
-            <a href="https://vk.ru/id521470239?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#4a76a8;color:#fff;text-decoration:none;font-size:0.9rem;">Author VK</a>
-            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=beta_access" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;background:#333;color:#C9A961;text-decoration:none;font-size:0.9rem;border:1px solid #C9A961;">🔒 Closed code — beta testers access</a>
+        <div class="footer-social">
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--boosty">Boosty</a>
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--yoomoney">YuMoney</a>
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--vk">VK games</a>
+            <a href="https://vk.ru/id521470239?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--vkauthor">Author VK</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=beta_access" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--beta">🔒 Closed code — beta testers access</a>
         </div>
 
         <div style="margin-top:1.5rem;text-align:center;">

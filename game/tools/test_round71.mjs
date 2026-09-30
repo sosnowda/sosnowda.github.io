@@ -128,12 +128,15 @@ const li = read('index.html');
 ok(has(li, 'assets/images/og-image.jpg'), 'лендинг (index.html) по-прежнему указывает на og-image.jpg');
 
 // ================================= 4) SW ====================================
-console.log('\n[4] Service Worker v76');
+console.log('\n[4] Service Worker');
 const sw = read('sw.js');
-ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v96'"), 'CACHE_NAME актуален (v86, 66.36)');
+ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v97'"), 'CACHE_NAME актуален (v97, 66.47)');
 ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v41'"), 'game-assets-v41 (фасады 66.36)');
-ok(has(sw, 'v69 — раунд 66.19'), 'шапка sw.js: запись о раунде 66.19');
-ok(has(sw, 'assets/images/og-demo.jpg'), 'шапка sw.js: og-demo.jpg задокументирован');
+// 66.47 (аудит №14): журнал версий переехал из sw.js в docs/SW_CHANGELOG.md
+ok(has(sw, 'журнал перенесён в docs/SW_CHANGELOG.md'), 'sw.js: указатель на новый дом журнала');
+const swlog = read('docs/SW_CHANGELOG.md');
+ok(has(swlog, 'v69 — раунд 66.19'), 'SW_CHANGELOG.md: запись о раунде 66.19 сохранена');
+ok(has(swlog, 'assets/images/og-demo.jpg'), 'SW_CHANGELOG.md: og-demo.jpg задокументирован');
 
 // ============================== 5) EN-ключи =================================
 console.log('\n[5] EN-словарь (i18n.js)');

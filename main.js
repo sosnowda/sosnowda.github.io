@@ -231,14 +231,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const lightbox = document.createElement('div');
     lightbox.id = 'mapLightbox';
     lightbox.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;padding:2rem;';
-    lightbox.innerHTML = '<img src="" alt="" style="max-width:95%;max-height:95%;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.8);"><div style="position:absolute;top:1rem;right:2rem;color:#c9a961;font-size:2rem;cursor:pointer;">×</div>';
+    lightbox.innerHTML = '<img src="" alt="" style="max-width:95%;max-height:95%;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.8);">'
+        + '<button type="button" class="mlb-close" aria-label="' + (IS_EN_PAGE ? 'Close map preview (Esc)' : 'Закрыть просмотр карты (Esc)') + '" style="position:absolute;top:1rem;right:2rem;background:none;border:none;color:#c9a961;font-size:2rem;cursor:pointer;padding:0 0.6rem;line-height:1;">×</button>';
     document.body.appendChild(lightbox);
 
     const lbImg = lightbox.querySelector('img');
-    const lbClose = lightbox.querySelector('div');
+    const lbClose = lightbox.querySelector('.mlb-close');
     // Заявлены ДО обработчиков (66.31: const/let — у var была всплыть-магия)
     let zoomLevel = 1;
     let startX = 0, startY = 0, translateX = 0, translateY = 0;
+    let mapLastFocus = null;
 
     function openLightbox(src, alt) {
         lbImg.src = src;
@@ -247,12 +249,16 @@ document.addEventListener('DOMContentLoaded', function () {
         translateX = 0;
         translateY = 0;
         lbImg.style.transform = 'scale(1)';
+        // 66.47 (аудит №16): фокус уходит в кнопку закрытия, при закрытии — назад
+        mapLastFocus = document.activeElement;
         lightbox.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        if (lbClose && typeof lbClose.focus === 'function') lbClose.focus();
     }
     function closeLightbox() {
         lightbox.style.display = 'none';
         document.body.style.overflow = '';
+        if (mapLastFocus && typeof mapLastFocus.focus === 'function') mapLastFocus.focus();
     }
 
     mapImages.forEach(function (img) {
@@ -352,9 +358,9 @@ function initInteractivePage(reducedMotion) {
     if (screenshots.length > 0) {
         const L10N = IS_EN_PAGE
             ? { prev: 'Previous screenshot (Left arrow)', next: 'Next screenshot (Right arrow)',
-                close: 'Close (Esc)', counter: 'Screenshot {i} of {n}' }
+                close: 'Close (Esc)', counter: 'Screenshot {i} of {n}', open: 'Open screenshot: ' }
             : { prev: 'Предыдущий скриншот (стрелка влево)', next: 'Следующий скриншот (стрелка вправо)',
-                close: 'Закрыть (Esc)', counter: 'Скриншот {i} из {n}' };
+                close: 'Закрыть (Esc)', counter: 'Скриншот {i} из {n}', open: 'Открыть скриншот: ' };
 
         const slb = document.createElement('div');
         slb.className = 'screenshot-lightbox';
@@ -410,7 +416,7 @@ function initInteractivePage(reducedMotion) {
         screenshots.forEach(function (card, idx) {
             card.setAttribute('tabindex', '0');
             card.setAttribute('role', 'button');
-            card.setAttribute('aria-label', 'Открыть скриншот: ' + (card.querySelector('.screenshot-caption')?.textContent || ''));
+            card.setAttribute('aria-label', L10N.open + (card.querySelector('.screenshot-caption')?.textContent || ''));
             card.addEventListener('click', function () { openSlb(idx); });
             card.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -431,6 +437,23 @@ function initInteractivePage(reducedMotion) {
             if (e.key === 'Escape') closeSlb();
             else if (e.key === 'ArrowLeft') stepSlb(-1);
             else if (e.key === 'ArrowRight') stepSlb(1);
+            else if (e.key === 'Tab') {
+                // 66.47 (аудит №16): фокус-трап — Tab ходит только по кнопкам лайтбокса
+                const btns = Array.prototype.filter.call(
+                    slb.querySelectorAll('.slb-btn'),
+                    function (el) { return el.offsetParent !== null; }
+                );
+                if (!btns.length) return;
+                const first = btns[0];
+                const last = btns[btns.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && (document.activeElement === last || !slb.contains(document.activeElement))) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
         });
 
         // Свайп влево/вправо на тач-экранах
@@ -456,7 +479,7 @@ function initInteractivePage(reducedMotion) {
         window.addEventListener('scroll', function () {
             if (!ticking) {
                 window.requestAnimationFrame(function () {
-                    const scrolled = window.pageYOffset;
+                    const scrolled = window.scrollY;
                     if (scrolled < 600) {
                         heroImg.style.transform = 'translateY(' + scrolled * 0.3 + 'px)';
                     }
@@ -569,10 +592,8 @@ function initInteractivePage(reducedMotion) {
         };
 
         if (bar) {
-            // Полоска — интерактивный элемент: роль + клавиатурное открытие
-            bar.setAttribute('role', 'button');
-            bar.setAttribute('tabindex', '0');
-            bar.setAttribute('aria-haspopup', 'dialog');
+            // 66.47 (аудит №20): полоска — настоящий <button> в разметке
+            // (role/tabindex больше не нужны); здесь только состояние
             bar.setAttribute('aria-expanded', 'false');
             bar.addEventListener('click', function () { openPopup(); syncExpanded(true); });
             bar.addEventListener('keydown', function (e) {
@@ -628,6 +649,58 @@ function initInteractivePage(reducedMotion) {
                 e.preventDefault();
                 first.focus();
             }
+        });
+    })();
+
+    // ============================================================
+    // 66.47 (аудит №4): ТОСТ вместо alert() + копирование с .catch().
+    // Кнопка «📋 Копировать» (.btn-share--copy) несёт data-url/data-toast;
+    // clipboard API с фолбэком execCommand и честным сообщением об ошибке.
+    // ============================================================
+    (function () {
+        const toast = document.createElement('div');
+        toast.className = 'copy-toast';
+        toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
+        document.body.appendChild(toast);
+        let toastTimer = 0;
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2200);
+        }
+        document.querySelectorAll('.btn-share--copy').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const url = btn.getAttribute('data-url') || location.origin + location.pathname;
+                const okMsg = btn.getAttribute('data-toast') || (IS_EN_PAGE ? 'Link copied!' : 'Ссылка скопирована!');
+                const errMsg = IS_EN_PAGE
+                    ? 'Could not copy — please copy the address from the browser bar'
+                    : 'Не удалось скопировать — скопируйте адрес из строки браузера';
+                function fallbackCopy() {
+                    // Фолбэк: старые браузеры / контексты без clipboard API
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = url;
+                        ta.setAttribute('readonly', '');
+                        ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        const done = document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        showToast(done ? okMsg : errMsg);
+                    } catch (e) {
+                        showToast(errMsg);
+                    }
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(function () {
+                        showToast(okMsg);
+                    }).catch(fallbackCopy);
+                } else {
+                    fallbackCopy();
+                }
+            });
         });
     })();
 

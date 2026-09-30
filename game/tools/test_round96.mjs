@@ -179,9 +179,10 @@ ok(252 + 30 <= 304 && 252 - 30 >= 218, 'зона мельницы между п�
 
 console.log('— 8. SW v90 —');
 const sw = read('../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v96';"), 'SW: site-cache v96');
+const swlog = read('../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v97';"), 'SW: site-cache v96');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41');
-ok(sw.includes('66.40'), 'SW-журнал: запись 66.40 есть');
+ok(swlog.includes('66.40'), 'SW-журнал: запись 66.40 есть');
 
 console.log(`\ntest_round96: ${pass} зелёных, ${fail} красных`);
 if (fail > 0) { console.log(fails.map(f => '  RED: ' + f).join('\n')); process.exit(1); }

@@ -90,10 +90,14 @@ ok(!existsSync(ROOT + 'game/assets/interiors/int_bg_church.webp'), 'фон це�
 // ---------- 4. КРИТИЧНЫЙ ФИКС: sw.js снова парсится ----------
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41'"), 'SW: кеш ассетов v31 (фасады 66.36)');
 ok(sw.includes('*/\n\n// ----- Журнал версий кэша'),
-    'SW: заголовочный блочный комментарий закрыт ДО changelog');
+    'SW: заголовочный блочный комментарий закрыт ДО указателя на журнал');
 const vLines = sw.split('\n').filter(l => /^v\d+ /.test(l.trim()));
-ok(vLines.length === 0, 'SW: в changelog нет незакомментированных строк-версий (bug 66.19 закрыт)');
-ok(sw.includes('// v70 — раунд 66.20'), 'SW: журнал содержит запись v70 (66.20)');
+ok(vLines.length === 0, 'SW: в sw.js нет незакомментированных строк-версий (bug 66.19 закрыт)');
+// 66.47 (аудит №14): журнал версий переехал в docs/SW_CHANGELOG.md — sw.js похудел со 110 до 3 КБ
+ok(sw.includes('журнал перенесён в docs/SW_CHANGELOG.md'), 'SW: указатель на docs/SW_CHANGELOG.md (66.47)');
+const swlog = read('docs/SW_CHANGELOG.md');
+ok(swlog.includes('v70 — раунд 66.20'), 'SW_CHANGELOG.md: запись v70 (66.20) сохранена');
+ok(!existsSync('sw.js.bak') && sw.length < 8000, 'SW: файл лёгкий (<8 КБ, журнал вынесен)');
 
 // ---------- 5. Регресс: main.js без «aref»-мусора ----------
 ok(!read('main.js').includes('aref'), 'main.js: селекторов-опечаток «aref» нет');

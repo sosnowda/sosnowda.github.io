@@ -1,6 +1,6 @@
 /* Раунд 20: любое разрешение — картинки никогда не шире контейнера */
 img{max-width:100%;height:auto}
-html,body{overflow-x:clip} /* раунд 20: карусель хроники не должна раздвигать страницу */
+html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель хроники не должна раздвигать страницу; 66.47: hidden — фолбэк для браузеров без clip (Safari < 16) */
 
 
         :root {
@@ -1131,4 +1131,64 @@ section[id]{scroll-margin-top:86px}
 @media (prefers-reduced-motion: reduce){
     .pt-reign{transition:none}
     .chronicle-card.pt-hit{transition:none}
+}
+
+/* ===== 66.47 (аудит лендинга): вынос inline-стилей в классы + доступность ===== */
+
+/* fund-bar — настоящий <button> (аудит №20): сброс браузерного оформления.
+   Шрифт/паддинг/цвет остаются в .fund выше — только геометрия и appearance */
+button.fund-bar{display:block;width:100%;border:none;appearance:none;-webkit-appearance:none}
+
+/* Кнопка запуска игры (аудит №7): hover в CSS вместо onmouseover/onmouseout */
+.btn-game-start{display:inline-block;padding:1.4rem 3.5rem;font-size:1.4rem;font-family:'Prata',serif;color:#1A1410;background:linear-gradient(135deg,#E0C078,#C9A961,#8B6914);border:2px solid #5A4015;border-radius:12px;text-decoration:none;box-shadow:0 8px 32px rgba(0,0,0,0.5);transition:transform 0.2s,box-shadow 0.2s;text-shadow:0 1px 1px rgba(255,255,255,0.2)}
+.btn-game-start:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.6),0 0 20px rgba(201,169,97,0.3)}
+.btn-game-start:focus-visible{outline:2px solid #C9A961;outline-offset:3px}
+
+/* Кнопки поддержки (аудит №11): .btn-support + цветовые/размерные модификаторы */
+.btn-support{display:inline-block;padding:0.8rem 2rem;border-radius:8px;color:#fff;text-decoration:none;font-size:1rem}
+.btn-support--boosty{background:#ff8a00;color:#1a1005}
+.btn-support--yoomoney{background:#8b3dff}
+.btn-support--vk{background:#0062cc}
+.btn-support--vkauthor{background:#4a76a8}
+.btn-support--beta{background:#333;color:#C9A961;border:1px solid #C9A961}
+.btn-support--block{display:block;padding:0.8rem}
+.btn-support--footer{padding:0.6rem 1.5rem;font-size:0.9rem}
+
+/* Кнопки «Поделиться» (в т.ч. кнопка-копирование) */
+.btn-share{display:inline-block;padding:0.5rem 1.2rem;border-radius:8px;color:#fff;text-decoration:none;font-size:0.85rem;border:none;cursor:pointer;font-family:'PT Sans',sans-serif}
+.btn-share--vk{background:#0062cc}
+.btn-share--tg{background:#0088cc}
+.btn-share--ok{background:#ee8208}
+.btn-share--copy{background:#333}
+.btn-share:focus-visible{outline:2px solid #C9A961;outline-offset:2px}
+
+/* Секция поддержки: центрирование + ряды кнопок (аудит №11) */
+.section--support{text-align:center}
+.support-row{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem}
+.share-block{border-top:1px solid rgba(201,169,97,0.2);padding-top:1.5rem}
+.share-block h4{color:#c9a961;margin-bottom:1rem;font-family:'Prata',serif}
+.share-row{display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap}
+.footer-social{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+
+/* Рамка видео (аудит №11); video сам держит пропорции через width/height-атрибуты */
+.video-frame{max-width:900px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);border:2px solid var(--gold)}
+.video-frame video{width:100%;height:auto;display:block}
+
+/* Сетка BRP: 4 карточки (аудит №11); на узких экранах — 2/1 колонки */
+.grid--brp-4col{display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:2rem}
+.grid--brp-4col .feature-card{text-align:center;padding:1rem}
+.grid--brp-4col h3{color:var(--gold);margin-bottom:0.5rem;font-size:0.95rem}
+.grid--brp-4col ul{list-style:none;padding:0;color:var(--text-dim);font-size:0.8rem;line-height:1.6}
+.grid--brp-4col li strong{color:var(--gold-bright)}
+.grid--brp-4col li strong.crit{color:#c44}
+.grid--brp-4col .feature-card p{color:var(--text-dim);font-size:0.8rem;line-height:1.5}
+@media (max-width:860px){.grid--brp-4col{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.grid--brp-4col{grid-template-columns:1fr}}
+
+/* Тост-уведомление (аудит №4): вместо alert() */
+.copy-toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%) translateY(16px);background:#241B15;border:1px solid #C9A961;color:#C9A961;font-family:'PT Sans',sans-serif;font-size:0.9rem;padding:0.7rem 1.4rem;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.6);opacity:0;pointer-events:none;transition:opacity 0.25s,transform 0.25s;z-index:10000;max-width:min(90vw,480px);text-align:center}
+.copy-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion: reduce){
+    .copy-toast{transition:none}
+    .btn-game-start{transition:none}
 }

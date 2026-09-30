@@ -183,9 +183,10 @@ ok(notInBoot.length === 0, `все листы на диске в загрузк�
 
 console.log('— 5. SW: site-cache v96, game-assets-v41 (66.39) —');
 const sw = read('../sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v96';"), 'SW: site-cache v96');
+const swlog = read('../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v97';"), 'SW: site-cache v96');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41');
-ok(sw.includes('v89 — итерация 66.39'), 'SW: журнал версий дополнен');
+ok(swlog.includes('v89 — итерация 66.39'), 'SW: журнал версий дополнен');
 
 console.log('');
 console.log(`=== ИТОГ: ${pass} OK, ${fail} FAIL ===`);

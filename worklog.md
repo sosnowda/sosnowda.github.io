@@ -2009,3 +2009,20 @@ Work Log:
 
 Stage Summary:
 - 66.46 полностью на проде: виджет солнца снят, ход солнца — тени/свет у всех локаций, кнопки диалогов без наложений, в бою у воды все стоят на суше, все 9 фонов боя проверены живыми кадрами. Регресс 64–101 зелёный; SW v96/v41.
+
+---
+Task ID: 66.47
+Agent: Super Z (main, Z.ai)
+Task: «ЗАПУШЬ ВСЕ ИЗМЕНЕНИЯ!» — реализовать и запушить свод рекомендаций аудита лендинга (9.3/10): P1 критические (1–4), P2 важные (5–10), P3 стратегические (11–20 — выполнимые в этой итерации).
+
+Work Log:
+- Сверка аудита с кодом: 6 пунктов уже выполнены в 66.31 (частицы reduced-motion+document.hidden, UTM на обеих версиях, таймлайн князей в RU, фокус-трап попапа, прогресс-бары в игре, унификация UTM fund-bar) — двойной правки не требуется, зафиксировано в CHANGES/QA.
+- P1: (1) stray `<li>` «Полный список моделей» перемещён внутрь `<ul>` в tech-секции (RU+EN); (2) copyright 2025–2026 (RU+EN); (3) aria-label карточек галереи локализован через L10N («Открыть скриншот: …» / «Open screenshot: …») + aria-label закрытия лайтбокса карт; (4) alert() → тост .copy-toast (role=status) с clipboard API + .catch → execCommand-фолбэк → честное сообщение об ошибке.
+- P2: (7) onmouseover/onmouseout → .btn-game-start:hover (+focus-visible); (8) video width=1920 height=1080; (9) overflow-x:hidden как фолбэк перед clip; (10) pageYOffset → scrollY.
+- P3: (11) первая партия выноса inline-стилей: .btn-game-start, .btn-support(+7 модификаторов), .btn-share(+4), .support-row/.share-block/.share-row/.footer-social/.section--support, .video-frame, .grid--brp-4col (+адаптив 4→2→1) — ~25 блоков × 2 файла; (14) журнал версий SW (240 строк, 107 КБ) вынесен в docs/SW_CHANGELOG.md, sw.js 110 КБ → 3,2 КБ, указатель в шапке; (16) фокус-трап галереи + лайтбокс карт: × → <button> с локализованной aria, фокус внутрь/возврат; (18) CSP meta на лендингах (object-src none, base-uri self, form-action, строгие img/media/frame/connect; script-src с unsafe-inline ради Метрики/onclick); (20) fund-bar div → настоящий <button type=button aria-haspopup aria-controls>, role/tabindex-костыли из main.js сняты; (15) JSON-LD softwareVersion → 0.2.0-alpha (RU+EN); GitHub Releases v0.1.0-alpha/v0.2.0-alpha — после пуша.
+- Тесты: 13 наборов актуализированы (v96→v97 в 19 файлах; журнал-ассерты → docs/SW_CHANGELOG.md: r69/81/86/87/88/89/93/94/96/97/98/99/100/101; r87 — нативный button). РЕГРЕСС 64–101 = 38 наборов ВСЕ ЗЕЛЁНЫЕ (r86–89 — из game/tools/ по АГЕНТ.md).
+- Живой смоук :8090 (agent-browser, RU+EN): 0 JS-ошибок; 0 li вне ul; fund-bar=BUTTON; попап/фокус-трапы (4 Tab — цикл по кнопкам лайтбокса)/тост/галерея проверены кликами; Метрика под CSP полностью грузится (tag.js/watch/tag_phono/ytm-config = 200), 0 нарушений CSP; контрольные кадры топ/trailer/support/brp — визуальная идентичность. Отчёт: game/docs/QA_ROUND66_47_LANDING_AUDIT.md.
+- Доки: CHANGES.md (66.47), АГЕНТ.md (правило про docs/SW_CHANGELOG.md + нативный fund-bar).
+
+Stage Summary:
+- SW: site-cache v97, game-assets-v41 (без изменений); сейвы совместимы. 14 пунктов аудита реализовано, 6 подтверждены как выполненные, 3 отложены с обоснованием (модули main.js, CSP для game/, вторая партия inline-стилей). Урок: перед реализацией аудита сверять пункты с текущим кодом — треть аудита уже была закрыта в 66.31.

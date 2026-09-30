@@ -250,9 +250,11 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     ok(loc.includes('showBellToast(this, work66.toast)'), 'LocationScene: плашка сезона при входе на поле');
     // SW: v69, ассеты вычищены от неиспользуемых (66.19)
     const sw = read('../sw.js');
-    ok(sw.includes("chronicles-ruthenia-v96"), 'SW: версия сайта v86 (66.36)');
-    ok(sw.includes("game-assets-v41"), 'SW: кеш ассетов v23 (тайлы икон церкви, 66.20)');
-    ok(sw.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
+    // 66.47: записи журнала живут в docs/SW_CHANGELOG.md
+    const swlog = read('../docs/SW_CHANGELOG.md');
+    ok(sw.includes("chronicles-ruthenia-v97"), 'SW: версия сайта актуальна');
+    ok(sw.includes("game-assets-v41"), 'SW: кеш ассетов актуален');
+    ok(swlog.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи
     const i18n = read('src/systems/i18n.js');
     ok(i18n.includes("'Пахарь': 'Ploughman'"), 'i18n: EN-ключи сезонных ролей');

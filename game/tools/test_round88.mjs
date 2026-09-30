@@ -19,6 +19,7 @@ const boot = read('../src/scenes/BootScene.js');
 const combat = read('../src/scenes/CombatScene.js');
 const heroes = read('../src/data/heroes.js');
 const sw = read('../../sw.js');
+const swlog = read('../../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
 
 
 console.log('--- 1. Боевые листы: 34 файла 384×128, палитра (п.1) ---');
@@ -104,9 +105,9 @@ ok(pipe.includes('HUNTRESS_DEAD_FRAMES'), 'смерть Охотницы соб�
 ok(pipe.includes('Huntress_dead.png 128er'), 'манифест помечает спец-сборку смерти');
 
 console.log('--- 6. SW v84 + game-assets-v41 (66.34) ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v96';"), 'SW: site-cache v96');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v97';"), 'SW: site-cache v96');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 (перегенерированные листы + бусты)');
-ok(sw.includes('// v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
+ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 
 console.log(`\nИТОГО: ✓ ${pass}  ✗ ${fail}`);
 process.exit(fail ? 1 : 0);

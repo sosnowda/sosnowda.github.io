@@ -17,6 +17,7 @@ const main = read('../src/main.js');
 const is = read('../src/scenes/InteriorScene.js');
 const loc = read('../src/scenes/LocationScene.js');
 const sw = read('../../sw.js');
+const swlog = read('../../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
 
 console.log('--- 1. Пиксель-арт и анимация (п.6) ---');
 ok(main.includes('pixelArt: true'), 'main.js: pixelArt: true — спрайты без «мыла» при масштабах 1.5–2.5');
@@ -71,12 +72,12 @@ for (const h of ['hero_baenor', 'hero_huntress']) {
 ok(existsSync('../docs/PACK_ANALYSIS_6629.md'), 'анализ пака Medieval - Heroes I задокументирован (game/docs/PACK_ANALYSIS_6629.md)');
 
 console.log('--- 7. SW и кеши ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v96';"), 'SW: site-cache v96');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v97';"), 'SW: site-cache v96');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 (листы 66.33 + бусты)');
-ok(sw.includes('// v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
+ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 
 console.log('--- 8. Телеметрия Метрики (п.1) ---');
-ok(sw.includes('Russian Trusted Sub CA'), 'SW-журнал: документирован вердикт по hdrc/mdd.yandex.net (статистика не страдает)');
+ok(swlog.includes('Russian Trusted Sub CA'), 'SW-журнал: документирован вердикт по hdrc/mdd.yandex.net (статистика не страдает)');
 
 console.log(`\n=== ИТОГ: ${pass} зелёных, ${fail} красных ===`);
 process.exit(fail ? 1 : 0);

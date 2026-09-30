@@ -129,9 +129,10 @@ const ok = (cond, name) => {
 // ---------- 6) SW-версии ----------
 {
     const sw = readFileSync(path.join(REPO, 'sw.js'), 'utf8');
-    ok(sw.includes("CACHE_NAME = 'chronicles-ruthenia-v96'"), '6: site-cache v96');
+    const swlog = readFileSync(path.join(REPO, 'docs', 'SW_CHANGELOG.md'), 'utf8'); // 66.47: журнал переехал
+    ok(sw.includes("CACHE_NAME = 'chronicles-ruthenia-v97'"), '6: site-cache v96');
     ok(sw.includes("GAME_ASSETS_CACHE = 'game-assets-v41'"), '6: game-assets v41');
-    ok(sw.includes('итерация 66.46'), '6: журнал версий дополнен');
+    ok(swlog.includes('итерация 66.46'), '6: журнал версий дополнен');
 }
 
 console.log(`\nr101: ${passed} ok, ${failed} fail`);

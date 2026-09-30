@@ -16,6 +16,7 @@ const read = (p) => readFileSync(p, 'utf8');
 const entry = read('../index.html');          // game/index.html
 const boot = read('../src/scenes/BootScene.js');
 const sw = read('../../sw.js');
+const swlog = read('../../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
 const landingRU = read('../../index.html');
 const landingEN = read('../../en/index.html');
 const mainJs = read('../../main.js');
@@ -77,7 +78,10 @@ for (const [name, page, closeLabel] of [['RU', landingRU, 'Закрыть окн
 }
 ok(mainJs.includes('focusablesSel'), 'main.js: фокус-трап Tab внутри попапа');
 ok(/e\.key === 'Escape'/.test(mainJs), 'main.js: Esc закрывает попап');
-ok(mainJs.includes("bar.setAttribute('role', 'button')"), 'main.js: полоска сбора — role=button (Enter/Space открывают)');
+// 66.47 (аудит №20): полоска — НАСТОЯЩИЙ <button class="fund-bar"> в разметке
+// (role/tabindex-костыли из main.js сняты); Enter/Space работают нативно
+ok(read('../../index.html').includes('<button type="button" class="fund-bar"'),
+    'main.js/лендинг: полоска сбора — нативный <button> (Enter/Space открывают)');
 ok(mainJs.includes("aria-expanded"), 'main.js: aria-expanded полоски синхронизируется');
 
 console.log('--- 5. UTM-метки донат-ссылок (п.5) ---');
@@ -135,9 +139,9 @@ ok(styles.includes('.pt-reign{transition:none}') || /prefers-reduced-motion[\s\S
     'styles.css: reduced-motion — без анимаций таймлайна');
 
 console.log('--- 9. SW и кеши ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v96';"), 'SW: site-cache v96');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v97';"), 'SW: site-cache v96');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 (66.33: листы+бусты)');
-ok(sw.includes('// v84 — итерация 66.34'), 'SW: журнал содержит запись v84 (история версий сохраняется)');
+ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84 (история версий сохраняется)');
 
 console.log(`\nИтог: ${pass} OK, ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

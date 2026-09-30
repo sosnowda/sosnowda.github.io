@@ -161,9 +161,10 @@ for (const f of ['qa_battle_thief_6642.mjs', 'qa_chimneys_6642.mjs', 'make_chimn
 
 console.log('— 7. SW v92 / game-assets-v41 —');
 const sw = read('sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v96';"), 'SW: site-cache v96');
+const swlog = read('docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v97';"), 'SW: site-cache v96');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41');
-ok(sw.includes('66.42'), 'SW-журнал: запись 66.42 есть');
+ok(swlog.includes('66.42'), 'SW-журнал: запись 66.42 есть');
 
 console.log(`\ntest_round98: ${pass} зелёных, ${fail} красных`);
 if (fail > 0) { console.log(fails.map(f => '  RED: ' + f).join('\n')); process.exit(1); }
