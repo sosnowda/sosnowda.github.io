@@ -60,10 +60,11 @@ ok(styles.includes('/* Однострочная полоса сбора сред
 ok(styles.includes('Однострочная полоса сбора средств на узких экранах'), 'историческое имя правила сохранено в комментарии');
 ok(styles.includes('button.fund-bar{display:block;width:100%;border:none;appearance:none;-webkit-appearance:none}'), 'button.fund-bar — сброс браузерного оформления не тронут (аудит №20)');
 ok(styles.includes('.fund-bar:focus-visible{outline:2px solid #C9A961;outline-offset:2px}'), '.fund-bar:focus-visible не тронут');
-ok(styles.includes('.fund-bar:hover{\n  background:linear-gradient(90deg,#B53925,#8B2C1A) !important;'), 'working-hover с !important не тронут (66.56/66.58 целы)');
+// актуализация 66.62: hover-стоп #B53925→#A23417 (контраст полоски, P3-1 аудита 66.61 — детали в r112)
+ok(styles.includes('.fund-bar:hover{\n  background:linear-gradient(90deg,#A23417,#8B2C1A) !important;'), 'working-hover с !important не тронут (66.56/66.58, значение 66.62)');
 
 console.log('--- 4. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v105';"), 'sw.js: site-cache v105 (актуализация 66.60 — высота полоски; изменение styles.css → бамп)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v106';"), 'sw.js: site-cache v106 (актуализация 66.62 — контраст полоски P3-1; изменение styles.css → бамп)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets-v41 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (переезд CSS-правила не трогал SW-логику)');
 ok(swlog.includes('- v104 — итерация 66.59'), 'SW_CHANGELOG: запись v104 добавлена');

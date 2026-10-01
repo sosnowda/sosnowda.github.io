@@ -664,7 +664,14 @@ html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель 
   background:linear-gradient(90deg, #6B1F15, #8B2C1A, #6B1F15) !important;
   border-bottom:1px solid rgba(201,169,97,0.2) !important;
   text-shadow:0 1px 1px rgba(0,0,0,0.5) !important;
-  color:#C9A961;
+  /* 66.62 (P3-1 аудита 66.61, приказ владельца): текст полоски — обычный кегль
+     0.9rem/0.72rem, вес 400 — порог WCAG AA 4.5:1. Прежний #C9A961 давал 5.09
+     на тёмных краях базы, но 3.77 в центре градиента и 2.61 на светлом стопе
+     hover. Осветление до #E8D5A3 по рецепту аудита закрывает базу (7.90/5.85),
+     но на прежнем светлом стопе hover #B53925 даёт лишь 4.05 — стоп затемнён
+     до #A23417: минимум по всем точкам 4.76:1, запас над AA 5.8 процента.
+     text-shadow сохранён — читаемость поддержана и тенью. */
+  color:#E8D5A3;
   text-align:center;
   padding:0.6rem;
   font-size:0.9rem;
@@ -690,8 +697,11 @@ html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель 
   z-index:1000;
   font-family:'PT Sans',sans-serif
 }
+/* 66.62: левый стоп затемнён #B53925→#A23417 — контраст текста на hover ≥4.5
+   (расчёт и причина — в док-комментарии 66.62 канонического блока);
+   important и правый стоп — из 66.56/66.58, не тронуты. */
 .fund-bar:hover{
-  background:linear-gradient(90deg,#B53925,#8B2C1A) !important;
+  background:linear-gradient(90deg,#A23417,#8B2C1A) !important;
 }
 /* Однострочная полоса сбора средств на узких экранах (66.59): правило
    перенесено из @media 480px выше в файл — канонический блок 66.58 стоит

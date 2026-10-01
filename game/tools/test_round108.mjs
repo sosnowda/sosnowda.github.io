@@ -39,14 +39,15 @@ console.log('--- 1. P3-1: живой hover бренд-бара ---');
 // (детали структуры — в r109; рендер бит-в-бит, см. CHANGES 66.58)
 // актуализация 66.59: SW-ожидание v103→v104 (мобильный кегль полосы — переезд
 // media-правила .fund-bar после канонического блока; детали — в r110)
-const hoverImportant = 'linear-gradient(90deg,#B53925,#8B2C1A) !important';
-ok(styles.includes(hoverImportant), 'styles.css: парный hover с !important (#B53925,#8B2C1A) присутствует');
+// актуализация 66.62: hover-стоп #B53925→#A23417 (контраст полоски, P3-1 аудита 66.61 — детали в r112)
+const hoverImportant = 'linear-gradient(90deg,#A23417,#8B2C1A) !important';
+ok(styles.includes(hoverImportant), 'styles.css: парный hover с !important (#A23417,#8B2C1A — актуализация 66.62) присутствует');
 ok((styles.match(/\.fund-bar:hover/g) || []).length === 1, 'styles.css: один .fund-bar:hover (консолидация 66.58: мёртвый 658 снят, остался working-hover)');
 const themeBase = styles.indexOf('/* Плашка альфа-версии — выгравированный камень */');
-const themeHover = styles.indexOf('.fund-bar:hover{\n  background:linear-gradient(90deg,#B53925,#8B2C1A) !important;');
+const themeHover = styles.indexOf('.fund-bar:hover{\n  background:linear-gradient(90deg,#A23417,#8B2C1A) !important;');
 ok(themeBase !== -1 && themeHover > themeBase, 'styles.css: парный hover ПОСЛЕ тематического блока (каскад: позднее правило побеждает)');
 ok(styles.includes('background:linear-gradient(90deg, #6B1F15, #8B2C1A, #6B1F15) !important;'), 'styles.css: базовый фон темы с !important не тронут');
-ok(!styles.includes('.fund-bar:hover{background:linear-gradient(90deg,#B53925,#8B2C1A)}') && (styles.match(/^\.fund-bar\{/gm) || []).length === 1, 'styles.css: консолидация 66.58 — один канонический .fund-bar, мёртвого hover-однострочника нет');
+ok(!styles.includes('.fund-bar:hover{background:linear-gradient(90deg,#A23417,#8B2C1A)}') && !styles.includes('.fund-bar:hover{background:linear-gradient(90deg,#B53925,#8B2C1A)}') && (styles.match(/^\.fund-bar\{/gm) || []).length === 1, 'styles.css: консолидация 66.58 — один канонический .fund-bar, мёртвого hover-однострочника нет (66.62 + исторические значения)');
 
 console.log('--- 2. P3-2: CSP на 404-страницах ---');
 const cspRe = /<meta http-equiv="Content-Security-Policy" content="([^"]+)">/;
@@ -62,7 +63,7 @@ ok(ru404.indexOf('Content-Security-Policy') < ru404.indexOf('<style>'), '404.htm
 ok(ru404.includes('<meta name="robots" content="noindex">') && en404.includes('<meta name="robots" content="noindex">'), '404-страницы: noindex сохранён на обеих');
 
 console.log('--- 3. P3-3: офлайн-фолбэк только для navigate ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v105';"), 'sw.js: site-cache v105 (актуализация 66.60 — высота полоски по контенту)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v106';"), 'sw.js: site-cache v106 (актуализация 66.62 — контраст полоски P3-1)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: субресурсы при офлайн-промахе — честный отказ (без HTML-фолбэка)');
 ok(sw.indexOf("event.request.mode !== 'navigate'") < sw.indexOf("var fb ="), 'sw.js: гейт navigate стоит ПЕРЕД фолбэк-цепочкой');

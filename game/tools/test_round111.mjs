@@ -41,7 +41,8 @@ console.log('--- 2. Соседи не тронуты: кегль/паддинг/
 ok(block.includes('font-size:0.9rem') && block.includes('padding:0.6rem'), 'канонический блок: десктопные кегль/паддинг не тронуты');
 ok((styles.match(/^\.fund-bar\{/gm) || []).length === 1, 'styles.css: по-прежнему ровно ОДИН верхнеуровневый .fund-bar{');
 ok((styles.match(/\.fund-bar:hover\{/g) || []).length === 1, 'styles.css: по-прежнему ровно ОДИН .fund-bar:hover{');
-ok(styles.includes('.fund-bar:hover{\n  background:linear-gradient(90deg,#B53925,#8B2C1A) !important;'), 'working-hover с !important не тронут (66.56/66.58 целы)');
+// актуализация 66.62: hover-стоп #B53925→#A23417 (контраст полоски, P3-1 аудита 66.61 — детали в r112)
+ok(styles.includes('.fund-bar:hover{\n  background:linear-gradient(90deg,#A23417,#8B2C1A) !important;'), 'working-hover с !important не тронут (66.56/66.58, значение 66.62)');
 const mob = styles.indexOf('@media (max-width: 480px){\n  .fund-bar{');
 ok(mob > styles.indexOf('.fund-bar:hover{'), 'media-блок 66.59 по-прежнему ПОСЛЕ hover (мобильный override жив)');
 const mobBlock = styles.slice(mob, styles.indexOf('}', styles.indexOf('{', mob)) + 1);
@@ -50,7 +51,7 @@ ok(mobBlock.includes('font-size:0.72rem;') && mobBlock.includes('padding:0.45rem
 ok(styles.includes('/* (66.59) .fund-bar переехал'), 'комментарий-указатель 66.59 на месте');
 
 console.log('--- 3. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v105';"), 'sw.js: site-cache v105 (изменение styles.css → бамп)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v106';"), 'sw.js: site-cache v106 (актуализация 66.62 — контраст полоски P3-1; изменение styles.css → бамп)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets-v41 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (правка CSS не трогала SW-логику)');
 ok(swlog.includes('- v105 — итерация 66.60'), 'SW_CHANGELOG: запись v105 добавлена');

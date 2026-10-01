@@ -58,7 +58,7 @@ ok((sitemap.match(/hreflang=/g) || []).length === 6, 'sitemap: hreflang-альт
 ok(!sitemap.includes('2026-09-27'), 'sitemap: устаревшая дата 2026-09-27 исчезла');
 
 console.log('--- 4. SW без бампа ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v105';"), 'sw.js: site-cache v105 (актуализация 66.60 — высота полоски по контенту)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v106';"), 'sw.js: site-cache v106 (актуализация 66.62 — контраст полоски P3-1)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets v41');
 
 console.log(`\nИТОГ: ${pass} ✓ / ${fail} ✗`);

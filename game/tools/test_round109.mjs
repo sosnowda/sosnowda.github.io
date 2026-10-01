@@ -37,13 +37,14 @@ const block = styles.slice(base, styles.indexOf('}', base) + 1);
 ok(block.includes('background:linear-gradient(90deg, #6B1F15, #8B2C1A, #6B1F15) !important;'), 'канонический блок: тематический фон «выгравированный камень» (!important — как у победителя каскада)');
 ok(block.includes('border-bottom:1px solid rgba(201,169,97,0.2) !important;'), 'канонический блок: border-bottom с !important (иначе button.fund-bar{border:none} (0,1,1) его перебьёт)');
 ok(block.includes('text-shadow:0 1px 1px rgba(0,0,0,0.5) !important;'), 'канонический блок: text-shadow с !important (как у победителя каскада)');
-ok(block.includes("color:#C9A961") && block.includes('font-family:\'PT Sans\',sans-serif'), 'канонический блок: базовые color/font-family из 657 сохранены');
+// актуализация 66.62: color #C9A961→#E8D5A3 (контраст полоски, P3-1 аудита 66.61 — детали в r112)
+ok(block.includes("color:#E8D5A3") && block.includes('font-family:\'PT Sans\',sans-serif'), 'канонический блок: color 66.62 (#E8D5A3) и font-family из 657 сохранены');
 ok(block.includes('text-align:center') && block.includes('padding:0.6rem') && block.includes('font-size:0.9rem'), 'канонический блок: text-align/padding/font-size из 657 сохранены');
 ok(block.includes('cursor:pointer') && block.includes('position:sticky') && block.includes('top:0') && block.includes('z-index:1000'), 'канонический блок: cursor/sticky/top/z-index из 657 сохранены');
-ok(styles.includes('.fund-bar:hover{\n  background:linear-gradient(90deg,#B53925,#8B2C1A) !important;'), 'styles.css: working-hover (#B53925,#8B2C1A) с !important (важный — первопричина 66.56 учтена)');
+ok(styles.includes('.fund-bar:hover{\n  background:linear-gradient(90deg,#A23417,#8B2C1A) !important;'), 'styles.css: working-hover (#A23417,#8B2C1A — актуализация 66.62) с !important (важный — первопричина 66.56 учтена)');
 
 console.log('--- 3. Легаси снят насовсем, соседи не тронуты ---');
-ok(!styles.includes('.fund-bar:hover{background:linear-gradient(90deg,#B53925,#8B2C1A)}'), 'мёртвый hover-однострочник 658 удалён');
+ok(!styles.includes('.fund-bar:hover{background:linear-gradient(90deg,#A23417,#8B2C1A)}') && !styles.includes('.fund-bar:hover{background:linear-gradient(90deg,#B53925,#8B2C1A)}'), 'мёртвый hover-однострочник 658 удалён (проверка по актуальным 66.62 и историческим значениям)');
 ok(!styles.includes('linear-gradient(90deg,#8B2C1A,#5A1A0E)'), 'старый базовый градиент 657 (#8B2C1A,#5A1A0E) удалён');
 ok(!styles.includes('выгравированный камень */\n.fund-bar{'), 'старого автономного тематического блока 786 больше нет');
 ok(styles.includes('/* Плашка альфа-версии — выгравированный камень */'), 'тематическое имя сохранено в шапке канонического блока');
@@ -53,7 +54,7 @@ ok(styles.includes('button.fund-bar{display:block;width:100%;border:none;appeara
 ok(styles.includes('.fund-bar:focus-visible{outline:2px solid #C9A961;outline-offset:2px}'), '.fund-bar:focus-visible не тронут');
 
 console.log('--- 4. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v105';"), 'sw.js: site-cache v105 (актуализация 66.60 — высота полоски по контенту; изменение styles.css → бамп)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v106';"), 'sw.js: site-cache v106 (актуализация 66.62 — контраст полоски P3-1; изменение styles.css → бамп)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets-v41 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (консолидация CSS не трогала SW-логику)');
 ok(swlog.includes('- v103 — итерация 66.58'), 'SW_CHANGELOG: запись v103 добавлена');
