@@ -20,13 +20,16 @@ const swlog = read('docs/SW_CHANGELOG.md');
 const audit = read('docs/AUDIT_R66_52.md');
 
 console.log('--- 1. P2-1: офлайн-фолбэк по разделам ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v101';"), 'sw.js: site-cache повышен до v101 (правки кода SW)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v102';"), 'sw.js: site-cache повышен до v101 (правки кода SW)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
 ok(sw.includes("var fb = url.pathname.indexOf('/game/') === 0 ? '/game/'"), 'sw.js: фолбэк /game/… → кэш /game/');
 ok(sw.includes(": url.pathname.indexOf('/en/') === 0 ? '/en/' : '/index.html';"), 'sw.js: фолбэк /en/… → кэш /en/, остальное → /index.html');
 ok(sw.includes("return cached || caches.match(fb).then(function (m) {"), 'sw.js: фолбэк-цепочка через .then (Promise нельзя чейнить через || — ловлено живым офлайн-тестом)');
 ok(sw.includes("return m || caches.match('/');"), "sw.js: второй эшелон '/' (ключ /index.html возникает редко)");
-ok(sw.indexOf("Офлайн-фолбэк по разделам") !== -1 && sw.indexOf('Офлайн-фолбэк по разделам') > sw.indexOf("event.request.mode"), 'sw.js: фолбэк внутри network-first ветки catch');
+// 66.57 (актуализация: в sw.js добавлен navigate-гейт P3-3 ПЕРЕД фолбэком —
+//    event.request.mode теперь стоит раньше комментария фолбэка; привязка
+//    к network-first-ветке проверяется относительно метки 'network-first')
+ok(sw.indexOf('Офлайн-фолбэк по разделам') !== -1 && sw.indexOf('Офлайн-фолбэк по разделам') > sw.indexOf('network-first'), 'sw.js: фолбэк внутри network-first ветки catch');
 ok(!/catch[\s\S]*?return cached \|\| caches\.match\('\/index\.html'\);\s*\}\);?\s*\}\)\s*\);?\s*\}\);/.test(sw.slice(sw.lastIndexOf('network-first'))), 'sw.js: старый безусловный фолбэк /index.html удалён');
 
 console.log('--- 2. P2-2: EN-404 (en/404.html) ---');

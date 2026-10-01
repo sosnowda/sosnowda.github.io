@@ -226,7 +226,7 @@ console.log('\n— п.1 (66.24): КАДРЫ СКРИНШОТОВ ЛЕНДИНГ�
 console.log('\n— sw.js: версия кэша сайта поднята —');
 {
     const sw = read('sw.js');
-    ok(/chronicles-ruthenia-v101/.test(sw), 'SW: chronicles-ruthenia-v101');
+    ok(/chronicles-ruthenia-v102/.test(sw), 'SW: chronicles-ruthenia-v102');
 }
 
 console.log('\nИТОГ: ' + pass + ' зелёных, ' + fail + ' красных');

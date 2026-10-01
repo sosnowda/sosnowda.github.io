@@ -7,7 +7,7 @@
 // ~200 строк комментариев раздували Service Worker. Новые записи о версиях
 // добавляются в docs/SW_CHANGELOG.md и CHANGES.md, но НЕ в этот файл.
 
-var CACHE_NAME = 'chronicles-ruthenia-v101';
+var CACHE_NAME = 'chronicles-ruthenia-v102';
 var GAME_ASSETS_CACHE = 'game-assets-v41';
 
 self.addEventListener('install', function (event) {
@@ -83,8 +83,12 @@ self.addEventListener('fetch', function (event) {
             return response;
         }).catch(function () {
             return caches.match(event.request).then(function (cached) {
-                // Офлайн-фолбэк по разделам (аудит P2-1): /game/ → игра,
-                // /en/ → EN-лендинг, остальное → RU; '/' — второй эшелон,
+                // Офлайн-фолбэк по разделам (аудит P2-1, 66.53) — только НАВИГАЦИЯМ
+                // (P3-3, аудит 66.56): субресурсы (js/css/картинки) при офлайн-промахе
+                // кэша получают честный сетевой отказ вместо HTML-лендинга,
+                // который вызвал бы MIME/Syntax-ошибку в консоли.
+                if (event.request.mode !== 'navigate') return cached;
+                // /game/ → игра, /en/ → EN-лендинг, остальное → RU; '/' — второй эшелон,
                 // т.к. ключ '/index.html' появляется редко (посетители идут на '/')
                 var fb = url.pathname.indexOf('/game/') === 0 ? '/game/'
                        : url.pathname.indexOf('/en/') === 0 ? '/en/' : '/index.html';

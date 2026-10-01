@@ -6,9 +6,8 @@
 // src/alt выставляют функции открытия (openLightbox / slbShow). Порядок DOM
 // и поведение лайтбоксов не изменены (img — первым ребёнком контейнера /
 // перед figcaption; инлайн-стили перенесены как были).
-// SW БЕЗ бампа: sw.js не менялся (v101/v41), network-first подхватывает новые
-// js/modules сам; офлайн-фолбэк отдал бы прежний JS с идентичным поведением
-// (прецедент 66.54: правки лендинга при неизменном sw.js — без бампа).
+// SW бампнут в 66.57 (P3-3 — фолбэк только navigate): site-cache v101→v102;
+// здесь секция 4 актуализирована под v102 (запись журнала — см. r108).
 // Запуск из корня репозитория: node game/tools/test_round107.mjs
 import fs from 'fs';
 import path from 'path';
@@ -57,11 +56,12 @@ ok(lb.includes('export function initMapLightbox') && gl.includes('export functio
 const mainJs = read('js/main.js');
 ok(mainJs.includes('initMapLightbox') && mainJs.includes('initGallery'), 'main.js: импорты и вызовы обоих модулей сохранены');
 
-console.log('--- 4. SW без бампа (прецедент 66.54) ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v101';"), 'sw.js: v101 сохранён (код SW не менялся)');
+console.log('--- 4. SW v102 (бамп 66.57 — P3-3; в 66.55 был без бампа) ---');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v102';"), 'sw.js: v102 (бамп 66.57 — правки кода SW)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets v41');
-ok(!swLog.includes('v102'), 'SW_CHANGELOG: записи v102 нет (бампа не было)');
-ok(swLog.includes('- v101'), 'SW_CHANGELOG: последняя запись — v101');
+// 66.57 (актуализация: в 66.55 ассерты запрещали запись v102 — теперь она ожидаема)
+ok(swLog.includes('- v102 — итерация 66.57'), 'SW_CHANGELOG: запись v102 добавлена (66.57)');
+ok(swLog.includes('- v101'), 'SW_CHANGELOG: историческая запись v101 на месте');
 
 console.log('--- 5. Документация ---');
 ok(audit.includes('ВНЕДРЕНО в патче 66.55'), 'AUDIT_R66_52.md: P3-4 помечен ВНЕДРЕНО в 66.55');

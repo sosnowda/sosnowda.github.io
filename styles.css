@@ -788,6 +788,12 @@ footer{
   border-bottom:1px solid rgba(201,169,97,0.2) !important;
   text-shadow:0 1px 1px rgba(0,0,0,0.5) !important;
 }
+/* P3-1 (аудит 66.56): парный hover с !important — обычный :hover из блока 658
+   всегда перебивался background !important выше (important бьёт обычное
+   объявление независимо от специфичности), отклик курсора не было */
+.fund-bar:hover{
+  background:linear-gradient(90deg,#B53925,#8B2C1A) !important;
+}
 
 /* ===== НОВЫЕ СТИЛИ (улучшения сайта) ===== */
 

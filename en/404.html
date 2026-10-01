@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- P3-2 (аудит 66.56): CSP как на лендингах — защита одинакова на всех
+         обслуживаемых HTML; страница статична, inline-скриптов нет -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://mc.yandex.ru; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://mc.yandex.ru https://*.mc.yandex.ru; media-src 'self'; connect-src 'self' https://mc.yandex.ru https://*.mc.yandex.ru wss://mc.yandex.ru wss://*.mc.yandex.ru; frame-src 'self' https://mc.yandex.ru; object-src 'none'; base-uri 'self'; form-action 'self' https://boosty.to https://yoomoney.ru https://vk.ru">
     <meta name="robots" content="noindex">
     <title>404 — The scroll is lost | The Chronicles of Ruthenia</title>
     <style>
