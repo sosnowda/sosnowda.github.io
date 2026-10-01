@@ -7,7 +7,7 @@
 //   №11  партия 2: index.html и en/index.html свободны от инлайн-стилей
 //        (ложное срабатывание SVG font-style отфильтровывается), новые классы
 //        на месте в styles.css;
-//   SW   site-cache v103 (66.58 консолидация styles.css; история актуализаций — см. r108), журнал версий в docs/SW_CHANGELOG.md (v97 и v98).
+//   SW   site-cache v104 (66.59 мобильный кегль полосы сбора; история актуализаций — см. r108), журнал версий в docs/SW_CHANGELOG.md (v97 и v98).
 import { readFileSync, existsSync } from 'fs';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -100,7 +100,7 @@ ok(styles.includes('.sr-only'), 'styles.css: .sr-only существует (ск
 
 console.log('--- 5. Service Worker v99 и журнал ---');
 const sw = read('sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v103';"), 'SW: site-cache v101');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v104';"), 'SW: site-cache v101');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 не менялся (ассеты не трогали)');
 const swlog = read('docs/SW_CHANGELOG.md');
 ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 добавлена');

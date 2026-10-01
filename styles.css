@@ -624,14 +624,10 @@ html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель 
             .container {
                 padding: 0 16px;
             }
-            /* Однострочная полоса сбора средств на узких экранах */
-            .fund-bar {
-                font-size: 0.72rem;
-                padding: 0.45rem 10px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
+            /* (66.59) .fund-bar переехал из этого media-блока ниже по файлу —
+               сразу ПОСЛЕ канонического блока .fund-bar 66.58: при равной
+               специфичности (0,1,0) базовые 0.9rem/0.6rem, стоявшие позже,
+               перебивали мобильные 0.72rem / 0.45rem 10px. Значения прежние. */
         }
     
 .img-placeholder{width:100%;border-radius:12px;overflow:hidden;margin:1rem 0}
@@ -680,6 +676,25 @@ html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель 
 }
 .fund-bar:hover{
   background:linear-gradient(90deg,#B53925,#8B2C1A) !important;
+}
+/* Однострочная полоса сбора средств на узких экранах (66.59): правило
+   перенесено из @media 480px выше в файл — канонический блок 66.58 стоит
+   ниже старого места и при равной специфичности (0,1,0) перебивал
+   font-size:0.72rem→0.9rem и padding:0.45rem 10px→0.6rem на мобильных
+   (задокументированное побочное наблюдение консолидации 66.58).
+   Теперь override стоит ПОСЛЕ базы и побеждает по порядку следования:
+   на ≤480px кегль 0.72rem и паддинг 0.45rem 10px применяются.
+   Значения прежние (66.47/аудит №20), поменялся только порядок источника.
+   white-space/overflow/text-overflow и раньше применялись (база их
+   не объявляет) — однострочность с ellipsis не менялась. */
+@media (max-width: 480px){
+  .fund-bar{
+    font-size:0.72rem;
+    padding:0.45rem 10px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow: ellipsis;
+  }
 }
 .fund-popup{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center}
 .fund-popup.open{display:flex}

@@ -9,7 +9,7 @@
 //    резолвились бы от /en/manifest.json и 404) + link в en/index.html;
 //    в RU-манифест явно добавлен scope "/" (дефолт совпадает, теперь явно).
 // 4) В 66.54 SW БЫЛ без бампа (правки лендингов при неизменном sw.js);
-//    актуализация 66.58: site-cache v103 (консолидация styles.css; в 66.57 был v102 — бамп P3-3).
+//    актуализация 66.59: site-cache v104 (мобильный кегль полосы; в 66.58 был v103 — консолидация styles.css).
 // Запуск из корня репозитория: node game/tools/test_round106.mjs
 import fs from 'fs';
 
@@ -58,7 +58,7 @@ ok((sitemap.match(/hreflang=/g) || []).length === 6, 'sitemap: hreflang-альт
 ok(!sitemap.includes('2026-09-27'), 'sitemap: устаревшая дата 2026-09-27 исчезла');
 
 console.log('--- 4. SW без бампа ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v103';"), 'sw.js: site-cache v103 (бамп 66.58 — консолидация styles.css)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v104';"), 'sw.js: site-cache v104 (актуализация 66.59 — мобильный кегль полосы)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets v41');
 
 console.log(`\nИТОГ: ${pass} ✓ / ${fail} ✗`);
