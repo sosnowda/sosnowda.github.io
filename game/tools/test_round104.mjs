@@ -59,7 +59,7 @@ ok(audit.includes('ВНЕДРЕНО в патче 66.52'), 'AUDIT: пометк�
 ok(audit.includes('Находок не несёт') || audit.includes('## Проверено и БЕЗ замечаний'), 'AUDIT: зелёная зона описана');
 
 console.log('--- 5. SW без повышения (правки только /game/src/) ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v104';"), 'sw.js: site-cache обновлён до v101 (/game/src/ идёт в обход SW)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v105';"), 'sw.js: site-cache обновлён до v101 (/game/src/ идёт в обход SW)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets остаётся v41');
 ok(sw.includes("url.pathname.startsWith('/game/src/')"), 'sw.js: /game/src/ пропускается напрямую — сцены всегда свежие');
 

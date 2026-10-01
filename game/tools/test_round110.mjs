@@ -11,6 +11,8 @@
 // Рендер-доказательство: computed-сверка baseline_fundbar_66_58.mjs до/после —
 // ровно 5 изменений на ru_mobile (fontSize 14.4→11.52px, padding 9.6→7.2/10px),
 // десктоп RU/EN и hover бит-в-бит (см. smoke_66_59 и CHANGES «Патч 66.59»).
+// актуализация 66.60: SW-ожидание v104→v105 (высота полоски по контенту —
+// явный line-height:1.2 в каноническом блоке; детали — в r111).
 // Здесь закреплена СТАТИКА (структура styles.css + SW + документация).
 // Запуск из корня репозитория: node game/tools/test_round110.mjs
 import { execSync } from 'child_process';
@@ -61,7 +63,7 @@ ok(styles.includes('.fund-bar:focus-visible{outline:2px solid #C9A961;outline-of
 ok(styles.includes('.fund-bar:hover{\n  background:linear-gradient(90deg,#B53925,#8B2C1A) !important;'), 'working-hover с !important не тронут (66.56/66.58 целы)');
 
 console.log('--- 4. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v104';"), 'sw.js: site-cache v104 (изменение styles.css → бамп)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v105';"), 'sw.js: site-cache v105 (актуализация 66.60 — высота полоски; изменение styles.css → бамп)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets-v41 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (переезд CSS-правила не трогал SW-логику)');
 ok(swlog.includes('- v104 — итерация 66.59'), 'SW_CHANGELOG: запись v104 добавлена');

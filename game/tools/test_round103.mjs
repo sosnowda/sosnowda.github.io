@@ -51,7 +51,7 @@ ok(ru.includes("softwareVersion\":\"0.3.0-alpha"), 'RU: JSON-LD softwareVersion 
 ok(en.includes("softwareVersion\":\"0.3.0-alpha"), 'EN: JSON-LD softwareVersion 0.3.0-alpha');
 
 console.log('--- 4. SW v101 и журнал ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v104';"), 'SW: site-cache v101');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v105';"), 'SW: site-cache v101');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 не менялся');
 ok(swlog.includes('- v101 — итерация 66.53'), 'SW-журнал: запись v101 добавлена');
 ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 на месте');
