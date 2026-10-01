@@ -93,18 +93,10 @@
 <button type="button" class="fund-bar" aria-haspopup="dialog" aria-controls="fundPopup" onclick="document.getElementById('fundPopup').classList.add('open')">
     💰 Сбор средств на развитие проекта — нажмите, чтобы поддержать!
 </button>
-<div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle" onclick="if(event.target===this)this.classList.remove('open')">
-    <div class="fund-popup-content">
-        <button class="fund-popup-close" aria-label="Закрыть окно поддержки" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
-        <h3 id="fundPopupTitle">Поддержите «Летописи Руси»</h3>
-        <p>Средства пойдут на оборудование для тестирования ИИ, наполнение баз знаний и разработку. Выберите удобный способ:</p>
-        <div class="support-buttons">
-            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--boosty">Boosty (подписка)</a>
-            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--yoomoney">ЮMoney (перевод)</a>
-            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--vk">ВКонтакте</a>
-        </div>
-    </div>
-</div>
+<!-- 66.63 (аудит 66.61, P3-3): .fund-popup переехал в конец body (после
+     </footer>) — его заголовок h3 больше не стоит в DOM до sr-only h1 героя
+     (порядок заголовков). .fund-popup — position:fixed, открытие по id,
+     привязок CSS/JS к месту в DOM нет. -->
 
 <header class="header">
         <div class="container header-inner">
@@ -312,7 +304,7 @@
                     </button>
                 </div>
                 <div class="pt-detail">
-                    <h4 class="pt-detail-name">105 лет эпохи</h4>
+                    <h3 class="pt-detail-name">105 лет эпохи</h3>
                     <div class="pt-detail-years">1400–1505</div>
                     <p class="pt-detail-text">Выберите князя на ленте — между ними 105 лет эпохи.</p>
                 </div>
@@ -515,140 +507,140 @@
                 <div class="detailed-item">
                     <div class="detailed-number">1</div>
                     <div>
-<h4>Симбиоз математики и творчества</h4>
+<h3>Симбиоз математики и творчества</h3>
 <p>Godot считает броски и урон, нейросеть описывает события и ведёт диалоги.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">2</div>
                     <div>
-<h4>Жёсткий историзм</h4>
+<h3>Жёсткий историзм</h3>
 <p>RAG-база не даёт нейросети выдумывать — только проверенные исторические данные.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">3</div>
                     <div>
-<h4>Локальная нейросеть</h4>
+<h3>Локальная нейросеть</h3>
 <p>Работает офлайн после загрузки модели с Hugging Face.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">4</div>
                     <div>
-<h4>Облачные модели</h4>
+<h3>Облачные модели</h3>
 <p>Подключение любых LLM через OpenAI-совместимый API-ключ.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">5</div>
                     <div>
-<h4>Умное управление памятью</h4>
+<h3>Умное управление памятью</h3>
 <p>Rolling Summary + State Injection вокруг контекстного окна.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">6</div>
                     <div>
-<h4>Проверка историчности</h4>
+<h3>Проверка историчности</h3>
 <p>На всех этапах: от создания персонажа до действий НИП.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">7</div>
                     <div>
-<h4>Пошаговые бои</h4>
+<h3>Пошаговые бои</h3>
 <p>Реальное оружие, доспехи. Смерть от одного удара в уязвимое место.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">8</div>
                     <div>
-<h4>Визуальные режимы боя</h4>
+<h3>Визуальные режимы боя</h3>
 <p>Графический 2.5D изометрия или текстовый режим словесных RPG.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">9</div>
                     <div>
-<h4>RAG из сотен книг</h4>
+<h3>RAG из сотен книг</h3>
 <p>База данных собрана из нескольких сотен исторических источников.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">10</div>
                     <div>
-<h4>BRP d100</h4>
+<h3>BRP d100</h3>
 <p>Ролевая система Basic Roleplaying Universal Game Engine SRD.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">11</div>
                     <div>
-<h4>Мировые события</h4>
+<h3>Мировые события</h3>
 <p>Все крупные исторические события отражаются в игровом мире.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">12</div>
                     <div>
-<h4>Слухи и новости</h4>
+<h3>Слухи и новости</h3>
 <p>События приходят через купцов, гостей и другие источники.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">13</div>
                     <div>
-<h4>Система выживания</h4>
+<h3>Система выживания</h3>
 <p>Отдых, питание, жажда, прокорм лошадей, болезни, отравления.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">14</div>
                     <div>
-<h4>Реалистичные дороги</h4>
+<h3>Реалистичные дороги</h3>
 <p>Дальности между городами соответствуют историческим картам.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">15</div>
                     <div>
-<h4>Смена дня и ночи</h4>
+<h3>Смена дня и ночи</h3>
 <p>Времена года и погода влияют на игровой процесс.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">16</div>
                     <div>
-<h4>Система репутации</h4>
+<h3>Система репутации</h3>
 <p>Местная и глобальная репутация, отношения окружающих.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">17</div>
                     <div>
-<h4>Встроенная справка</h4>
+<h3>Встроенная справка</h3>
 <p>Типа «Рупедии» — все исторические вехи мировой и русской истории XV века.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">18</div>
                     <div>
-<h4>Лог сессии</h4>
+<h3>Лог сессии</h3>
 <p>Полный лог событий, диалогов и боёв. Экспорт в текстовый файл.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">19</div>
                     <div>
-<h4>Исторические карты</h4>
+<h3>Исторические карты</h3>
 <p>Реалистичные карты Руси XIV–XVI веков и окрестностей.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">20</div>
                     <div>
-<h4>llama.cpp server</h4>
+<h3>llama.cpp server</h3>
 <p>Локальный сервер нейросети с OpenAI-совместимым API по HTTP.</p>
 </div>
                 </div>
@@ -787,7 +779,7 @@
             </a>
         </div>
         <div class="share-block">
-            <h4>Поделиться сайтом</h4>
+            <h3>Поделиться сайтом</h3>
             <div class="share-row">
                 <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--vk">ВК</a>
                 <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=Летописи Руси XV века — AI-narrative RPG" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--tg">Telegram</a>
@@ -845,6 +837,24 @@
         </div>
 
 </footer>
+
+
+<!-- 66.63 (аудит 66.61, P3-3): попап поддержки — теперь в конце body, ПОСЛЕ
+     sr-only h1. Разметка, стили и поведение не изменились (position:fixed,
+     aria-labelledby="fundPopupTitle"). -->
+<div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="fund-popup-content">
+        <button class="fund-popup-close" aria-label="Закрыть окно поддержки" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
+        <h3 id="fundPopupTitle">Поддержите «Летописи Руси»</h3>
+        <p>Средства пойдут на оборудование для тестирования ИИ, наполнение баз знаний и разработку. Выберите удобный способ:</p>
+        <div class="support-buttons">
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--boosty">Boosty (подписка)</a>
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--yoomoney">ЮMoney (перевод)</a>
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--vk">ВКонтакте</a>
+        </div>
+    </div>
+</div>
+
 
 
 <!-- 66.48 (аудит №12): монолит main.js разбит на ES-модули (js/modules/);

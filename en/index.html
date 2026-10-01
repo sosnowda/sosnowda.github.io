@@ -93,18 +93,10 @@
 <button type="button" class="fund-bar" aria-haspopup="dialog" aria-controls="fundPopup" onclick="document.getElementById('fundPopup').classList.add('open')">
     💰 Fundraising for the project — click to support!
 </button>
-<div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle" onclick="if(event.target===this)this.classList.remove('open')">
-    <div class="fund-popup-content">
-        <button class="fund-popup-close" aria-label="Close support dialog" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
-        <h3 id="fundPopupTitle">Support The Chronicles of Ruthenia</h3>
-        <p>Funds will go toward AI testing hardware, knowledge-base content and development. Choose a convenient method:</p>
-        <div class="support-buttons">
-            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--boosty">Boosty (subscription)</a>
-            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--yoomoney">YuMoney (transfer)</a>
-            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--vk">VKontakte</a>
-        </div>
-    </div>
-</div>
+<!-- 66.63 (audit 66.61, P3-3): .fund-popup moved to the end of <body> (after
+     </footer>) — its h3 heading no longer precedes the sr-only h1 in the DOM
+     (heading order). .fund-popup is position:fixed and opened by id — no CSS/JS
+     coupling to its DOM position. -->
 
 <header class="header">
         <div class="container header-inner">
@@ -311,7 +303,7 @@
                     </button>
                 </div>
                 <div class="pt-detail">
-                    <h4 class="pt-detail-name">105 years of the epoch</h4>
+                    <h3 class="pt-detail-name">105 years of the epoch</h3>
                     <div class="pt-detail-years">1400–1505</div>
                     <p class="pt-detail-text">Select a prince on the ribbon — 105 years of the era between them.</p>
                 </div>
@@ -514,140 +506,140 @@
                 <div class="detailed-item">
                     <div class="detailed-number">1</div>
                     <div>
-<h4>Where math meets storytelling</h4>
+<h3>Where math meets storytelling</h3>
 <p>Godot computes rolls and damage; the neural network describes events and carries dialogue.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">2</div>
                     <div>
-<h4>Strict historical authenticity</h4>
+<h3>Strict historical authenticity</h3>
 <p>The RAG base keeps the AI from inventing — only verified historical data.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">3</div>
                     <div>
-<h4>Local neural network</h4>
+<h3>Local neural network</h3>
 <p>Works offline after downloading the model from Hugging Face.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">4</div>
                     <div>
-<h4>Cloud models</h4>
+<h3>Cloud models</h3>
 <p>Connect any LLMs via an OpenAI-compatible API key.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">5</div>
                     <div>
-<h4>Smart memory management</h4>
+<h3>Smart memory management</h3>
 <p>Rolling Summary + State Injection around the context window.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">6</div>
                     <div>
-<h4>Historical accuracy checks</h4>
+<h3>Historical accuracy checks</h3>
 <p>At every stage: from character creation to NPC actions.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">7</div>
                     <div>
-<h4>Turn-based combat</h4>
+<h3>Turn-based combat</h3>
 <p>Real weapons and armour. Death from a single blow to a vulnerable spot.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">8</div>
                     <div>
-<h4>Visual combat modes</h4>
+<h3>Visual combat modes</h3>
 <p>Graphical 2.5D isometric view or the text mode of classic tabletop RPGs.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">9</div>
                     <div>
-<h4>RAG from hundreds of books</h4>
+<h3>RAG from hundreds of books</h3>
 <p>The knowledge base is compiled from several hundred historical sources.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">10</div>
                     <div>
-<h4>BRP d100</h4>
+<h3>BRP d100</h3>
 <p>The Basic Roleplaying Universal Game Engine SRD system.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">11</div>
                     <div>
-<h4>World events</h4>
+<h3>World events</h3>
 <p>All major historical events are reflected in the game world.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">12</div>
                     <div>
-<h4>Rumours and news</h4>
+<h3>Rumours and news</h3>
 <p>Events arrive through merchants, guests and other sources.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">13</div>
                     <div>
-<h4>Survival system</h4>
+<h3>Survival system</h3>
 <p>Rest, food, thirst, horse fodder, illnesses, poisoning.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">14</div>
                     <div>
-<h4>Realistic roads</h4>
+<h3>Realistic roads</h3>
 <p>Distances between towns match historical maps.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">15</div>
                     <div>
-<h4>Day and night cycle</h4>
+<h3>Day and night cycle</h3>
 <p>Seasons and weather affect gameplay.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">16</div>
                     <div>
-<h4>Reputation system</h4>
+<h3>Reputation system</h3>
 <p>Local and global reputation, the attitude of those around you.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">17</div>
                     <div>
-<h4>Built-in encyclopedia</h4>
+<h3>Built-in encyclopedia</h3>
 <p>A kind of &ldquo;Rupedia&rdquo; — every milestone of 15th-century Russian and world history.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">18</div>
                     <div>
-<h4>Session log</h4>
+<h3>Session log</h3>
 <p>A full log of events, dialogue and battles. Export to a text file.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">19</div>
                     <div>
-<h4>Historical maps</h4>
+<h3>Historical maps</h3>
 <p>Realistic maps of 14th–16th century Rus' and its surroundings.</p>
 </div>
                 </div>
                 <div class="detailed-item">
                     <div class="detailed-number">20</div>
                     <div>
-<h4>llama.cpp server</h4>
+<h3>llama.cpp server</h3>
 <p>A local neural network server with an OpenAI-compatible API over HTTP.</p>
 </div>
                 </div>
@@ -786,7 +778,7 @@
             </a>
         </div>
         <div class="share-block">
-            <h4>Share this site</h4>
+            <h3>Share this site</h3>
             <div class="share-row">
                 <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--vk">VK</a>
                 <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=The Chronicles of Ruthenia — AI-narrative RPG" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--tg">Telegram</a>
@@ -844,6 +836,24 @@
         </div>
 
 </footer>
+
+
+<!-- 66.63 (audit 66.61, P3-3): support popup now lives at the end of <body>,
+     AFTER the sr-only h1. Markup, styles and behaviour unchanged
+     (position:fixed, aria-labelledby="fundPopupTitle"). -->
+<div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="fund-popup-content">
+        <button class="fund-popup-close" aria-label="Close support dialog" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
+        <h3 id="fundPopupTitle">Support The Chronicles of Ruthenia</h3>
+        <p>Funds will go toward AI testing hardware, knowledge-base content and development. Choose a convenient method:</p>
+        <div class="support-buttons">
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--boosty">Boosty (subscription)</a>
+            <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--yoomoney">YuMoney (transfer)</a>
+            <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=fund_popup" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--block btn-support--vk">VKontakte</a>
+        </div>
+    </div>
+</div>
+
 
 
 <!-- 66.48 (audit #12): the monolithic main.js is split into ES modules (js/modules/);

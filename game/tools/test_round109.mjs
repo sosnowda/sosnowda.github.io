@@ -9,6 +9,7 @@
 // RU mobile 390, EN desktop) + hover-градиент сверены живым смоуком до/после
 // (diff пуст) — см. CHANGES.md «Патч 66.58» и scripts/smoke_66_58.mjs.
 // Здесь закреплена СТАТИКА (структура styles.css + SW + документация).
+// актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
 // Запуск из корня репозитория: node game/tools/test_round109.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -54,7 +55,7 @@ ok(styles.includes('button.fund-bar{display:block;width:100%;border:none;appeara
 ok(styles.includes('.fund-bar:focus-visible{outline:2px solid #C9A961;outline-offset:2px}'), '.fund-bar:focus-visible не тронут');
 
 console.log('--- 4. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v106';"), 'sw.js: site-cache v106 (актуализация 66.62 — контраст полоски P3-1; изменение styles.css → бамп)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v107';"), 'sw.js: site-cache v107 (актуализация 66.63 — P3-2/P3-3: canonical+h1 игры, порядок заголовков; изменение styles.css → бамп)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets-v41 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (консолидация CSS не трогала SW-логику)');
 ok(swlog.includes('- v103 — итерация 66.58'), 'SW_CHANGELOG: запись v103 добавлена');

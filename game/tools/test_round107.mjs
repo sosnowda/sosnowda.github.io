@@ -8,6 +8,7 @@
 // перед figcaption; инлайн-стили перенесены как были).
 // SW бампнут в 66.57 (P3-3 — фолбэк только navigate): site-cache v101→v102;
 // здесь секция 4 актуализирована под v104 (66.59 — мобильный кегль полосы; запись журнала — см. r109).
+// актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
 // Запуск из корня репозитория: node game/tools/test_round107.mjs
 import fs from 'fs';
 import path from 'path';
@@ -57,7 +58,7 @@ const mainJs = read('js/main.js');
 ok(mainJs.includes('initMapLightbox') && mainJs.includes('initGallery'), 'main.js: импорты и вызовы обоих модулей сохранены');
 
 console.log('--- 4. SW v103 (бамп 66.58 — консолидация styles.css; в 66.57 был v102 под P3-3) ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v106';"), 'sw.js: v106 (актуализация 66.62 — контраст полоски P3-1)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v107';"), 'sw.js: v107 (актуализация 66.63 — P3-2/P3-3: canonical+h1 игры, порядок заголовков)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets v41');
 // 66.57 (актуализация: в 66.55 ассерты запрещали запись v102 — теперь она ожидаема)
 ok(swLog.includes('- v102 — итерация 66.57'), 'SW_CHANGELOG: запись v102 добавлена (66.57)');

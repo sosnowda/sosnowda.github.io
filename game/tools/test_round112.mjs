@@ -12,6 +12,7 @@
 // Здесь закреплена СТАТИКА (структура styles.css + SW + документация) и
 // WCAG-математика (пересчёт контраста прямо в тесте — значения не смогут
 // откатиться ниже AA незаметно).
+// актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
 // Запуск из корня репозитория: node game/tools/test_round112.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -73,7 +74,7 @@ ok(styles.includes('.fund-bar:focus-visible{outline:2px solid #C9A961;outline-of
 ok(block.includes('text-shadow:0 1px 1px rgba(0,0,0,0.5) !important;'), 'text-shadow полоски сохранён (поддержка читаемости)');
 
 console.log('--- 5. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v106';"), 'sw.js: site-cache v106 (актуализация 66.62 — контраст полоски; изменение styles.css → бамп)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v107';"), 'sw.js: site-cache v107 (актуализация 66.63 — P3-2/P3-3: canonical+h1 игры, порядок заголовков; изменение styles.css → бамп)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets-v41 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (правка цвета не трогала SW-логику)');
 ok(swlog.includes('- v106 — итерация 66.62'), 'SW_CHANGELOG: запись v106 добавлена');

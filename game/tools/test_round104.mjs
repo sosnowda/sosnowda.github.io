@@ -10,6 +10,7 @@
 //    SW пропускает напрямую (св. sw.js:70 «сцены обновляются часто»);
 //    ассерты ниже отслеживают АКТУАЛЬНУЮ версию: после 66.57 (P3-3 —
 //    фолбэк только для navigate) site-cache v104 (актуализация 66.59 — мобильный кегль полосы сбора), game-assets v41.
+// актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
 // Запуск из корня репозитория: node game/tools/test_round104.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -59,7 +60,7 @@ ok(audit.includes('ВНЕДРЕНО в патче 66.52'), 'AUDIT: пометк�
 ok(audit.includes('Находок не несёт') || audit.includes('## Проверено и БЕЗ замечаний'), 'AUDIT: зелёная зона описана');
 
 console.log('--- 5. SW без повышения (правки только /game/src/) ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v106';"), 'sw.js: site-cache v106 (актуализация 66.62 — контраст полоски; ассерт актуализирован из v101)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v107';"), 'sw.js: site-cache v107 (актуализация 66.63 — P3-2/P3-3: canonical+h1 игры, порядок заголовков; ассерт актуализирован из v101)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets остаётся v41');
 ok(sw.includes("url.pathname.startsWith('/game/src/')"), 'sw.js: /game/src/ пропускается напрямую — сцены всегда свежие');
 

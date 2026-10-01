@@ -6,6 +6,7 @@
 //    кнопки); корневой 404.html получил локале-детект /^\/en(\/|$)/ — GitHub
 //    Pages отдаёт корневой файл на ЛЮБОЙ отсутствующий путь, включая /en/…
 //    (проверено curl'ом прода), поэтому EN-тексты подменяются на лету.
+// актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
 // Запуск из корня репозитория: node game/tools/test_round105.mjs
 import fs from 'fs';
 
@@ -20,7 +21,7 @@ const swlog = read('docs/SW_CHANGELOG.md');
 const audit = read('docs/AUDIT_R66_52.md');
 
 console.log('--- 1. P2-1: офлайн-фолбэк по разделам ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v106';"), 'sw.js: site-cache v106 (актуализация 66.62; ассерт актуализирован из v101)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v107';"), 'sw.js: site-cache v107 (актуализация 66.63 — P3-2/P3-3; ассерт актуализирован из v101)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
 ok(sw.includes("var fb = url.pathname.indexOf('/game/') === 0 ? '/game/'"), 'sw.js: фолбэк /game/… → кэш /game/');
 ok(sw.includes(": url.pathname.indexOf('/en/') === 0 ? '/en/' : '/index.html';"), 'sw.js: фолбэк /en/… → кэш /en/, остальное → /index.html');
