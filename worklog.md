@@ -2408,3 +2408,23 @@ Work Log:
 
 Stage Summary:
 - P3-1 аудита 66.61 закрыт: контраст текста полосы сбора доведён до WCAG AA на всех точках (минимум 4.76:1 вместо 2.61), визуальный язык полоски (тёмно-красный градиент, золотистый текст, hover-эффект) сохранён. SW v106, РЕГРЕСС 49/49, СМОУК 21/21, ПРОД ALL GREEN. Остатки аудита: P3-2 canonical/h1 игры, P3-3 порядок заголовков, P3-4 самохостинг Phaser, P3-5 PT Sans в стеке.
+
+---
+Task ID: 66.63
+Agent: Super Z (main, Z.ai)
+Task: Приказ владельца — P3-2 (canonical/h1 игры) + P3-3 (порядок заголовков) аудита 66.61 одной итерацией 66.62+1 = 66.63 по стандартному циклу.
+
+Work Log:
+- Репо актуален @5002217; credential store восстановлен (helper store + ~/.git-credentials, падение пуша — известный инцидент 66.60).
+- Диагноз живым замером scripts/baseline_outline_66_63.mjs (RU/EN desktop + RU mobile + игра): первый заголовок лендингов — h3 попапа сбора (до sr-only h1), outline_no_skip=false, h4_total=22 (20×.detailed-item + .pt-detail-name + .share-block), у game/index.html canonical=0/h1=0. Числа аудита 66.61 подтверждены.
+- P3-3: .fund-popup перенесён в конец body (после </footer>) — position:fixed, открытие по id, привязок CSS/JS к месту нет (styles.css:725–731 без позиционных зависимостей, ui.js querySelector('h3') и r87 целы); тег h3 попапа СОХРАНЁН; на старом месте — комментарий-указатель. 22×h4→h3 (патч scripts/patch_66_63.py с подсчётом замен; NB: инвентарь 21 «голых» h4 + 1 с классом, а указатели содержат текст </footer> — сорвало 3 прогона патча, закреплено идемпотентными якорями).
+- Паритет: правило 777 h1,h2,h3{text-shadow…!important} и UA-размер h3=1.17em дали бы визуальный дрейф → .detailed-item h3 / .pt-detail-name / .share-block h3 + text-shadow:none !important, .share-block h3 + font-size:1rem; правило 81–90 (h1,h2,h3,h4) не тронуто.
+- РЕНДЕР: computed-сверка до/после — 310 различий, ВСЕ структурные, НЕОЖИДАННЫХ (computed/геометрия) = 0; тексты 22 бывших h4 полностью сохранены в h3; popup_title/popup_content_box 450px/fund_bar/share 16px/detailed 16.8px/pt 16.8px/loading_text бит-в-бит (baseline_66_63_before/after.json, кадры → download/screenshots_6663/).
+- P3-2: game/index.html — link rel=canonical https://sosnowda.github.io/game/ (перекрёстная сверка с og:url) + sr-only H1 «Летописи Руси XV века — Браузерное демо» (первый элемент body, .sr-only бит-в-бит из styles.css). Отклонение от рецепта-кандидата «видимый H1» задокументировано в CHANGES.md: канвас 100% вьюпорта перекрыл бы видимый заголовок; sr-only — паттерн лендингов (позитив по самому аудиту), SEO-цель достигнута. Порядок h1→h2 для ошибки загрузки стал корректным.
+- SW v106→v107 (§4: styles.css изменён), game-assets-v41, navigate-гейт цел; SW_CHANGELOG v107. SW-ожидания v106→v107 в 30 наборах; честные шапки r102–r112; причины SW-ассертов → 66.63.
+- Тесты: НОВЫЙ r113 (63 assert: попап/порядок/h4→h3/паритет-селекторы/canonical+h1/SW/доки/живой bump_lastmod --check). РЕГРЕСС 64–113 = 50/50 (r86–89 из game/tools). Смоук smoke_66_63.mjs 32/32.
+- Коммит 449a544 → bump_lastmod (/game/ 2026-09-30→10-01, лендинги актуальны) → amend → ef19cd9, push 5002217..ef19cd9.
+- Прод: Pages built @ef19cd9; URL 200×11 + /missing 404; sw.js прод=v107+v41+гейт; sha256 прод==локал ×6 (styles.css, sw.js, index.html, en/index.html, game/index.html, sitemap.xml); sitemap прод 10-01×3; прод-проба prod_outline_66_63.mjs 10/10 (первый h1/без пропусков/попап после футера на RU+EN, canonical+sr-only h1+канвас игры, fund-bar бит-в-бит, SW контролирует).
+
+Stage Summary:
+- P3-2 и P3-3 закрыты одной итерацией: порядок заголовков выровнен (первый h1, без пропусков), canonical/H1 игры на месте, computed бит-в-бит, прод ALL GREEN, SW v107, регресс 50/50, смоук 32/32. Остатки аудита 66.61: P3-4 (самохостинг Phaser), P3-5 (PT Sans в стеке).
