@@ -3,7 +3,7 @@
 //    таймлайн князей (подсказка + досье) в словаре, ui.js без inline-тернарников строк.
 // 2) РЕЛИЗ: JSON-LD softwareVersion 0.3.0-alpha (RU+EN) под релиз v0.3.0-alpha.
 // 3) SW: в 66.50 — site-cache v100, запись v100 в журнале
-//    (ассерты ниже отслеживают АКТУАЛЬНУЮ версию: после 66.57 — v102).
+//    (ассерты ниже отслеживают АКТУАЛЬНУЮ версию: после 66.58 — v103).
 // Запуск из корня репозитория: node game/tools/test_round103.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -51,7 +51,7 @@ ok(ru.includes("softwareVersion\":\"0.3.0-alpha"), 'RU: JSON-LD softwareVersion 
 ok(en.includes("softwareVersion\":\"0.3.0-alpha"), 'EN: JSON-LD softwareVersion 0.3.0-alpha');
 
 console.log('--- 4. SW v101 и журнал ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v102';"), 'SW: site-cache v101');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v103';"), 'SW: site-cache v101');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 не менялся');
 ok(swlog.includes('- v101 — итерация 66.53'), 'SW-журнал: запись v101 добавлена');
 ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 на месте');

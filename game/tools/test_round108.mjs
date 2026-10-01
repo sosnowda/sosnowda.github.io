@@ -35,14 +35,16 @@ const agent = read('АГЕНТ.md');
 const sitemap = read('sitemap.xml');
 
 console.log('--- 1. P3-1: живой hover бренд-бара ---');
+// актуализация 66.58: консолидация блоков 657+786 — остался ОДИН hover
+// (детали структуры — в r109; рендер бит-в-бит, см. CHANGES 66.58)
 const hoverImportant = 'linear-gradient(90deg,#B53925,#8B2C1A) !important';
 ok(styles.includes(hoverImportant), 'styles.css: парный hover с !important (#B53925,#8B2C1A) присутствует');
-ok((styles.match(/\.fund-bar:hover/g) || []).length === 2, 'styles.css: два .fund-bar:hover (базовый 658 + тематический парный)');
+ok((styles.match(/\.fund-bar:hover/g) || []).length === 1, 'styles.css: один .fund-bar:hover (консолидация 66.58: мёртвый 658 снят, остался working-hover)');
 const themeBase = styles.indexOf('/* Плашка альфа-версии — выгравированный камень */');
 const themeHover = styles.indexOf('.fund-bar:hover{\n  background:linear-gradient(90deg,#B53925,#8B2C1A) !important;');
 ok(themeBase !== -1 && themeHover > themeBase, 'styles.css: парный hover ПОСЛЕ тематического блока (каскад: позднее правило побеждает)');
 ok(styles.includes('background:linear-gradient(90deg, #6B1F15, #8B2C1A, #6B1F15) !important;'), 'styles.css: базовый фон темы с !important не тронут');
-ok(styles.includes('.fund-bar:hover{background:linear-gradient(90deg,#B53925,#8B2C1A)}'), 'styles.css: исходный hover 658 сохранён (история/документация градиента)');
+ok(!styles.includes('.fund-bar:hover{background:linear-gradient(90deg,#B53925,#8B2C1A)}') && (styles.match(/^\.fund-bar\{/gm) || []).length === 1, 'styles.css: консолидация 66.58 — один канонический .fund-bar, мёртвого hover-однострочника нет');
 
 console.log('--- 2. P3-2: CSP на 404-страницах ---');
 const cspRe = /<meta http-equiv="Content-Security-Policy" content="([^"]+)">/;
@@ -58,7 +60,7 @@ ok(ru404.indexOf('Content-Security-Policy') < ru404.indexOf('<style>'), '404.htm
 ok(ru404.includes('<meta name="robots" content="noindex">') && en404.includes('<meta name="robots" content="noindex">'), '404-страницы: noindex сохранён на обеих');
 
 console.log('--- 3. P3-3: офлайн-фолбэк только для navigate ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v102';"), 'sw.js: site-cache v102 (правки кода SW → бамп)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v103';"), 'sw.js: site-cache v103 (бамп 66.58 — консолидация styles.css)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: субресурсы при офлайн-промахе — честный отказ (без HTML-фолбэка)');
 ok(sw.indexOf("event.request.mode !== 'navigate'") < sw.indexOf("var fb ="), 'sw.js: гейт navigate стоит ПЕРЕД фолбэк-цепочкой');

@@ -7,7 +7,7 @@
 // ~200 строк комментариев раздували Service Worker. Новые записи о версиях
 // добавляются в docs/SW_CHANGELOG.md и CHANGES.md, но НЕ в этот файл.
 
-var CACHE_NAME = 'chronicles-ruthenia-v102';
+var CACHE_NAME = 'chronicles-ruthenia-v103';
 var GAME_ASSETS_CACHE = 'game-assets-v41';
 
 self.addEventListener('install', function (event) {

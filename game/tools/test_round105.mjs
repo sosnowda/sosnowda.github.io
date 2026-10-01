@@ -20,7 +20,7 @@ const swlog = read('docs/SW_CHANGELOG.md');
 const audit = read('docs/AUDIT_R66_52.md');
 
 console.log('--- 1. P2-1: офлайн-фолбэк по разделам ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v102';"), 'sw.js: site-cache повышен до v101 (правки кода SW)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v103';"), 'sw.js: site-cache повышен до v101 (правки кода SW)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
 ok(sw.includes("var fb = url.pathname.indexOf('/game/') === 0 ? '/game/'"), 'sw.js: фолбэк /game/… → кэш /game/');
 ok(sw.includes(": url.pathname.indexOf('/en/') === 0 ? '/en/' : '/index.html';"), 'sw.js: фолбэк /en/… → кэш /en/, остальное → /index.html');
