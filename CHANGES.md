@@ -18,7 +18,7 @@
 
 8) **SW V112** (§4): HTML RU+EN лендингов + новый js/modules/webvitals.js в network-first бакете CACHE_NAME → бамп **v111→v112**; код SW не менялся, game-assets-v42 цел. SW-ожидания актуализированы в 35 наборах (v112, пины low-приоритетного preload в r97/r117, SW_CHANGELOG-пин на v112/66.70, честные шапки 66.70).
 
-9) **Тесты**: НОВЫЙ `test_round118.mjs` (~44 assert: onclick-ноль ×2 локали + разметка цела + слушатели ui.js, keywords-ноль + description цел, preload без low + hero high, webvitals-модуль/импорт/досрочный вызов/CSP-чистота, en/manifest.json-пин, SW v112/v42/механика, доки + живой bump_lastmod --check).
+9) **Тесты**: НОВЫЙ `test_round118.mjs` (46 assert: onclick-ноль ×2 локали + разметка цела + слушатели ui.js, keywords-ноль + description цел, preload без low + hero high, webvitals-модуль/импорт/досрочный вызов/CSP-чистота, en/manifest.json-пин, SW v112/v42/механика, доки + живой bump_lastmod --check).
 
 ## Патч 66.69 — остаток реестра §9/66.66: 9×P4 одной итерацией
 
