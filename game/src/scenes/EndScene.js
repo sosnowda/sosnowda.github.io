@@ -2,7 +2,7 @@
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
 import { ActionLog } from '../data/actionLog.js';
-import { getHuntState, checkGameEnd } from '../data/thief.js';
+import { checkGameEnd } from '../data/thief.js';
 import { createButton, bindRestartOnResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { getTime, formatDateTime } from '../systems/TimeSystem.js';
@@ -43,7 +43,6 @@ export class EndScene extends Phaser.Scene {
             this.audioManager.playSceneMusic('menu');
         }
 
-        const state = getHuntState(this.registry);
         // Раунд 36: репутационная победа — свой исход для оценки
         // Раунд 46 (п.2): убийство старосты — свой исход Проигрыша
         const finalOutcome = quest.elderMurdered
@@ -55,59 +54,50 @@ export class EndScene extends Phaser.Scene {
         const rating = log ? log.getRating(finalOutcome) : { stars: 0, title: 'Неизвестно', comment: '', stats: {} };
 
         // Определяем тип финала
-        let endType = 'defeat';
         let endTitle = '';
         let endColor = '';
         if (quest.elderMurdered) {
             // Раунд 46 (п.2): убийство старосты — НЕМЕДЛЕННЫЙ Проигрыш,
             // перебивает любые победные флаги (свадьба/вор/репутация)
-            endType = 'defeat';
             endTitle = t('⚖ УБИЙСТВО СТАРОСТЫ');
             endColor = '#ff4040';
         } else if (quest.marriageVictory) {
             // Раунд 66.11 (приказ владельца): ЖЕНИТЬБА — ВЫИГРЫШ И КОНЕЦ ИГРЫ.
             // Свадьба перебивает титул «ВОР ПОВЕРЖЕН»: поход завершён венцом.
-            endType = 'victory';
             endTitle = t('💍 ПОБЕДА! СВАДЬБА СЫГРАНА');
             endColor = '#ff90c8';
             this.audioManager.playLevelUp();
         } else if (quest.reputationVictory) {
             // Раунд 36: ОТДЕЛЬНАЯ ветка — репутационная победа (доступна только
             // после «обучалки» с поимкой вора и выбора «Продолжить игру»)
-            endType = 'victory';
             endTitle = t('🌿 ПОБЕДА! ТЕБЯ ПРИНЯЛИ КАК СВОЕГО');
             endColor = '#a8d46a';
             this.audioManager.playLevelUp();
         } else if (quest.thiefDefeated) {
-            endType = 'victory';
             // Раунд 21: победа бывает двух степеней — святыня возвращена деревне
             // или вор повержен, но икона ещё у героя
             endTitle = quest.mainQuestDone ? t('🏆 ПОБЕДА! ИКОНА ВОЗВРАЩЕНА') : t('⚖ ВОР ПОВЕРЖЕН');
             endColor = '#ffcc40';
             this.audioManager.playLevelUp();
         } else if (quest.thiefEscaped) {
-            endType = 'defeat';
             endTitle = t('🏃 ВОР СБЕЖАЛ');
             endColor = '#ff6040';
         } else if (quest.expelledFromVillage) {
             // Раунд 45 (п.2): изгнание за дурную славу (репутация −100) —
             // свой титул, не «Герой пал»
-            endType = 'defeat';
             endTitle = t('🚪 ИЗГНАН ИЗ ДЕРЕВНИ');
             endColor = '#ff4040';
         } else if (quest.heroDead) {
-            endType = 'defeat';
             endTitle = t('☠ ГЕРОЙ ПАЛ');
             endColor = '#ff4040';
         }
 
         // ----- Затемнённый фон с золотой рамкой -----
-        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
+        this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
         const panelW = width - 200;
         const panelH = height - 120;
-        const panelX = (width - panelW) / 2;
         const panelY = 60;
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x1a1008, 0.95)
+        this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x1a1008, 0.95)
             .setStrokeStyle(4, 0xc9a14a, 1);
 
         // ----- Заголовок финала -----

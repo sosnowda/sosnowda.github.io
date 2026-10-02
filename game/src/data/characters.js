@@ -5,7 +5,7 @@
 // от силы был огромен. Теперь у каждого врага явные, сбалансированные
 // значения: бой честный, но напряжённый для любого архетипа героя.
 import { createCharacter } from '../systems/Character.js';
-import { ARMORS, WEAPONS } from '../systems/Character.js';
+import { ARMORS } from '../systems/Character.js';
 
 export const ENEMY_TEMPLATES = {
     bandit: {

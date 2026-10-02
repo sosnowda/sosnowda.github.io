@@ -18,14 +18,14 @@ import { checkGameEnd } from '../data/thief.js';
 import { isChaseActive, guardThiefHintLine } from '../data/thief.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
-import { createButton, createDialog, closeAllSingletonDialogs } from '../utils/ui.js';
+import { createDialog, closeAllSingletonDialogs } from '../utils/ui.js';
 import { tickTime, getTime, getDayNightOverlay, getSeason, getDarknessFactor } from '../systems/TimeSystem.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
 import { formatDateRus, slavonicHourLine, folkTimeName, showChroniclePanel, eraYear, monthNameNom, monthNameGen } from '../systems/RusTime.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах, час за беседу
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
-import { getWeather, applyWeatherVisuals } from '../systems/Weather.js';
+import { applyWeatherVisuals } from '../systems/Weather.js';
 // Раунд 66.10: changeVillageRep убран из импорта (был нужен только луту сундуков)
 import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, isNpcKilled } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
@@ -33,7 +33,6 @@ import { t, tf, tk } from '../systems/i18n.js';
 import { MiniMap } from '../systems/MiniMap.js';
 // Раунд 66.10 (приказ владельца): сундуки/тайники удалены из игры; дневной ключ — из data/daily.js
 import { findNpc, getNpcs, getNpcDisplayName } from '../data/npcNames.js';
-import { getNpcActivity } from '../data/npcSchedules.js';
 import { getPresence, ALL_NPC_IDS, NPC_DIALOGUE, PLACE_NAMES, pickOutdoorLine } from '../data/npcPresence.js';
 import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
 // 66.37: калибровка масштаба мировых листов персонажей 128px (были 64)
@@ -504,7 +503,7 @@ export class VillageScene extends Phaser.Scene {
         const gatePx = (MAP_W - 1) * ts + ts / 2;
         const gatePy = VILLAGE_GATE.row * ts + ts / 2;
         this.drawVillageGate(ts);
-        const gateLabel = this.add.text(gatePx - ts * 2.2, gatePy - ts * 1.1, t('ВЫХОД ▶'), {
+        this.add.text(gatePx - ts * 2.2, gatePy - ts * 1.1, t('ВЫХОД ▶'), {
             fontSize: '15px', color: '#ff8060', backgroundColor: '#00000088',
             padding: { x: 6, y: 3 },
             stroke: '#000', strokeThickness: 2,
@@ -867,7 +866,7 @@ export class VillageScene extends Phaser.Scene {
                 .setInteractive({ useHandCursor: true })
                 .setScrollFactor(0)
                 .setDepth(101);
-            const ovText = this.add.text(ovBtnX, btnY, '🗺 ' + t('Обзор'), {
+            this.add.text(ovBtnX, btnY, '🗺 ' + t('Обзор'), {
                 fontSize: '10px', color: '#E8DCC4',
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
@@ -883,7 +882,7 @@ export class VillageScene extends Phaser.Scene {
                 .setInteractive({ useHandCursor: true })
                 .setScrollFactor(0)
                 .setDepth(101);
-            const planText = this.add.text(planBtnX, btnY, '🗺 ' + t('План'), {
+            this.add.text(planBtnX, btnY, '🗺 ' + t('План'), {
                 fontSize: '10px', color: '#E8DCC4',
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
@@ -899,7 +898,7 @@ export class VillageScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0)
             .setDepth(101);
-        const questText = this.add.text(questBtnX, btnY, t('📋 Задания'), {
+        this.add.text(questBtnX, btnY, t('📋 Задания'), {
             fontSize: '10px', color: '#E8DCC4',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
@@ -914,7 +913,7 @@ export class VillageScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0)
             .setDepth(101);
-        const charText = this.add.text(charBtnX, btnY, t('📜 Персонаж'), {
+        this.add.text(charBtnX, btnY, t('📜 Персонаж'), {
             fontSize: '11px', color: '#E8DCC4',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
@@ -939,7 +938,7 @@ export class VillageScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0)
             .setDepth(101);
-        const invText = this.add.text(invBtnX, btnY, t('🎒 Инвентарь'), {
+        this.add.text(invBtnX, btnY, t('🎒 Инвентарь'), {
             fontSize: '11px', color: '#E8DCC4',
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
@@ -1456,7 +1455,6 @@ export class VillageScene extends Phaser.Scene {
      * Тот же единый лимит, что у бесед и кнопки «Задание» (makeQuestOffer).
      */
     showStreetQuestOffer(npcId, quest, npcData) {
-        const npcName = npcData ? getNpcDisplayName(this.registry, npcId) : npcId;
         const portraitKey = (npcData && npcData.portrait) || 'portrait_villager_f';
         if (!quest) {
             createDialog(this, t('Дело'),
@@ -1540,7 +1538,6 @@ export class VillageScene extends Phaser.Scene {
         const moneyStr = formatMoney(p.dengas || 0);
         const timeState = getTime(this.registry);
         const villageRep = getVillageRep(this.registry);
-        const repLevel = getReputationLevel(villageRep);
         // Раунд 66.12 (приказ владельца №6): ОБРАТНЫЙ ОТСЧЁТ «до побега вора»
         // скрыт из статуса — игрок не видит, сколько часов осталось до побега.
         // Внутренний счётчик погони работает как прежде (chaseHoursLeft).
@@ -2062,7 +2059,7 @@ export class VillageScene extends Phaser.Scene {
         // прежние 600px обрезали заголовок и статус сверху).
         const panelW = Math.min(750, width - 20);
         const panelH = Math.min(600, height - 16);
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
+        this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 20, t('📋 Журнал заданий'), {
@@ -2073,7 +2070,6 @@ export class VillageScene extends Phaser.Scene {
 
         const q = this.registry.get('quest') || {};
         const quests = q.activeQuests || [];
-        const timeState = getTime(this.registry);
 
         if (quests.length === 0) {
             this.add.text(width / 2, height / 2, t('Нет активных заданий.\nПоговорите с жителями деревни.'), {
@@ -2144,7 +2140,7 @@ export class VillageScene extends Phaser.Scene {
         const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 25, 140, 30, 0x8B2C1A, 1)
             .setStrokeStyle(2, 0xC9A961)
             .setInteractive({ useHandCursor: true }).setDepth(202);
-        const btnText = this.add.text(width / 2, height / 2 + panelH / 2 - 25, t('Закрыть'), {
+        this.add.text(width / 2, height / 2 + panelH / 2 - 25, t('Закрыть'), {
             fontSize: '14px', color: '#E8DCC4',
         }).setOrigin(0.5).setDepth(203);
 

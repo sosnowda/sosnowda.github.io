@@ -65,11 +65,11 @@ ok(ru404.indexOf('Content-Security-Policy') < ru404.indexOf('<style>'), '404.htm
 ok(ru404.includes('<meta name="robots" content="noindex">') && en404.includes('<meta name="robots" content="noindex">'), '404-страницы: noindex сохранён на обеих');
 
 console.log('--- 3. P3-3: офлайн-фолбэк только для navigate ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v110';"), 'sw.js: site-cache v110 (актуализация 66.68 — P3 аудита §9/66.66: дубли i18n ×18 / покадровые Vector2 ×3 сцены / W3C-кодирование URL ×3, HTML страниц → бамп)');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v111';"), 'sw.js: site-cache v111 (актуализация 66.69 — P4 аудита §9/66.66: остаток реестра ×9 — sr-only clip-path, var→const sw.js, unused-vars, aria-label логотипа, <main> на /game/; HTML/CSS → бамп)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: субресурсы при офлайн-промахе — честный отказ (без HTML-фолбэка)');
-ok(sw.indexOf("event.request.mode !== 'navigate'") < sw.indexOf("var fb ="), 'sw.js: гейт navigate стоит ПЕРЕД фолбэк-цепочкой');
-ok(sw.includes("var fb = url.pathname.indexOf('/game/') === 0 ? '/game/'"), 'sw.js: фолбэк /game/… → кэш /game/ сохранён (66.53)');
+ok(sw.indexOf("event.request.mode !== 'navigate'") < sw.indexOf("const fb ="), 'sw.js: гейт navigate стоит ПЕРЕД фолбэк-цепочкой');
+ok(sw.includes("const fb = url.pathname.indexOf('/game/') === 0 ? '/game/'"), 'sw.js: фолбэк /game/… → кэш /game/ сохранён (66.53)');
 ok(sw.includes(": url.pathname.indexOf('/en/') === 0 ? '/en/' : '/index.html';"), 'sw.js: фолбэк /en/… → кэш /en/, остальное → /index.html сохранён');
 ok(sw.includes("return cached || caches.match(fb).then(function (m) {"), 'sw.js: цепочка .then (Promise через || не чейнится) сохранена');
 ok(sw.includes("return m || caches.match('/');"), "sw.js: второй эшелон '/' сохранён");

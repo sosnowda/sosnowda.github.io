@@ -4,7 +4,7 @@
 // - расписание активности по времени суток
 // - местоположение в зависимости от времени (дома / в поле / в церкви / и т.д.)
 
-import { TIME_OF_DAY, getTimeOfDay } from '../systems/TimeSystem.js';
+import { getTimeOfDay } from '../systems/TimeSystem.js';
 
 // Профессии NPC Руси XV века
 export const PROFESSIONS = {

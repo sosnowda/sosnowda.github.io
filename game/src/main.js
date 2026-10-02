@@ -85,7 +85,6 @@ const config = {
 
     const DL = Phaser.GameObjects && Phaser.GameObjects.DisplayList;
     if (DL && DL.prototype && typeof DL.prototype.shutdown === 'function') {
-        const origShutdown = DL.prototype.shutdown;
         DL.prototype.shutdown = function () {
             const list = this.list || [];
             for (let i = list.length - 1; i >= 0; i--) {

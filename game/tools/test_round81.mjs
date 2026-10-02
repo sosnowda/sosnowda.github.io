@@ -36,8 +36,8 @@ ok(style.includes('fontMax: 28') && style.includes('fontMin: 13') && style.inclu
 ok(style.includes("fontSize: '26px'"), 'StyleConfig: реплики 26px (было 21px)');
 ok(ui.includes('const fontMax = Number(DIALOG_STYLES.content.fontMax) || 26'),
     'createDialog: кегль берётся из DIALOG_STYLES (fontMax)');
-ok(ui.includes('let fontPx = best.fp') && ui.includes('fp -= 1'),
-    'createDialog: best-fit перебором с шагом 1px от максимума');
+ok(!ui.includes('let fontPx') && ui.includes('fp -= 1') && ui.includes('best.fp'),
+    'createDialog: best-fit перебором с шагом 1px от максимума (актуализация 66.69: биндинг fontPx удалён как мёртвый — P4-3, перебор жив)');
 ok(/while \(nh > availH && fp > fontMin\)/.test(ui),
     'createDialog: основной цикл — до обычного пола fontMin');
 ok(/Аварийный дожим ниже обычного пола[\s\S]*?while \(nh > availH && fp > fontHardMin\)/.test(ui),
@@ -88,7 +88,7 @@ ok(boot.includes("'icon_christ', 'icon_theotokos', 'icon_john', 'icon_archangel'
 ok(!existsSync(ROOT + 'game/assets/interiors/int_bg_church.webp'), 'фон церкви удалён (66.44, приказ 3)');
 
 // ---------- 4. КРИТИЧНЫЙ ФИКС: sw.js снова парсится ----------
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42'"), 'SW: кеш ассетов v31 (фасады 66.36)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42'"), 'SW: кеш ассетов game-assets-v42 (актуализация 66.69: var→const)');
 ok(sw.includes('*/\n\n// ----- Журнал версий кэша'),
     'SW: заголовочный блочный комментарий закрыт ДО указателя на журнал');
 const vLines = sw.split('\n').filter(l => /^v\d+ /.test(l.trim()));

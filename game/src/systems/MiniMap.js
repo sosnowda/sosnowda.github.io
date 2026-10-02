@@ -158,7 +158,7 @@ export class MiniMap {
 
         const panelW = size.w + 40;
         const panelH = size.h + 96 + legend.length * 17 + 12;
-        const px = width / 2 - panelW / 2, py = height / 2 - panelH / 2;
+        const py = height / 2 - panelH / 2;
         const P = [];
         const add = (o) => { P.push(o); return o; };
 
@@ -199,7 +199,7 @@ export class MiniMap {
         const closeBg = add(s.add.rectangle(width / 2, py + panelH - 20, 150, 26, 0x8B2C1A, 1)
             .setStrokeStyle(2, 0xC9A961).setInteractive({ useHandCursor: true })
             .setScrollFactor(0).setDepth(223));
-        const closeText = add(s.add.text(width / 2, py + panelH - 20, t('Закрыть'), {
+        add(s.add.text(width / 2, py + panelH - 20, t('Закрыть'), {
             fontSize: '13px', color: '#E8DCC4', fontFamily: 'Georgia, serif',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(224));
         closeBg.on('pointerup', () => this.hidePanel());

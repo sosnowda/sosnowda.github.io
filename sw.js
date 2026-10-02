@@ -8,8 +8,10 @@
 // ~200 строк комментариев раздували Service Worker. Новые записи о версиях
 // добавляются в docs/SW_CHANGELOG.md и CHANGES.md, но НЕ в этот файл.
 
-var CACHE_NAME = 'chronicles-ruthenia-v110';
-var GAME_ASSETS_CACHE = 'game-assets-v42';
+// 66.69 (аудит §9/66.66, P4): var→const по всему файлу (no-var §9.2); бамп v111
+// (HTML лендингов/игры + styles.css меняются — sr-only/aria-label/<main>)
+const CACHE_NAME = 'chronicles-ruthenia-v111';
+const GAME_ASSETS_CACHE = 'game-assets-v42';
 
 self.addEventListener('install', function (event) {
     self.skipWaiting();
@@ -32,7 +34,7 @@ self.addEventListener('activate', function (event) {
 self.addEventListener('fetch', function (event) {
     if (event.request.method !== 'GET') return;
 
-    var url = new URL(event.request.url);
+    const url = new URL(event.request.url);
 
     // ВНЕШНИЕ запросы (CDN, другие домены) — пропускаем напрямую
     if (url.origin !== self.location.origin) {
@@ -78,7 +80,7 @@ self.addEventListener('fetch', function (event) {
     event.respondWith(
         fetch(event.request).then(function (response) {
             if (response && response.status === 200) {
-                var clone = response.clone();
+                const clone = response.clone();
                 caches.open(CACHE_NAME).then(function (cache) {
                     cache.put(event.request, clone).catch(function () {});
                 });
@@ -93,7 +95,7 @@ self.addEventListener('fetch', function (event) {
                 if (event.request.mode !== 'navigate') return cached;
                 // /game/ → игра, /en/ → EN-лендинг, остальное → RU; '/' — второй эшелон,
                 // т.к. ключ '/index.html' появляется редко (посетители идут на '/')
-                var fb = url.pathname.indexOf('/game/') === 0 ? '/game/'
+                const fb = url.pathname.indexOf('/game/') === 0 ? '/game/'
                        : url.pathname.indexOf('/en/') === 0 ? '/en/' : '/index.html';
                 return cached || caches.match(fb).then(function (m) {
                     return m || caches.match('/');

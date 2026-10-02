@@ -25,8 +25,7 @@ import {
     DIALOG_STYLES,
     STORY_TEXTBOX_STYLES,
     FLOATING_TEXT_STYLES,
-    PARTICLE_STYLES,
-    ROUND_RECTANGLE_DEFAULTS
+    PARTICLE_STYLES
 } from '../config/StyleConfig.js';
 // Раунд 31 (пп.11,12): пауза реального времени в диалогах + час за разговор
 import { pauseWorldClock, resumeWorldClock, chargeTalkTime } from '../systems/WorldClock.js';
@@ -146,31 +145,6 @@ export function onSceneResize(scene, fn) {
 // Внутренние хелперы (рисование)
 // ============================================================
 
-/**
- * Создать скруглённый прямоугольник-фон на чистом Phaser.
- * Возвращает Phaser.GameObjects.Graphics, который можно перемещать/масштабировать.
- */
-function createRoundRectangle(
-    scene,
-    color,
-    radius = ROUND_RECTANGLE_DEFAULTS.cornerRadius,
-    strokeColor = ROUND_RECTANGLE_DEFAULTS.strokeColor,
-    strokeWidth = ROUND_RECTANGLE_DEFAULTS.strokeWidth
-) {
-    const { width, height } = ROUND_RECTANGLE_DEFAULTS.fallbackSize;
-    const g = scene.add.graphics();
-    g.fillStyle(color, 1);
-    g.fillRoundedRect(0, 0, width, height, radius);
-    if (strokeColor !== null && strokeWidth > 0) {
-        g.lineStyle(strokeWidth, strokeColor, 1);
-        g.strokeRoundedRect(0, 0, width, height, radius);
-    }
-    // Точка привязки — центр
-    g.setOrigin(0.5);
-    g.x = 0;
-    g.y = 0;
-    return g;
-}
 
 /**
  * Привязать событие changedata к scene.registry и автоматически отвязать при уничтожении target.
@@ -971,7 +945,6 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             const fin = tryFit();   // восстановить состояние под лучшую ширину
             best = fin;
         }
-        let fontPx = best.fp;
         let naturalH = best.nh;
         // Панель не выше 90% экрана, даже если текст ещё не убрался
         const totalH = Math.min(naturalH, availH);
@@ -994,7 +967,6 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         maxContentHCache = maxContentH;
         contentScrollY = overflow > 2 ? Phaser.Math.Clamp(contentScrollY, 0, overflow) : 0;
 
-        const contentH = contentText.height || 60;
 
         // Пергаментный фон панели
         panelBg.clear();
@@ -1460,7 +1432,6 @@ export function createStoryTextBox(scene, config = {}) {
     const {
         characterName = 'Рассказчик',
         content = '',
-        avatarTexture = null,
         typingSpeed = STORY_TEXTBOX_STYLES.typing.defaultSpeed,
         onComplete = null,
         x = scene.cameras.main.centerX,

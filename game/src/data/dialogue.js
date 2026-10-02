@@ -8,7 +8,7 @@
 //   хлеб ржаной (каравай) — 1 деньга, вода (бурдюк) — 1 деньга;
 //   постоялый двор — 2 деньги с человека за ночь.
 
-import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, checkGameEnd, chaseTicksLeft, inheritThiefKnowledge } from './thief.js';
+import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, chaseTicksLeft, inheritThiefKnowledge } from './thief.js';
 // Раунд 66.6: слухи-наводки на постоялом дворе (приказ владельца)
 import { tavernRumorLine } from './rumors.js';
 import { ActionLog } from './actionLog.js';
@@ -18,7 +18,7 @@ import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal } from '../system
 import { t, tf } from '../systems/i18n.js';
 // Раунд 45 (пп.5,6 заявки): староста мирит игрока с разозлёнными НПЦ за виру
 // Раунд 46 (п.4): со СТАРОСТОЙ всегда можно помириться (getViraCandidates)
-import { getViraCandidates, calculateVira, payViraToElder } from './reputation.js';
+import { getViraCandidates, payViraToElder } from './reputation.js';
 
 /**
  * Раунд 22 (п.3): повторный расспрос того же NPC НЕВОЗМОЖЕН.

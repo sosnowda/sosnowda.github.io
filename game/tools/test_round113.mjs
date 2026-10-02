@@ -86,7 +86,7 @@ ok(game.includes('og:url" content="https://sosnowda.github.io/game/"'), 'игр�
 ok(game.includes('<h1 class="sr-only">Летописи Руси XV века — Браузерное демо</h1>'), 'игра: sr-only H1 с текстом og:title');
 const bodyStart = game.indexOf('<body>');
 const iH1 = game.indexOf('<h1 class="sr-only"');
-const iContainer = game.indexOf('<div id="game-container">');
+const iContainer = game.indexOf('<main id="game-container">');
 ok(bodyStart !== -1 && iH1 > bodyStart && iH1 < iContainer, 'игра: H1 — первый элемент body (до #game-container)');
 ok(game.includes('.sr-only {') && game.includes('clip: rect(0, 0, 0, 0);') && game.includes('width: 1px; height: 1px;'), 'игра: .sr-only определён в инлайн-стилях (бит-в-бит из styles.css)');
 ok(game.includes("errorEl.innerHTML = '<h2 style=\"color:#c9a961;margin-bottom:1rem;\">Игра не загрузилась</h2>"), 'игра: обработчик ошибки по-прежнему h2 (порядок h1→h2 стал корректным)');
@@ -94,8 +94,8 @@ ok(game.includes('<meta http-equiv="Content-Security-Policy"'), 'регресс 
 ok(game.includes('<title>Летописи Руси — Браузерное демо</title>'), 'регресс: title игры не тронут');
 
 console.log('--- 5. SW v107 + документация ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v110';"), 'sw.js: site-cache v110 (актуализация 66.68 — P3 аудита §9/66.66: дубли i18n ×18 / покадровые Vector2 ×3 сцены / W3C-кодирование URL ×3, HTML страниц → бамп)');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 без изменений');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v111';"), 'sw.js: site-cache v111 (актуализация 66.69 — P4 аудита §9/66.66: остаток реестра ×9 — sr-only clip-path, var→const sw.js, unused-vars, aria-label логотипа, <main> на /game/; HTML/CSS → бамп)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 без изменений');
 ok(sw.includes("event.request.mode !== 'navigate'") && sw.includes('return cached;'), 'регресс 66.57: navigate-гейт цел');
 ok(swlog.includes('- v107 — итерация 66.63'), 'SW_CHANGELOG: запись v107 добавлена');
 ok(swlog.includes('- v106 — итерация 66.62'), 'SW_CHANGELOG: запись v106 (история) сохранена');

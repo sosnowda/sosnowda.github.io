@@ -255,7 +255,7 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     const sw = read('../sw.js');
     // 66.47: записи журнала живут в docs/SW_CHANGELOG.md
     const swlog = read('../docs/SW_CHANGELOG.md');
-    ok(sw.includes("chronicles-ruthenia-v110"), 'SW: версия сайта актуальна');
+    ok(sw.includes("chronicles-ruthenia-v111"), 'SW: версия сайта актуальна');
     ok(sw.includes("game-assets-v42"), 'SW: кеш ассетов актуален');
     ok(swlog.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи

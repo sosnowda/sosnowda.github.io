@@ -25,7 +25,7 @@ import { ActionLog } from './actionLog.js';
 // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели кузнеца
 import { getNpcs, findNpc, spawnBlacksmithApprentice, BLACKSMITH_APPRENTICE_ID } from './npcNames.js';
 import { getTimeOfDay, getTime } from '../systems/TimeSystem.js';
-import { skillCheck, opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
+import { opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
 // Раунд 48 (п.4 заявки): встречные проверки «навык против навыка» /
 // «характеристика против характеристики» — параметры из базы жителей
 import { getNpcOpposition } from './npcStats.js';
@@ -488,7 +488,6 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
     if (!npc) return { success: false, message: t('NPC не найден.') };
     
     const npcGender = npc.gender;
-    const npcRep = getNpcRep(registry, npcId);
     // Раунд 35 (QA-фикс P2): бросок «res» здесь был мёртвым — ниже бросается
     // effectiveRes с учётом модификаторов (страдал двойной расход RNG,
     // но на результат он не влиял). Убран.

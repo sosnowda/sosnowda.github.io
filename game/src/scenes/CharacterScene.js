@@ -112,7 +112,6 @@ export class CharacterScene extends Phaser.Scene {
         // Характеристики (2 колонки)
         // Патч 66.2: названия характеристик через t() (EN-лист героя)
         const charLines = CHARACTER_KEYS.slice(0, 4).map(c => `${t(c.name)}: ${p[c.key]}`);
-        const charLines2 = CHARACTER_KEYS.slice(4).map(c => `${t(c.name)}: ${p[c.key]}`);
         charLines.push('—');
         charLines.push(`HP: ${p.HP}/${p.HPmax}`);
         charLines.push(`MP: ${p.MP}/${p.MPmax}`);
@@ -221,7 +220,7 @@ export class CharacterScene extends Phaser.Scene {
      * Вкладка инвентаря с экипировкой.
      */
     drawInventoryTab(p, q) {
-        const { width, height } = this.scale;
+        const { width } = this.scale;
         const top = 150;
 
         // Текущее снаряжение
@@ -338,7 +337,6 @@ export class CharacterScene extends Phaser.Scene {
             }).setOrigin(0.5);
         } else {
             const cols = Math.min(items.length, 6);
-            const rows = Math.ceil(items.length / cols);
             const gridW = cols * 80;
             const startX = width / 2 - gridW / 2 + 40;
             const startY = top + 330;

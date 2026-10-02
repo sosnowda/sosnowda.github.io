@@ -393,7 +393,6 @@ export class CombatScene extends Phaser.Scene {
         // кнопки переносятся на ВТОРОЙ РЯД, чтобы не уходили за край.
         const gap = 160;
         const perRow = Math.max(2, Math.min(acts.length, Math.floor((width - 24) / gap)));
-        const rows = Math.ceil(acts.length / perRow);
         acts.forEach((a, i) => {
             const row = Math.floor(i / perRow);            // 0 — НИЖНИЙ ряд
             const inRow = i % perRow;

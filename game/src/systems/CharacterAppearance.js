@@ -17,9 +17,6 @@
 //   Размер: 640×256 px (10×4 of 64×64)
 
 const FRAME_SIZE = 64;
-const LPC_SHEET_COLS = 13;
-const WALK_ROW_OFFSET = 8; // в LPC-листе walk начинается с 8-й строки (0-индекс)
-const WALK_FRAMES = 8;     // 8 кадров walk в каждом ряду LPC (0-7, последний ~ пустой)
 const IDLE_FRAME_IDX = 0;  // первый кадр ряда — idle
 
 // РАУНД 39 (пп.3,8,9 заявки): КРИТИЧЕСКИЙ ФИКС ориентации.
@@ -488,8 +485,6 @@ export function loadAllLpcLayers(scene, onProgress = null) {
             return;
         }
 
-        let loaded = 0;
-        const total = toLoad.length;
 
         // Используем Phaser loader
         const loader = scene.load;

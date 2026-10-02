@@ -882,13 +882,17 @@ a:focus, button:focus, [tabindex]:focus, .screenshot-card:focus {
     outline-offset: 2px;
 }
 
-/* ARIA: скрытые визуально, но доступные для скринридеров */
+/* ARIA: скрытые визуально, но доступные для скринридеров.
+   66.69 (аудит §9/66.66, P4): clip-path — современный компаньон
+   устаревающему clip (канон W3C/HTML5BP); блок бит-в-бит с
+   инлайн-стилем game/index.html (инвариант 66.63) */
 .sr-only {
     position: absolute;
     width: 1px; height: 1px;
     padding: 0; margin: -1px;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
 }

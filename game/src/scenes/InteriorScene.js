@@ -9,11 +9,11 @@ import { attachCraftAudio } from '../systems/CraftAudio.js';
 import SaveManager from '../systems/SaveManager.js';
 import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons, closeAllSingletonDialogs } from '../utils/ui.js';
 import { ActionLog } from '../data/actionLog.js';
-import { checkGameEnd, askMoneyForHelp, askElderAdvance, isChaseActive } from '../data/thief.js';
+import { checkGameEnd, askMoneyForHelp, isChaseActive } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
 // Раунд 66.28 (пп.9,12): стрелы в продажу — пачки по 10, слот колчана
 import { addArrowsToInventory, getQuiver, countInventoryArrows, ARROW_PACK_PRICE, ARROW_PACK_SIZE, QUIVER_CAP } from '../systems/ammo.js';
-import { makeQuestOffer, acceptQuest, getActiveQuests, grantQuestRewards, checkQuestCompletion, onLocationVisited } from '../data/questGenerator.js';
+import { makeQuestOffer, acceptQuest, grantQuestRewards, onLocationVisited } from '../data/questGenerator.js';
 // Раунд 66.21 (приказ 10): срочное ночное дело (стук в дверь)
 import { hasUrgentQuestBusiness } from '../systems/NightKnock.js';
 // Раунд 66.21 (приказы 13-14): пожертвование церкви (меню сумм)
@@ -23,24 +23,23 @@ import { getTime, formatTime, formatDateTime, getDayNightOverlay, tickTime } fro
 import { attachSunLight } from '../systems/SunLight.js';
 import { getWeather } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
-import { findNpc, meetNpc, getNpcDisplayName, getNpcShortName, getNpcs, getNpcFallbackName } from '../data/npcNames.js';
+import { findNpc, meetNpc, getNpcDisplayName, getNpcFallbackName } from '../data/npcNames.js';
 import { buildNpcLookTextures, npcVariantKey, npcPortraitVariantKey } from '../systems/NpcLook.js';
 import { ensureNpcLpcTexture } from '../systems/NpcLpc.js';
 // 66.37: калибровка масштаба мировых листов персонажей 128px (были 64)
 import { WORLD_K } from '../systems/WorldLook.js';
-import { getPresence, PLACE_NAMES, getNpcsAtPlace, NPC_DIALOGUE, ALL_NPC_IDS, pickOutdoorLine } from '../data/npcPresence.js';
+import { getPresence, PLACE_NAMES, getNpcsAtPlace, NPC_DIALOGUE, pickOutdoorLine } from '../data/npcPresence.js';
 import {
-    checkNpcWillingToTalk, getNpcRep, getReputationLevel,
+    checkNpcWillingToTalk, getNpcRep,
     applyGiftBonus, applyCompliment, applyTreatEveryoneBonus,
-    applyQuestCompleteBonus, applyThreat, willNpcAttack, willNpcRefuseTrade,
-    getPriceModifier, getRewardModifier,
+    applyQuestCompleteBonus, applyThreat, willNpcRefuseTrade,
+    getPriceModifier,
     canMarry, marry, getMarriageCost, getMarriageNpcRepThreshold, getMarriageVillageRepThreshold, getAgeOfMajority,
     getVillageRep, changeVillageRep,
     isNpcKilled, canBuyMilitaryGear, MILITARY_GEAR_IDS,
     getSmithNpcId, // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели мастера
     repActionAllowedToday, markRepActionDone, // 66.21/66.22: дневной лимит похвалы (угрозы не лимитируются)
 } from '../data/reputation.js';
-import { getNpcSchedule, getNpcActivity } from '../data/npcSchedules.js';
 // Раунд 48 (пп.2,3 заявки): параметры НПЦ игроку НЕ показываются —
 // в информации о жителе видно только во что он одет и что держит в руках
 import { getNpcWornLine } from '../data/characters.js';
@@ -2428,7 +2427,6 @@ export class InteriorScene extends Phaser.Scene {
      */
     addDecorations(interior) {
         const { width, height } = this.scale;
-        const decor = interior.decor || [];
         const ts = 32;
         // Раунд 39: painted-ветка удалена — ВСЕ интерьеры тайловые (единая рисовка)
         const painted = false;

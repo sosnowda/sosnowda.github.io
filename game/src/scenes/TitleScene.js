@@ -242,7 +242,7 @@ export class TitleScene extends Phaser.Scene {
             .setOrigin(0).setInteractive().setDepth(200);
         const panelW = Math.min(700, width - 24);
         const panelH = Math.min(640, height - 24);
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
+        this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 20, t('❓ Инструкция'), {
@@ -327,7 +327,7 @@ export class TitleScene extends Phaser.Scene {
         const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 30, 140, 35, 0x8B2C1A, 1)
             .setStrokeStyle(2, 0xC9A961)
             .setInteractive({ useHandCursor: true }).setDepth(202);
-        const btnText = this.add.text(width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), {
+        this.add.text(width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), {
             fontFamily: 'Georgia, serif', fontSize: '16px', color: '#E8DCC4',
         }).setOrigin(0.5).setDepth(203);
 
@@ -352,7 +352,7 @@ export class TitleScene extends Phaser.Scene {
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
             .setOrigin(0).setInteractive().setDepth(200);
         const panelW = 500, panelH = 430;
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
+        this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 25, t('⚙ Настройки'), {
@@ -415,7 +415,7 @@ export class TitleScene extends Phaser.Scene {
         const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 30, 140, 35, 0x8B2C1A, 1)
             .setStrokeStyle(2, 0xC9A961)
             .setInteractive({ useHandCursor: true }).setDepth(202);
-        const btnText = this.add.text(width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), {
+        this.add.text(width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), {
             fontFamily: 'Georgia, serif', fontSize: '16px', color: '#E8DCC4',
         }).setOrigin(0.5).setDepth(203);
 
@@ -454,7 +454,7 @@ export class TitleScene extends Phaser.Scene {
             .setStrokeStyle(1, 0xC9A961)
             .setInteractive({ useHandCursor: true })
             .setDepth(202);
-        const text = this.add.text(x, y, label, {
+        this.add.text(x, y, label, {
             fontSize: '14px', color: '#E8DCC4',
             fontFamily: 'Georgia, serif',
         }).setOrigin(0.5).setDepth(203);

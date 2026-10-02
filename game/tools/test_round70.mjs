@@ -378,8 +378,8 @@ console.log('— п.3: СТРЕЛКИ ЛАЙТБОКСА ВСЕГДА ВИДНЫ
 console.log('— Service Worker и локализация —');
 {
     const sw = read('sw.js');
-    ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v110'"), 'SW: сайт v87 (66.36)');
-    ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42'"),
+    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v111'"), 'SW: сайт v111 (актуализация 66.69)');
+    ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42'"),
         'SW: game-assets-v42 (фасады 66.36)');
     setLang('en');
     ok(t('☁ Что погода сулит?') === '☁ What will the weather bring?', 'i18n: вопрос о погоде EN');

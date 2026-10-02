@@ -5,7 +5,7 @@
 // раунд 58 п.1: 10 минут за беседу, было 1 час).
 import { createDialog } from '../utils/ui.js';
 import { DIALOGUES } from '../data/dialogue.js';
-import { findNpc, getNpcDisplayName, meetNpc } from '../data/npcNames.js';
+import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { pauseWorldClock, resumeWorldClock, chargeTalkTime, TALK_MINUTES } from './WorldClock.js';
 import { isEn, t } from './i18n.js';
 // Раунд 66.7 (п.5): вопрос о погоде — ко всем взрослым НПЦ автоматически

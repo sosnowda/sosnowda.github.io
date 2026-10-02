@@ -57,7 +57,6 @@ export class ForestScene extends Phaser.Scene {
     }
 
     create() {
-        const { width, height } = this.scale;
         this.audioManager = new AudioManager(this);
         // 66.68 (§9.3 аудита 66.66, P3): переиспользуемый вектор движения — каждый
         // кадр movePlayer() раньше создавал new Phaser.Math.Vector2; и кэш idle-ключа
@@ -545,7 +544,6 @@ export class ForestScene extends Phaser.Scene {
 
         // Стрела — тонкая палочка, летящая от героя к зверю (160 мс)
         const dx = s.x - this.playerObj.x, dy = s.y - this.playerObj.y;
-        const len = Math.max(1, Math.hypot(dx, dy));
         const arrow = this.add.rectangle(this.playerObj.x, this.playerObj.y - 10, 14, 2, 0xd8c8a0)
             .setRotation(Math.atan2(dy, dx)).setDepth(150);
         this.tweens.add({
@@ -1148,7 +1146,6 @@ export class ForestScene extends Phaser.Scene {
 
     updateHUD() {
         const p = this.player;
-        const q = this.registry.get('quest') || {};
         const timeState = getTime(this.registry);
         const villageRep = getVillageRep(this.registry);
         const moneyStr = formatMoney(p.dengas || 0);

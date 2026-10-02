@@ -19,7 +19,6 @@
 
 import { getTime, getSeason, MONTHS } from './TimeSystem.js';
 import { getWeather } from './Weather.js';
-import { t, tf } from './i18n.js';
 
 // Сколько слухов о погоде нужно, чтобы примета сбылась (п.6: «более 3 раз»).
 export const OMEN_THRESHOLD = 3;

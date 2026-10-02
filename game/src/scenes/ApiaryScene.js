@@ -62,7 +62,6 @@ export class ApiaryScene extends Phaser.Scene {
     }
 
     create() {
-        const { width, height } = this.scale;
         this.audioManager = new AudioManager(this);
         // 66.68 (§9.3 аудита 66.66, P3): переиспользуемый вектор движения — каждый
         // кадр movePlayer() раньше создавал new Phaser.Math.Vector2; и кэш idle-ключа

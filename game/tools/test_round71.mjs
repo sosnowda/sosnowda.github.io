@@ -130,8 +130,8 @@ ok(has(li, 'assets/images/og-image.jpg'), 'лендинг (index.html) по-пр
 // ================================= 4) SW ====================================
 console.log('\n[4] Service Worker');
 const sw = read('sw.js');
-ok(has(sw, "var CACHE_NAME = 'chronicles-ruthenia-v110'"), 'CACHE_NAME актуален (v97, 66.47)');
-ok(has(sw, "var GAME_ASSETS_CACHE = 'game-assets-v42'"), 'game-assets-v42 (фасады 66.36)');
+ok(has(sw, "const CACHE_NAME = 'chronicles-ruthenia-v111'"), 'CACHE_NAME актуален (v111, актуализация 66.69)');
+ok(has(sw, "const GAME_ASSETS_CACHE = 'game-assets-v42'"), 'game-assets-v42 (фасады 66.36)');
 // 66.47 (аудит №14): журнал версий переехал из sw.js в docs/SW_CHANGELOG.md
 ok(has(sw, 'журнал перенесён в docs/SW_CHANGELOG.md'), 'sw.js: указатель на новый дом журнала');
 const swlog = read('docs/SW_CHANGELOG.md');

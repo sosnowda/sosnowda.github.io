@@ -51,7 +51,7 @@ import { getNpcSpriteKey, isChildNpc } from '../systems/NpcLpc.js';
 import { addMorningFog, addSeasonalGround } from '../systems/AmbientFX.js';
 // Раунд 68 (п.5): коллизия воды — ни НПЦ, ни персонаж не входят в воду на
 // локациях «Река» и «Озеро» (споты/следы/стадо выталкиваются на берег)
-import { isWaterAt, clampOutOfWater } from '../systems/WaterBounds.js';
+import { clampOutOfWater } from '../systems/WaterBounds.js';
 // Раунд 66.6: ШУМ РЕКИ/ОЗЕРА (WebAudio, без ассетов) + плеск при рыбалке;
 // СЕЗОННЫЕ РАБОТЫ поля (пахота/посев/сенокос/жатва) — приказ владельца
 import { attachRiverAmbience, playWaterSplash, RIVER_VOLUME_BY_LOCATION } from '../systems/RiverAmbience.js';
@@ -226,7 +226,6 @@ export class LocationScene extends Phaser.Scene {
 
         // ----- HUD -----
         const player = this.registry.get('player');
-        const q = this.registry.get('quest') || {};
         // Раунд 45 (п.1 заявки): параметр «меч» (⚔%) из верхнего виджета удалён
         // Раунд 46 (п.8 заявки): из статус-бара удалён и параметр «✦ Воля» (MP)
         this.add.text(16, 12, `❤ ${player.HP}/${player.HPmax}`, {

@@ -9,6 +9,7 @@
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
 // актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v42 без изменений (детали в r115)
 // актуализация 66.68: SW-ожидания v109→v110; P3 аудита §9/66.66 — дубли i18n ×18 (i18n.js), покадровые Vector2 ×3 сцены, W3C-кодирование URL ×3 (HTML страниц → бамп), game-assets-v42 без изменений (детали в r116)
+// актуализация 66.69: SW-ожидания v110→v111; P4 аудита §9/66.66 — остаток реестра ×9 (sr-only clip-path, var→const sw.js, unused-vars ×21 файл, aria-label логотипа, <main> на /game/, sourcemap/preload-решения; детали в r117)
 // Запуск из корня репозитория: node game/tools/test_round105.mjs
 import fs from 'fs';
 
@@ -23,9 +24,9 @@ const swlog = read('docs/SW_CHANGELOG.md');
 const audit = read('docs/AUDIT_R66_52.md');
 
 console.log('--- 1. P2-1: офлайн-фолбэк по разделам ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v110';"), 'sw.js: site-cache v110 (актуализация 66.68 — P3 аудита §9/66.66: дубли i18n ×18 / покадровые Vector2 ×3 сцены / W3C-кодирование URL ×3; ассерт актуализирован из v109)');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
-ok(sw.includes("var fb = url.pathname.indexOf('/game/') === 0 ? '/game/'"), 'sw.js: фолбэк /game/… → кэш /game/');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v111';"), 'sw.js: site-cache v111 (актуализация 66.69 — P4 аудита §9/66.66: остаток реестра ×9; ассерт актуализирован из v110)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
+ok(sw.includes("const fb = url.pathname.indexOf('/game/') === 0 ? '/game/'"), 'sw.js: фолбэк /game/… → кэш /game/');
 ok(sw.includes(": url.pathname.indexOf('/en/') === 0 ? '/en/' : '/index.html';"), 'sw.js: фолбэк /en/… → кэш /en/, остальное → /index.html');
 ok(sw.includes("return cached || caches.match(fb).then(function (m) {"), 'sw.js: фолбэк-цепочка через .then (Promise нельзя чейнить через || — ловлено живым офлайн-тестом)');
 ok(sw.includes("return m || caches.match('/');"), "sw.js: второй эшелон '/' (ключ /index.html возникает редко)");

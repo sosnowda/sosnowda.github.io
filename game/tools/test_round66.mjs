@@ -147,7 +147,7 @@ ok(bootSrc.includes('v < 5; v++') && bootSrc.includes('deco_tree_'), 'BootScene:
 console.log('\nп.5 Шрифты диалогов');
 ok(styleSrc.includes("fontMax: 28") && styleSrc.includes('width: 880'), 'реплики best-fit до 28px, панель 880 (66.44, приказ 8)');
 ok(styleSrc.replace(/\n\s*/g, '').replace(/\s+/g, ' ').includes('button: {fontSize: 20'), 'кнопки 20px (StyleConfig)');
-ok(uiSrc.includes('let fontPx = best.fp') && uiSrc.includes('fontHardMin'), 'createDialog: динамический best-fit кегля 26→13 (66.20)');
+ok(uiSrc.includes('fp -= 1') && uiSrc.includes('best.fp') && uiSrc.includes('fontHardMin'), 'createDialog: динамический best-fit кегля 26→13 (актуализация 66.69: пин мёртвого биндинга fontPx снят — P4-3, механика best.fp/fp-=1/fontHardMin жива)');
 ok(uiSrc.includes('dialogWidth - pad.left - pad.right'), 'перенос строк от фактической ширины панели');
 
 // ===== п.1: отдых у костра =====
