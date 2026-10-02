@@ -61,7 +61,7 @@ ok(audit.includes('ВНЕДРЕНО в патче 66.52'), 'AUDIT: пометк�
 ok(audit.includes('Находок не несёт') || audit.includes('## Проверено и БЕЗ замечаний'), 'AUDIT: зелёная зона описана');
 
 console.log('--- 5. SW без повышения (правки только /game/src/) ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v109';"), 'sw.js: site-cache v109 (актуализация 66.64 — P3-4+P3-5: самохостинг Phaser, PT Sans в вебшрифтах; ассерт актуализирован из v101)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v110';"), 'sw.js: site-cache v110 (актуализация 66.68 — P3 аудита §9/66.66: дубли i18n ×18 / покадровые Vector2 ×3 сцены / W3C-кодирование URL ×3, HTML страниц → бамп)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets остаётся v41');
 ok(sw.includes("url.pathname.startsWith('/game/src/')"), 'sw.js: /game/src/ пропускается напрямую — сцены всегда свежие');
 

@@ -64,6 +64,11 @@ export class ApiaryScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
         this.audioManager = new AudioManager(this);
+        // 66.68 (§9.3 аудита 66.66, P3): переиспользуемый вектор движения — каждый
+        // кадр movePlayer() раньше создавал new Phaser.Math.Vector2; и кэш idle-ключа
+        // (без шаблонной строки каждый кадр стоянки).
+        this._moveVec = new Phaser.Math.Vector2(0, 0);
+        this._idleKey = ''; this._idleKeyDir = null;
         this.dialogue = new DialogueRunner(this);
         // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
         attachWorldClock(this);
@@ -765,7 +770,8 @@ export class ApiaryScene extends Phaser.Scene {
             if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
         }
 
-        const v = new Phaser.Math.Vector2(vx, vy);
+        // 66.68 (§9.3, P3): вектор переиспользуется — set() вместо new (см. create)
+        const v = this._moveVec.set(vx, vy);
         if (v.length() > 0) {
             v.normalize().scale(speed);
             let dir = this.lastDir;
@@ -788,7 +794,12 @@ export class ApiaryScene extends Phaser.Scene {
             }
         } else if (!this.player.useComposite) {
             this.playerObj.anims.pause();
-            this.playerObj.play(`${this.player.sprite || 'player'}_idle_${this.lastDir}`, true);
+            // 66.68 (§9.3, P3): idle-ключ кэшируется по направлению
+            if (this.lastDir !== this._idleKeyDir) {
+                this._idleKeyDir = this.lastDir;
+                this._idleKey = `${this.player.sprite || 'player'}_idle_${this.lastDir}`;
+            }
+            this.playerObj.play(this._idleKey, true);
         }
         this.playerObj.setVelocity(v.x, v.y);
         this.playerObj.setDepth(this.playerObj.y / TS);

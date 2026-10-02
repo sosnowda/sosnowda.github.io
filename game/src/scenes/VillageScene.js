@@ -530,6 +530,13 @@ export class VillageScene extends Phaser.Scene {
         // п.22 — игрок ходит с анимацией, как и жители
         const startIdle = `${this.playerTexKey}_idle_down`;
         if (this.anims.exists(startIdle)) this.playerObj.play(startIdle);
+        // 66.68 (§9.3 аудита 66.66, P3): переиспользуемый вектор движения и кэш
+        // аним-ключей — раньше каждый кадр update() создавал new Vector2 и две
+        // шаблонные строки ключей (до 60+ аллокаций/с GC-давления). playerTexKey
+        // назначен выше и до конца сцены не меняется — кэш по dir безопасен.
+        this._moveVec = new Phaser.Math.Vector2(0, 0);
+        this._walkKey = ''; this._walkKeyDir = null;
+        this._idleKey = ''; this._idleKeyDir = null;
         // 66.37: WORLD_K — листы персонажей теперь 128px (были 64) — фигуры
         // прежнего визуального размера, источник втрое плотнее (WorldLook.js)
         this.playerObj.setScale(ts / 32 * 0.75 * WORLD_K);  // единый «взрослый» масштаб (у NPC тот же)
@@ -1047,7 +1054,8 @@ export class VillageScene extends Phaser.Scene {
             if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
         }
 
-        const v = new Phaser.Math.Vector2(vx, vy);
+        // 66.68 (§9.3, P3): вектор переиспользуется — set() вместо new (см. create)
+        const v = this._moveVec.set(vx, vy);
         if (v.length() > 0) {
             v.normalize().scale(speed);
             let dir = this.lastDir;
@@ -1062,7 +1070,12 @@ export class VillageScene extends Phaser.Scene {
             // !isPlaying» упиралась в idle-анимацию: после остановки движение в
             // ту же сторону начиналось со СТОЯЩЕГО кадра и могло так и не
             // переключиться на ходьбу.
-            const walkKey = `${this.playerTexKey}_walk_${dir}`;
+            // 66.68 (§9.3, P3): ключ собирается только при смене направления
+            if (dir !== this._walkKeyDir) {
+                this._walkKeyDir = dir;
+                this._walkKey = `${this.playerTexKey}_walk_${dir}`;
+            }
+            const walkKey = this._walkKey;
             if (this.anims.exists(walkKey)) this.playerObj.play(walkKey, true);
             this.lastDir = dir;
             const now = this.time.now;
@@ -1076,7 +1089,12 @@ export class VillageScene extends Phaser.Scene {
             }
         } else {
             // П.22: стоя — idle-кадр в последнем направлении
-            const idleKey = `${this.playerTexKey}_idle_${this.lastDir}`;
+            // 66.68 (§9.3, P3): idle-ключ кэшируется по направлению (без шаблонной строки каждый кадр)
+            if (this.lastDir !== this._idleKeyDir) {
+                this._idleKeyDir = this.lastDir;
+                this._idleKey = `${this.playerTexKey}_idle_${this.lastDir}`;
+            }
+            const idleKey = this._idleKey;
             if (this.anims.exists(idleKey)) this.playerObj.play(idleKey, true);
         }
         this.playerObj.setVelocity(v.x, v.y);

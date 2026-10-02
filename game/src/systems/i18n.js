@@ -54,6 +54,10 @@ export function setLang(lang) {
 }
 
 // ----- Словарь EN (ключ — точная русская строка) -----
+// 66.68 (§9.2 аудита 66.66, P3): из словаря удалены 18 дубликатов ключей
+// (пополнение блоками патчей без проверки существования; no-dupe-keys).
+// Живое поведение не изменено: у дублей с РАЗНЫМИ значениями побеждало
+// ПОСЛЕДНЕЕ вхождение (семантика объектного литерала) — сохранены последние.
 const EN = {
     // --- Title ---
     'Новая игра': 'New Game',
@@ -621,9 +625,6 @@ const EN = {
     'Спасибо!': 'Thank you!',
     'путник': 'traveller',
     'путница': 'traveller (f)',
-    'Ты уже прочитал следы в этой местности.\nНовых здесь не найти.':
-        'You have already read the tracks in this area.\nThere is nothing new to find here.',
-
     // ----- Раунд 22: три локации, одноразовые следы и расспросы, благословение -----
     'ПОРАЖЕНИЕ: вор покинул последнюю локацию и скрылся из вида. След ведёт за околицу.':
         'DEFEAT: the thief left the last location and vanished from sight. The trail leads out of the village bounds.',
@@ -654,8 +655,6 @@ const EN = {
     '🙏 Попросить благословения': '🙏 Ask for a blessing',
     'Батюшка качает головой: «Ты уже под защитой Господней, чадо. Благословение исполнится при первом же испытании — не гневи Боженьку жадностью.»':
         'The priest shakes his head: "You are already under God\'s protection, my child. The blessing will come true at your first trial — do not anger the Lord with greed."',
-    'Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ Благословение: СЛЕДУЮЩАЯ проверка навыка (следы, расспрос, убеждение, оглушение или удар) пройдёт с +10 к шансу — но только одна!':
-        'The priest lays his hand on your head and whispers a prayer. Warmth spreads over your shoulders.\n\n✨ Blessing: your NEXT skill check (tracks, questioning, persuasion, knock-out or a strike) gets +10 to its chance — but only one!',
     'Получил благословение в церкви: +10 к одной проверке навыка.':
         'Received a blessing at the church: +10 to one skill check.',
     'Аминь.': 'Amen.',
@@ -714,15 +713,13 @@ const EN = {
     'Сил это не вернуло — для лечения есть платный «Отдых» (от 1 до 12 ч) и костёр в лесу, у брошенного лагеря.':
         'It did not restore your strength — for healing there is the paid "Rest" (1 to 12 hours) and the campfire in the forest, by the abandoned camp.',
     'Провёл время на постоялом дворе ({0}).': 'Spent time at the inn ({0}).',
-    'Ты посидел за столом у Фёдора... но пока время шло, вор успел скрыться из вида!':
-        "You sat at Fyodor's table for hours... but while the time was passing, the thief managed to vanish from sight!",
 
     // --- Раунд 27: живой мир (пп.6-13) ---
     '🌙 Здесь сейчас никого нет...': '🌙 Nobody is here right now...',
     'Найди его там — или возвращайся в другой час.': 'Find them there — or come back at another hour.',
     'Продолжить': 'Continue',
-    'на постоялом дворе': 'at the wayside inn', 'на мельнице': 'at the mill',
-    'на пасеке': 'at the apiary', 'у озера': 'by the lake', 'на реке': 'at the river',
+    'на мельнице': 'at the mill',
+    'у озера': 'by the lake', 'на реке': 'at the river',
     'в лесу': 'in the forest', 'в поле': 'in the field', 'у ворот': 'at the gate',
     'в церкви': 'in the church', 'на улице деревни': 'in the village street', 'дома': 'at home',
     '🍯 Купить мёд (8 д.)': '🍯 Buy honey (8 d.)',
@@ -767,8 +764,6 @@ const EN = {
     'Спасибо, хозяйка.': 'Thank you, goodwife.',
     'Дай Бог вам здоровья.': 'God grant you health.',
     'Помолиться': 'Pray',
-    'Ох, горе нам, чадо... Ночью случилось дело великое: вор прокрался в храм Божий и выкрал чудотворную икону Богородицы из самого киота! Я молился в алтаре, свечи ещё теплились — и слыхал только, как скрипнула дверца. А под утро глянул: киот пуст, лишь лампада коптит и пыль на полу лежит, где святыня стояла.\n\nВидел я в церкви темного человека краем глаза, а разобрать не успел — мелькнёт и нет. Одно скажу точно: человек был ПРИШЛЫЙ, не из наших селян — одеждой и повадкой странник, такой же пришлый человек в деревне, как и ты, чадо.\n\nСам я лица его не разглядел и куда побежал — не видал, Бог миловал. Но в деревне народ разный ходит, всякий на виду: кто у колодца зорит, кто на выпас глядит во все стороны. Может, кто-то из селян и видел вора — куда он бежал да где нынче прячется. ПОРАСПРОСИ ЛЮДЕЙ, чадо: спроси каждого о воре и о том, куда он мог податься. Господь путь укажет, а люди — подскажут.':
-        'Oh, woe to us, my child... A great deed was done this night: a thief crept into the church of God and stole the wonderworking icon of the Mother of God from its very shrine! I was praying in the altar, the candles still burning — and all I heard was the little door creak. And at dawn I looked: the shrine empty, only the icon-lamp smoking and dust on the floor where the holy thing stood.\n\nI glimpsed a dark figure in the church from the corner of my eye, but could not make him out — a flash, and gone. One thing I can say for certain: he was a STRANGER, none of our villagers — a wayfarer in dress and manner, a newcomer to this village just as you are, my child.\n\nI did not see his face, nor where he ran — God spared me that. But many kinds of people walk about the village, all in plain sight: some keep watch by the well, some stare in every direction on the pasture. Perhaps one of the villagers did see the thief — where he ran and where he hides now. QUESTION THE PEOPLE, my child: ask everyone about the thief and where he might have gone. The Lord will show the way, and the people will help.',
     'Мир тебе, чадо. Что привело тебя в дом Божий? Может, хочешь исповедаться или помолиться?':
         'Peace to you, my child. What brings you to the house of God? Would you confess, or pray?',
     'Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ Благословение…':
@@ -806,8 +801,6 @@ const EN = {
     'Вход: Опушка': 'Entry: Forest edge',
     'Центр: Лесная поляна': 'Center: Forest glade',
     'Глубина: Густой лес': 'Depth: Dense forest',
-    '🌲 Лес — единая локация цепочкой: вход через Опушку → Поляна → Густой лес; выход последовательно.':
-        '🌲 The Forest is one chained location: enter via the Edge → Glade → Dense forest; leave step by step.',
     '🌲 Лес — единая локация цепочкой: вход через Опушку → Поляна → Густой лес; выход последовательно.':
         '🌲 The Forest is one chained location: enter via the Edge → Glade → Dense forest; leave step by step.',
     'Лесная поляна': 'Forest glade',
@@ -869,8 +862,6 @@ const EN = {
     // (клик-зоны), старые описания разметки 66.24/66.25 удалены.
     '🗺 Околица — теперь карта местности: кликай локацию на карте и в путь.\nКаждый переход по карте занимает ровно 1 игровой час.\nВход в лес — только через Опушку, дальше последовательно: Поляна → Густой лес.\nСледы вора живут от 12 до 24 часов — а дождь и снег смывают их и раньше.':
         '🗺 The outskirts is now the terrain map itself: click a location on the map and set out.\nEvery crossing on the map takes exactly 1 game hour.\nThe forest is entered only through the Forest Edge, then onward: Glade → Dense Forest.\nThe thief\'s tracks last 12 to 24 hours — and rain or snow washes them away even sooner.',
-    '🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n◀ Выход — кнопка внизу.':
-        '🏠 Talking to a host takes 1 game hour —\nchoose whom and what to speak about.\n◀ Leave by the button below.',
     '💬 Поговорить': '💬 Talk',
     '💰 Просить денег': '💰 Ask for money',
     '📜 Задание': '📜 Quest',
@@ -891,8 +882,6 @@ const EN = {
     '🚪 Выйти': '🚪 Leave',
     '📜 Персонаж': '📜 Character',
     '🎒 Инвентарь': '🎒 Inventory',
-    '🔍 Каждый след проверяется отдельно и только один раз;\nнеудача затирает след. Ночью следы читаются хуже.\n🕐 Обследование следа занимает ровно 1 игровой час.\n◀ Назад к развилке — тоже час дороги.':
-        '🔍 Each track is examined separately and only once;\na failure smears the print away. At night tracks are harder to read.\n🕐 Examining a track takes exactly 1 game hour.\n◀ Back to the crossroads — another hour of road.',
     '⟳ Наводка устарела': '⟳ The tip has gone stale',
     '📍 Ты по адресу!': '📍 You are on the spot!',
     'Селяне говорили, что вора видели у «{0}». Но с той поры прошло больше пяти часов — наводка больше не верна: вор давно перебрался в другое место. Ищи свежие следы или расспроси новых людей!':
@@ -909,7 +898,7 @@ const EN = {
 
     // --- Раунд 34: возрастные группы и обращения (дети и не только) ---
     'младенец': 'babe in arms',
-    'мальчик': 'boy', 'девочка': 'girl',
+    'мальчик': 'boy',
     'парень': 'lad', 'девушка': 'lass',
     'мужчина': 'man', 'женщина': 'woman',
     'старик': 'old man', 'старуха': 'old woman',
@@ -923,7 +912,7 @@ const EN = {
     'пасечник': 'beekeeper', 'пасечница': 'beekeeper woman',
     'плотник': 'carpenter', 'стражник': 'guard', 'инок': 'monk',
     'торгарь': 'trader', 'торгарка': 'trader woman',
-    'ткачиха': 'weaver', 'повитуха': 'midwife', 'вдова': 'widow',
+    'ткачиха': 'weaver', 'повитуха': 'midwife',
     'хозяйка': 'goodwife', 'ребёнок': 'child', 'дитя': 'child',
 
     // --- Раунд 34: колокольный звон по службам ---
@@ -994,18 +983,12 @@ const EN = {
         'Smith Danila shakes his head: "{0}."',
     'По уложению Судебника воинское снаряжение не продаётся несовершеннолетним (с 18 лет)':
         'By the Law Code, warrior-grade gear is not sold to minors (from age 18)',
-    'По уложению Судебника воинское снаряжение не продаётся людям дурной славы (репутация деревни ниже 0)':
-        'By the Law Code, warrior-grade gear is not sold to those of ill repute (village reputation below 0)',
     ' (воинское снаряжение, по уложению Судебника)':
         ' (warrior-grade gear, by the Law Code)',
     '🕯 Здесь стоит тишина...': '🕯 Silence fills this place...',
-    '{0} погиб(ла) от твоей руки.\nДом опустел, вещи прикрыты холстиной.\nДеревня шепчется о кровной вине.':
-        '{0} perished at your hand.\nThe house stands empty, the things draped in linen.\nThe village whispers of blood-guilt.',
     'Староста может смыть эту вину вирой — если заплатишь.':
         'The elder can wash away this guilt with wergild — if you pay.',
     '☠ Кровная вина!': '☠ Blood-guilt!',
-    'Ты убил {0}. Вся деревня в ужасе: репутация в деревне и у всех жителей упала на 50!\n{1}\nТакие грехи смываются только вирой у старосты — если он согласится мирить.':
-        'You killed {0}. The whole village is horrified: village and every villager\'s reputation fell by 50!\n{1}\nOnly the wergild paid to the elder can wash away such a sin — if he agrees to make peace.',
     'Родня убитого проклинает тебя: их репутация упала до −100.':
         'The slain one\'s kin curse you: their reputation fell to −100.',
     'Староста разводит руками: «На тебя никто больше не в ярости — мирить некого. Спасибо Судебнику!»':
@@ -1020,8 +1003,6 @@ const EN = {
     'Кузнец Данила отказался торговаться с героем дурной славы (репутация ≤ −50).':
         'Smith Danila refused to trade with a hero of ill repute (reputation ≤ −50).',
     '🚪 ИЗГНАН ИЗ ДЕРЕВНИ': '🚪 EXILED FROM THE VILLAGE',
-    'Староста выгнал тебя на все четыре стороны: деревня не прощает крови и бесчестия.':
-        'The elder drove you beyond the gates: the village forgives neither blood nor dishonour.',
 
     // --- Раунд 36: репутационная победа (отдельная ветка финала) ---
     '🌿 ПОБЕДА! ТЕБЯ ПРИНЯЛИ КАК СВОЕГО': '🌿 VICTORY! TAKEN IN AS ONE OF THE VILLAGE',
@@ -1031,12 +1012,6 @@ const EN = {
     'Деревня тебя полюбила, но зваться «своим» судьбой суждено после возврата иконы и продолжения похода.':
         'The village has grown fond of you, but to be called "one of our own" is fated only after the icon is returned and the journey continues.',
     'Деревня тебя полюбила!': 'The village has grown fond of you!',
-    'Ни одной ошибки, и весь приход любит тебя. Редкий дар!':
-        'Not a single mistake, and the whole parish loves you. A rare gift!',
-    'Тебя приняли в деревню как родного: добрые дела и честный труд дороже золота.':
-        'The village has taken you in as kin: good deeds and honest labour are worth more than gold.',
-    'Любовь деревни снискивается годами — и ты её снискал.':
-        "A village's love is earned over years — and you have earned it.",
 
     // --- Раунд 36: рыбалка на Реке (пруд в деревне удалён) ---
     '🎣 Рыбалка': '🎣 Fishing',

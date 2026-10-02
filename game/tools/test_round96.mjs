@@ -180,7 +180,7 @@ ok(252 + 30 <= 304 && 252 - 30 >= 218, 'зона мельницы между п�
 console.log('— 8. SW v90 —');
 const sw = read('../sw.js');
 const swlog = read('../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v109';"), 'SW: site-cache v96');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v110';"), 'SW: site-cache v96');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'SW: game-assets-v42');
 ok(swlog.includes('66.40'), 'SW-журнал: запись 66.40 есть');
 

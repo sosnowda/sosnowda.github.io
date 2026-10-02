@@ -53,7 +53,7 @@ ok(ru.includes("softwareVersion\":\"0.3.0-alpha"), 'RU: JSON-LD softwareVersion 
 ok(en.includes("softwareVersion\":\"0.3.0-alpha"), 'EN: JSON-LD softwareVersion 0.3.0-alpha');
 
 console.log('--- 4. SW v101 и журнал ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v109';"), 'SW: site-cache v109 (актуализация 66.67 — P2 аудита §9/66.66: контраст футерных кнопок поддержки; ассерт актуализирован из v108)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v110';"), 'SW: site-cache v110 (актуализация 66.68 — P3 аудита §9/66.66: дубли i18n ×18 / покадровые Vector2 ×3 сцены / W3C-кодирование URL ×3; ассерт актуализирован из v109)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'SW: game-assets-v42 не менялся');
 ok(swlog.includes('- v101 — итерация 66.53'), 'SW-журнал: запись v101 добавлена');
 ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 на месте');
