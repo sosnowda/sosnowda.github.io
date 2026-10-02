@@ -130,7 +130,7 @@ ok(charScene.includes('p.bustKey || getBustFor(p.archetype, p.gender)'), '66.39:
 console.log('--- 4. SW v89 + game-assets-v42 (п.4) ---'); // 66.39: актуализация (35 бустов + альты обликов + удаление женских брюк)
 const sw = read('../../sw.js');
 const swlog = read('../../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v111';"), 'SW: site-cache v111 (актуализация 66.69)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'SW: site-cache v112 (актуализация 66.70)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'SW: game-assets-v42 (35 бустов + 14 боевых альтов, −8 женских брюк/топов)');
 ok(swlog.includes('v89 — итерация 66.39'), 'SW: журнал содержит запись v89');
 // game-assets кэширует /game/assets/ целиком — бусты попадают автоматически,

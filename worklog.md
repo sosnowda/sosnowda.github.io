@@ -2552,3 +2552,23 @@ Stage Summary:
 - Реестр §9/66.66 ЗАКРЫТ ЦЕЛИКОМ: P2 (66.67) + P3×3 (66.68) + P4×9 (66.69). Пять P4 исправлены кодом (sr-only clip-path, var→const+v111, unused-vars 69→0 в 19 файлах, aria-label ×2 локали, <main> на /game/), одна закрыта ранее (REPO r98 — 66.67), три решены с фиксацией обоснований (sourcemap — принято; cookies Метрики — принято; preload hero — уже реализовано, верифицировано).
 - Поведение пользователя не изменено: рендер-создающие вызовы переведены на bare-выражения (объекты рендерятся как прежде), механика SW прежняя (v111), разметка/paths не тронуты (aria-label и div→main — семантические атрибуты).
 - Проверки: node --check ×20; ESLint 0/0; r117 зелёный; полный регресс 64–117 и живой смоук :8090 — см. коммит.
+
+---
+Task ID: 66.70
+Agent: Super Z (main, Z.ai)
+Task: Приказ владельца — аудит сайта: критическая проблема PWA на EN-версии (битый /en/manifest.json), inline onclick ×2, meta keywords, fetchpriority="low" у preload, GitHub Release v0.3.0-alpha с описанием, Sentry, Web Vitals через Яндекс.Метрику (LCP, FID, CLS). Токен в credential.helper store по прямому предписанию владельца сессии (прецедент 66.67–66.69; примечание: новый токен из приказа — 401 Bad credentials, работа продолжена живым токеном владельца из прошлых итераций, полный доступ admin/push к репо подтверждён).
+
+Work Log:
+- Инспекция аудита по пунктам: (КРИТИЧНО) /en/manifest.json СУЩЕСТВУЕТ с 66.54 (git log: патч 66.54, поля EN, start_url /en/, scope /) — прод HTTP 200, битой ссылки нет, правка не требуется; пин-регресс добавлен в r118. Остальные пункты подтверждены: onclick ×3 типа на RU+EN (fund-bar:96, фон popапа:848/847, ×:850/849), keywords (RU+EN:8), fetchpriority="low" (RU+EN:54).
+- Onclick ×6 снят (MultiEdit ×2 файла); ui.js initFundPopup — единственный источник поведения (слушатели клика/keydown/×/фона/Esc/фокус-трап проверены чтением L46–120); коммент-шапка 66.48→66.70; CSP-комментарии RU+EN актуализированы ('unsafe-inline' остаётся для счётчика Метрики + JSON-LD).
+- keywords снят ×2; fetchpriority="low" снят ×2 (preload скриншота сохранён; hero high не тронут) с актуализацией коммент-блока 66.41.
+- НОВЫЙ js/modules/webvitals.js (экспорт initWebVitals): LCP (largest-contentful-paint, финал на hidden), FID (first-input, сразу), CLS (layout-shift, сессионные окна gap 1s/окно 5s, hadRecentInput мимо); PerformanceObserver buffered:true; guard typeof ym + try/catch; цели webvitals_lcp/fid/cls c {value}; НОЛЬ внешних URL (CSP 'self' — новых origin нет). main.js: импорт + досрочный вызов до bootPage; шапка-реестр модулей пополнена.
+- SW v111→v112 (§4: HTML лендингов + webvitals.js в CACHE_NAME; код sw.js не менялся); SW_CHANGELOG v112; SW-ожидания актуализированы скриптом scripts/update_sw_expectations_6670.py в 35 наборах (v112, SW_CHANGELOG-пин → v112/66.70, пины fetchpriority="low" в r97/r117 переведены на снятый атрибут, длинные тексты 66.69 → честный состав 66.70, шапки «актуализация 66.70»); дочистка «актуализация 66.69 —» ×14 файлов; исторические шапки v110→v111 сохранены.
+- НОВЫЙ game/tools/test_round118.mjs (44 assert: onclick-ноль ×2 + разметка + слушатели ui.js, keywords-ноль + description, preload без low + hero high, webvitals/CSP-чистота/досрочный вызов, en/manifest.json-пин, SW v112/v42/механика, доки, node --check ×4, живой bump_lastmod --check).
+- Release v0.3.0-alpha: тег существует (3a8ddf3) и релиз существует → тело обновлено через API описанием владельца (PreloadScene с прогресс-баром, 8 модулей, WCAG AA, CSP ×2, фокус-трап, WAAPI d100, самохостинг Phaser 3.88.2, 54 набора регресс-тестов) + состав итераций 66.46–66.70.
+- Sentry: без DSN невозможна (секрет в код не попадает) — рецепт зафиксирован, ожидает DSN владельца (CSP connect-src + self-hosted Sentry SDK или CDN-вариант с правкой CSP).
+
+Stage Summary:
+- Все исполнимые пункты аудита закрыты: manifest-пункт верифицирован как закрытый (66.54), onclick/keywords/fetchpriority сняты (RU+EN, поведение не изменилось — ui.js дублировал всё), Web Vitals → Метрика реализованы нативно без зависимостей, Release обновлён; Sentry — рецепт ждёт DSN.
+- Проверки: r118 44/44; полный регресс 64–118; смоук :8090 (попап открывается/закрывается ×/фоном/Esc, aria-expanded синхронен, консоль чиста, webvitals тихо выходит без ym); W3C Nu ×2 = 0 ошибок.
+- Артефакты: коммит 66.70 (index.html, en/index.html, js/main.js, js/modules/ui.js, js/modules/webvitals.js НОВЫЙ, sw.js v112, docs/SW_CHANGELOG.md, CHANGES.md, worklog.md, test_round118.mjs НОВЫЙ, актуализация пинов ×35).

@@ -75,7 +75,7 @@ ok(styles.includes('.fund-bar:focus-visible{outline:2px solid #C9A961;outline-of
 ok(block.includes('text-shadow:0 1px 1px rgba(0,0,0,0.5) !important;'), 'text-shadow полоски сохранён (поддержка читаемости)');
 
 console.log('--- 5. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v111';"), 'sw.js: site-cache v111 (актуализация 66.69 — P4 аудита §9/66.66: остаток реестра ×9 — sr-only clip-path, var→const sw.js, unused-vars, aria-label логотипа, <main> на /game/; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (правка цвета не трогала SW-логику)');
 ok(swlog.includes('- v106 — итерация 66.62'), 'SW_CHANGELOG: запись v106 добавлена');

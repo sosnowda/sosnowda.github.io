@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Chronicles of Ruthenia — 15th-Century Rus' | AI-Narrative Text RPG</title>
     <meta name="description" content="A narrative text RPG set in 15th-century Rus', featuring an LLM Narrator, a RAG base of historical data and the BRP d100 roleplaying system.">
-    <meta name="keywords" content="RPG, Rus', medieval, BRP, d100, browser game, Phaser, Godot, AI, historical game, Chronicles of Ruthenia, text RPG">
     <meta name="author" content="sosnowda">
     <meta name="theme-color" content="#1A1410">
     <meta name="robots" content="index, follow">
     <!-- 66.47 (audit #18): basic landing CSP. script-src keeps 'unsafe-inline' —
-         otherwise the inline Yandex.Metrika counter and onclick handlers break;
+         otherwise the inline Yandex.Metrika counter and JSON-LD break (66.70:
+         inline onclick removed from the landing, behaviour lives in js/modules);
          the policy cuts object/frame/form-action/base-uri and foreign hosts -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://mc.yandex.ru; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://mc.yandex.ru https://*.mc.yandex.ru; media-src 'self'; connect-src 'self' https://mc.yandex.ru https://*.mc.yandex.ru wss://mc.yandex.ru wss://*.mc.yandex.ru; frame-src 'self' https://mc.yandex.ru; object-src 'none'; base-uri 'self'; form-action 'self' https://boosty.to https://yoomoney.ru https://vk.ru">
 
@@ -49,9 +49,11 @@
 
     <!-- Critical resource preload -->
     <link rel="preload" href="../assets/images/title.webp" as="image" fetchpriority="high">
-    <!-- 66.41 (audit 66.40 §3): first gallery screenshot — instant render on scroll;
-         low priority so it never competes with the hero image -->
-    <link rel="preload" href="../assets/screenshots/01-title.webp" as="image" fetchpriority="low">
+    <!-- 66.41 (audit 66.40 §3): first gallery screenshot — instant render on scroll.
+         66.70 (owner's audit): fetchpriority="low" removed — contradictory combo
+         (preload means “needed early”, low means “not important”); the preload
+         stays without priority demotion -->
+    <link rel="preload" href="../assets/screenshots/01-title.webp" as="image">
     <link rel="preload" href="../styles.css" as="style">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -93,7 +95,7 @@
 
 <!-- FUNDRAISING BAR -->
 <!-- 66.47 (audit #20): div → a real <button> — accessibility without role shims -->
-<button type="button" class="fund-bar" aria-haspopup="dialog" aria-controls="fundPopup" onclick="document.getElementById('fundPopup').classList.add('open')">
+<button type="button" class="fund-bar" aria-haspopup="dialog" aria-controls="fundPopup">
     💰 Fundraising for the project — click to support!
 </button>
 <!-- 66.63 (audit 66.61, P3-3): .fund-popup moved to the end of <body> (after
@@ -844,9 +846,9 @@
 <!-- 66.63 (audit 66.61, P3-3): support popup now lives at the end of <body>,
      AFTER the sr-only h1. Markup, styles and behaviour unchanged
      (position:fixed, aria-labelledby="fundPopupTitle"). -->
-<div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle">
     <div class="fund-popup-content">
-        <button class="fund-popup-close" aria-label="Close support dialog" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
+        <button class="fund-popup-close" aria-label="Close support dialog">×</button>
         <h3 id="fundPopupTitle">Support The Chronicles of Ruthenia</h3>
         <p>Funds will go toward AI testing hardware, knowledge-base content and development. Choose a convenient method:</p>
         <div class="support-buttons">

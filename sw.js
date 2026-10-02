@@ -8,9 +8,11 @@
 // ~200 строк комментариев раздували Service Worker. Новые записи о версиях
 // добавляются в docs/SW_CHANGELOG.md и CHANGES.md, но НЕ в этот файл.
 
-// 66.69 (аудит §9/66.66, P4): var→const по всему файлу (no-var §9.2); бамп v111
-// (HTML лендингов/игры + styles.css меняются — sr-only/aria-label/<main>)
-const CACHE_NAME = 'chronicles-ruthenia-v111';
+// 66.70 (аудит владельца): бамп v112 — HTML RU+EN лендингов (сняты inline
+// onclick попапа поддержки, meta keywords, fetchpriority="low" у preload
+// первого скриншота) + новый модуль js/modules/webvitals.js (Web Vitals
+// → Метрика). Код SW не менялся; game-assets-v42 цел.
+const CACHE_NAME = 'chronicles-ruthenia-v112';
 const GAME_ASSETS_CACHE = 'game-assets-v42';
 
 self.addEventListener('install', function (event) {

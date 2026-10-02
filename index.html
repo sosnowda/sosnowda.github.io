@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Летописи Руси XV века — The Chronicles of Ruthenia | Текстовая RPG с ИИ</title>
     <meta name="description" content="Текстовая повествовательная RPG про Русь XV века с LLM-Нарратором, RAG-базой исторических данных и ролевой системой BRP d100.">
-    <meta name="keywords" content="RPG, Русь, средневековье, BRP, d100, браузерная игра, Phaser, Godot, AI, историческая игра, Chronicles of Ruthenia">
     <meta name="author" content="sosnowda">
     <meta name="theme-color" content="#1A1410">
     <meta name="robots" content="index, follow">
     <!-- 66.47 (аудит №18): базовый CSP лендинга. script-src сохраняет 'unsafe-inline' —
-         иначе перестанут работать инлайн-счётчик Метрики и onclick-обработчики;
+         иначе перестанут работать инлайн-счётчик Метрики и JSON-LD (66.70: inline
+         onclick сняты с лендинга, поведение живёт в js/modules — один источник);
          политика срезает object/frame/form-action/base-uri и посторонние хосты -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://mc.yandex.ru; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://mc.yandex.ru https://*.mc.yandex.ru; media-src 'self'; connect-src 'self' https://mc.yandex.ru https://*.mc.yandex.ru wss://mc.yandex.ru wss://*.mc.yandex.ru; frame-src 'self' https://mc.yandex.ru; object-src 'none'; base-uri 'self'; form-action 'self' https://boosty.to https://yoomoney.ru https://vk.ru">
 
@@ -50,8 +50,10 @@
     <!-- Preload критических ресурсов -->
     <link rel="preload" href="assets/images/title.webp" as="image" fetchpriority="high">
     <!-- 66.41 (аудит 66.40 §3): первый скриншот галереи — мгновенная отрисовка
-         при прокрутке; low-приоритет, чтобы не спорить с hero за полосу -->
-    <link rel="preload" href="assets/screenshots/01-title.webp" as="image" fetchpriority="low">
+         при прокрутке. 66.70 (аудит владельца): fetchpriority="low" снят —
+         противоречивая комбинация (preload декларирует «важно рано», low —
+         «не важно»); preload остаётся без понижения приоритета -->
+    <link rel="preload" href="assets/screenshots/01-title.webp" as="image">
     <link rel="preload" href="styles.css" as="style">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -93,7 +95,7 @@
     
 <!-- СБОР СРЕДСТВ -->
 <!-- 66.47 (аудит №20): div → настоящий <button> — доступность без role-костылей -->
-<button type="button" class="fund-bar" aria-haspopup="dialog" aria-controls="fundPopup" onclick="document.getElementById('fundPopup').classList.add('open')">
+<button type="button" class="fund-bar" aria-haspopup="dialog" aria-controls="fundPopup">
     💰 Сбор средств на развитие проекта — нажмите, чтобы поддержать!
 </button>
 <!-- 66.63 (аудит 66.61, P3-3): .fund-popup переехал в конец body (после
@@ -845,9 +847,9 @@
 <!-- 66.63 (аудит 66.61, P3-3): попап поддержки — теперь в конце body, ПОСЛЕ
      sr-only h1. Разметка, стили и поведение не изменились (position:fixed,
      aria-labelledby="fundPopupTitle"). -->
-<div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle">
     <div class="fund-popup-content">
-        <button class="fund-popup-close" aria-label="Закрыть окно поддержки" onclick="this.closest('.fund-popup').classList.remove('open')">×</button>
+        <button class="fund-popup-close" aria-label="Закрыть окно поддержки">×</button>
         <h3 id="fundPopupTitle">Поддержите «Летописи Руси»</h3>
         <p>Средства пойдут на оборудование для тестирования ИИ, наполнение баз знаний и разработку. Выберите удобный способ:</p>
         <div class="support-buttons">

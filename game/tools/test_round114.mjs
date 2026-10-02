@@ -10,11 +10,11 @@
 // бит-в-бит с jsdelivr и npm-тарболом (sha256 397fc65b…); CSP script-src без
 // CDN; с лендингов сняты мёртвые preconnect/dns-prefetch к jsdelivr;
 // css2-линк лендингов +family=PT+Sans:wght@400;700. SW: /game/vendor/ добавлен
-// в cache-first ветку ассетов (неизменяемая библиотека), v111 + game-assets-v42 (66.69: site-cache бамп v110→v111).
+// в cache-first ветку ассетов (неизменяемая библиотека), v112 + game-assets-v42 (66.69: site-cache бамп v110→v111).
 // Живые доказательства (вне этого файла): scripts/baseline_66_64_before/after.json,
 // смоук smoke_66_64.mjs (FontFaceSet, ширина текста, ноль внешних запросов игры).
 // Здесь закреплена СТАТИКА: vendor-файл, game/index.html, CSP, лендинги,
-// styles.css, sw.js v111/v42, документация, живой bump_lastmod --check.
+// styles.css, sw.js v112/v42, документация, живой bump_lastmod --check.
 // Запуск из корня репозитория: node game/tools/test_round114.mjs
 import { execSync } from 'child_process';
 import { createHash } from 'crypto';
@@ -78,8 +78,8 @@ ok(styles.includes("'PT Sans' вебфонтом НЕ загружен") || styl
 const canonBlock = styles.slice(styles.indexOf('.fund-bar {') >= 0 ? styles.indexOf('.fund-bar {') : styles.indexOf('.fund-bar{'), styles.indexOf('.fund-bar:hover'));
 ok(canonBlock.includes('line-height:1.2'), 'styles.css: инвариант 66.60 line-height:1.2 в каноническом блоке цел');
 
-console.log('--- 5. SW: vendor в cache-first, v111 + game-assets-v42 ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v111';"), 'sw.js: site-cache v111 (актуализация 66.69 — P4 аудита §9/66.66: остаток реестра ×9 — sr-only clip-path, var→const sw.js, unused-vars, aria-label логотипа, <main> на /game/; HTML/CSS → бамп)');
+console.log('--- 5. SW: vendor в cache-first, v112 + game-assets-v42 ---');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 (новый бакет под новую ветку маршрута /game/vendor/)');
 ok(sw.includes("url.pathname.startsWith('/game/assets/') || url.pathname.startsWith('/game/vendor/')"), 'sw.js: /game/vendor/ в cache-first ветке ассетов (неизменяемая библиотека — как /game/assets/)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт офлайн-фолбэка цел (66.57 P3-3)');

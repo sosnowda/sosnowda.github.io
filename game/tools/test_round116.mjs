@@ -16,7 +16,7 @@
 // P3-3 (§9.1): W3C Nu — 3 ошибки кодирования: t.me-ссылка RU+EN (пробел в
 //   query) → текст параметра закодирован целиком (encodeURIComponent); data:-
 //   URI фавиконки игры (пробелы) → %20; декод бит-в-бит даёт прежний SVG.
-// SW: v111 (66.69 — sr-only/<main> game/index.html, aria-label лендингов, clip-path styles.css, var→const sw.js), v42 цел.
+// SW: v112 (66.69 — sr-only/<main> game/index.html, aria-label лендингов, clip-path styles.css, var→const sw.js), v42 цел.
 // Запуск из корня репозитория: node game/tools/test_round116.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -208,10 +208,10 @@ function finish() {
         'game/index.html: декод %20-версии = прежний SVG бит-в-бит (рендер фавиконки не изменён)');
 
     console.log('--- 6. SW: бамп по §4 (HTML страниц изменён), механика не тронута ---');
-    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v111';"), 'sw.js: site-cache v111 (P4 66.69: sr-only/<main>/aria-label в HTML, clip-path в styles.css, var→const sw.js → бамп)');
+    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'sw.js: site-cache v112 (P4 66.69: sr-only/<main>/aria-label в HTML, clip-path в styles.css, var→const sw.js → бамп)');
     ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 без изменений (ассеты/vendor не тронуты)');
     ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел');
-    ok(swlog.includes('- v111 — итерация 66.69'), 'SW_CHANGELOG: запись v111 добавлена');
+    ok(swlog.includes('- v112 — итерация 66.70'), 'SW_CHANGELOG: запись v112 добавлена');
 
     console.log('--- 7. Синтаксис правленых файлов + документация патча ---');
     for (const f of ['game/src/systems/i18n.js', 'game/src/scenes/VillageScene.js', 'game/src/scenes/ApiaryScene.js', 'game/src/scenes/ForestScene.js', 'sw.js']) {

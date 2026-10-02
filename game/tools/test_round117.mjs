@@ -59,9 +59,9 @@ ok(styles.indexOf('clip-path: inset(50%)') > styles.indexOf('.sr-only {') &&
    styles.indexOf('clip-path: inset(50%)') < styles.indexOf('/* Скриншоты-галерея'),
     'styles.css: clip-path стоит внутри блока .sr-only');
 
-console.log('--- 2. P4-2: sw.js — var→const ×5, v111, механика не тронута ---');
+console.log('--- 2. P4-2: sw.js — var→const ×5, v112, механика не тронута ---');
 ok((sw.match(/\bvar\s+[A-Za-z_$]/gm) || []).length === 0, 'sw.js: объявлений var — ноль (no-var §9.2)');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v111';"), 'sw.js: const CACHE_NAME v111 (HTML/CSS менялись → бамп §4)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'sw.js: const CACHE_NAME v112 (HTML/CSS менялись → бамп §4)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: const GAME_ASSETS_CACHE v42 (ассеты/vendor не тронуты)');
 ok(sw.includes("const url = new URL(event.request.url);") &&
    sw.includes("const clone = response.clone();") &&
@@ -125,11 +125,11 @@ ok(!read('game/tools/test_98_pixel_probe.py').includes('/home/z/'), 'test_98_pix
 
 console.log('--- 7. P4-9: preload hero — цели ровно в первичный кандидат <picture> ---');
 for (const [html, locale, pre, preLow] of [
-    [indexRu, 'RU', '<link rel="preload" href="assets/images/title.webp" as="image" fetchpriority="high">', '<link rel="preload" href="assets/screenshots/01-title.webp" as="image" fetchpriority="low">'],
-    [indexEn, 'EN', '<link rel="preload" href="../assets/images/title.webp" as="image" fetchpriority="high">', '<link rel="preload" href="../assets/screenshots/01-title.webp" as="image" fetchpriority="low">'],
+    [indexRu, 'RU', '<link rel="preload" href="assets/images/title.webp" as="image" fetchpriority="high">', '<link rel="preload" href="assets/screenshots/01-title.webp" as="image">'],
+    [indexEn, 'EN', '<link rel="preload" href="../assets/images/title.webp" as="image" fetchpriority="high">', '<link rel="preload" href="../assets/screenshots/01-title.webp" as="image">'],
 ]) {
     ok(html.includes(pre), `${locale}: preload hero (title.webp, fetchpriority=high) на месте`);
-    ok(html.includes(preLow), `${locale}: low-приоритетный preload карточки меню на месте (не спорит с hero)`);
+    ok(html.includes(preLow), `${locale}: preload карточки меню на месте (66.70: fetchpriority="low" снят)`);
     const srcset = (html.match(/<source srcset="([^"]+)" type="image\/webp">/) || [])[1];
     const href = (html.match(/rel="preload" href="([^"]+)" as="image" fetchpriority="high">/) || [])[1];
     ok(!!srcset && srcset === href, `${locale}: preload href === первичный кандидат <source srcset> («${href}») — двойной загрузки нет`);
@@ -138,7 +138,7 @@ for (const [html, locale, pre, preLow] of [
 }
 
 console.log('--- 8. SW/доки/lastmod (§4/§7/§8) ---');
-ok(swlog.includes('- v111 — итерация 66.69'), 'SW_CHANGELOG: запись v111 добавлена');
+ok(swlog.includes('- v112 — итерация 66.70'), 'SW_CHANGELOG: запись v112 добавлена');
 ok(changes.includes('66.69'), 'CHANGES.md: секция патча 66.69 добавлена');
 let lastmodSync = false;
 try { execSync('python3 game/tools/bump_lastmod.py --check', { stdio: 'pipe' }); lastmodSync = true; } catch {}

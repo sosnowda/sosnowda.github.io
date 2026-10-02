@@ -7,7 +7,8 @@
 //   gallery.js   — лайтбокс галереи скриншотов со стрелками;
 //   particles.js — золотые частицы (reduced-motion + скрытая вкладка);
 //   ui.js        — гамбургер, попап поддержки, тост, d100, таймлайн князей;
-//   analytics.js — цели Яндекс.Метрики.
+//   analytics.js — цели Яндекс.Метрики;
+//   webvitals.js — Web Vitals (LCP/FID/CLS) → цели Метрики (66.70).
 // Подключается как <script type="module"> — defer-поведение встроено.
 import { REDUCED_MOTION } from './modules/state.js';
 import { initReveal } from './modules/reveal.js';
@@ -17,6 +18,7 @@ import { initGallery } from './modules/gallery.js';
 import { initParticles } from './modules/particles.js';
 import { initInteractivePage } from './modules/ui.js';
 import { initAnalytics } from './modules/analytics.js';
+import { initWebVitals } from './modules/webvitals.js';
 
 // Флаг наличия JS: reveal-анимации применяются только если JS работает.
 // Без JS страница полностью видима (прогрессивное улучшение).
@@ -26,6 +28,10 @@ document.documentElement.classList.add('js');
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(function () { });
 }
+
+// Web Vitals → Метрика: регистрируем ДОСРОЧНО (не в bootPage) — наблюдатели
+// с buffered:true поймают и прошлые события, но чем раньше старт, тем точнее LCP.
+initWebVitals();
 
 function bootPage() {
     // Reveal-анимации: при reduced-motion/no-IO контент просто виден,
