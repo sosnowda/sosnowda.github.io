@@ -12,7 +12,7 @@
 // канвас — отклонение задокументировано в CHANGES.md).
 // Здесь закреплена СТАТИКА: разметка RU/EN/игры, селекторы styles.css,
 // порядок заголовков (статический разбор), SW v107, документация.
-// актуализация 66.64: SW-ожидания v107→v108 и game-assets-v41→v42; P3-4 самохостинг Phaser (/game/vendor/, CSP без внешнего CDN, vendor в cache-first ветке SW) + P3-5 PT Sans в css2-линке лендингов (аудит 66.61 — детали в r114)
+// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v42 без изменений (детали в r115)
 // Запуск из корня репозитория: node game/tools/test_round113.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -94,7 +94,7 @@ ok(game.includes('<meta http-equiv="Content-Security-Policy"'), 'регресс 
 ok(game.includes('<title>Летописи Руси — Браузерное демо</title>'), 'регресс: title игры не тронут');
 
 console.log('--- 5. SW v107 + документация ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v108';"), 'sw.js: site-cache v108 (актуализация 66.64 — P3-4+P3-5: самохостинг Phaser в /game/vendor/, PT Sans в css2-линке; изменение HTML×3+styles.css → бамп)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v109';"), 'sw.js: site-cache v109 (актуализация 66.67 — P2 аудита §9/66.66: контраст футерных кнопок поддержки, styles.css → бамп)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 без изменений');
 ok(sw.includes("event.request.mode !== 'navigate'") && sw.includes('return cached;'), 'регресс 66.57: navigate-гейт цел');
 ok(swlog.includes('- v107 — итерация 66.63'), 'SW_CHANGELOG: запись v107 добавлена');

@@ -5,7 +5,7 @@
 // 3) SW: в 66.50 — site-cache v100, запись v100 в журнале
 //    (ассерты ниже отслеживают АКТУАЛЬНУЮ версию: после 66.59 — v104).
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
-// актуализация 66.64: SW-ожидания v107→v108 и game-assets-v41→v42; P3-4 самохостинг Phaser (/game/vendor/, CSP без внешнего CDN, vendor в cache-first ветке SW) + P3-5 PT Sans в css2-линке лендингов (аудит 66.61 — детали в r114)
+// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v42 без изменений (детали в r115)
 // Запуск из корня репозитория: node game/tools/test_round103.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -53,7 +53,7 @@ ok(ru.includes("softwareVersion\":\"0.3.0-alpha"), 'RU: JSON-LD softwareVersion 
 ok(en.includes("softwareVersion\":\"0.3.0-alpha"), 'EN: JSON-LD softwareVersion 0.3.0-alpha');
 
 console.log('--- 4. SW v101 и журнал ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v108';"), 'SW: site-cache v108 (актуализация 66.64 — P3-4+P3-5; ассерт актуализирован из v101)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v109';"), 'SW: site-cache v109 (актуализация 66.67 — P2 аудита §9/66.66: контраст футерных кнопок поддержки; ассерт актуализирован из v108)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'SW: game-assets-v42 не менялся');
 ok(swlog.includes('- v101 — итерация 66.53'), 'SW-журнал: запись v101 добавлена');
 ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 на месте');

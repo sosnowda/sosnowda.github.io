@@ -13,7 +13,7 @@
 // бит-в-бит (baseline_66_60_before/after.json, diff пуст).
 // Здесь закреплена СТАТИКА (структура styles.css + SW + документация).
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
-// актуализация 66.64: SW-ожидания v107→v108 и game-assets-v41→v42; P3-4 самохостинг Phaser (/game/vendor/, CSP без внешнего CDN, vendor в cache-first ветке SW) + P3-5 PT Sans в css2-линке лендингов (аудит 66.61 — детали в r114)
+// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v42 без изменений (детали в r115)
 // Запуск из корня репозитория: node game/tools/test_round111.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -53,7 +53,7 @@ ok(mobBlock.includes('font-size:0.72rem;') && mobBlock.includes('padding:0.45rem
 ok(styles.includes('/* (66.59) .fund-bar переехал'), 'комментарий-указатель 66.59 на месте');
 
 console.log('--- 3. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v108';"), 'sw.js: site-cache v108 (актуализация 66.64 — P3-4+P3-5: самохостинг Phaser в /game/vendor/, PT Sans в css2-линке; изменение HTML×3+styles.css → бамп)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v109';"), 'sw.js: site-cache v109 (актуализация 66.67 — P2 аудита §9/66.66: контраст футерных кнопок поддержки, styles.css → бамп)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (правка CSS не трогала SW-логику)');
 ok(swlog.includes('- v105 — итерация 66.60'), 'SW_CHANGELOG: запись v105 добавлена');

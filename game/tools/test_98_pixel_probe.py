@@ -2,12 +2,16 @@
 # test_98_pixel_probe.py — пиксельные проверки текстур для test_round98.mjs
 # (Python+PIL надёжен для любых фильтров PNG; Node-декодер в r94 покрывает
 # только палитровые фильтр-0 файлы). Печатает JSON.
+# 66.67 (P4 аудита §9/66.66): REPO вычисляется от __file__ (репортизационная
+# независимость) — прежний зашитый абсолютный путь прошлой среды давал
+# средовой фолс-позитив r98 при клонировании репо в другой каталог.
 import json
 import sys
+from pathlib import Path
 
 from PIL import Image
 
-REPO = '/home/z/my-project/sosnowda.github.io'
+REPO = str(Path(__file__).resolve().parents[2])  # game/tools/ → вверх на 2 = корень репо
 
 
 def opaque_in(path, x0, y0, x1, y1, thr=40):

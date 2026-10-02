@@ -1204,15 +1204,25 @@ button.fund-bar{display:block;width:100%;border:none;appearance:none;-webkit-app
 .btn-game-start:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.6),0 0 20px rgba(201,169,97,0.3)}
 .btn-game-start:focus-visible{outline:2px solid #C9A961;outline-offset:3px}
 
-/* Кнопки поддержки (аудит №11): .btn-support + цветовые/размерные модификаторы */
-.btn-support{display:inline-block;padding:0.8rem 2rem;border-radius:8px;color:#fff;text-decoration:none;font-size:1rem}
-.btn-support--boosty{background:#ff8a00;color:#1a1005}
-.btn-support--yoomoney{background:#8b3dff}
-.btn-support--vk{background:#0062cc}
-.btn-support--vkauthor{background:#4a76a8}
-.btn-support--beta{background:#333;color:#C9A961;border:1px solid #C9A961}
-.btn-support--block{display:block;padding:0.8rem}
-.btn-support--footer{padding:0.6rem 1.5rem;font-size:0.9rem}
+/* Кнопки поддержки (аудит №11): .btn-support + цветовые/размерные модификаторы.
+   66.67 (P2 аудита §9/66.66): в футере .footer a{color:var(--gold-dim)=#8a6d1f}
+   (0,1,1 — специфичность решает, порядок в файле не важен) перебивал .btn-support
+   и модификаторы (0,1,0) независимо от порядка каскада — все 5 кнопок поддержки
+   футера RU+EN рендерились тёмным золотом на фирменных ярких фонах (живой замер
+   аудита: контраст 1.02–2.57, FAIL WCAG AA при пороге 4.5 для 0.9rem/400).
+   Рецепт аудита: селекторы переведены на a.btn-support* (0,1,1) — победа по
+   порядку следования (этот блок ниже .footer a). Пересчёт (WCAG-математика в
+   test_round115): Boosty 7.93, ЮMoney 4.99, ВК 5.80, Автор ВК 4.72, Бета 5.61 —
+   PASS AA. Все .btn-support в разметке — <a> (22 шт., RU+EN); hover (.footer
+   a:hover) не тронут. */
+a.btn-support{display:inline-block;padding:0.8rem 2rem;border-radius:8px;color:#fff;text-decoration:none;font-size:1rem}
+a.btn-support--boosty{background:#ff8a00;color:#1a1005}
+a.btn-support--yoomoney{background:#8b3dff}
+a.btn-support--vk{background:#0062cc}
+a.btn-support--vkauthor{background:#4a76a8}
+a.btn-support--beta{background:#333;color:#C9A961;border:1px solid #C9A961}
+a.btn-support--block{display:block;padding:0.8rem}
+a.btn-support--footer{padding:0.6rem 1.5rem;font-size:0.9rem}
 
 /* Кнопки «Поделиться» (в т.ч. кнопка-копирование) */
 .btn-share{display:inline-block;padding:0.5rem 1.2rem;border-radius:8px;color:#fff;text-decoration:none;font-size:0.85rem;border:none;cursor:pointer;font-family:'PT Sans',sans-serif}

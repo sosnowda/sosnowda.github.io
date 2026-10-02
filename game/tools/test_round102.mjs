@@ -9,7 +9,7 @@
 //        на месте в styles.css;
 //   SW   site-cache v104 (66.59 мобильный кегль полосы сбора; история актуализаций — см. r108), журнал версий в docs/SW_CHANGELOG.md (v97 и v98).
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
-// актуализация 66.64: SW-ожидания v107→v108 и game-assets-v41→v42; P3-4 самохостинг Phaser (/game/vendor/, CSP без внешнего CDN, vendor в cache-first ветке SW) + P3-5 PT Sans в css2-линке лендингов (аудит 66.61 — детали в r114)
+// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v42 без изменений (детали в r115)
 import { readFileSync, existsSync } from 'fs';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -103,7 +103,7 @@ ok(styles.includes('.sr-only'), 'styles.css: .sr-only существует (ск
 
 console.log('--- 5. Service Worker v99 и журнал ---');
 const sw = read('sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v108';"), 'SW: site-cache v108 (актуализация 66.64 — P3-4+P3-5; ассерт актуализирован из v101)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v109';"), 'SW: site-cache v109 (актуализация 66.67 — P2 аудита §9/66.66: контраст футерных кнопок поддержки; ассерт актуализирован из v108)');
 ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'SW: game-assets-v42 не менялся (ассеты не трогали)');
 const swlog = read('docs/SW_CHANGELOG.md');
 ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 добавлена');
