@@ -2428,3 +2428,22 @@ Work Log:
 
 Stage Summary:
 - P3-2 и P3-3 закрыты одной итерацией: порядок заголовков выровнен (первый h1, без пропусков), canonical/H1 игры на месте, computed бит-в-бит, прод ALL GREEN, SW v107, регресс 50/50, смоук 32/32. Остатки аудита 66.61: P3-4 (самохостинг Phaser), P3-5 (PT Sans в стеке).
+
+---
+Task ID: 66.64
+Agent: Super Z (main, Z.ai)
+Task: Приказ владельца — P3-4 (самохостинг Phaser) + P3-5 (PT Sans в стеке) аудита 66.61 одной итерацией 66.64 по стандартному циклу. Закрывает последнюю пару находок аудита 66.61.
+
+Work Log:
+- Репо актуален @c63c4c6; credential store восстановлен из приказа владельца (падение пуша — известный инцидент 66.60), core.filemode=false.
+- Диагноз живым замером scripts/baseline_p345_66_64.mjs (SUFFIX=before): FontFaceSet лендингов = [PT Serif, Prata] — PT Sans в стеке .fund-bar/.btn-share/.copy-toast, но вебшрифтом НЕ грузится; ширина текста полоски 471.28px (desktop) / 376.72px (mobile); единственный внешний запрос игры — cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.min.js; Phaser.VERSION 3.88.2, консоль чиста. Числа аудита 66.61 подтверждены.
+- P3-4: game/vendor/phaser.min.js (1193491 байт) — ДВОЙНАЯ ВЕРИФИКАЦИЯ ИСТОЧНИКА: jsdelivr и npm-тарбол дают бит-в-бит один файл (sha256 397fc65bb751b2549b59c64647edf70300d604b742cd6be03d8298b8f35ca9d6 у обоих); game/index.html — script src="vendor/phaser.min.js" (относительный путь); CSP УЖЕСТОЧЕНА — https://cdn.jsdelivr.net УБРАН из script-src (внешних <script src> у игры ноль); с лендингов RU/EN сняты мёртвые preconnect/dns-prefetch к jsdelivr-CDN.
+- P3-5: css2-линк RU/EN дополнен family=PT+Sans:wght@400;700 (кириллица+латиница юникод-рангами); в styles.css — док-заметка 66.64 рядом с сохранённой исторической справкой 66.60 (на неё смотрит r111 — не тронута).
+- РЕНДЕР (baseline_66_64_after.json): FontFaceSet = [PT Sans, PT Serif, Prata]; ширина текста полоски 471.28→438.0px (desktop) и 376.72→358.0px (mobile) — PT Sans реально рендерится; ВЫСОТЫ НЕ ИЗМЕНИЛИСЬ (37.46875/29.1875px) — инвариант line-height:1.2 (66.60) держит высоту при любом шрифте; computed font-family/size/line-height бит-в-бит; кадры → download/screenshots_6664/.
+- SW: КОД менялся — /game/vendor/ добавлен в cache-first ветку ассетов (|| в startsWith, фоновое обновление как у /game/assets/): v107→v108 И game-assets-v41→v42 (новый бакет под новую ветку маршрута); navigate-гейт 66.57 цел; SW_CHANGELOG v108.
+- Тесты: НОВЫЙ r114 (38 assert: vendor размер/версия/sha256-пин крипто-сверкой, script src, CSP без CDN и с целыми img/media-blob, лендинги без jsdelivr и с шрифтовыми preconnect, css2-линки RU/EN, стек из 3 селекторов, док-заметка+справка 66.60, инвариант 1.2, sw v108/v42/vendor-ветка/гейт, доки, живой bump_lastmod --check); r102/r103 актуализированы (CSP без CDN — причины 66.64); r106 переведён с пинов абсолютных дат lastmod на инварианты (ПИН УСТАРЕВАЛ НА КАЖДОЙ итерации с бампом — 66.63 прошла регресс ДО amend и оставила r106 устаревшим незаметно; синхронность git↔sitemap живьём проверяет bump_lastmod --check в r108/r114); SW-ожидания v107→v108 и game-assets-v41→v42 в 32 наборах (scripts/sweep_sw_66_64.py + fixup); честные шапки 66.64 в r102–r113. РЕГРЕСС 64–114 = 51/51 (r86–89 из game/tools). Смоук smoke_66_64.mjs 25/25.
+- Коммит 1d5b3b4 → bump_lastmod (3 секции → 2026-10-02) → amend → 27c120c, push c63c4c6..27c120c.
+- Прод: Pages built @27c120c; URL 200×8 + /missing 404; sha256 прод==локал ×6 (index.html, en/index.html, game/index.html, styles.css, sw.js, game/vendor/phaser.min.js=397fc65b…); прод-sw v108+v42+vendor-ветка; sitemap прод 10-02×3; прод-проба prod_p345_66_64.mjs 10/10 (ноль внешних запросов игры, Phaser 3.88.2 самохостинг, CSP без CDN и 0 нарушений, PT Sans в FontFaceSet RU+EN, ширина 438px, высота 37.46875px, цвет 66.62 цел).
+
+Stage Summary:
+- P3-4 и P3-5 закрыты одной итерацией: игра полностью самодостаточна (внешних зависимостей ноль, CSP без внешних origin, Phaser 3.88.2 из /game/vendor/ с cache-first в game-assets-v42), стек шрифтов совпадает с рендером (PT Sans загружен, высоты инвариантны по 66.60), прод ALL GREEN, SW v108/v42, регресс 51/51, смоук 25/25. ВСЕ 5 НАХОДОК АУДИТА 66.61 ЗАКРЫТЫ (P3-1→66.62, P3-2+P3-3→66.63, P3-4+P3-5→66.64).
