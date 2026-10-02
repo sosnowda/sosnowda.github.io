@@ -88,7 +88,7 @@ ok(boot.includes("'icon_christ', 'icon_theotokos', 'icon_john', 'icon_archangel'
 ok(!existsSync(ROOT + 'game/assets/interiors/int_bg_church.webp'), 'фон церкви удалён (66.44, приказ 3)');
 
 // ---------- 4. КРИТИЧНЫЙ ФИКС: sw.js снова парсится ----------
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41'"), 'SW: кеш ассетов v31 (фасады 66.36)');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42'"), 'SW: кеш ассетов v31 (фасады 66.36)');
 ok(sw.includes('*/\n\n// ----- Журнал версий кэша'),
     'SW: заголовочный блочный комментарий закрыт ДО указателя на журнал');
 const vLines = sw.split('\n').filter(l => /^v\d+ /.test(l.trim()));

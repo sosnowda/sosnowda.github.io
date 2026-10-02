@@ -14,7 +14,7 @@
 //      сохранены), housesFX.js — 19 дымовых точек суммарно.
 //   3) СКРИНШОТЫ (приказы 2+4): все 9 webp на месте.
 //   4) ИНСТРУМЕНТЫ 66.42 в репо + исторический маркер у 6632/6633.
-//   5) SW v92 / game-assets-v41 (версии актуализирует каждый новый раунд).
+//   5) SW v92 / game-assets-v42 (версии актуализирует каждый новый раунд).
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -159,11 +159,11 @@ for (const f of ['qa_battle_thief_6642.mjs', 'qa_chimneys_6642.mjs', 'make_chimn
     ok(existsSync(join(ROOT, `game/tools/${f}`)), `game/tools/${f} в репо`);
 }
 
-console.log('— 7. SW v92 / game-assets-v41 —');
+console.log('— 7. SW v92 / game-assets-v42 —');
 const sw = read('sw.js');
 const swlog = read('docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v107';"), 'SW: site-cache v96');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v108';"), 'SW: site-cache v96');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'SW: game-assets-v42');
 ok(swlog.includes('66.42'), 'SW-журнал: запись 66.42 есть');
 
 console.log(`\ntest_round98: ${pass} зелёных, ${fail} красных`);

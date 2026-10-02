@@ -11,6 +11,7 @@
 // 4) В 66.54 SW БЫЛ без бампа (правки лендингов при неизменном sw.js);
 //    актуализация 66.59: site-cache v104 (мобильный кегль полосы; в 66.58 был v103 — консолидация styles.css).
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
+// актуализация 66.64: SW-ожидания v107→v108 и game-assets-v41→v42; P3-4 самохостинг Phaser (/game/vendor/, CSP без внешнего CDN, vendor в cache-first ветке SW) + P3-5 PT Sans в css2-линке лендингов (аудит 66.61 — детали в r114)
 // Запуск из корня репозитория: node game/tools/test_round106.mjs
 import fs from 'fs';
 
@@ -51,16 +52,24 @@ ok(ru.includes('<link rel="manifest" href="manifest.json">'), 'index.html: link 
 ok(manRu.icons.every(i => !i.src.startsWith('/') && !i.src.startsWith('.')), 'RU-манифест: относительные иконки сохранены (резолв от /manifest.json — корректно)');
 
 console.log('--- 3. P3-1: sitemap lastmod ---');
+// актуализация 66.64: пины абсолютных дат (2×10-01 + 09-30) устаревали на КАЖДОЙ
+// итерации с бампом lastmod — 66.63 прошла регресс ДО amend с bump_lastmod и
+// оставила эти ассерты устаревшими незаметно. Теперь здесь инварианты (3 lastmod,
+// ISO-формат, пол 2026-10-01), а синхронность git-фактов ↔ sitemap живьём проверяет
+// bump_lastmod --check (r108/r114) — единственный источник истины по датам.
 ok((sitemap.match(/<url>/g) || []).length === 3, 'sitemap: 3 URL (/, /en/, /game/)');
 ok(sitemap.includes('<loc>https://sosnowda.github.io/</loc>') && sitemap.includes('<loc>https://sosnowda.github.io/en/</loc>'), 'sitemap: оба лендинга в списке');
-ok((sitemap.match(/<lastmod>2026-10-01<\/lastmod>/g) || []).length === 2, 'sitemap: лендинги lastmod 2026-10-01 (правки 66.54)');
-ok(sitemap.includes('<lastmod>2026-09-30</lastmod>'), 'sitemap: /game/ lastmod 2026-09-30 (66.52 — сцены)');
+{
+    const mods = sitemap.match(/<lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/g) || [];
+    ok(mods.length === 3, `sitemap: 3 lastmod (фактически ${mods.length})`);
+    ok(mods.every(m => m >= '<lastmod>2026-10-01'), 'sitemap: каждая lastmod не старше пола 2026-10-01 (эпоха аудита 66.56+)');
+}
 ok((sitemap.match(/hreflang=/g) || []).length === 6, 'sitemap: hreflang-альтернаты целы (3×2)');
 ok(!sitemap.includes('2026-09-27'), 'sitemap: устаревшая дата 2026-09-27 исчезла');
 
 console.log('--- 4. SW без бампа ---');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v107';"), 'sw.js: site-cache v107 (актуализация 66.63 — P3-2/P3-3: canonical+h1 игры, порядок заголовков)');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'sw.js: game-assets v41');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v108';"), 'sw.js: site-cache v108 (актуализация 66.64 — P3-4+P3-5: самохостинг Phaser, PT Sans в вебшрифтах)');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 (сообщение ассерта актуализировано 66.64)');
 
 console.log(`\nИТОГ: ${pass} ✓ / ${fail} ✗`);
 if (fail > 0) process.exit(1);

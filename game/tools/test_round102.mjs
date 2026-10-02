@@ -9,6 +9,7 @@
 //        на месте в styles.css;
 //   SW   site-cache v104 (66.59 мобильный кегль полосы сбора; история актуализаций — см. r108), журнал версий в docs/SW_CHANGELOG.md (v97 и v98).
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
+// актуализация 66.64: SW-ожидания v107→v108 и game-assets-v41→v42; P3-4 самохостинг Phaser (/game/vendor/, CSP без внешнего CDN, vendor в cache-first ветке SW) + P3-5 PT Sans в css2-линке лендингов (аудит 66.61 — детали в r114)
 import { readFileSync, existsSync } from 'fs';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -72,14 +73,15 @@ const cspMatch = gameHtml.match(/<meta http-equiv="Content-Security-Policy" cont
 ok(!!cspMatch, 'game/index.html: CSP meta присутствует');
 if (cspMatch) {
     const csp = cspMatch[1];
-    ok(csp.includes("script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net"), 'CSP: Phaser CDN + инлайн-лоадер разрешены точечно');
+    ok(csp.includes("script-src 'self' 'unsafe-inline'"), 'CSP: инлайн-лоадер разрешён точечно');
+    ok(!csp.includes('jsdelivr'), 'CSP: внешний CDN убран (актуализация 66.64 — P3-4: Phaser самохостится в /game/vendor/, внешних скриптов нет)');
     ok(csp.includes("default-src 'self'"), 'CSP: default-src self');
     ok(csp.includes("img-src 'self' data:"), 'CSP: img-src self + data: (favicon)');
     ok(csp.includes("connect-src 'self'"), 'CSP: connect-src self (XHR ассетов Phaser)');
     ok(!csp.includes('unsafe-eval'), 'CSP: unsafe-eval отсутствует (Phaser его не требует)');
     ok(csp.includes("object-src 'none'") && csp.includes("base-uri 'self'"), 'CSP: object-src none + base-uri self');
 }
-ok(gameHtml.includes('https://cdn.jsdelivr.net/npm/phaser@3.88.2'), 'game/index.html: Phaser по-прежнему с jsdelivr (совпадает с CSP)');
+ok(gameHtml.includes('vendor/phaser.min.js'), 'game/index.html: Phaser самохостится в /game/vendor/ (актуализация 66.64 — P3-4 аудита 66.61; совпадает с CSP)');
 
 console.log('--- 4. Аудит №11 (партия 2): инлайн-стили сняты ---');
 const countInlines = (html) => (html.replace(/font-style="[^"]*"/g, '').match(/style="[^"]*"/g) || []).length;
@@ -101,8 +103,8 @@ ok(styles.includes('.sr-only'), 'styles.css: .sr-only существует (ск
 
 console.log('--- 5. Service Worker v99 и журнал ---');
 const sw = read('sw.js');
-ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v107';"), 'SW: site-cache v107 (актуализация 66.63 — P3-2/P3-3; ассерт актуализирован из v101)');
-ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v41';"), 'SW: game-assets-v41 не менялся (ассеты не трогали)');
+ok(sw.includes("var CACHE_NAME = 'chronicles-ruthenia-v108';"), 'SW: site-cache v108 (актуализация 66.64 — P3-4+P3-5; ассерт актуализирован из v101)');
+ok(sw.includes("var GAME_ASSETS_CACHE = 'game-assets-v42';"), 'SW: game-assets-v42 не менялся (ассеты не трогали)');
 const swlog = read('docs/SW_CHANGELOG.md');
 ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 добавлена');
 ok(swlog.includes('- v98 — итерация 66.48'), 'SW-журнал: запись v98 добавлена');

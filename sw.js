@@ -1,5 +1,6 @@
 /* Service Worker — Летописи Руси XV века
-   Network-first для HTML/CSS/JS, cache-first для ассетов игры.
+   Network-first для HTML/CSS/JS, cache-first для ассетов игры
+   и вендор-библиотек (/game/vendor/ — с 66.64).
 */
 
 // ----- Журнал версий кэша -----
@@ -7,8 +8,8 @@
 // ~200 строк комментариев раздували Service Worker. Новые записи о версиях
 // добавляются в docs/SW_CHANGELOG.md и CHANGES.md, но НЕ в этот файл.
 
-var CACHE_NAME = 'chronicles-ruthenia-v107';
-var GAME_ASSETS_CACHE = 'game-assets-v41';
+var CACHE_NAME = 'chronicles-ruthenia-v108';
+var GAME_ASSETS_CACHE = 'game-assets-v42';
 
 self.addEventListener('install', function (event) {
     self.skipWaiting();
@@ -38,8 +39,10 @@ self.addEventListener('fetch', function (event) {
         return;
     }
 
-    // /game/assets/ — cache-first (ассеты не меняются между релизами)
-    if (url.pathname.startsWith('/game/assets/')) {
+    // /game/assets/ и /game/vendor/ — cache-first (ассеты и вендор-библиотеки
+    // не меняются между релизами; vendor появился в 66.64 — самохостинг Phaser,
+    // аудит 66.61 P3-4; game-assets-v42 — новый бакет под новую ветку маршрута)
+    if (url.pathname.startsWith('/game/assets/') || url.pathname.startsWith('/game/vendor/')) {
         event.respondWith(
             caches.open(GAME_ASSETS_CACHE).then(function (cache) {
                 return cache.match(event.request).then(function (cached) {

@@ -55,9 +55,12 @@
     <link rel="preload" href="styles.css" as="style">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prata&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prata&family=PT+Sans:wght@400;700&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap">
+    <!-- 66.64 (аудит 66.61, P3-5): в стек включён и загружен PT Sans (400/700,
+         кириллица+латиница юникод-рангами) — ранее объявлялся в font-family
+         (.fund-bar/.btn-share/.copy-toast), но вебшрифтом не грузился -->
+    <!-- 66.64 (аудит 66.61, P3-4): preconnect/dns-prefetch к внешнему CDN (jsdelivr)
+         сняты — Phaser самохостится в /game/vendor/, внешних скриптов нет -->
     <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
 
     <!-- JSON-LD -->
