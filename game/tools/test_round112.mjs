@@ -13,7 +13,7 @@
 // WCAG-математика (пересчёт контраста прямо в тесте — значения не смогут
 // откатиться ниже AA незаметно).
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
-// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v42 без изменений (детали в r115)
+// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v43 без изменений (детали в r115)
 // Запуск из корня репозитория: node game/tools/test_round112.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -75,8 +75,8 @@ ok(styles.includes('.fund-bar:focus-visible{outline:2px solid #C9A961;outline-of
 ok(block.includes('text-shadow:0 1px 1px rgba(0,0,0,0.5) !important;'), 'text-shadow полоски сохранён (поддержка читаемости)');
 
 console.log('--- 5. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 без изменений (ассеты не тронуты)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v113';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'sw.js: game-assets-v43 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (правка цвета не трогала SW-логику)');
 ok(swlog.includes('- v106 — итерация 66.62'), 'SW_CHANGELOG: запись v106 добавлена');
 

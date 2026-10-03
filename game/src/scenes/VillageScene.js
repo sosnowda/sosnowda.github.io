@@ -27,7 +27,7 @@ import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
 import { applyWeatherVisuals } from '../systems/Weather.js';
 // Раунд 66.10: changeVillageRep убран из импорта (был нужен только луту сундуков)
-import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, isNpcKilled } from '../data/reputation.js';
+import { getVillageRep, getReputationLevel, checkExpulsion, checkVictory, getNpcRep, isNpcKilled, applyQuestRefusalPenalty } from '../data/reputation.js';
 import { t, tf, tk } from '../systems/i18n.js';
 // Раунд 66.8: план деревни — виджет-миникарта в углу + большая панель (клавиша P)
 import { MiniMap } from '../systems/MiniMap.js';
@@ -1482,7 +1482,13 @@ export class VillageScene extends Phaser.Scene {
                         this.busyDialog = false;
                     },
                 },
-                { text: t('✗ Отказаться'), callback: () => { this.busyDialog = false; } },
+                { text: t('✗ Отказаться'), callback: () => {
+                    // Раунд 66.71 (приказ 6): отказ от озвученного задания
+                    // понижает личную репутацию у НПЦ на 1–3 единицы.
+                    const pen = applyQuestRefusalPenalty(this.registry, npcId);
+                    ActionLog.add(this.registry, tf(t('Отказался от задания: «{0}». Личная репутация у НПЦ −{1}.'), quest.title, pen));
+                    this.busyDialog = false;
+                } },
             ],
             { singleton: false, portraitKey, typing: true, typingSpeed: 25 });
     }

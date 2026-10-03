@@ -13,9 +13,10 @@ import {
     equipWeapon, equipArmor,
     formatMoney,
 } from '../systems/Character.js';
-// Раунд 66.17 (п.4): кнопка «Съесть» для съестных припасов узла —
-// единые правила еды (1 час, кулдаун 4 часа, «герой сытый»)
+// Раунд 66.16 (приказы 1–4): единые правила еды и сна
+// Раунд 66.71 (приказ 5): целебная трава — карточка с кулдауном 12 ч, +1 HP
 import { getLootDef, tryEatFood } from '../systems/loot.js';
+import { canUseHerb, registerHerb, showHerbBlockedPopup, HERB_HEAL_HP } from '../systems/meal.js';
 // Раунд 66.28 (пп.5–12): колчан — отдельный слот меню персонажа, вместимость 10,
 // наложение/высыпание стрел между узлом и колчаном
 import { getQuiver, countInventoryArrows, loadQuiver, unloadQuiver, quiverWord, QUIVER_CAP } from '../systems/ammo.js';
@@ -46,10 +47,10 @@ export class CharacterScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5);
 
-        // Имя и архетип (+ возраст — раунд 44; + облик-прессет — раунд 62)
-        // Патч 66.3: имя героя и имя облика — собственные, в EN транслитерацией (t())
+        // Имя и архетип (+ возраст — раунд 44)
+        // Раунд 66.71 (приказ 12): упоминание ОБЛИКА (модели персонажа) снято с листа
+        // Патч 66.3: имя героя — собственное, в EN транслитерацией (t())
         this.add.text(width / 2, 65, `${t(p.name)} — ${t(p.archetype)}` +
-            (p.presetName ? ` · ${t('Облик')} «${t(p.presetName)}»` : '') +
             ` (${p.gender === 'female' ? '♀' : '♂'}${p.age != null ? `, ${p.age} ${ageUnitWord(p.age)}` : ''})`, {
             fontSize: '18px', color: RUS.textDim,
             stroke: '#000', strokeThickness: 2,
@@ -109,12 +110,11 @@ export class CharacterScene extends Phaser.Scene {
             return;
         }
 
-        // Характеристики (2 колонки)
+        // Характеристики (одна колонка; раунд 66.71 — все 5 по SRD, без МР)
         // Патч 66.2: названия характеристик через t() (EN-лист героя)
-        const charLines = CHARACTER_KEYS.slice(0, 4).map(c => `${t(c.name)}: ${p[c.key]}`);
+        const charLines = CHARACTER_KEYS.map(c => `${t(c.name)}: ${p[c.key]}`);
         charLines.push('—');
         charLines.push(`HP: ${p.HP}/${p.HPmax}`);
-        charLines.push(`MP: ${p.MP}/${p.MPmax}`);
         charLines.push(`${t('Бонус урона:')} ${p.DB.text}`);
 
         const colX = width / 2 - 360;
@@ -175,32 +175,32 @@ export class CharacterScene extends Phaser.Scene {
         });
 
         // П.11: снаряжение — исправлен текст, не налезает
-        // (раунд 16: блок характеристик занимает 7 строк × ~22px ≈ 154px от top+30
-        // и заканчивается на ~top+184 — снаряжение опущено ниже, было top+140 → наложение)
-        this.add.text(colX, top + 200, t('Снаряжение:'), {
+        // (раунд 66.71: 5 характеристик + HP + БУ = 8 строк × ~22px ≈ 176px от top+30
+        // и заканчиваются на ~top+206 — блок снаряжения опущен ниже top+212)
+        this.add.text(colX, top + 212, t('Снаряжение:'), {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
         const weapon = WEAPONS[p.weaponId] || { name: 'Кулаки' };
         const armor = ARMORS[p.armorId] || { name: 'Без доспеха' };
         // Раунд 66.28 (п.6): колчан — в строке снаряжения характеристик
-        this.add.text(colX, top + 224, `${t('⚔ Оружие:')} ${t(weapon.name)} (${t('урон')} ${weapon.dice.min}-${weapon.dice.max}+${weapon.bonus || 0})`, {
+        this.add.text(colX, top + 236, `${t('⚔ Оружие:')} ${t(weapon.name)} (${t('урон')} ${weapon.dice.min}-${weapon.dice.max}+${weapon.bonus || 0})`, {
             fontSize: '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
-        this.add.text(colX, top + 246, `${t('🛡 Доспех:')} ${t(armor.name)} (${t('защита')} ${armor.def})`, {
+        this.add.text(colX, top + 258, `${t('🛡 Доспех:')} ${t(armor.name)} (${t('защита')} ${armor.def})`, {
             fontSize: '14px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
         // 66.33: колчан — отдельной строкой (строка доспеха с колчаном налезала
         // на правую колонку навыков — QA-кадр 6633)
-        this.add.text(colX, top + 268, `${t('🪶 Колчан')}: ${getQuiver(p)}/${QUIVER_CAP}`, {
+        this.add.text(colX, top + 280, `${t('🪶 Колчан')}: ${getQuiver(p)}/${QUIVER_CAP}`, {
             fontSize: '13px', color: RUS.text,
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5);
 
         // Деньги
-        this.add.text(colX, top + 292, `${t('💰 Денег:')} ${formatMoney(p.dengas || 0)}`, {
+        this.add.text(colX, top + 304, `${t('💰 Денег:')} ${formatMoney(p.dengas || 0)}`, {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
@@ -347,8 +347,12 @@ export class CharacterScene extends Phaser.Scene {
                 this.add.rectangle(ix, iy, 64, 64, 0x2a1f15, 0.8)
                     .setStrokeStyle(2, item.equipped ? RUS.accent : RUS.border, 1);
                 // Иконка / эмодзи-заглушка
-                if (item.iconKey) {
-                    this.add.image(ix, iy, item.iconKey).setDisplaySize(48, 48);
+                // Раунд 66.71 (приказ 16): иконки из assets/icons (opengameart) —
+                // для КАЖДОГО предмета/оружия/брони ключ icon_<id>; эмодзи — фолбэк.
+                const iconKey = item.iconKey
+                    || (this.textures.exists('icon_' + item.id) ? 'icon_' + item.id : null);
+                if (iconKey) {
+                    this.add.image(ix, iy, iconKey).setDisplaySize(48, 48);
                 } else {
                     this.add.text(ix, iy, item.emoji || '📦', { fontSize: '26px' })
                         .setOrigin(0.5);
@@ -388,6 +392,12 @@ export class CharacterScene extends Phaser.Scene {
                     this.add.text(ix + 20, iy - 20, '🍽', { fontSize: '12px' })
                         .setOrigin(0.5).setDepth(51);
                     hitArea.on('pointerup', () => this.showFoodCard(item, foodDef));
+                }
+                // Раунд 66.71 (приказ 5): целебная трава — карточка «Выпить отвар»
+                // (+1 HP, кулдаун 12 ч); время НЕ тратит (в отличие от еды).
+                const isHerb = item.id === 'herb' && !item.equipped;
+                if (isHerb) {
+                    hitArea.on('pointerup', () => this.showHerbCard(item));
                 }
                 // Раунд 66.28 (пп.6,10,11): стрелы узла и колчан-слот — свои карточки
                 if (item.id === 'arrows' && !item.equipped) {
@@ -483,5 +493,54 @@ export class CharacterScene extends Phaser.Scene {
                 t('Сырым это не едят: приготовь на костре (лесное кострище или костёр пастухов — 30 мин) или продай трактирщику/мяснику.'),
                 [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
         }
+    }
+
+    /**
+     * Раунд 66.71 (приказ 5): карточка ЦЕЛЕБНОЙ ТРАВЫ.
+     * «Восстанавливают Здоровье, при использовании, только на 1 единицу.
+     * Можно использовать не чаше чем раз в 12 часов» — кулдаун в meal.js,
+     * время НЕ тратится (это зелье, а не еда).
+     */
+    showHerbCard(item) {
+        const p = this.registry.get('player');
+        const count = (item && item.count) || 0;
+        if (count <= 0) return;
+        const herbCheck = canUseHerb(this.registry);
+        if (!herbCheck.ok) {
+            showHerbBlockedPopup(this, herbCheck.minutesLeft);
+            return;
+        }
+        createDialog(this, `🌿 ${t('Целебная трава')}`,
+            tf(t('Целебная трава ×{0} в узле. Выпить отвар: +{1} здоровью. Травы можно принимать не чаще раза в 12 часов.'), count, HERB_HEAL_HP),
+            [
+                { text: t('🌿 Выпить отвар'), callback: () => {
+                    const check = canUseHerb(this.registry);
+                    if (!check.ok) {
+                        showHerbBlockedPopup(this, check.minutesLeft);
+                        return;
+                    }
+                    if ((p.HP || 0) >= (p.HPmax || 10)) {
+                        createDialog(this, `🌿 ${t('Целебная трава')}`,
+                            t('Здоровье и так полное — отвар не нужен. Трава осталась в узле.'),
+                            [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+                        return;
+                    }
+                    const heal = Math.min(HERB_HEAL_HP, (p.HPmax || 10) - (p.HP || 0));
+                    p.HP = (p.HP || 0) + heal;
+                    // Убрать ОДНУ траву из узла (кучкуется по id)
+                    const it = (p.inventory || []).find(i => i && i.id === 'herb');
+                    if (it) {
+                        it.count = (it.count || 1) - 1;
+                        if (it.count <= 0) p.inventory = p.inventory.filter(i => i !== it);
+                    }
+                    registerHerb(this.registry);
+                    this.registry.set('player', p);
+                    this.scene.restart({ from: this.from, tab: 'inventory' });
+                    createDialog(this, `🌿 ${t('Целебная трава')}`,
+                        tf(t('Ты принял траву и восстановил {0} здоровья.'), heal),
+                        [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+                } },
+                { text: t('Отмена'), callback: () => {} },
+            ], { singleton: false });
     }
 }

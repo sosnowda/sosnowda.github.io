@@ -26,7 +26,7 @@ import { applyNpcMurderConsequences, setNpcTruce } from '../data/reputation.js';
 import { battleLookFor } from '../data/heroes.js';
 // Раунд 46 (п.1): жители дерутся своими характеристиками
 import { findNpc } from '../data/npcNames.js';
-import { getActiveQuests, checkQuestCompletion, consumeBlessing } from '../data/questGenerator.js';
+import { getActiveQuests, checkQuestCompletion, getBlessedSkill } from '../data/questGenerator.js';
 import { getTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals } from '../systems/Weather.js';
 // Раунд 66.17 (п.11): с убитого волка — мясо (сырое; готовить на костре или продать)
@@ -511,7 +511,8 @@ export class CombatScene extends Phaser.Scene {
      * Счётчик ходов до побега вора продолжает тикать (вор ближе к побегу).
      */
     flee() {
-        const dodgeSkill = consumeBlessing(this.registry, this.player.skills.dodge || 25);
+        // Раунд 66.71: благословение батюшки усиливает Уклонение (+10%, приказ 4)
+        const dodgeSkill = getBlessedSkill(this.registry, this.player.skills.dodge || 25);
         const res = skillCheck(dodgeSkill);
         this.busy = true;
         // Раунд 45 (п.4): бой с враждебным ЖИТЕЛЕМ (не вор, не разбойник с тракта)
@@ -760,7 +761,8 @@ export class CombatScene extends Phaser.Scene {
         }
 
         // Раунд 22 (п.11): благословение батюшки усиливает ОДНУ проверку навыка
-        const skill = consumeBlessing(this.registry, this.player.skills[w.skill] || 20);
+        // Раунд 66.71: благословение батюшки усиливает и удар оружием (+10%, приказ 4)
+        const skill = getBlessedSkill(this.registry, this.player.skills[w.skill] || 20);
         const res = skillCheck(skill);
 
         if (weaponKey === 'bow') {
@@ -984,7 +986,8 @@ export class CombatScene extends Phaser.Scene {
                         if (this.audioManager) this.audioManager.playSwordMiss();
                     } else {
                         if (this.playerDodging) {
-                            const dr = skillCheck(this.player.skills.dodge);
+                            // Раунд 66.71: благословение усиливает и ответное уклонение
+                            const dr = skillCheck(getBlessedSkill(this.registry, this.player.skills.dodge));
                             if (dr.result === ROLL_RESULT.SUCCESS || dr.result === ROLL_RESULT.CRITICAL) {
                                 this.pushLog(tf('Ты уклонился от {0} ({1})!', t(en.name), dr.roll));
                                 this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'dust');

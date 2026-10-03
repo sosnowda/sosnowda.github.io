@@ -18,7 +18,7 @@ import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal } from '../system
 import { t, tf } from '../systems/i18n.js';
 // Раунд 45 (пп.5,6 заявки): староста мирит игрока с разозлёнными НПЦ за виру
 // Раунд 46 (п.4): со СТАРОСТОЙ всегда можно помириться (getViraCandidates)
-import { getViraCandidates, payViraToElder } from './reputation.js';
+import { getViraCandidates, payViraToElder, applyQuestRefusalPenalty } from './reputation.js';
 
 /**
  * Раунд 22 (п.3): повторный расспрос того же NPC НЕВОЗМОЖЕН.
@@ -232,15 +232,14 @@ export const DIALOGUES = {
                     },
                 ],
             },
-            // Финальный узел после победы
+            // Финальный узел после победы (раунд 66.71: без МР — только Здоровье)
             d: {
                 speaker: 'Староста Мирослав',
-                text: 'Ты вернул нашу святыню! Вся деревня у тебя в долгу. Прими нашу искреннюю благодарность и это благословение. (Здоровье и воля восстановлены)',
-                en: 'You have returned our holy treasure! The whole village is in your debt. Accept our heartfelt thanks and this blessing. (Health and Will are restored)',
+                text: 'Ты вернул нашу святыню! Вся деревня у тебя в долгу. Прими нашу искреннюю благодарность и этот пир в твою честь. (Здоровье полностью восстановлено)',
+                en: 'You have returned our holy treasure! The whole village is in your debt. Accept our heartfelt thanks and this feast in your honour. (Health is fully restored)',
                 action: (scene) => {
                     const p = scene.registry.get('player');
                     p.HP = p.HPmax;
-                    p.MP = p.MPmax;
                     const q = scene.registry.get('quest');
                     // Раунд 43 (п.2): квест окончен — баннер цели гаснет.
                     q.currentObjective = '';
@@ -944,26 +943,29 @@ export const DIALOGUES = {
                 },
                 choices: [],
             },
-            // Раунд 22 (п.11): благословение — +10% к ШАНСАМ ОДНОЙ проверки навыка
-            // (поиска следов, расспроса, убеждения, оглушения или удара в бою).
+            // Раунд 66.71 (приказ 4): благословение — «ВСЕ навыки +10% на
+            // 12 часов», получать можно не чаще раза в 24 игровых часа.
             blessing: {
                 speaker: 'Отец Савватий',
                 text: '...',
                 action: (scene) => {
-                    const q = scene.registry.get('quest') || {};
-                    if (q.blessing) {
-                        scene._lastAskResult = { message: t('Батюшка качает головой: «Ты уже под защитой Господней, чадо. Благословение исполнится при первом же испытании — не гневи Боженьку жадностью.»') };
+                    if (isBlessingActive(scene.registry)) {
+                        scene._lastAskResult = { message: t('Батюшка качает головой: «Ты уже под защитой Господней, чадо. Благословение действует ещё до двенадцати часов — не гневи Боженьку жадностью.»') };
                         return;
                     }
-                    q.blessing = true;
-                    scene.registry.set('quest', q);
+                    const cdLeft = blessingCooldownLeftMin(scene.registry);
+                    if (cdLeft > 0) {
+                        const h = Math.max(1, Math.ceil(cdLeft / 60));
+                        scene._lastAskResult = { message: tf(t('Батюшка качает головой: «Благословение даруется не чаще раза в сутки. Приходи через {0} ч, чадо.»'), h) };
+                        return;
+                    }
+                    blessPlayer(scene.registry);
                     // Раунд 31: час на беседу с батюшкой списывается при закрытии
                     // Раунд 24: тихая молитва и колокол при благословении
                     if (scene.audioManager) {
                         scene.audioManager.playPrayerChant();
                     }
-                    scene._lastAskResult = { message: t('Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ Благословение: СЛЕДУЮЩАЯ проверка навыка (следы, расспрос, убеждение, оглушение или удар) пройдёт с +10 к шансу — но только одна!') };
-                    ActionLog.add(scene.registry, t('Получил благословение в церкви: +10 к одной проверке навыка.'));
+                    scene._lastAskResult = { message: t('Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ Благословение: ВСЕ твои навыки усилены на 10% на двенадцать часов!') };
                 },
                 choices: [
                     { text: t('Аминь.'), next: 'ask_result' },
@@ -1052,9 +1054,8 @@ export const DIALOGUES = {
                 text: 'Помолимся вместе, чадо. Господи, помилуй и сохрани раба Твоего...',
                 en: 'Let us pray together, my child. O Lord, have mercy and keep Thy servant...',
                 action: (scene) => {
-                    const p = scene.registry.get('player');
-                    p.MP = Math.min(p.MPmax, p.MP + 2);
-                    ActionLog.add(scene.registry, t('Помолился в церкви (+2 MP).'));
+                    // Раунд 66.71 (приказ 7): МР удалён — молитва даёт душевный покой
+                    ActionLog.add(scene.registry, t('Помолился в церкви — на душе стало спокойно.'));
                 },
                 choices: [{ text: t('Аминь.'), end: true }],
             },
@@ -2930,7 +2931,7 @@ export function appendWeatherChoice(dialogId, choices) {
 // ============================================================
 
 import { NPC_DIALOGUE } from './npcPresence.js';
-import { NPC_QUEST_POOLS, makeQuestOffer, acceptQuest } from './questGenerator.js';
+import { NPC_QUEST_POOLS, makeQuestOffer, acceptQuest, isBlessingActive, blessingCooldownLeftMin, blessPlayer } from './questGenerator.js';
 import { showDonationMenu } from '../systems/ChurchDonation.js';
 
 const QUEST_ASK_TEXT = t('📜 Есть ли дело?');
@@ -2987,7 +2988,18 @@ function buildQuestTalk(dialogId, startNode) {
                     action: (sc) => { if (sc && sc.registry) acceptQuest(sc.registry, quest); },
                     end: true,
                 },
-                { text: t('✗ Отказаться'), end: true },
+                {
+                    // Раунд 66.71 (приказ 6): отказ от озвученного задания
+                    // понижает личную репутацию у НПЦ на 1–3 единицы.
+                    text: t('✗ Отказаться'),
+                    action: (sc) => {
+                        if (sc && sc.registry && npcId) {
+                            const pen = applyQuestRefusalPenalty(sc.registry, npcId);
+                            ActionLog.add(sc.registry, tf(t('Отказался от задания: «{0}». Личная репутация у НПЦ −{1}.'), quest.title, pen));
+                        }
+                    },
+                    end: true,
+                },
             ];
         },
     };

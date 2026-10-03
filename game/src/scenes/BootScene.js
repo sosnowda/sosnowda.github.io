@@ -384,7 +384,16 @@ export class BootScene extends Phaser.Scene {
         this.load.image('ui_button_wood', 'assets/ui/button_wood.png');
 
         // ----- ИКОНКИ -----
-        ['sword', 'bow', 'herb', 'gold', 'potion', 'icon'].forEach((i) => {
+        // Раунд 66.71 (приказ 16 владельца): полный набор иконок предметов/
+        // оружия/брони для свитка персонажа и инвентаря — пак «496 pixel art
+        // icons for medieval/fantasy RPG» (7Soul, CC0) с opengameart.org.
+        // Файлы — game/assets/icons/<id>.png; ключи icon_<id> (см. CharacterScene).
+        ['fists', 'club', 'palitsa', 'mace', 'flail', 'knife', 'spear', 'sword', 'axe', 'bow',
+         'sabre', 'steel_sword', 'arrows',
+         'padded', 'leather', 'chain', 'plate',
+         'herb', 'gold', 'potion', 'icon', 'bread', 'ration', 'mead', 'kvass', 'amulet',
+         'fish_raw', 'fish_cooked', 'meat_raw', 'meat_cooked',
+        ].forEach((i) => {
             this.load.image(`icon_${i}`, `assets/icons/${i}.png`);
         });
 

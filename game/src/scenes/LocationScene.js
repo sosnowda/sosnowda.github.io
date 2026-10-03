@@ -11,7 +11,7 @@ import {
     // Раунд 66.28 (п.14): наводка стражника на вора
     guardThiefHintLine,
 } from '../data/thief.js';
-import { onLocationVisited, getActiveQuests } from '../data/questGenerator.js';
+import { onLocationVisited, getActiveQuests, getBlessedSkill } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
 import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
@@ -909,7 +909,8 @@ export class LocationScene extends Phaser.Scene {
                     spendArrow(player);
                     this.registry.set('player', player);
                     if (this.audioManager) this.audioManager.playShoot();
-                    const chance = shotChance(cfg.base, (player.skills && player.skills.bow) || 15);
+                    // Раунд 66.71: благословение усиливает и выстрел (+10%)
+                    const chance = shotChance(cfg.base, getBlessedSkill(this.registry, (player.skills && player.skills.bow) || 15));
                     const hit = Math.random() * 100 < chance;
                     if (hit) {
                         const [minM, maxM] = cfg.meat;

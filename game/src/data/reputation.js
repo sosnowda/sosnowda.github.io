@@ -442,15 +442,31 @@ export function applyGiftBonus(registry, npcId, giftValue) {
 }
 
 /**
- * П.11: Похвала NPC через навык Oratory.
- * Раунд 48 (п.4 заявки): проверки БЕЗ сопротивлений — «НАВЫК ПРОТИВ НАВЫКА»:
- * Красноречие игрока против Красноречия жителя; если житель не владеет
- * навыком — «ХАРАКТЕРИСТИКИ ПРОТИВ ХАРАКТЕРИСТИК» (Обаяние против Обаяния).
+ * Раунд 66.71 (приказ 6 владельца): ОТКАЗ от принятия озвученного задания
+ * при запросе в диалоге задания у НПЦ понижает у него ЛИЧНУЮ репутацию
+ * игрока на 1–3 единицы (точно, без балансировочного множителя и каскада
+ * — по прецеденту 66.21 «точных изменений»). Вызывается из трёх точек
+ * отказа: интерьер (кнопка «Задание»), улица, узел quest_talk диалога.
+ * @returns {number} фактическое снижение (1..3)
  */
-export function applyCompliment(registry, npcId, oratorySkill) {
-    const opp = getNpcOpposition(findNpc(registry, npcId), 'oratory');
-    const res = opposedSkillCheck(oratorySkill, opp.value, 0);
-    const checkLine = formatOpposedCheck(res, 'Красноречие', `${opp.ruNameGen} жителя`);
+export function applyQuestRefusalPenalty(registry, npcId) {
+    const penalty = 1 + Math.floor(Math.random() * 3); // 1..3
+    changeNpcRepExact(registry, npcId, -penalty);
+    return penalty;
+}
+
+/**
+ * П.11: Похвала NPC через навык Болтовня (Fast Talk).
+ * Раунд 66.71 (приказ 10 владельца): «Красноречие» удалено — социальный
+ * навык похвалы теперь «Болтовня».
+ * Раунд 48 (п.4 заявки): проверки БЕЗ сопротивлений — «НАВЫК ПРОТИВ НАВЫКА»:
+ * Болтовня игрока против Болтовни жителя; если житель не владеет навыком —
+ * «ХАРАКТЕРИСТИКИ ПРОТИВ ХАРАКТЕРИСТИК» (Харизма против Харизмы).
+ */
+export function applyCompliment(registry, npcId, fastTalkSkill) {
+    const opp = getNpcOpposition(findNpc(registry, npcId), 'fast_talk');
+    const res = opposedSkillCheck(fastTalkSkill, opp.value, 0);
+    const checkLine = formatOpposedCheck(res, 'Болтовня', `${opp.ruNameGen} жителя`);
     
     if (res.result === 'critical') {
         changeNpcRep(registry, npcId, 5, 'удачная похвала (крит)');

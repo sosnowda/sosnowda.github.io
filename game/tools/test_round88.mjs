@@ -5,7 +5,7 @@
 // 3) CombatScene: боевой облик по архетипу/полу, без флипа, выстрел/смерть/победа
 // 4) heroes.js: BATTLE_LOOK_BY_PRESET (8 пресетов) + страховка по полу
 // 5) конвейер tools/mvsv_battle_6632.py с якорением по туловищу
-// 6) SW v84 + game-assets-v42 (66.34 актуализировал v83/v29). Сейвы совместимы.
+// 6) SW v84 + game-assets-v43 (66.34 актуализировал v83/v29). Сейвы совместимы.
 import { readFileSync, existsSync, readdirSync } from 'fs';
 
 let pass = 0, fail = 0;
@@ -104,9 +104,9 @@ ok(pipe.includes("anchor='f1' if anim == 'idle' else 'mean'"), 'idle якори�
 ok(pipe.includes('HUNTRESS_DEAD_FRAMES'), 'смерть Охотницы собирается из Huntress_dead.png (128-сетка)');
 ok(pipe.includes('Huntress_dead.png 128er'), 'манифест помечает спец-сборку смерти');
 
-console.log('--- 6. SW v84 + game-assets-v42 (66.34) ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'SW: site-cache v112 (актуализация 66.70)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'SW: game-assets-v42 (перегенерированные листы + бусты)');
+console.log('--- 6. SW v84 + game-assets-v43 (66.34) ---');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v113';"), 'SW: site-cache v112 (актуализация 66.70)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'SW: game-assets-v43 (перегенерированные листы + бусты)');
 ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 
 console.log(`\nИТОГО: ✓ ${pass}  ✗ ${fail}`);

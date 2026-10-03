@@ -13,32 +13,71 @@ import { applyQuestFailurePenalty } from './reputation.js';
 import { getSeason } from '../systems/TimeSystem.js';
 
 // ============================================================
-// БЛАГОСЛОВЕНИЕ (раунд 22, п.11)
-// Священник в церкви даёт благословение: следующая проверка навыка
-// (любая: поиск следов, расспрос, убеждение, оглушение, атака) проходит
-// с +10 к шансу — но только ОДНА проверка.
+// БЛАГОСЛОВЕНИЕ (раунд 22, п.11) — ПЕРЕРАБОТАНО РАУНДОМ 66.71 (приказ 4
+// владельца): «Благословение священника должно ТОЛЬКО увеличивать параметры
+// всех навыков на 10% на 12 часов. Получить можно только раз в 24 часа».
+//   • длительность: 12 игровых часов (BLESSING_DURATION_MIN = 720 мин);
+//   • кулдаун получения: 24 игровых часа (BLESSING_COOLDOWN_MIN);
+//   • действует на ВСЕ проверки навыков (атака, уклон, убеждение,
+//     болтовня, запугивание, следы, выстрел, оглушение) — getBlessedSkill;
+//   • НЕ расходуется за одну проверку — истекает по времени.
+// Состояние — registry-ключ 'blessingState' с абсолютной игровой минутой
+// (формула та же, что у meal.js: (год*372 + месяц*31 + день)*1440 + ч*60 + мин).
 // ============================================================
 
-/** Есть ли у героя неиспользованное благословение. */
-export function hasBlessing(registry) {
-    const q = registry.get('quest') || {};
-    return !!q.blessing;
+export const BLESSING_DURATION_MIN = 720;   // 12 часов действия
+export const BLESSING_COOLDOWN_MIN = 1440;  // 24 часа кулдауна получения
+export const BLESSING_SKILL_MULT = 1.1;     // +10% ко всем навыкам
+
+/** Абсолютная игровая минута (та же формула, что в meal.js/диалогах). */
+function absMinutes(registry) {
+    const time = registry ? registry.get('gameTime') : null;
+    if (!time) return 0;
+    const day = (time.yearFromChrist * 372) + (time.month * 31) + time.day;
+    return (day * 1440) + ((time.hour || 0) * 60) + (time.minute || 0);
+}
+
+function blessingState(registry) {
+    return (registry && registry.get('blessingState')) || { lastAbsMin: -999999 };
+}
+
+/** Сколько минут осталось действия благословения (0 — не действует). */
+export function blessingMinutesLeft(registry) {
+    const left = (blessingState(registry).lastAbsMin + BLESSING_DURATION_MIN) - absMinutes(registry);
+    return left > 0 ? left : 0;
+}
+
+/** Действует ли сейчас благословение (+10% ко всем навыкам). */
+export function isBlessingActive(registry) {
+    return blessingMinutesLeft(registry) > 0;
+}
+
+/** Сколько минут осталось до конца кулдауна получения (0 — можно просить). */
+export function blessingCooldownLeftMin(registry) {
+    const left = (blessingState(registry).lastAbsMin + BLESSING_COOLDOWN_MIN) - absMinutes(registry);
+    return left > 0 ? left : 0;
 }
 
 /**
- * Применить благословение к проверке навыка. Если благословение есть —
- * оно расходуется и навык увеличивается на +10 (один раз!).
- * @returns {number} значение навыка для skillCheck
+ * Дать герою благословение (узел батюшки или награда поручения священника):
+ * все навыки +10% на 12 часов; точка отсчёта кулдауна 24 часа.
+ * Повторное получение ОБНОВЛЯЕТ длительность и кулдаун.
  */
-export function consumeBlessing(registry, skillValue) {
-    const q = registry.get('quest');
-    if (q && q.blessing) {
-        q.blessing = false;
-        registry.set('quest', q);
-        ActionLog.add(registry, t('✨ Благословение батюшки окрыляет: +10 к шансу этой проверки (единственный раз).'));
-        return Math.min(95, (skillValue || 0) + 10);
-    }
-    return skillValue || 0;
+export function blessPlayer(registry) {
+    if (!registry) return;
+    registry.set('blessingState', { lastAbsMin: absMinutes(registry) });
+    ActionLog.add(registry, t('✨ Благословение батюшки: все навыки +10% на 12 часов.'));
+}
+
+/**
+ * Значение навыка с учётом действующего благословения (+10%, потолок 99).
+ * Применяется ко ВСЕМ проверкам навыков героя (приказ 4: «всех навыков»).
+ * @returns {number} значение для skillCheck/opposedSkillCheck
+ */
+export function getBlessedSkill(registry, skillValue) {
+    const v = Math.max(1, Number(skillValue) || 0);
+    if (!isBlessingActive(registry)) return v;
+    return Math.min(99, Math.round(v * BLESSING_SKILL_MULT));
 }
 
 // ============================================================
@@ -560,9 +599,9 @@ function generateRewards(npcId, questType, scale, registry) {
         rewards.push({ type: 'item', id: 'bread', name: t('Хлеб'), count: 1 + Math.floor(Math.random() * 2), consumable: true, heal: 2 });
     }
 
-    // Питьё (медовуха, квас)
+    // Питьё (медовуха) — раунд 66.71: МР удалён; питьё лечит +1 HP (как в трактире)
     if (rewardTypes.includes('drink') && Math.random() < 0.5) {
-        rewards.push({ type: 'item', id: 'mead', name: t('Медовуха'), count: 1, consumable: true, mpHeal: 2 });
+        rewards.push({ type: 'item', id: 'mead', name: t('Медовуха'), count: 1, consumable: true, heal: 1 });
     }
 
     // Лечебная трава
@@ -570,12 +609,14 @@ function generateRewards(npcId, questType, scale, registry) {
         rewards.push({ type: 'item', id: 'herb', name: t('Целебная трава'), count: 1 + Math.floor(Math.random() * 2), consumable: true });
     }
 
-    // Благословение/отвар (восстановление HP/MP). Раунд 66.12 (п.5):
-    // «Благословение батюшки» — только у священника; вдова и знахарка
-    // вручают свой травный отвар (сакральное — не их роль).
+    // Благословение/отвар. Раунд 66.12 (п.5): «Благословение батюшки» —
+    // только у священника; вдова и знахарка вручают свой травный отвар.
+    // Раунд 66.71 (приказ 4): благословение священника — ТОЛЬКО «+10% ко
+    // всем навыкам на 12 часов» (не лечение); травный отвар вдовы/знахарки —
+    // прежнее полное восстановление Здоровья.
     if (rewardTypes.includes('blessing')) {
         const blessName = (npcId === 'priest')
-            ? t('Благословение батюшки (полное восстановление)')
+            ? t('Благословение батюшки (+10% ко всем навыкам на 12 часов)')
             : t('Травный отвар (полное восстановление)');
         rewards.push({ type: 'blessing', name: blessName });
     }
@@ -849,7 +890,7 @@ export function grantQuestRewards(registry, quest) {
                     count: reward.count,
                     type: reward.weapon ? 'weapon' : (reward.armor ? 'armor' : 'consumable'),
                     heal: reward.heal,
-                    mpHeal: reward.mpHeal,
+                    // Раунд 66.71: поле лечения МР удалено (МР в игре больше нет)
                     // РАУНД 62 (п.7): меч старосты — уникальный дар, продаже
                     // кузнецу не подлежит (флаг проверяется во вкладке «Продать»)
                     uniqueFromElder: reward.uniqueFromElder || false,
@@ -857,9 +898,16 @@ export function grantQuestRewards(registry, quest) {
             }
             grantedRewards.push(`${reward.name} ×${reward.count}`);
         } else if (reward.type === 'blessing') {
-            player.HP = player.HPmax;
-            player.MP = player.MPmax;
-            grantedRewards.push(t('Благословение (полное восстановление)'));
+            // Раунд 66.71 (приказ 4): благословение СВЯЩЕННИКА — «+10% ко всем
+            // навыкам на 12 часов» (и кулдаун 24 ч); травный отвар вдовы/
+            // знахарки — прежнее полное восстановление Здоровья (без МР).
+            if (quest.npcId === 'priest') {
+                blessPlayer(registry);
+                grantedRewards.push(t('Благословение батюшки (+10% ко всем навыкам на 12 часов)'));
+            } else {
+                player.HP = player.HPmax;
+                grantedRewards.push(t('Травный отвар (полное восстановление)'));
+            }
         }
     });
 

@@ -8,12 +8,12 @@
 // ~200 строк комментариев раздували Service Worker. Новые записи о версиях
 // добавляются в docs/SW_CHANGELOG.md и CHANGES.md, но НЕ в этот файл.
 
-// 66.70 (аудит владельца): бамп v112 — HTML RU+EN лендингов (сняты inline
-// onclick попапа поддержки, meta keywords, fetchpriority="low" у preload
-// первого скриншота) + новый модуль js/modules/webvitals.js (Web Vitals
-// → Метрика). Код SW не менялся; game-assets-v42 цел.
-const CACHE_NAME = 'chronicles-ruthenia-v112';
-const GAME_ASSETS_CACHE = 'game-assets-v42';
+// 66.71 (приказы владельца 1–16): бамп v112→v113 — HTML лендингов не менялся,
+// но заменены 6 и обновлены +24 файла game/assets/icons/*.png (иконки
+// предметов/оружия/брони — CC0-пак с opengameart.org) — cache-first бакет
+// ассетов обязан перевернуться. game-assets-v42→v43.
+const CACHE_NAME = 'chronicles-ruthenia-v113';
+const GAME_ASSETS_CACHE = 'game-assets-v43';
 
 self.addEventListener('install', function (event) {
     self.skipWaiting();

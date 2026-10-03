@@ -11,7 +11,7 @@
 // 4) В 66.54 SW БЫЛ без бампа (правки лендингов при неизменном sw.js);
 //    актуализация 66.59: site-cache v104 (мобильный кегль полосы; в 66.58 был v103 — консолидация styles.css).
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
-// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v42 без изменений (детали в r115)
+// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v43 без изменений (детали в r115)
 // Запуск из корня репозитория: node game/tools/test_round106.mjs
 import fs from 'fs';
 
@@ -68,8 +68,8 @@ ok((sitemap.match(/hreflang=/g) || []).length === 6, 'sitemap: hreflang-альт
 ok(!sitemap.includes('2026-09-27'), 'sitemap: устаревшая дата 2026-09-27 исчезла');
 
 console.log('--- 4. SW без бампа ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 (сообщение ассерта актуализировано 66.64)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v113';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'sw.js: game-assets-v43 (сообщение ассерта актуализировано 66.64)');
 
 console.log(`\nИТОГ: ${pass} ✓ / ${fail} ✗`);
 if (fail > 0) process.exit(1);

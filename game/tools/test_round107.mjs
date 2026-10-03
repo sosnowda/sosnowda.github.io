@@ -9,8 +9,8 @@
 // SW бампнут в 66.57 (P3-3 — фолбэк только navigate): site-cache v101→v102;
 // здесь секция 4 актуализирована под v104 (66.59 — мобильный кегль полосы; запись журнала — см. r109).
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
-// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v42 без изменений (детали в r115)
-// актуализация 66.68: SW-ожидания v109→v110; P3 аудита §9/66.66 — дубли i18n ×18 (i18n.js), покадровые Vector2 ×3 сцены, W3C-кодирование URL ×3 (HTML страниц → бамп), game-assets-v42 без изменений (детали в r116)
+// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v43 без изменений (детали в r115)
+// актуализация 66.68: SW-ожидания v109→v110; P3 аудита §9/66.66 — дубли i18n ×18 (i18n.js), покадровые Vector2 ×3 сцены, W3C-кодирование URL ×3 (HTML страниц → бамп), game-assets-v43 без изменений (детали в r116)
 // Запуск из корня репозитория: node game/tools/test_round107.mjs
 import fs from 'fs';
 import path from 'path';
@@ -60,8 +60,8 @@ const mainJs = read('js/main.js');
 ok(mainJs.includes('initMapLightbox') && mainJs.includes('initGallery'), 'main.js: импорты и вызовы обоих модулей сохранены');
 
 console.log('--- 4. SW v103 (бамп 66.58 — консолидация styles.css; в 66.57 был v102 под P3-3) ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'sw.js: v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets v41');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v113';"), 'sw.js: v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'sw.js: game-assets v41');
 // 66.57 (актуализация: в 66.55 ассерты запрещали запись v102 — теперь она ожидаема)
 ok(swLog.includes('- v102 — итерация 66.57'), 'SW_CHANGELOG: запись v102 добавлена (66.57)');
 ok(swLog.includes('- v101'), 'SW_CHANGELOG: историческая запись v101 на месте');

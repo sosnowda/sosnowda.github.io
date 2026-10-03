@@ -460,15 +460,40 @@ const EN = {
     'Стрельба из лука': 'Archery',
     'Владение копьём': 'Spear fighting',
     'Рукопашная': 'Brawling',
+    // Раунд 66.71 (п.14): новый боевой навык — дробящее (булавы, кистени, дубины, палицы)
+    'Ударное оружие': 'Blunt weapons',
     'Уклонение': 'Dodge',
-    'Красноречие': 'Oratory',
+    // Раунд 66.71 (п.10): «Красноречие» удалено — вместо него «Болтовня»
     'Убеждение': 'Persuade',
     'Болтовня': 'Fast talk',
     'Запугивание': 'Intimidate',
     'Знахарство': 'Folk medicine',
     'Выживание': 'Survival',
-    'Верховая езда': 'Riding',
     'Слух': 'Listen',
+
+    // --- Раунд 66.71 (приказы 4–7 владельца): благословение / травы / отказ / без МР ---
+    '✨ Благословение батюшки: все навыки +10% на 12 часов.': '✨ The priest\'s blessing: all skills +10% for 12 hours.',
+    'Благословение батюшки (+10% ко всем навыкам на 12 часов)': 'The priest\'s blessing (+10% to all skills for 12 hours)',
+    'благословение (+10% ко всем навыкам на 12 часов)': 'blessing (+10% to all skills for 12 hours)',
+    'Батюшка качает головой: «Ты уже под защитой Господней, чадо. Благословение действует ещё до двенадцати часов — не гневи Боженьку жадностью.»':
+        'The priest shakes his head: "You are already under God\'s protection, my child. The blessing lasts another twelve hours — do not anger the Lord with greed."',
+    'Батюшка качает головой: «Благословение даруется не чаще раза в сутки. Приходи через {0} ч, чадо.»':
+        'The priest shakes his head: "A blessing is given no more than once a day. Come back in {0} h, my child."',
+    'Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ Благословение: ВСЕ твои навыки усилены на 10% на двенадцать часов!':
+        'The priest lays his hand on your head and whispers a prayer. Warmth spreads over your shoulders.\n\n✨ Blessing: ALL your skills are enhanced by 10% for twelve hours!',
+    '🌿 Организм ещё не принял прошлую траву': '🌿 Your body has not yet taken in the previous herb',
+    'Целебные травы можно принимать не чаще раза в 12 часов. Следующая трава подействует примерно через {0} ч.':
+        'Healing herbs can be taken no more than once every 12 hours. The next herb will work in about {0} h.',
+    '🌿 Выпить отвар': '🌿 Drink the brew',
+    'Целебная трава ×{0} в узле. Выпить отвар: +{1} здоровью. Травы можно принимать не чаще раза в 12 часов.':
+        'Healing herb ×{0} in the pack. Drink the brew: +{1} health. Herbs can be taken no more than once every 12 hours.',
+    'Здоровье и так полное — отвар не нужен. Трава осталась в узле.': 'Health is already full — no need for the brew. The herb stays in the pack.',
+    'Отказался от задания: «{0}». Личная репутация у НПЦ −{1}.': 'Refused the quest "{0}". Personal reputation with the villager −{1}.',
+    'Помолился в церкви — на душе стало спокойно.': 'Prayed in the church — the soul feels at peace.',
+    'Ты опускаешься на колени перед киотом. В полумраке церкви, под мерцание лампад, приходит покой.\n\nДуша успокоена.':
+        'You kneel before the icon shelf. In the dim church, under the flickering lampadas, peace comes.\n\nThe soul is soothed.',
+    'Здоровье восстановлено ПОЛНОСТЬЮ.': 'Health has been FULLY restored.',
+    'Здоровье +{0} (~{1}% от полного).': 'Health +{0} (~{1}% of full).',
 
     // --- LPC-генератор персонажа (раунд 20) ---
     // («Телосложение»: 'Body' удалено — патч 66.2: мёртвый ключ раунда 20
@@ -2148,7 +2173,10 @@ const EN_KEYS = {
     'взрослый': 'adult', 'взрослая': 'adult woman',
     'зрелый': 'mature', 'зрелая': 'mature woman',
     'пожилой': 'elderly', 'пожилая': 'elderly woman',
-    'Сила': 'Strength', 'Телосложение': 'Constitution', 'Размер': 'Size', 'Ловкость': 'Dexterity',
+    'Сила': 'Strength', 'Телосложение': 'Constitution', 'Ловкость': 'Dexterity',
+    // Раунд 66.71 (п.15): характеристики по BRP SRD — МОЩЬ и ХАРИЗМА;
+    // РАЗ/ИНТ/ВНШ изъяты (ключи удалены как мёртвые)
+    'Мощь': 'Power', 'Харизма': 'Charisma',
     'Боевые навыки': 'Combat skills',
     'Уклонение': 'Dodge',
     'Общение и Знания': 'Communication & Knowledge',
@@ -2156,13 +2184,13 @@ const EN_KEYS = {
         'I\'m just a child, I saw no thief. Please don\'t chase me away, sir!',
 
     // --- Патч 66.2: глубокий EN свитка персонажа и экрана выбора героя ---
-    // Характеристики BRP (Сила/Телосложение/Размер/Ловкость — с раунда 44)
-    'Интеллект': 'Intellect', 'Сила воли': 'Willpower', 'Обаяние': 'Charisma', 'Внешность': 'Appearance',
+    // Раунд 66.71: ключи Интеллект/Сила воли/Обаяние/Внешность удалены (мёртвые)
     // Категории навыков
     'Боевые': 'Combat', 'Общение': 'Communication', 'Знания': 'Knowledge',
     'Манипуляции': 'Manipulation', 'Восприятие': 'Perception', 'Скрытность': 'Stealth',
     // Оставшиеся навыки (Уклонение/Внимательность и пр. — раньше частично)
-    'Внимательность': 'Spot', 'Следопытство': 'Tracking', 'Исследование': 'Investigation',
+    // Раунд 66.71: Следопытство/Исследование удалены (мёртвые ключи)
+    'Внимательность': 'Spot',
     // Заголовки и вкладки свитка
     '📜 Свиток персонажа': '📜 Character Sheet',
     'Характеристики': 'Attributes', 'Инвентарь': 'Inventory',

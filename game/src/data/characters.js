@@ -10,12 +10,13 @@ import { ARMORS } from '../systems/Character.js';
 export const ENEMY_TEMPLATES = {
     bandit: {
         name: 'Разбойник',
-        stats: { STR: 55, CON: 55, SIZ: 60, DEX: 50, INT: 40, POW: 45, CHA: 35, APP: 45 },
+        // Раунд 66.71: 5 характеристик (СТР, CON, POW, DEX, CHA)
+        stats: { STR: 55, CON: 55, POW: 45, DEX: 50, CHA: 35 },
         weapon: { name: 'Секач', dice: { min: 1, max: 8 }, bonus: 1 },
         // Раунд 22: явный навык атаки 40% (было ~120-130% — всегда попадал)
         attackSkill: 40,
         dodge: 30,
-        // Явный бонус урона вместо табличного STR+SIZ (там было +1d8)
+        // Явный бонус урона вместо табличного (там было +1d8)
         db: { min: 0, max: 4 },
         spriteKey: 'enemy_bandit',
         color: 0x333333,
@@ -23,7 +24,7 @@ export const ENEMY_TEMPLATES = {
     },
     wolf: {
         name: 'Волк',
-        stats: { STR: 45, CON: 40, SIZ: 40, DEX: 65, INT: 25, POW: 40, CHA: 20, APP: 30 },
+        stats: { STR: 45, CON: 40, POW: 40, DEX: 65, CHA: 20 },
         weapon: { name: 'Клыки', dice: { min: 1, max: 6 }, bonus: 0 },
         // Раунд 22: явный навык атаки 40% (было ~155-165%), HP снижено до 8
         attackSkill: 40,
@@ -46,8 +47,8 @@ export const ENEMY_TEMPLATES = {
     //  краденая икона за пазухой; ловкий, но не закалён в честном бою.
     thief: {
         name: 'Вор-иконокрад',
-        // HP = (CON+SIZ)/10 = (60+55)/10 → 12 (было 10) — не «одним ударом»
-        stats: { STR: 65, CON: 60, SIZ: 55, DEX: 70, INT: 60, POW: 50, CHA: 40, APP: 50 },
+        // Раунд 66.71: HP = (CON+STR)/10 = (60+65)/10 → 13 (без РАЗ)
+        stats: { STR: 65, CON: 60, POW: 50, DEX: 70, CHA: 40 },
         weapon: { name: 'Кривой кинжал', dice: { min: 1, max: 6 }, bonus: 1 },
         // Явный навык атаки 50%: попадает в каждого второго — бой опасен для всех
         attackSkill: 50,

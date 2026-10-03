@@ -4,7 +4,7 @@
 //     (RusTime.buildChronicleExport: датировка+месяц+время+ДЕЯНИЯ,
 //     ASCII-имя файла)  3) отдельный og:image демо (assets/images/
 //     og-demo.jpg 1200×630, ссылки в game/index.html)  4) SW v67
-//     (site-cache бамп, game-assets-v42 не тронут)  5) EN-ключи 66.8.
+//     (site-cache бамп, game-assets-v43 не тронут)  5) EN-ключи 66.8.
 // Запуск: node tools/test_round71.mjs
 
 import { readFileSync, existsSync, statSync } from 'node:fs';
@@ -130,8 +130,8 @@ ok(has(li, 'assets/images/og-image.jpg'), 'лендинг (index.html) по-пр
 // ================================= 4) SW ====================================
 console.log('\n[4] Service Worker');
 const sw = read('sw.js');
-ok(has(sw, "const CACHE_NAME = 'chronicles-ruthenia-v112'"), 'CACHE_NAME актуален (v112, актуализация 66.70)');
-ok(has(sw, "const GAME_ASSETS_CACHE = 'game-assets-v42'"), 'game-assets-v42 (фасады 66.36)');
+ok(has(sw, "const CACHE_NAME = 'chronicles-ruthenia-v113'"), 'CACHE_NAME актуален (v112, актуализация 66.70)');
+ok(has(sw, "const GAME_ASSETS_CACHE = 'game-assets-v43'"), 'game-assets-v43 (фасады 66.36)');
 // 66.47 (аудит №14): журнал версий переехал из sw.js в docs/SW_CHANGELOG.md
 ok(has(sw, 'журнал перенесён в docs/SW_CHANGELOG.md'), 'sw.js: указатель на новый дом журнала');
 const swlog = read('docs/SW_CHANGELOG.md');

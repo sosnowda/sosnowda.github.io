@@ -100,6 +100,52 @@ export function showMealBlockedPopup(scene) {
     return false;
 }
 
+// ---------------- ЦЕЛЕБНЫЕ ТРАВЫ (раунд 66.71, приказ 5 владельца) ----------------
+// «Целебные травы восстанавливают Здоровье, при использовании, только на
+// 1 единицу. Целебные травы можно использовать не чаше чем раз в 12 часов».
+// Использование — из свитка персонажа (карточка травы); время НЕ тратит.
+
+/** Сколько Здоровья восстанавливает целебная трава (ровно 1 очко). */
+export const HERB_HEAL_HP = 1;
+/** Кулдаун использования целебных трав (игровых минут) — 12 часов. */
+export const HERB_COOLDOWN_MIN = 720;
+
+function herbState(registry) {
+    return (registry && registry.get('herbState')) || { lastAbsMin: -999999 };
+}
+
+/** Сколько минут осталось до конца отката трав (0 — можно принять). */
+export function herbCooldownLeftMin(registry) {
+    const left = (herbState(registry).lastAbsMin + HERB_COOLDOWN_MIN) - worldAbsMinutes(registry);
+    return left > 0 ? left : 0;
+}
+
+/** Можно ли сейчас принять целебную траву: { ok, minutesLeft }. */
+export function canUseHerb(registry) {
+    const minutesLeft = herbCooldownLeftMin(registry);
+    return { ok: minutesLeft <= 0, minutesLeft };
+}
+
+/** Отметить приём целебной травы (ставит точку отсчёта кулдауна 12 часов). */
+export function registerHerb(registry) {
+    if (!registry) return;
+    registry.set('herbState', { lastAbsMin: worldAbsMinutes(registry) });
+}
+
+/**
+ * Поп-ап «отвар не действует» (приказ 5): трава принята не чаще раза в 12 часов.
+ * Возвращает false — для удобства раннего выхода из обработчиков.
+ */
+export function showHerbBlockedPopup(scene, minutesLeft) {
+    if (scene && scene.add) {
+        const h = Math.max(1, Math.ceil((minutesLeft || 0) / 60));
+        createDialog(scene, t('🌿 Организм ещё не принял прошлую траву'),
+            tf(t('Целебные травы можно принимать не чаще раза в 12 часов. Следующая трава подействует примерно через {0} ч.'), h),
+            [{ text: t('Понятно'), callback: () => {} }]);
+    }
+    return false;
+}
+
 // ---------------- СОН ----------------
 
 function sleepState(registry) {

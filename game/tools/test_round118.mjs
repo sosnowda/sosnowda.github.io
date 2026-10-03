@@ -14,7 +14,7 @@
 //   5) Критический пункт аудита «битый /en/manifest.json» — закрыт ЕЩЁ В 66.54;
 //      здесь пин: файл валиден, поля EN, start_url /en/, link в en/index.html.
 //   6) SW v111→v112 (HTML RU+EN лендингов + webvitals.js в CACHE_NAME),
-//      game-assets-v42 цел; доки + живой bump_lastmod --check.
+//      game-assets-v43 цел; доки + живой bump_lastmod --check.
 // Запуск из корня репозитория: node game/tools/test_round118.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -107,9 +107,9 @@ ok(indexEn.includes('<link rel="manifest" href="/en/manifest.json">'),
     'en/index.html: link rel="manifest" ведёт на существующий /en/manifest.json (404 невозможен)');
 
 console.log('--- 6. SW: v112, v42 цел, механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"),
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v113';"),
     'sw.js: const CACHE_NAME v112 (HTML RU+EN лендингов + webvitals.js → бамп §4)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"),
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"),
     'sw.js: const GAME_ASSETS_CACHE v42 (ассеты/vendor не тронуты)');
 ok((sw.match(/\bvar\s+[A-Za-z_$]/gm) || []).length === 0, 'sw.js: объявлений var — ноль (no-var §9.2)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел');

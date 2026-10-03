@@ -13,7 +13,9 @@ import { checkGameEnd, askMoneyForHelp, isChaseActive } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
 // Раунд 66.28 (пп.9,12): стрелы в продажу — пачки по 10, слот колчана
 import { addArrowsToInventory, getQuiver, countInventoryArrows, ARROW_PACK_PRICE, ARROW_PACK_SIZE, QUIVER_CAP } from '../systems/ammo.js';
-import { makeQuestOffer, acceptQuest, grantQuestRewards, onLocationVisited } from '../data/questGenerator.js';
+import { makeQuestOffer, acceptQuest, grantQuestRewards, onLocationVisited, getBlessedSkill } from '../data/questGenerator.js';
+// Раунд 66.71 (приказ 6): отказ от озвученного задания — штраф личной репутации
+import { applyQuestRefusalPenalty } from '../data/reputation.js';
 // Раунд 66.21 (приказ 10): срочное ночное дело (стук в дверь)
 import { hasUrgentQuestBusiness } from '../systems/NightKnock.js';
 // Раунд 66.21 (приказы 13-14): пожертвование церкви (меню сумм)
@@ -49,7 +51,7 @@ import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 // Раунд 66.16 (приказы 1–4): единые правила еды и сна (кукдауны, поп-апы)
 // Раунд 66.17: пропорциональный отдых (8 ч = 100%), минимальный сон 2 часа
-import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal, canSleep, registerSleep, showMealBlockedPopup, showSleepBlockedPopup, restHealPct, SLEEP_MIN_MIN } from '../systems/meal.js';
+import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal, canSleep, registerSleep, showMealBlockedPopup, showSleepBlockedPopup, restHealPct, SLEEP_MIN_MIN, canUseHerb, registerHerb, showHerbBlockedPopup, HERB_HEAL_HP } from '../systems/meal.js';
 // Раунд 66.17 (п.5): ПРОДАЖА ДОБЫЧИ — трактирщик берёт рыбу/дичь на кухню
 import { sellableLoot, removeItem } from '../systems/loot.js';
 // Раунд 66.17 (п.6): ставка подёнки — +1 к славе за отработанный день
@@ -848,7 +850,10 @@ export class InteriorScene extends Phaser.Scene {
             {
                 text: t('✗ Отказаться'),
                 callback: () => {
-                    ActionLog.add(this.registry, tf(t('Отказался от задания: {0}.'), quest.title));
+                    // Раунд 66.71 (приказ 6): отказ от озвученного задания
+                    // понижает личную репутацию у НПЦ на 1–3 единицы.
+                    const pen = applyQuestRefusalPenalty(this.registry, interior.npcId);
+                    ActionLog.add(this.registry, tf(t('Отказался от задания: «{0}». Личная репутация у НПЦ −{1}.'), quest.title, pen));
                 },
             },
         ], {
@@ -1004,8 +1009,10 @@ export class InteriorScene extends Phaser.Scene {
         }
         const player = this.registry.get('player');
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
-        const oratorySkill = player.skills.oratory || 15;
-        const result = applyCompliment(this.registry, interior.npcId, oratorySkill);
+        // Раунд 66.71 (п.10): похвала идёт от навыка «Болтовня» (fast_talk);
+        // «Красноречие» удалено. Благословение батюшки усиливает навык (+10%).
+        const fastTalkSkill = getBlessedSkill(this.registry, player.skills.fast_talk || 10);
+        const result = applyCompliment(this.registry, interior.npcId, fastTalkSkill);
         markRepActionDone(this.registry, interior.npcId, 'compliment');
         
         // Раунд 47 (п.4): в диалоге видна ВСТРЕЧАЯ проверка:
@@ -1030,7 +1037,8 @@ export class InteriorScene extends Phaser.Scene {
         // только при крайней нужде.
         const player = this.registry.get('player');
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
-        const intimidateSkill = player.skills.intimidate || 15;
+        // Раунд 66.71: благословение усиливает и Запугивание (+10%)
+        const intimidateSkill = getBlessedSkill(this.registry, player.skills.intimidate || 15);
         const playerGender = player.gender || 'male';
         
         const result = applyThreat(this.registry, interior.npcId, intimidateSkill, playerGender);
@@ -1314,9 +1322,8 @@ export class InteriorScene extends Phaser.Scene {
                     addArrowsToInventory(player, ARROW_PACK_SIZE);
                     logNote = t('в узел');
                 } else {
-                    // Еда/мелочь: эффект сразу (HP/MP), «в узел» не кладётся
+                    // Еда/мелочь: эффект сразу (HP) — раунд 66.71: МР удалён (приказ 7)
                     if (item.heal) player.HP = Math.min(player.HPmax, player.HP + item.heal);
-                    if (item.mpHeal) player.MP = Math.min(player.MPmax || 0, (player.MP || 0) + item.mpHeal);
                 }
                 this.registry.set('player', player);
                 ActionLog.add(this.registry, tf(t('Купил «{0}» в «{1}» за {2} д.{3}'), t(item.name), interior.name, price, logNote ? ` (${logNote})` : ''));
@@ -1362,15 +1369,15 @@ export class InteriorScene extends Phaser.Scene {
         // кулдаун 4 часа (см. systems/meal.js).
         // РАУНД 66.17 (уточнение п.1): «+1 HP» — про ПРОСТУЮ еду (яблоко, мёд).
         // ПОЛНОЦЕННАЯ еда в трактире лечит 2–3 HP: каша +3, хлеб +2.
-        // Медовуха и квас — питьё: +1 HP, Воля едой не восстанавливается.
+        // Медовуха и квас — питьё: +1 HP. Раунд 66.71: МР удалён (приказ 7).
         const priceMod = getPriceModifier(this.registry, 'tavernkeeper');
         const modNote = priceMod < 1 ? t(' (скидка за добрую славу)') : (priceMod > 1 ? t(' (наценка за дурную славу)') : '');
         const mkEffect = (heal) => `+${heal} HP · ${t('1 час')}`;
         const items = [
-            { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: mkEffect(2), heal: 2, mpHeal: 0 },   // полноценная еда
-            { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: mkEffect(3), heal: 3, mpHeal: 0 },   // самая сытная
-            { id: 'mead', name: 'Медовуха', price: Math.max(1, Math.round(4 * priceMod)), effect: mkEffect(1), heal: 1, mpHeal: 0 }, // питьё
-            { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: mkEffect(1), heal: 1, mpHeal: 0 },   // питьё
+            { id: 'bread', name: 'Хлеб', price: Math.max(1, Math.round(2 * priceMod)), effect: mkEffect(2), heal: 2 },   // полноценная еда
+            { id: 'kasha', name: 'Каша', price: Math.max(1, Math.round(5 * priceMod)), effect: mkEffect(3), heal: 3 },   // самая сытная
+            { id: 'mead', name: 'Медовуха', price: Math.max(1, Math.round(4 * priceMod)), effect: mkEffect(1), heal: 1 }, // питьё
+            { id: 'kvass', name: 'Квас', price: Math.max(1, Math.round(3 * priceMod)), effect: mkEffect(1), heal: 1 },   // питьё
         ];
 
         const { width, height } = this.scale;
@@ -1415,7 +1422,6 @@ export class InteriorScene extends Phaser.Scene {
                 player.dengas -= item.price;
                 this.audioManager.playGoldSpend(); // раунд 24: расплата монетами
                 player.HP = Math.min(player.HPmax, player.HP + item.heal);
-                player.MP = Math.min(player.MPmax, player.MP + item.mpHeal);
                 registerMeal(this.registry); // приказ 3: кулдаун 4 часа
                 // Приказ 1: еда ВСЕГДА занимает 1 час игрового времени
                 tickTime(this.registry, MEAL_DURATION_MIN);
@@ -1701,14 +1707,11 @@ export class InteriorScene extends Phaser.Scene {
             let effectText;
             if (pct >= 1) {
                 player.HP = player.HPmax;
-                player.MP = player.MPmax;
-                effectText = t('Здоровье и Воля восстановлены ПОЛНОСТЬЮ.');
+                effectText = t('Здоровье восстановлено ПОЛНОСТЬЮ.');
             } else {
                 const heal = Math.max(1, Math.round((player.HPmax || 10) * pct));
-                const mp = Math.max(1, Math.round((player.MPmax || 4) * pct));
                 player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
-                player.MP = Math.min(player.MPmax || player.MP + mp, player.MP + mp);
-                effectText = tf(t('Здоровье +{0}, Воля +{1} (~{2}% от полного).'), heal, mp, Math.round(pct * 100));
+                effectText = tf(t('Здоровье +{0} (~{1}% от полного).'), heal, Math.round(pct * 100));
             }
             this.registry.set('player', player);
             this.updateHUD();
@@ -1988,7 +1991,7 @@ export class InteriorScene extends Phaser.Scene {
         // Подложка
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
             .setOrigin(0).setInteractive().setDepth(200);
-        const panelW = 600, panelH = 480;
+        const panelW = 600, panelH = 560;  // 66.71: 560 — 9 строк ассортимента (4 дробящих + нож/копьё/топор/лук/стрелы)
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
 
@@ -2076,12 +2079,14 @@ export class InteriorScene extends Phaser.Scene {
         } else {
             // РАУНД 62 (п.7 приказа владельца) — ЧТО КУЗНЕЦ ПРОДАЁТ:
             // только простое оружие своей работы (нож/дубина/копьё/топор/лук).
+            // Раунд 66.71 (приказ 14): дробящее пополнено — ПАЛИЦА, БУЛАВА,
+            // КИСТЕНЬ (навык «Ударное оружие»); дубина теперь тоже дробящая.
             // МЕЧ (а также сабля и стальной меч) НЕ ПРОДАЁТСЯ — меч есть
             // УНИКАЛЬНАЯ НАГРАДА ОТ СТАРОСТЫ за самое тяжёлое дело.
             // ДОСПЕХИ не продаются вовсе — выдаются за тяжёлые поручения.
             // Старые сейвы, пришедшие с вкладкой 'armor', попадают в «Оружие».
             if (tab === 'armor') tab = 'weapon';
-            const SMITH_SALE_WEAPONS = ['club', 'knife', 'spear', 'axe', 'bow'];
+            const SMITH_SALE_WEAPONS = ['club', 'palitsa', 'mace', 'flail', 'knife', 'spear', 'axe', 'bow'];
             const items = tab === 'weapon'
                 ? Object.values(WEAPONS).filter(w => SMITH_SALE_WEAPONS.includes(w.id))
                 : [];
@@ -2094,7 +2099,7 @@ export class InteriorScene extends Phaser.Scene {
             }
 
             items.forEach((item, i) => {
-                const y = startY + i * 42;
+                const y = startY + i * 36;  // 66.71: шаг 36 — 9 строк в панели 560
                 const price = Math.max(1, Math.round((item.price || 0) * priceMod));
                 const canAfford = (player.dengas || 0) >= price;
                 // 7э: сословные рамки — «воинское» снаряжение не всякому
@@ -2173,7 +2178,7 @@ export class InteriorScene extends Phaser.Scene {
                 const invNow = countInventoryArrows(player);
                 const packDesc = tf(t('🪶 Пачка стрел ({0} шт.) — {1} {2}   ·   {3}: {4}/{5}, {6}: {7}'),
                     ARROW_PACK_SIZE, packPrice, t('д.'), t('колчан'), qNow, QUIVER_CAP, t('в узле'), invNow);
-                createButton(this, width / 2, startY + items.length * 42, packDesc, () => {
+                createButton(this, width / 2, startY + items.length * 36, packDesc, () => {
                     if (!canAffordPack) {
                         createDialog(this, t('Кузница'), t('Не хватает денег!'), [
                             { text: t('Понятно'), callback: () => {} },
@@ -2231,7 +2236,8 @@ export class InteriorScene extends Phaser.Scene {
     }
 
     /**
-     * Молитва в церкви: +Воля (MP), один раз в игровой день.
+     * Молитва в церкви — раунд 66.71 (приказ 7): МР (Воля) удалён из игры,
+     * молитва даёт душевный покой (без изменения параметров), один раз в игровой день.
      * Забирает 15 минут времени.
      */
     prayInChurch() {
@@ -2252,15 +2258,11 @@ export class InteriorScene extends Phaser.Scene {
         q.prayerDay = today;
         this.registry.set('quest', q);
 
-        const gain = Phaser.Math.Between(3, 8);
-        player.MP = Math.min(player.MPmax || player.MP + gain, player.MP + gain);
-        this.registry.set('player', player);
         this.audioManager.playPrayerChant(); // раунд 24: тихая молитва
-        this.updateHUD();
-        ActionLog.add(this.registry, tf(t('Помолился в церкви — Воля +{0}.'), gain));
+        ActionLog.add(this.registry, t('Помолился в церкви — на душе стало спокойно.'));
 
         createDialog(this, t('Молитва'),
-            tf(t('Ты опускаешься на колени перед киотом. В полумраке церкви, под мерцание лампад, приходит покой.\n\nВоля восстановлена: +{0}.'), gain),
+            t('Ты опускаешься на колени перед киотом. В полумраке церкви, под мерцание лампад, приходит покой.\n\nДуша успокоена.'),
             [{ text: t('Встать с колен.'), callback: () => {} }]);
     }
 

@@ -9,7 +9,11 @@ export const GAME = {
 // (Дублирует данные из Character.WEAPONS для обратной совместимости с CombatScene.)
 export const WEAPONS = {
     fists:   { name: 'Кулаки',         skill: 'brawl', dice: { min: 1, max: 3 }, bonus: 0 },
-    club:    { name: 'Дубина',          skill: 'brawl', dice: { min: 1, max: 6 }, bonus: 0 },
+    // Раунд 66.71 (п.14): дубина/палица/булава/кистень — навык «Ударное оружие» (blunt)
+    club:    { name: 'Дубина',          skill: 'blunt', dice: { min: 1, max: 6 }, bonus: 0 },
+    palitsa: { name: 'Палица',          skill: 'blunt', dice: { min: 1, max: 8 }, bonus: 0 },
+    mace:    { name: 'Булава',          skill: 'blunt', dice: { min: 1, max: 6 }, bonus: 1 },
+    flail:   { name: 'Кистень',         skill: 'blunt', dice: { min: 1, max: 8 }, bonus: 1 },
     knife:   { name: 'Нож',             skill: 'brawl', dice: { min: 1, max: 4 }, bonus: 1 },
     spear:   { name: 'Копьё',           skill: 'spear', dice: { min: 1, max: 8 }, bonus: 0 },
     sword:   { name: 'Меч',             skill: 'sword', dice: { min: 1, max: 8 }, bonus: 1 },

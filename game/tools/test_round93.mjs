@@ -211,11 +211,11 @@ ok(apiary.includes('TS / 32 * 0.75 * WORLD_K') && apiary.includes('body.setSize(
    'ApiaryScene: игрок и жители × WORLD_K + физтело');
 
 // ============================================================
-console.log('— 5. SW: site-cache v96, game-assets-v42 —');
+console.log('— 5. SW: site-cache v96, game-assets-v43 —');
 const sw = read('../sw.js');
 const swlog = read('../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'SW: site-cache v112 (актуализация 66.70)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'SW: game-assets-v42');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v113';"), 'SW: site-cache v112 (актуализация 66.70)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'SW: game-assets-v43');
 ok(swlog.includes('v87 — итерация 66.37'), 'SW: журнал содержит запись v87');
 ok(swlog.includes('v86 — итерация 66.36'), 'SW: журнал хранит v86');
 

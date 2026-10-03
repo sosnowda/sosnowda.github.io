@@ -128,8 +128,8 @@ ok(charSceneSrc.includes('const lineStep = Math.max(10.5, 16 * kFit)') &&
    charSceneSrc.includes('const gapStep = Math.max(2, 6 * kFit)'),
    'шаги строк сжимаются, есть фолбэк-минимумы');
 ok(charSceneSrc.includes("kFit < 0.8 ? '12px' : '13px'"), 'шрифт 12px при сильном сжатии');
-ok(charSceneSrc.includes('t(p.name)') && charSceneSrc.includes('t(p.presetName)'),
-   'имя героя/облика в свитке — через t() (п.1 попутно)');
+ok(charSceneSrc.includes('t(p.name)') && !charSceneSrc.includes('t(p.presetName)'),
+   'имя героя в свитке через t(); ОБЛИК (модель) снят с листа — приказ 12, 66.71');
 
 console.log('\n— П.4: ночные блики и свечение окон fb_* —');
 const villageSrc = read('src/scenes/VillageScene.js');

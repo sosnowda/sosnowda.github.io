@@ -9,8 +9,9 @@
 // - данные модификаторов — из ролевой системы (BRP SRD aging table).
 //
 // Соответствие BRP SRD:
-//  - 15–19: тело ещё растёт — СИЛ −5, РАЗМ −5 (юноша слабее и мельче взрослого);
+//  - 15–19: тело ещё растёт — СИЛ −5 (юноша слабее взрослого);
 //    ЛОВ +5 — природная проворство юности (SRD допускает +5 DEX молодым);
+//    Раунд 66.71: РАЗ изъят (5 характеристик), штраф «−5 РАЗМ» снят;
 //  - 20–39: расцвет сил — без модификаторов;
 //  - 40–49: СИЛ/КОН/ЛОВ −3..−4 за полдекады (SRD: 40-м −3, 50-м −6, 60-м −9…),
 //    опыт компенсирует: категории «Общение» и «Знания» +5 (в SRD растёт
@@ -40,12 +41,13 @@ export const AGE_DEFAULT = 25; // в расцвете — старт без шт
 export const AGE_ROWS = [
     {
         min: 15, max: 17, group: 'отрок', groupF: 'отроковица',
-        stats: { STR: -5, SIZ: -5, DEX: +5 },
+        // Раунд 66.71: РАЗ изъят (5 характеристик) — юниорская мелкость не моделируется
+        stats: { STR: -5, DEX: +5 },
         combatMod: -5, dodgeMod: +5, wisdomMod: 0,
     },
     {
         min: 18, max: 19, group: 'юнец', groupF: 'девица',
-        stats: { STR: -2, SIZ: -2, DEX: +3 },
+        stats: { STR: -2, DEX: +3 },
         combatMod: -3, dodgeMod: +3, wisdomMod: 0,
     },
     {
@@ -91,14 +93,15 @@ export const AGE_ROWS = [
     },
 ];
 
+// Раунд 66.71: 5 характеристик SRD; МОЩЬ (бывш. «Сила воли»), ХАРИЗМА (бывш. «Обаяние»)
 const STAT_NAMES = {
-    STR: 'Сила', CON: 'Телосложение', SIZ: 'Размер', DEX: 'Ловкость',
-    INT: 'Интеллект', POW: 'Сила воли', CHA: 'Обаяние', APP: 'Внешность',
+    STR: 'Сила', CON: 'Телосложение', POW: 'Мощь', DEX: 'Ловкость', CHA: 'Харизма',
 };
 
 // Боевые и «умные» навыки игры (Character.js SKILLS)
-export const COMBAT_SKILLS = ['sword', 'bow', 'spear', 'brawl'];
-export const WISDOM_SKILLS = ['oratory', 'persuade', 'fast_talk', 'medicine', 'survival', 'spot', 'track', 'listen', 'investigate'];
+// Раунд 66.71: blunt («Ударное оружие») — боевой; oratory/track/investigate удалены
+export const COMBAT_SKILLS = ['sword', 'bow', 'spear', 'brawl', 'blunt'];
+export const WISDOM_SKILLS = ['persuade', 'fast_talk', 'medicine', 'survival', 'spot', 'listen'];
 
 /**
  * Строка таблицы по возрасту (диапазон 15..70 перекрыт полностью).
@@ -169,14 +172,14 @@ export function applyAgeModifiers(chr) {
         }
     });
 
-    // 2. Пересчёт производных BRP (CON/SIZ/DEX могли измениться)
-    chr.HPmax = Math.ceil((chr.CON + chr.SIZ) / 10);
+    // 2. Пересчёт производных BRP (CON/DEX могли измениться)
+    // Раунд 66.71: канон (CON+SIZ)/10 → (CON+STR)/10; MP удалён (приказ 7);
+    // DB — СИЛ+ТЕЛ (таблица та же); Build — от ТЕЛ; MOV без РАЗ.
+    chr.HPmax = Math.ceil((chr.CON + chr.STR) / 10);
     chr.HP = chr.HPmax;
-    chr.MPmax = Math.floor(chr.POW / 5);
-    chr.MP = chr.MPmax;
-    chr.DB = damageBonus(chr.STR, chr.SIZ);
-    chr.Build = chr.SIZ >= 65 ? 1 : (chr.SIZ <= 35 ? -1 : 0);
-    chr.MOV = 10 + (chr.DEX >= 60 ? 1 : 0) - (chr.SIZ >= 70 ? 1 : 0);
+    chr.DB = damageBonus(chr.STR, chr.CON);
+    chr.Build = chr.CON >= 65 ? 1 : (chr.CON <= 35 ? -1 : 0);
+    chr.MOV = 10 + (chr.DEX >= 60 ? 1 : 0);
 
     return applied;
 }

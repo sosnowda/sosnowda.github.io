@@ -1,20 +1,19 @@
 // ============================================================
 // Раунд 47 (пп.3,5 заявки): БАЗА ДАННЫХ ПАРАМЕТРОВ ЖИТЕЛЕЙ.
 //
-// У КАЖДОГО жителя деревни — те же характеристики, что и у героя
-// (BRP SRD: СИЛ/ТЕЛ/РАЗ/ЛОВ/ИНТ/ВОЛ/ОБА/ВНШ — 8 штук, диапазон 15..90),
-// но НАВЫКИ упрощены: житель умеет только то, чем живёт (п.3 заявки:
-// «удалив у НПЦ параметры, которые они не могут использовать»).
+// Раунд 66.71 (приказы 7,15 владельца): У КАЖДОГО жителя — те же 5
+// характеристик, что и у героя (BRP SRD: СИЛ/ТЕЛ/МОЩ/ЛОВ/ХАР);
+// РАЗ/ИНТ/ВНШ изъяты, МР удалён из игры вовсе.
+// НАВЫКИ по-прежнему упрощены: житель умеет только то, чем живёт (п.3
+// заявки: «удалив у НПЦ параметры, которые они не могут использовать»).
 //
 // Соответствие базе данных игры:
 //  - характеристики — те же ключи, что в systems/Character.js
-//    (CHARACTER_KEYS: STR/CON/SIZ/DEX/INT/POW/CHA/APP);
+//    (CHARACTER_KEYS: STR/CON/POW/DEX/CHA);
 //  - навыки — ТОЛЬКО ключи из SKILLS (systems/Character.js):
-//    sword/bow/spear/brawl/dodge/oratory/persuade/fast_talk/intimidate/
-//    medicine/survival/ride/spot/track/listen;
-//  - HP жителя = (CON + SIZ) / 10 — та же формула BRP, что у героя;
-//  - МАГИИ у жителей нет: MP = 0 (параметр, который они не могут
-//    использовать, — удалён, см. getNpcCharacter).
+//    sword/bow/spear/brawl/blunt/persuade/fast_talk/intimidate/
+//    medicine/survival/spot/listen (66.71: oratory/ride/track/investigate удалены);
+//  - HP жителя = (CON + STR) / 10 — адаптация BRP без РАЗ (как у героя).
 //
 // Аудит (п.5 заявки) проверяет: полноту характеристик, диапазоны,
 // соответствие формулам BRP, а также то, что VILLAGER_COMBAT берёт
@@ -33,9 +32,9 @@
 import { createCharacter, SKILLS } from '../systems/Character.js';
 import { applyAgingToStats, getAgeRow, COMBAT_SKILLS, WISDOM_SKILLS } from '../systems/AgeRules.js';
 
-// --- Характеристики: [СИЛ, ТЕЛ, РАЗ, ЛОВ, ИНТ, ВОЛ, ОБА, ВНШ] ---
-const S = (STR, CON, SIZ, DEX, INT, POW, CHA, APP) =>
-    ({ STR, CON, SIZ, DEX, INT, POW, CHA, APP });
+// --- Характеристики: [СИЛ, ТЕЛ, МОЩ, ЛОВ, ХАР] (раунд 66.71: 5 штук по SRD) ---
+const S = (STR, CON, POW, DEX, CHA) =>
+    ({ STR, CON, POW, DEX, CHA });
 
 // --- Навыки: только используемые жителем (ключ → значение, %) ---
 // Кузнец: рука от молота (Рукопашная 45 = его attackSkill в бою).
@@ -51,125 +50,126 @@ export const NPC_STAT_BLOCKS = {
     // === ЗНАТНЫЕ ЖИТЕЛИ ===
     elder: {
         name: 'Староста Мирослав',
-        stats: S(50, 50, 60, 40, 60, 65, 60, 45),
-        skills: { oratory: 55, persuade: 50, intimidate: 45, brawl: 35, spot: 40, listen: 45 },
+        stats: S(50, 50, 65, 40, 60),
+        skills: { fast_talk: 55, persuade: 50, intimidate: 45, brawl: 35, spot: 40, listen: 45 },
     },
     priest: {
         name: 'Отец Савватий',
-        stats: S(40, 45, 50, 40, 70, 75, 65, 50),
-        skills: { oratory: 60, persuade: 55, medicine: 45, spot: 40, listen: 45 },
+        stats: S(40, 45, 75, 40, 65),
+        skills: { fast_talk: 60, persuade: 55, medicine: 45, spot: 40, listen: 45 },
     },
     elder_wife: {
         name: 'Любава',
-        stats: S(30, 40, 45, 35, 55, 60, 50, 40),
+        stats: S(30, 40, 60, 35, 50),
         skills: homemakerSkills(45),
     },
 
     // === РЕМЕСЛЕННИКИ ===
     blacksmith: {
         name: 'Кузнец Данила',
-        stats: S(65, 60, 70, 45, 50, 50, 40, 40),
+        stats: S(65, 60, 50, 45, 40),
         skills: SMITH_SKILLS,
     },
     apprentice: {
         name: 'Ученик кузнеца',
-        stats: S(40, 45, 40, 50, 45, 45, 45, 50),
+        stats: S(40, 45, 45, 50, 45),
         skills: APPRENTICE_SKILLS,
     },
     peasant1: {
         name: 'Мельник Авдей',
-        stats: S(55, 55, 55, 50, 55, 50, 45, 40),
+        stats: S(55, 55, 50, 50, 45),
         skills: { brawl: 40, persuade: 35, survival: 40, spot: 40, listen: 40 },
     },
     carpenter1: {
         name: 'Плотник Микула',
-        stats: S(60, 55, 55, 50, 50, 45, 40, 40),
+        stats: S(60, 55, 45, 50, 40),
         skills: { brawl: 45, intimidate: 35, spot: 35, listen: 35 },
     },
     potter1: {
         name: 'Гончар Игнат',
-        stats: S(55, 50, 50, 55, 55, 45, 40, 40),
+        stats: S(55, 50, 45, 55, 40),
         skills: { brawl: 40, persuade: 35, spot: 35, listen: 35 },
     },
     weaver1: {
         name: 'Ткачиха Пелагея',
-        stats: S(35, 45, 45, 45, 55, 55, 45, 45),
+        stats: S(35, 45, 55, 45, 45),
         skills: homemakerSkills(40),
     },
 
     // === ПРОМЫСЛОВИКИ ===
     hunter: {
         name: 'Охотник',
-        stats: S(55, 55, 50, 60, 60, 50, 40, 40),
-        skills: { bow: 55, track: 60, survival: 55, spot: 55, listen: 50, brawl: 35 },
+        stats: S(55, 55, 50, 60, 40),
+        // Раунд 66.71: track слит в spot (max(55, 60) = 60)
+        skills: { bow: 55, survival: 55, spot: 60, listen: 50, brawl: 35 },
     },
     fisherman: {
         name: 'Рыбак Ерёма',
-        stats: S(50, 55, 50, 50, 50, 45, 40, 40),
+        stats: S(50, 55, 45, 50, 40),
         skills: { survival: 45, spot: 50, listen: 45, brawl: 35 },
     },
     beekeeper1: {
         name: 'Пахарь Тарас',
-        stats: S(60, 60, 65, 45, 45, 45, 40, 35),
+        stats: S(60, 60, 45, 45, 40),
         skills: { brawl: 45, survival: 40, intimidate: 35, spot: 35, listen: 35 },
     },
     shepherd1: {
         name: 'Пастух Сила',
-        stats: S(50, 55, 50, 50, 45, 45, 40, 40),
-        skills: { survival: 45, ride: 40, spot: 40, listen: 40, brawl: 35 },
+        stats: S(50, 55, 45, 50, 40),
+        skills: { survival: 45, spot: 40, listen: 40, brawl: 35 },
     },
     shepherd2: {
         name: 'Пастушка Настасья',
-        stats: S(40, 50, 45, 50, 45, 50, 45, 45),
-        skills: { survival: 40, ride: 40, spot: 40, listen: 40 },
+        stats: S(40, 50, 50, 50, 45),
+        skills: { survival: 40, spot: 40, listen: 40 },
     },
     shepherd_boy: {
         name: 'Пастушок Ивашка',
-        stats: S(40, 45, 35, 60, 50, 45, 40, 45),
+        stats: S(40, 45, 45, 60, 40),
         skills: { brawl: 25, dodge: 40, survival: 35, spot: 40, listen: 40 },
     },
     widow: {
         name: 'Пасечница Марфа',
-        stats: S(35, 45, 45, 40, 60, 60, 50, 40),
+        stats: S(35, 45, 60, 40, 50),
         skills: { persuade: 40, medicine: 30, survival: 45, spot: 40, listen: 40 },
     },
 
     // === ЛЕКАРЬ И СЛУГИ ПОРЯДКА ===
     healer: {
         name: 'Знахарка Февронья',
-        stats: S(25, 35, 40, 30, 75, 80, 55, 40),
+        stats: S(25, 35, 80, 30, 55),
         skills: { medicine: 70, persuade: 45, spot: 45, listen: 45 },
     },
     guard: {
         name: 'Стражник',
-        stats: S(60, 60, 60, 55, 45, 45, 40, 45),
+        stats: S(60, 60, 45, 55, 40),
         skills: { spear: 45, brawl: 40, dodge: 35, intimidate: 40, spot: 40 },
     },
 
     // === ХОЗЯЕВА И ХОЗЯЙКИ ===
     tavernkeeper: {
         name: 'Тавернщик',
-        stats: S(55, 55, 60, 45, 50, 50, 55, 45),
+        stats: S(55, 55, 50, 45, 55),
         skills: { persuade: 45, fast_talk: 40, brawl: 40, spot: 35, listen: 35 },
     },
     beekeeper_wife: {
         name: 'Фёкла',
-        stats: S(40, 50, 45, 45, 50, 50, 45, 45),
+        stats: S(40, 50, 50, 45, 45),
         skills: { persuade: 35, survival: 40, spot: 35, listen: 40 },
     },
     carpenter_wife: {
         name: 'Матрёна',
-        stats: S(40, 50, 45, 45, 50, 50, 45, 45),
+        stats: S(40, 50, 50, 45, 45),
         skills: homemakerSkills(35),
     },
     potter_wife: {
         name: 'Анна',
-        stats: S(35, 45, 40, 50, 50, 50, 50, 50),
+        stats: S(35, 45, 50, 50, 50),
         skills: homemakerSkills(40),
     },
     fisher_wife: {
         name: 'Домна',
-        stats: S(35, 50, 45, 45, 50, 50, 45, 45),
+        stats: S(35, 50, 50, 45, 45),
         skills: { persuade: 35, survival: 35, spot: 35, listen: 40 },
     },
 
@@ -177,75 +177,75 @@ export const NPC_STAT_BLOCKS = {
     // Снедница Прасковья: за прилавком всю жизнь — вес и цена на глаз.
     grocer: {
         name: 'Прасковья',
-        stats: S(35, 50, 50, 45, 60, 55, 60, 50),
+        stats: S(35, 50, 55, 45, 60),
         skills: { persuade: 45, fast_talk: 40, spot: 40, listen: 40 },
     },
     // Мясник Потап: рука от тесака, спина от туш.
     butcher: {
         name: 'Потап',
-        stats: S(65, 60, 65, 40, 45, 50, 40, 40),
+        stats: S(65, 60, 50, 40, 40),
         skills: { brawl: 50, intimidate: 40, spot: 30, listen: 30 },
     },
     // Торгарь Аверьян: знает цену всякой вещи, язык подвешен ловко.
     peddler: {
         name: 'Аверьян',
-        stats: S(45, 45, 50, 50, 60, 50, 60, 45),
+        stats: S(45, 45, 50, 50, 60),
         skills: { persuade: 50, fast_talk: 45, brawl: 30, spot: 40, listen: 40 },
     },
     // Сапожник Нефёд: руки в шиле и дёгте, в драку не лезет.
     shoemaker: {
         name: 'Нефёд',
-        stats: S(45, 50, 45, 55, 55, 50, 45, 45),
+        stats: S(45, 50, 50, 55, 45),
         skills: { brawl: 30, dodge: 30, spot: 40, listen: 40 },
     },
     // Агафья, жена сапожника: хозяйка при лавке.
     shoemaker_wife: {
         name: 'Агафья',
-        stats: S(40, 50, 45, 45, 50, 55, 50, 50),
+        stats: S(40, 50, 55, 45, 50),
         skills: homemakerSkills(40),
     },
     // Дровосек Горазд: топор за поясом, слух лесника.
     woodcutter: {
         name: 'Горазд',
-        stats: S(70, 60, 60, 50, 45, 45, 35, 40),
+        stats: S(70, 60, 45, 50, 35),
         skills: { brawl: 55, intimidate: 40, survival: 45, spot: 40, listen: 45 },
     },
     // Раунд 63 (п.1): Степан — крестьянин нового дома на месте овчарни.
     peasant2: {
         name: 'Степан',
-        stats: S(60, 60, 55, 45, 45, 50, 45, 40),
+        stats: S(60, 60, 50, 45, 45),
         skills: { brawl: 40, persuade: 35, survival: 45, spot: 35, listen: 40 },
     },
     // Арина, жена Степана: хозяйка при скотине и огороде.
     peasant2_wife: {
         name: 'Арина',
-        stats: S(40, 50, 45, 45, 50, 55, 50, 50),
+        stats: S(40, 50, 55, 45, 50),
         skills: homemakerSkills(40),
     },
 
     // === ДЕТИ (п.6 заявки раунда 44: с 6 лет) — слабые, но верткие ===
-    kid1: { stats: S(30, 35, 30, 55, 50, 50, 45, 50), skills: kidSkills(20) },
-    kid2: { stats: S(25, 35, 30, 55, 50, 55, 45, 50), skills: kidSkills(18) },
-    kid3: { stats: S(25, 30, 25, 55, 45, 50, 45, 50), skills: kidSkills(16) },
-    kid4: { stats: S(20, 30, 25, 50, 45, 50, 45, 50), skills: kidSkills(15) },
-    kid5: { stats: S(20, 30, 25, 50, 40, 50, 45, 45), skills: kidSkills(15) },
-    kid6: { stats: S(15, 30, 20, 50, 40, 50, 45, 50), skills: kidSkills(15) },
-    kid7: { stats: S(20, 30, 20, 50, 40, 45, 45, 45), skills: kidSkills(15) },
-    kid8: { stats: S(20, 30, 25, 55, 45, 50, 45, 50), skills: kidSkills(18) },
-    kid9: { stats: S(25, 35, 25, 55, 50, 55, 45, 55), skills: kidSkills(15) },
+    kid1: { stats: S(30, 35, 50, 55, 45), skills: kidSkills(20) },
+    kid2: { stats: S(25, 35, 55, 55, 45), skills: kidSkills(18) },
+    kid3: { stats: S(25, 30, 50, 55, 45), skills: kidSkills(16) },
+    kid4: { stats: S(20, 30, 50, 50, 45), skills: kidSkills(15) },
+    kid5: { stats: S(20, 30, 50, 50, 45), skills: kidSkills(15) },
+    kid6: { stats: S(15, 30, 50, 50, 45), skills: kidSkills(15) },
+    kid7: { stats: S(20, 30, 45, 50, 45), skills: kidSkills(15) },
+    kid8: { stats: S(20, 30, 50, 55, 45), skills: kidSkills(18) },
+    kid9: { stats: S(25, 35, 55, 55, 45), skills: kidSkills(15) },
 };
 
 // Ключи навыков по категориям — для проверки «навык против навыка»
 // (п.4 заявки раунда 48): если житель не владеет навыком, проверка идёт
 // «характеристика против характеристики» (замена «сопротивлений»).
 const RESISTANCE_BY_SKILL = {
-    // Боевые — от Ловкости (увернуться/сопротивляться физически)
-    sword: 'DEX', bow: 'DEX', spear: 'DEX', brawl: 'STR', dodge: 'DEX',
-    // Общение — от Обаяния (запугивание — ещё и от Силы)
-    oratory: 'CHA', persuade: 'CHA', fast_talk: 'CHA', intimidate: 'STR',
-    // Знания и восприятие — от Интеллекта
-    medicine: 'INT', survival: 'INT', ride: 'DEX', spot: 'INT', track: 'INT', listen: 'INT',
-    investigate: 'INT',
+    // Боевые — от Ловкости (увернуться/сопротивляться физически);
+    // blunt («Ударное оружие») — тоже от Ловкости
+    sword: 'DEX', bow: 'DEX', spear: 'DEX', brawl: 'STR', blunt: 'DEX', dodge: 'DEX',
+    // Общение — от Харизмы (запугивание — ещё и от Силы)
+    persuade: 'CHA', fast_talk: 'CHA', intimidate: 'STR',
+    // Знания и восприятие — от Мощи (ИНТ изъят в 66.71; интуиция от МОЩИ)
+    medicine: 'POW', survival: 'POW', spot: 'POW', listen: 'POW',
 };
 
 /** Возраст жителя (у случайных незнакомцев — расцвет сил). */
@@ -317,12 +317,13 @@ export function getNpcSkillResistance(npc, skillKey) {
 
 /**
  * Боевая единица жителя из ЕГО базы параметров (п.3 заявки).
- * Полный набор характеристик как у героя; навыки — только используемые;
- * MP = 0 (жители магией не владеют — параметр удалён).
+ * Полный набор характеристик как у героя; навыки — только используемые.
+ * (Раунд 66.71: МР удалён из игры — параметра больше нет ни у кого.)
  */
 export function createNpcCharacter(npc) {
     const block = (npc && NPC_STAT_BLOCKS[npc.id]) || null;
-    const stats = block ? block.stats : { STR: 50, CON: 50, SIZ: 50, DEX: 50, INT: 50, POW: 50, CHA: 45, APP: 45 };
+    // Раунд 66.71: 5 характеристик (fallback для случайных незнакомцев)
+    const stats = block ? block.stats : { STR: 50, CON: 50, POW: 50, DEX: 50, CHA: 45 };
     const usable = block ? Object.keys(block.skills) : ['brawl', 'dodge', 'spot', 'listen'];
     // Детерминированные значения навыков — только из блока жителя
     const overrides = {};
@@ -340,9 +341,6 @@ export function createNpcCharacter(npc) {
     Object.keys(c.skills).forEach(k => {
         if (!usable.includes(k)) delete c.skills[k];
     });
-    // Магии у жителей нет: MP — параметр, который они не могут использовать
-    c.MP = 0;
-    c.MPmax = 0;
     c.isVillager = true;
     return c;
 }
@@ -350,22 +348,21 @@ export function createNpcCharacter(npc) {
 /**
  * Строка параметров жителя для показа в игре (п.3 заявки: параметры
  * как у игрока — видны тем же способом, что и у героя).
- * Пример: «СИЛ 65 · ТЕЛ 60 · РАЗ 70 · ЛОВ 45 · ИНТ 50 · ВОЛ 50 · ОБА 40 · ВНШ 40»
+ * Раунд 66.71: 5 характеристик (МОЩ вместо ВОЛ).
+ * Пример: «СИЛ 65 · ТЕЛ 60 · МОЩ 50 · ЛОВ 45 · ХАР 40»
  *         «Навыки: Рукопашная 45, Запугивание 40, Внимательность 35, Слух 35»
  */
 const STAT_SHORT = {
-    STR: 'СИЛ', CON: 'ТЕЛ', SIZ: 'РАЗ', DEX: 'ЛОВ',
-    INT: 'ИНТ', POW: 'ВОЛ', CHA: 'ОБА', APP: 'ВНШ',
+    STR: 'СИЛ', CON: 'ТЕЛ', POW: 'МОЩ', DEX: 'ЛОВ', CHA: 'ХАР',
 };
 const SKILL_RU = {
-    sword: 'Владение мечом', bow: 'Лук', spear: 'Копьё', brawl: 'Рукопашная', dodge: 'Уклонение',
-    oratory: 'Красноречие', persuade: 'Убеждение', fast_talk: 'Болтовня', intimidate: 'Запугивание',
-    medicine: 'Знахарство', survival: 'Выживание', ride: 'Верховая езда',
-    spot: 'Внимательность', track: 'Следопытство', listen: 'Слух', investigate: 'Исследование',
+    sword: 'Владение мечом', bow: 'Лук', spear: 'Копьё', brawl: 'Рукопашная', blunt: 'Ударное оружие', dodge: 'Уклонение',
+    persuade: 'Убеждение', fast_talk: 'Болтовня', intimidate: 'Запугивание',
+    medicine: 'Знахарство', survival: 'Выживание',
+    spot: 'Внимательность', listen: 'Слух',
 };
 const RU_STAT_FULL = {
-    STR: 'Сила', CON: 'Телосложение', SIZ: 'Размер', DEX: 'Ловкость',
-    INT: 'Интеллект', POW: 'Сила воли', CHA: 'Обаяние', APP: 'Внешность',
+    STR: 'Сила', CON: 'Телосложение', POW: 'Мощь', DEX: 'Ловкость', CHA: 'Харизма',
 };
 
 /** Русское название навыка (для бою: «Рукопашная — 40»). */
@@ -375,14 +372,12 @@ export function ruSkillName(key) { return SKILL_RU[key] || key; }
 // «против Рукопашной вора» (без склонения подпись звучит безграмотно).
 const RU_GENITIVE = {
     'Владение мечом': 'Владения мечом', 'Лук': 'Лука', 'Копьё': 'Копья',
-    'Рукопашная': 'Рукопашной', 'Уклонение': 'Уклонения',
-    'Красноречие': 'Красноречия', 'Убеждение': 'Убеждения', 'Болтовня': 'Болтовни',
+    'Рукопашная': 'Рукопашной', 'Ударное оружие': 'Ударного оружия', 'Уклонение': 'Уклонения',
+    'Убеждение': 'Убеждения', 'Болтовня': 'Болтовни',
     'Запугивание': 'Запугивания', 'Знахарство': 'Знахарства', 'Выживание': 'Выживания',
-    'Верховая езда': 'Верховой езды', 'Внимательность': 'Внимательности',
-    'Следопытство': 'Следопытства', 'Слух': 'Слуха', 'Исследование': 'Исследования',
-    'Сила': 'Силы', 'Телосложение': 'Телосложения', 'Размер': 'Размера',
-    'Ловкость': 'Ловкости', 'Интеллект': 'Интеллекта', 'Сила воли': 'Силы воли',
-    'Обаяние': 'Обаяния', 'Внешность': 'Внешности', 'Упорство': 'Упорства',
+    'Внимательность': 'Внимательности', 'Слух': 'Слуха',
+    'Сила': 'Силы', 'Телосложение': 'Телосложения', 'Мощь': 'Мощи',
+    'Ловкость': 'Ловкости', 'Харизма': 'Харизмы', 'Упорство': 'Упорства',
 };
 export function ruGenitive(ruName) { return RU_GENITIVE[ruName] || ruName; }
 
@@ -404,6 +399,6 @@ export function formatNpcStatsLine(npc) {
     const skills = Object.entries(block.skills)
         .map(([k, v]) => `${SKILL_RU[k] || k} ${Math.max(1, Math.min(99, v + ageSkillMod(k, age)))}`)
         .join(', ');
-    const hp = Math.ceil((stats.CON + stats.SIZ) / 10);
+    const hp = Math.ceil((stats.CON + stats.STR) / 10);
     return `❤${hp} ${statsText}\nНавыки: ${skills}`;
 }

@@ -361,9 +361,9 @@ export class CharacterSelectionScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5).setDepth(202);
 
-        // Производные
+        // Производные — раунд 66.71: МР удалён из игры (приказ 7)
         const derivY = statsY + (compact ? 58 : 80);
-        const derivText = `HP: ${hero.HPmax}   MP: ${hero.MPmax}   ${t('Бонус урона:')} ${hero.DB.text}   ${t('Броня:')} ${hero.armor ? hero.armor.def : 0}`;
+        const derivText = `HP: ${hero.HPmax}   ${t('Бонус урона:')} ${hero.DB.text}   ${t('Броня:')} ${hero.armor ? hero.armor.def : 0}`;
         this.add.text(width / 2, derivY, derivText, {
             fontSize: compact ? '13px' : '15px', color: '#c9a14a',
             stroke: '#000', strokeThickness: 1,

@@ -16,7 +16,7 @@
 //    game/docs контентом не считаются, sw.js вне маппинга) + чек-лист пуша
 //    в АГЕНТ.md §5; здесь же автоматическая сверка --check.
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
-// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v42 без изменений (детали в r115)
+// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v43 без изменений (детали в r115)
 // Запуск из корня репозитория: node game/tools/test_round108.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -65,8 +65,8 @@ ok(ru404.indexOf('Content-Security-Policy') < ru404.indexOf('<style>'), '404.htm
 ok(ru404.includes('<meta name="robots" content="noindex">') && en404.includes('<meta name="robots" content="noindex">'), '404-страницы: noindex сохранён на обеих');
 
 console.log('--- 3. P3-3: офлайн-фолбэк только для navigate ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v113';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'sw.js: game-assets остаётся v41 (игровые ассеты не менялись)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: субресурсы при офлайн-промахе — честный отказ (без HTML-фолбэка)');
 ok(sw.indexOf("event.request.mode !== 'navigate'") < sw.indexOf("const fb ="), 'sw.js: гейт navigate стоит ПЕРЕД фолбэк-цепочкой');
 ok(sw.includes("const fb = url.pathname.indexOf('/game/') === 0 ? '/game/'"), 'sw.js: фолбэк /game/… → кэш /game/ сохранён (66.53)');

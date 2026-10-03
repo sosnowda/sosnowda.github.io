@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# run_regression_6667.sh — полный юнит-регресс 64–115 для итерации 66.67.
-# r86–89 — CWD-относительные пути → запускать из game/tools/ (AGENTS.md §5).
+# run_regression_6667.sh — полный юнит-регресс 64–119 (диапазон актуализируется
+# каждой итерацией; 66.71 добавил r119). r86–89 — CWD-относительные пути →
+# запускать из game/tools/ (AGENTS.md §5).
 cd "$(dirname "$0")/../.." || exit 1   # корень репозитория
 PASS=(); FAIL=()
-for n in $(seq 64 115); do
+for n in $(seq 64 119); do
     f="game/tools/test_round${n}.mjs"
     [ -f "$f" ] || continue
     if [ $n -ge 86 ] && [ $n -le 89 ]; then

@@ -59,7 +59,7 @@ import { tickTime } from '../systems/TimeSystem.js';
 // зимой в ~15:10 уже темно, летом в 21:00 ещё светло.
 import { isNightHour as solarIsNightHour } from '../systems/AccessHours.js';
 import { getWeather, isPrecip } from '../systems/Weather.js';
-import { consumeBlessing } from './questGenerator.js';
+import { getBlessedSkill, isBlessingActive, blessPlayer } from './questGenerator.js';
 import { formatMoney } from '../systems/Character.js';
 import { t, tf, isEn } from '../systems/i18n.js';
 import { createDialog } from '../utils/ui.js';
@@ -583,7 +583,7 @@ export function examineFootprint(registry, locationId, fpId) {
     // Раунд 59 (п.1): вторая попытка по тому же следу — штраф повторного поиска
     const nightPenalty = isNightCheck(registry) ? NIGHT_SPOT_PENALTY : 0;
     const retryPenalty = isRetry ? TRACK_RETRY_PENALTY : 0;
-    const spotSkill = consumeBlessing(registry, Math.max(
+    const spotSkill = getBlessedSkill(registry, Math.max(
         Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT) - nightPenalty - retryPenalty, 5));
     const res = skillCheck(spotSkill);
     const success = res.result === 'critical' || res.result === 'success';
@@ -1062,7 +1062,7 @@ export function searchLocation(registry, locationId) {
     // Раунд 59 (п.1): вторая попытка — ещё и штраф повторного поиска
     const nightPenaltyS = isNightCheck(registry) ? NIGHT_SPOT_PENALTY : 0;
     const retryPenaltyS = isRetry ? TRACK_RETRY_PENALTY : 0;
-    const spotSkill = consumeBlessing(registry, Math.max(
+    const spotSkill = getBlessedSkill(registry, Math.max(
         Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT) - nightPenaltyS - retryPenaltyS, 5));
 
     if (trace) {
@@ -1347,7 +1347,7 @@ export function askMoneyForHelp(registry, npcId, npcName) {
     // Раунд 48 (п.4 заявки): проверка «НАВЫК ПРОТИВ НАВЫКА» — Убеждение игрока
     // против Убеждения жителя (без навыка — Обаяние против Обаяния) +
     // сложность 10 (просить денег труднее, чем просто говорить).
-    const persuadeSkill = consumeBlessing(registry, (player.skills && player.skills.persuade) || 20);
+    const persuadeSkill = getBlessedSkill(registry, (player.skills && player.skills.persuade) || 20);
     const opp = getNpcOpposition(findNpc(registry, npcId), 'persuade');
     const res = opposedSkillCheck(persuadeSkill, opp.value, 10);
     const checkLine = formatOpposedCheck(res, 'Убеждение', `${opp.ruNameGen} жителя`);
@@ -1518,7 +1518,7 @@ export function persuadeThief(registry) {
     // Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Убеждение игрока против
     // ТАКОГО ЖЕ параметра вора (болтливый наёмник: 50) + сложность 10
     // (на равных с вором; раунд 48: «навык против навыка», без сопротивлений).
-    const persuadeSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.persuade) || 20, MIN_PERSUADE));
+    const persuadeSkill = getBlessedSkill(registry, Math.max((player.skills && player.skills.persuade) || 20, MIN_PERSUADE));
     const res = opposedSkillCheck(persuadeSkill, 50, 10);
     const checkLine = formatOpposedCheck(res, 'Убеждение', 'Болтовни вора');
 
@@ -1558,7 +1558,7 @@ export function stunThief(registry) {
     // Раунд 22: нижний порог Драки + благословение (+10, одна проверка)
     // Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Драка игрока против
     // ТАКОГО ЖЕ параметра вора (Рукопашная вора = его навык атаки 50).
-    const brawlSkill = consumeBlessing(registry, Math.max((player.skills && player.skills.brawl) || 25, MIN_BRAWL));
+    const brawlSkill = getBlessedSkill(registry, Math.max((player.skills && player.skills.brawl) || 25, MIN_BRAWL));
     const res = opposedSkillCheck(brawlSkill, 50, 0);
     const checkLine = formatOpposedCheck(res, 'Рукопашная', 'Рукопашной вора');
 
@@ -1745,9 +1745,10 @@ export function surrenderStolenItem(registry, npcId) {
     if (npcId === 'priest') {
         const amount = 20 + Math.floor(Math.random() * 11);
         player.dengas = (player.dengas || 0) + amount;
-        player.HP = player.HPmax;
-        player.MP = player.MPmax;
-        rewardText = `${formatMoney(amount)} + ${t('благословение (полное восстановление)')}`;
+        // Раунд 66.71 (приказ 4): благословение священника — ТОЛЬКО
+        // «+10% ко всем навыкам на 12 часов» (кулдаун 24 ч); лечения больше нет.
+        blessPlayer(registry);
+        rewardText = `${formatMoney(amount)} + ${t('благословение (+10% ко всем навыкам на 12 часов)')}`;
     } else {
         const amount = 40 + Math.floor(Math.random() * 21);
         player.dengas = (player.dengas || 0) + amount;
@@ -1820,7 +1821,7 @@ export function getHuntState(registry) {
         cluesGathered: q.cluesGathered || [],
         locationsSearched: q.locationsSearched || [],
         askedFrom: q.thiefAskedFrom || [],   // раунд 22: кого уже расспрашивали
-        blessing: !!q.blessing,              // раунд 22: есть благословение
+        blessing: isBlessingActive(registry),  // 66.71: благословение активно (+10% навыкам на 12 ч)
         turnsUsed: q.turnsUsed || 0,
         turnLimit: q.turnLimit || TURN_LIMIT,
     };

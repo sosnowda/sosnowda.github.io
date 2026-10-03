@@ -94,8 +94,8 @@ function dupesOf(src, name) {
 console.log('--- 1. P3-1: ноль дубликатов ключей i18n (статический no-dupe-keys) ---');
 const en = dupesOf(i18n, 'EN');
 const enk = dupesOf(i18n, 'EN_KEYS');
-ok(en.dupes === 0 && en.total === 1633, `EN: 0 дубликатов, 1633 уникальных ключа (факт: ${en.dupes} дублей, ${en.total})`);
-ok(enk.dupes === 0 && enk.total === 280, `EN_KEYS: 0 дубликатов, 280 ключей (факт: ${enk.dupes} дублей, ${enk.total})`);
+ok(en.dupes === 0 && en.total === 1648, `EN: 0 дубликатов, 1648 уникальных ключа (факт: ${en.dupes} дублей, ${en.total}) — 66.71: +19 механик, −мёртвые`);
+ok(enk.dupes === 0 && enk.total === 275, `EN_KEYS: 0 дубликатов, 275 ключей (факт: ${enk.dupes} дублей, ${enk.total})`);
 ok(i18n.includes('66.68 (§9.2 аудита 66.66, P3)'), 'i18n.js: док-комментарий 66.68 о дедупликации на месте');
 for (const snippet of [
     "    'мальчик': 'boy',",
@@ -208,8 +208,8 @@ function finish() {
         'game/index.html: декод %20-версии = прежний SVG бит-в-бит (рендер фавиконки не изменён)');
 
     console.log('--- 6. SW: бамп по §4 (HTML страниц изменён), механика не тронута ---');
-    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v112';"), 'sw.js: site-cache v112 (P4 66.69: sr-only/<main>/aria-label в HTML, clip-path в styles.css, var→const sw.js → бамп)');
-    ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v42';"), 'sw.js: game-assets-v42 без изменений (ассеты/vendor не тронуты)');
+    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v113';"), 'sw.js: site-cache v112 (P4 66.69: sr-only/<main>/aria-label в HTML, clip-path в styles.css, var→const sw.js → бамп)');
+    ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'sw.js: game-assets-v43 без изменений (ассеты/vendor не тронуты)');
     ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел');
     ok(swlog.includes('- v112 — итерация 66.70'), 'SW_CHANGELOG: запись v112 добавлена');
 

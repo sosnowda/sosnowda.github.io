@@ -1,10 +1,18 @@
 // Модель персонажа по BRP (Basic Roleplaying Universal Game Engine SRD).
 //
+// РАУНД 66.71 (приказы 7, 15 владельца): ПЯТЬ характеристик — по быстрому
+// старту BRP SRD (rules/ru/0200_Characters.md, «Бросьте 3D6 для
+// характеристик Сила (СИЛ), Телосложение (ТЕЛ), Мощь (МОЩ), Ловкость (ЛОВ)
+// и Харизма (ХАР)»): STR/CON/POW/DEX/CHA. Опциональные РАЗ/ИНТ/ВНШ ИЗЪЯТЫ,
+// параметр МР (очки мощи) удалён из игры приказом 7.
 // Соответствие BRP SRD:
-// - 7 характеристик: STR/CON/SIZ/DEX/INT/POW/CHA (3d6×5, диапазон 15..90)
-// - HP = (CON + SIZ) / 10, MP = POW / 5
-// - Damage Bonus (DB) по таблице STR+SIZ
-// - Сила урона (Build) и Движение (MOV) — добавлены для полноты BRP
+// - 5 характеристик: STR/CON/POW/DEX/CHA (3d6×5, диапазон 15..90)
+// - HP: канон (ТЕЛ+РАЗ)/2 → без РАЗ адаптировано как (CON + STR) / 10
+//   (СИЛ — физический аналог массы при отсутствии РАЗ)
+// - Damage Bonus (DB): канон СИЛ+РАЗ → адаптировано СИЛ+ТЕЛ (таблица та же;
+//   ступени для прегенов близки к прежним, слабые герои чуть усилены)
+// - Очки мощи (MP) УДАЛЕНЫ приказом 7 («удалить параметр Воля и МР»)
+// - Build/MOV: Build от ТЕЛ (аналог массы), MOV без надбавки РАЗ
 // - Навыки: base + (char × factor) + 1d10 (personal bonus)
 // - Категории навыков: Combat / Communication / Knowledge / Manipulation / Perception / Stealth
 //
@@ -12,23 +20,26 @@
 // - Денежная система: рубли, полтины, гривны, куны, мордки, резаны
 // - Доспехи и оружие из реестра CR
 // - Навык "Знахарство" (Medicine) для лечения травами
-// - Навык "Выживание" (Survival) для следопытства
+// - Навык "Выживание" (Survival) для лесных дел
+//
+// РАУНД 66.71 (приказы 9–14 владельца): НАВЫКИ приведены к приказу:
+//   • УДАЛЕНЫ: «Верховая езда» (ride), «Исследование» (investigate),
+//     «Следопытство» (track — вместо него «Внимательность»/spot),
+//     «Красноречие» (oratory — вместо него «Болтовня»/fast_talk);
+//   • ДОБАВЛЕН: «Ударное оружие» (blunt) — булавы, кистени, дубины, палицы.
 
 import { rollCharacteristic, damageBonus } from './BRPEngine.js';
 import { AGE_DEFAULT, AGE_MIN, AGE_MAX, applyAgeModifiers, applyAgeSkillModifiers } from './AgeRules.js';
 // Раунд 66.28 (пп.5,10): стартовый колчан стрел у героев с луком
 import { QUIVER_CAP } from './ammo.js';
 
-// === ХАРАКТЕРИСТИКИ BRP ===
+// === ХАРАКТЕРИСТИКИ BRP (раунд 66.71: 5 штук по SRD) ===
 export const CHARACTER_KEYS = [
-    { key: 'STR', name: 'Сила', desc: 'Физическая мощь' },
-    { key: 'CON', name: 'Телосложение', desc: 'Здоровье и выносливость' },
-    { key: 'SIZ', name: 'Размер', desc: 'Габариты тела' },
-    { key: 'DEX', name: 'Ловкость', desc: 'Скорость и координация' },
-    { key: 'INT', name: 'Интеллект', desc: 'Ум и сообразительность' },
-    { key: 'POW', name: 'Сила воли', desc: 'Магическая и духовная мощь' },
-    { key: 'CHA', name: 'Обаяние', desc: 'Социальная привлекательность' },
-    { key: 'APP', name: 'Внешность', desc: 'Физическая привлекательность' },  // BRP опциональная 8-я
+    { key: 'STR', name: 'Сила', desc: 'Физическая мощь и сырая мышечная сила' },
+    { key: 'CON', name: 'Телосложение', desc: 'Здоровье, бодрость и жизнеспособность' },
+    { key: 'POW', name: 'Мощь', desc: 'Сила воли, интуиция и духовное развитие' },
+    { key: 'DEX', name: 'Ловкость', desc: 'Скорость, проворство и координация' },
+    { key: 'CHA', name: 'Харизма', desc: 'Первое впечатление и привлекательность' },
 ];
 
 // === НАВЫКИ BRP (по категориям SRD) ===
@@ -47,24 +58,25 @@ export const SKILLS = [
     { key: 'bow', name: 'Стрельба из лука', base: 15, attr: 'DEX', factor: 2, category: 'combat' },
     { key: 'spear', name: 'Владение копьём', base: 20, attr: 'STR', factor: 1.5, category: 'combat' },
     { key: 'brawl', name: 'Рукопашная', base: 25, attr: 'STR', factor: 2, category: 'combat' },
+    // Раунд 66.71 (п.14): «Ударное оружие» — булавы, кистени, дубины, палицы
+    // (дробящее оружие SRD; база по специализации — берём 20, от ЛОВ)
+    { key: 'blunt', name: 'Ударное оружие', base: 20, attr: 'DEX', factor: 1.5, category: 'combat' },
     { key: 'dodge', name: 'Уклонение', base: 0, attr: 'DEX', factor: 0.5, derived: true, category: 'combat' },
     // Общение
-    { key: 'oratory', name: 'Красноречие', base: 15, attr: 'CHA', factor: 2, category: 'communication' },
+    // Раунд 66.71 (п.10): «Красноречие» удалено — социальный навык похвалы
+    // теперь «Болтовня» (fast_talk; SRD: Fast Talk, база 05%, Коммуникация).
     { key: 'persuade', name: 'Убеждение', base: 20, attr: 'CHA', factor: 1.5, category: 'communication' },
     { key: 'fast_talk', name: 'Болтовня', base: 10, attr: 'CHA', factor: 1.5, category: 'communication' },
     { key: 'intimidate', name: 'Запугивание', base: 15, attr: 'STR', factor: 1.5, category: 'communication' },
     // Знания
-    { key: 'medicine', name: 'Знахарство', base: 5, attr: 'INT', factor: 2, category: 'knowledge' },
+    { key: 'medicine', name: 'Знахарство', base: 5, attr: 'POW', factor: 2, category: 'knowledge' },
     { key: 'survival', name: 'Выживание', base: 20, attr: 'CON', factor: 1, category: 'knowledge' },
-    { key: 'ride', name: 'Верховая езда', base: 10, attr: 'DEX', factor: 1, category: 'knowledge' },
-    // Восприятие
-    { key: 'spot', name: 'Внимательность', base: 25, attr: 'INT', factor: 1, category: 'perception' },
-    { key: 'track', name: 'Следопытство', base: 10, attr: 'INT', factor: 1.5, category: 'perception' },
+    // Восприятие (ИНТ изъят — интуиция идёт от МОЩИ)
+    { key: 'spot', name: 'Внимательность', base: 25, attr: 'POW', factor: 1, category: 'perception' },
+    // Раунд 66.71 (п.13): «Следопытство» удалено — следы ищет
+    // «Внимательность» (spot; SRD: Spot, база 25%, Восприятие).
     { key: 'listen', name: 'Слух', base: 25, attr: 'CON', factor: 0.5, category: 'perception' },
-    // Раунд 48 (п.2 заявки): «Исследование» — только в бою успешная проверка
-    // этого навыка раскрывает параметры противника (параметры НПЦ игроку
-    // больше не показываются просто так).
-    { key: 'investigate', name: 'Исследование', base: 15, attr: 'INT', factor: 1, category: 'perception' },
+    // Раунд 66.71 (п.11): «Исследование» удалено (кнопка снята ещё в 66.44).
 ];
 
 // === ДОСПЕХИ И ОРУЖИЕ (Chronicles of Ruthenia) ===
@@ -78,7 +90,12 @@ export const ARMORS = {
 
 export const WEAPONS = {
     fists:   { id: 'fists',   name: 'Кулаки',         skill: 'brawl', dice: { min: 1, max: 3 }, bonus: 0, price: 0 },
-    club:    { id: 'club',    name: 'Дубина',          skill: 'brawl', dice: { min: 1, max: 6 }, bonus: 0, price: 2 },
+    // Раунд 66.71 (п.14): ДУБИНА переведена на навык «Ударное оружие»; к ней
+    // добавлены палица, булава и кистень — всё дробящее (blunt).
+    club:    { id: 'club',    name: 'Дубина',          skill: 'blunt', dice: { min: 1, max: 6 }, bonus: 0, price: 2 },
+    palitsa: { id: 'palitsa', name: 'Палица',          skill: 'blunt', dice: { min: 1, max: 8 }, bonus: 0, price: 6 },
+    mace:    { id: 'mace',    name: 'Булава',          skill: 'blunt', dice: { min: 1, max: 6 }, bonus: 1, price: 15 },
+    flail:   { id: 'flail',   name: 'Кистень',         skill: 'blunt', dice: { min: 1, max: 8 }, bonus: 1, price: 20 },
     knife:   { id: 'knife',   name: 'Нож',             skill: 'brawl', dice: { min: 1, max: 4 }, bonus: 1, price: 3 },
     spear:   { id: 'spear',   name: 'Копьё',           skill: 'spear', dice: { min: 1, max: 8 }, bonus: 0, price: 8 },
     sword:   { id: 'sword',   name: 'Меч',             skill: 'sword', dice: { min: 1, max: 8 }, bonus: 1, price: 30 },
@@ -150,12 +167,13 @@ export const PRESET_HEROES = [
         age: 30,
         sprite: 'player',
         description: 'Хорошие навыки разведки и чтения следов, средние боевые, слабое общение.',
-        stats: { STR: 45, CON: 60, SIZ: 45, DEX: 70, INT: 70, POW: 55, CHA: 35, APP: 45 },
+        stats: { STR: 45, CON: 60, POW: 55, DEX: 70, CHA: 35 },
         skillOverrides: {
-            spot: 70, track: 75, survival: 70, listen: 65,
+            // Раунд 66.71: spot = max(старый spot, track 75); fast_talk = max(20, oratory 25)
+            spot: 75, survival: 70, listen: 65,
             sword: 45, bow: 55, brawl: 40, dodge: 50,
-            oratory: 25, persuade: 30, fast_talk: 20, intimidate: 35,
-            medicine: 35, ride: 50,
+            persuade: 30, fast_talk: 25, intimidate: 35,
+            medicine: 35,
         },
         startWeapon: 'bow',
         startArmor: 'leather',
@@ -169,12 +187,12 @@ export const PRESET_HEROES = [
         age: 22,
         sprite: 'npc_merchant',
         description: 'Хорошие навыки разведки и чтения следов, средние боевые, слабое общение.',
-        stats: { STR: 40, CON: 55, SIZ: 40, DEX: 75, INT: 70, POW: 55, CHA: 35, APP: 50 },
+        stats: { STR: 40, CON: 55, POW: 55, DEX: 75, CHA: 35 },
         skillOverrides: {
-            spot: 72, track: 78, survival: 72, listen: 68,
+            spot: 78, survival: 72, listen: 68,
             sword: 42, bow: 60, brawl: 38, dodge: 55,
-            oratory: 28, persuade: 32, fast_talk: 22, intimidate: 30,
-            medicine: 38, ride: 48,
+            persuade: 32, fast_talk: 28, intimidate: 30,
+            medicine: 38,
         },
         startWeapon: 'bow',
         startArmor: 'leather',
@@ -189,12 +207,12 @@ export const PRESET_HEROES = [
         age: 25,
         sprite: 'player',
         description: 'Слабые навыки розыска и общения, но отличные боевые навыки.',
-        stats: { STR: 80, CON: 75, SIZ: 70, DEX: 55, INT: 40, POW: 50, CHA: 35, APP: 50 },
+        stats: { STR: 80, CON: 75, POW: 50, DEX: 55, CHA: 35 },
         skillOverrides: {
             sword: 80, brawl: 75, spear: 70, dodge: 55, bow: 35,
-            spot: 30, track: 20, survival: 35, listen: 30,
-            oratory: 20, persuade: 25, fast_talk: 15, intimidate: 60,
-            medicine: 15, ride: 50,
+            spot: 30, survival: 35, listen: 30,
+            persuade: 25, fast_talk: 20, intimidate: 60,
+            medicine: 15,
         },
         startWeapon: 'sword',
         startArmor: 'chain',
@@ -208,12 +226,12 @@ export const PRESET_HEROES = [
         age: 24,
         sprite: 'npc_merchant',
         description: 'Слабые навыки розыска и общения, но отличные боевые навыки.',
-        stats: { STR: 70, CON: 70, SIZ: 55, DEX: 65, INT: 45, POW: 50, CHA: 40, APP: 55 },
+        stats: { STR: 70, CON: 70, POW: 50, DEX: 65, CHA: 40 },
         skillOverrides: {
             sword: 78, brawl: 70, spear: 68, dodge: 60, bow: 40,
-            spot: 35, track: 25, survival: 38, listen: 32,
-            oratory: 22, persuade: 28, fast_talk: 18, intimidate: 55,
-            medicine: 18, ride: 52,
+            spot: 35, survival: 38, listen: 32,
+            persuade: 28, fast_talk: 22, intimidate: 55,
+            medicine: 18,
         },
         startWeapon: 'sword',
         startArmor: 'chain',
@@ -231,12 +249,13 @@ export const PRESET_HEROES = [
         age: 35,
         sprite: 'player',
         description: 'Хорошие навыки общения и поиска улик в разговорах, средние боевые.',
-        stats: { STR: 45, CON: 55, SIZ: 50, DEX: 55, INT: 80, POW: 60, CHA: 70, APP: 55 },
+        stats: { STR: 45, CON: 55, POW: 60, DEX: 55, CHA: 70 },
         skillOverrides: {
-            oratory: 72, persuade: 78, fast_talk: 62, intimidate: 38,
-            spot: 68, track: 52, listen: 72,
+            // Раунд 66.71: fast_talk = max(62, oratory 72); spot = max(68, track 52)
+            persuade: 78, fast_talk: 72, intimidate: 38,
+            spot: 68, listen: 72,
             sword: 42, brawl: 45, dodge: 52, bow: 28,
-            survival: 48, medicine: 42, ride: 32,
+            survival: 48, medicine: 42,
         },
         startWeapon: 'knife',
         startArmor: 'padded',
@@ -250,12 +269,12 @@ export const PRESET_HEROES = [
         age: 27,
         sprite: 'npc_merchant',
         description: 'Хорошие навыки общения и поиска улик в разговорах, средние боевые.',
-        stats: { STR: 40, CON: 55, SIZ: 50, DEX: 60, INT: 80, POW: 60, CHA: 75, APP: 65 },
+        stats: { STR: 40, CON: 55, POW: 60, DEX: 60, CHA: 75 },
         skillOverrides: {
-            oratory: 75, persuade: 80, fast_talk: 65, intimidate: 40,
-            spot: 70, track: 55, listen: 75,
+            persuade: 80, fast_talk: 75, intimidate: 40,
+            spot: 70, listen: 75,
             sword: 45, brawl: 45, dodge: 55, bow: 30,
-            survival: 50, medicine: 45, ride: 35,
+            survival: 50, medicine: 45,
         },
         startWeapon: 'knife',
         startArmor: 'padded',
@@ -270,12 +289,12 @@ export const PRESET_HEROES = [
         age: 30,
         sprite: 'player',
         description: 'Все навыки среднего уровня — универсал.',
-        stats: { STR: 55, CON: 55, SIZ: 50, DEX: 60, INT: 60, POW: 60, CHA: 60, APP: 55 },
+        stats: { STR: 55, CON: 55, POW: 60, DEX: 60, CHA: 60 },
         skillOverrides: {
             sword: 55, bow: 50, brawl: 50, spear: 50, dodge: 50,
-            oratory: 55, persuade: 55, fast_talk: 50, intimidate: 45,
-            spot: 55, track: 50, listen: 55,
-            survival: 55, medicine: 50, ride: 50,
+            persuade: 55, fast_talk: 55, intimidate: 45,
+            spot: 55, listen: 55,
+            survival: 55, medicine: 50,
         },
         startWeapon: 'sword',
         startArmor: 'leather',
@@ -289,12 +308,12 @@ export const PRESET_HEROES = [
         age: 20,
         sprite: 'npc_merchant',
         description: 'Все навыки среднего уровня — универсал.',
-        stats: { STR: 50, CON: 55, SIZ: 45, DEX: 62, INT: 60, POW: 60, CHA: 62, APP: 58 },
+        stats: { STR: 50, CON: 55, POW: 60, DEX: 62, CHA: 62 },
         skillOverrides: {
             sword: 55, bow: 52, brawl: 48, spear: 50, dodge: 52,
-            oratory: 56, persuade: 56, fast_talk: 51, intimidate: 44,
-            spot: 55, track: 50, listen: 56,
-            survival: 55, medicine: 51, ride: 50,
+            persuade: 56, fast_talk: 56, intimidate: 44,
+            spot: 55, listen: 56,
+            survival: 55, medicine: 51,
         },
         startWeapon: 'sword',
         startArmor: 'leather',
@@ -343,20 +362,20 @@ export function createCharacter(name, opts = {}) {
 
     // Возраст (раунд 44): 15..50, выбирается в генераторе персонажа.
     // Возрастные модификаторы BRP SRD применяются к характеристикам, затем
-    // пересчитываются производные (HP/MP/DB/Build/MOV) — внутри функции.
+    // пересчитываются производные (HP/DB/Build/MOV) — внутри функции.
     chr.age = (opts.age != null) ? opts.age : AGE_DEFAULT;
     chr.ageApplied = applyAgeModifiers(chr);
 
     // BRP производные (fallback для прямых вызовов без возраста):
     // applyAgeModifiers уже выставил их; здесь только страховка.
+    // Раунд 66.71: канон (CON+SIZ)/10 → (CON+STR)/10; очки мощи (MP)
+    // УДАЛЕНЫ приказом 7; DB — СИЛ+ТЕЛ; Build — от ТЕЛ; MOV без РАЗ.
     if (chr.HPmax == null) {
-        chr.HPmax = Math.ceil((chr.CON + chr.SIZ) / 10);
+        chr.HPmax = Math.ceil((chr.CON + chr.STR) / 10);
         chr.HP = chr.HPmax;
-        chr.MPmax = Math.floor(chr.POW / 5);
-        chr.MP = chr.MPmax;
-        chr.DB = damageBonus(chr.STR, chr.SIZ); // {text, min, max}
-        chr.Build = chr.SIZ >= 65 ? 1 : (chr.SIZ <= 35 ? -1 : 0);
-        chr.MOV = 10 + (chr.DEX >= 60 ? 1 : 0) - (chr.SIZ >= 70 ? 1 : 0);
+        chr.DB = damageBonus(chr.STR, chr.CON); // {text, min, max}
+        chr.Build = chr.CON >= 65 ? 1 : (chr.CON <= 35 ? -1 : 0);
+        chr.MOV = 10 + (chr.DEX >= 60 ? 1 : 0);
     }
     
     // Доспех и оружие

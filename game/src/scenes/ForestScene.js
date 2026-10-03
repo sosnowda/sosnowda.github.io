@@ -16,7 +16,7 @@ import { addMorningFog } from '../systems/AmbientFX.js';
 // Патч 66.46 (приказ 2): ход солнца — тени и смена освещения
 import { attachSunLight } from '../systems/SunLight.js';
 import { checkGameEnd } from '../data/thief.js';
-import { onLocationVisited } from '../data/questGenerator.js';
+import { onLocationVisited, getBlessedSkill } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
 import { dayKeyOf } from '../data/daily.js'; // раунд 66.10: daily вместо удалённого chests.js
 // Раунд 66.16 (приказы 1–3): лесные грибы/ягоды — еда (+1 HP, час, кулдаун 4 ч)
@@ -553,7 +553,8 @@ export class ForestScene extends Phaser.Scene {
             onComplete: () => arrow.destroy(),
         });
 
-        const chance = shotChance(animal.cfg.base, (player.skills && player.skills.bow) || 15);
+        // Раунд 66.71: благословение усиливает и выстрел по дичи (+10%)
+        const chance = shotChance(animal.cfg.base, getBlessedSkill(this.registry, (player.skills && player.skills.bow) || 15));
         const roll = Math.random() * 100;
         this.time.delayedCall(180, () => {
             if (roll < chance) {
@@ -1150,7 +1151,7 @@ export class ForestScene extends Phaser.Scene {
         const villageRep = getVillageRep(this.registry);
         const moneyStr = formatMoney(p.dengas || 0);
 
-        let statusLine = `❤${p.HP}/${p.HPmax}  ✦${p.MP}/${p.MPmax}  💰${moneyStr}`;
+        let statusLine = `❤${p.HP}/${p.HPmax}  💰${moneyStr}`;  // 66.71: МР удалён (приказ 7)
         if (timeState) statusLine += `  📅${formatDateTime(timeState)}`;
         statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
         this.statusText.setText(statusLine);
