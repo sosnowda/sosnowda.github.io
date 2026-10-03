@@ -53,6 +53,8 @@ import { HOUSES_FX } from '../data/housesFX.js';
 // часы церкви и стук в запертую дверь
 import { isNightHour, isChurchOpen, churchClosedReason } from '../systems/AccessHours.js';
 import { knockAtDoor as knockAtDoorLogic, doorResponder, responderName } from '../systems/NightKnock.js';
+// Патч 66.74 (приказы 13–18): ВЗЛОМ закрытого дома (дверь) + сундуки
+import { hasChest, attemptBreakIn } from '../systems/burglary.js';
 // Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
 import { hungerStatusLine } from '../systems/hunger.js';
 // Патч 66.73 (приказ 14): усталость в HUD деревни (ОУ = СИЛ+ТЕЛ, BRP SRD)
@@ -1808,13 +1810,107 @@ export class VillageScene extends Phaser.Scene {
         const activity = (pres.activity ? t(pres.activity) : t('занят(а) своим делом'));
         ActionLog.add(this.registry, tf(t('Дверь закрыта: {0}. Хозяин: {1} ({2})'), name, activity, where));
         this.busyDialog = true;
+        // Патч 66.74 (приказы 13, 17): в ЖИЛОМ доме с сундуком, если рядом
+        // нет НПЦ (приказ 17), можно попытаться ВЗЛОМАТЬ замок (приказ 13).
+        const canBurglary = hasChest(interiorId) && !this.isNpcNearby();
+        const burglaryButtons = [];
+        if (canBurglary) {
+            burglaryButtons.push({
+                text: t('🔓 Взломать замок (Взлом)'),
+                callback: () => { this.busyDialog = false; this.breakIntoHouse(interiorId); },
+            });
+        }
+        burglaryButtons.push({ text: t('Понятно'), callback: () => { this.busyDialog = false; } });
+        const burglaryNote = hasChest(interiorId)
+            ? (canBurglary
+                ? '\n' + t('Ты прикидываешь замок взглядом… (Взлом; при провале Скрадывания тебя приметят — репутация упадёт.)')
+                : '\n' + t('Рядом ходят люди — взламывать дом нельзя, увидят. Подожди, пока улица опустеет.'))
+            : '';
         createDialog(this,
             t('Дом закрыт'),
             `${t('🔒 Дом закрыт, никого нет')}` +
             `\n\n${name}\n` +
-            tf(t('Хозяин сейчас: {0} · {1}'), activity, where),
-            [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+            tf(t('Хозяин сейчас: {0} · {1}'), activity, where) + burglaryNote,
+            burglaryButtons,
             { singletonKey: `closed-${interiorId}` });
+    }
+
+    /**
+     * Патч 66.74 (приказ 17): расстояние до ближайшего НПЦ на улице деревни
+     * (в тайлах). Учитывает гуляющих жителей и старосту. null — улица пуста.
+     */
+    nearestNpcDistanceTiles() {
+        if (!this.playerObj) return null;
+        let best = null;
+        const consider = (spr) => {
+            if (!spr || !spr.active) return;
+            const d = Phaser.Math.Distance.Between(this.playerObj.x, this.playerObj.y, spr.x, spr.y) / this.tileSize;
+            if (best == null || d < best) best = d;
+        };
+        (this.streetNpcs || []).forEach(n => consider(n.spr));
+        if (this.elderWalker) consider(this.elderWalker.spr);
+        return best;
+    }
+
+    /** Есть ли НПЦ рядом с героем (ближе ~2.5 тайлов) — приказ 17. */
+    isNpcNearby(radiusTiles = 2.5) {
+        const d = this.nearestNpcDistanceTiles();
+        return d != null && d <= radiusTiles;
+    }
+
+    /**
+     * ПАТЧ 66.74 (приказы 13, 17, 18): ВЗЛОМ ДВЕРИ закрытого дома.
+     * Вызывается из поп-апа «Дом закрыт» (только днём, когда хозяина нет,
+     * и только если рядом нет НПЦ — приказ 17).
+     *  • попытка — 30 минут времени, усталость −1;
+     *  • сначала СКРАДЫВАНИЕ (приказ 18): провал — «приметили» −2 репутации,
+     *    попытка сорвана;
+     *  • затем ВЗЛОМ: успех — дверь приоткрыта (интерьер в режиме взлома,
+     *    в пустом доме доступен сундук); провал — замок держит (можно снова).
+     */
+    breakIntoHouse(interiorId) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        // Приказ 17: повторная проверка НПЦ — гуляющий мог подойти
+        if (this.isNpcNearby()) {
+            this.busyDialog = true;
+            createDialog(this, t('👀 Рядом люди'),
+                t('У самой двери мелькают жители — сейчас не время. Взламывать дом можно, только когда вокруг ни души. Дождись, пока улица опустеет.'),
+                [{ text: t('Отойти подобру'), callback: () => { this.busyDialog = false; } }],
+                { singleton: false });
+            return;
+        }
+        const interior = INTERIORS[interiorId];
+        const name = interior ? interior.name : interiorId;
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+        tickTime(this.registry, 30, 'walk');
+        const res = attemptBreakIn(this.registry, player, {
+            stealth: (player.skills && player.skills.stealth) || 10,
+            lock: (player.skills && player.skills.lockpicking) || 10,
+        });
+        if (res.stealthFailed) {
+            ActionLog.add(this.registry, tf(t('Пытался взломать дверь «{0}» — Скрадывание провалено ({1}%: бросок {2}): приметили, −2 к репутации.'), name, res.stealthSkill, res.stealthRoll));
+            createDialog(this, t('👣 Приметили!'),
+                tf(t('Ты возился у замка, когда со стороны колодца раздался голос — на тебя взглянули. Ты отошёл за угол, но дело сделано: тебя запомнили.\n\n(Скрадывание {0}%: бросок {1} — провал; −2 к славе в деревне.)'), res.stealthSkill, res.stealthRoll),
+                [{ text: t('Смешаться с улицей'), callback: close }], { singleton: false });
+            this.updateHUD();
+            return;
+        }
+        if (res.done) {
+            ActionLog.add(this.registry, tf(t('Вскрыл замок «{0}» (Взлом {1}%: бросок {2}) — дверь приоткрыта. Скрадывание {3}% (бросок {4}): подошёл неслышно.'), name, res.lockSkill, res.lockRoll, res.stealthSkill, res.stealthRoll));
+            this.busyDialog = false;
+            this.audioManager.playRealDoorOpen();
+            this.scene.pause();
+            this.scene.launch('Interior', { interiorId, from: 'Village', burglary: true });
+            return;
+        }
+        ActionLog.add(this.registry, tf(t('Пытался вскрыть замок «{0}» (Взлом {1}%: бросок {2}) — замок крепок.'), name, res.lockSkill, res.lockRoll));
+        createDialog(this, t('🔒 Крепкий замок'),
+            tf(t('Скребёшь отмычкой в колоде ключа — а он держит. Дом пуст, но замок живуч: можно пробовать снова (полчаса за попытку, и Скрадывание рискует всякий раз).\n\n(Взлом {0}%: бросок {1} — провал.)'), res.lockSkill, res.lockRoll),
+            [{ text: t('Отойти от двери'), callback: close }], { singleton: false });
+        this.updateHUD();
     }
 
     /**

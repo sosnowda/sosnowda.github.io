@@ -35,6 +35,9 @@ import { canUseHerb, registerHerb } from './meal.js';
 import { hungerSkillPenalty } from './hunger.js';
 // Патч 66.73 (приказ 14): усталость — −1% за каждый отрицательный ОУ (BRP SRD)
 import { fatigueSkillMod } from './fatigue.js';
+// Патч 66.74 (приказы 2,3): новые навыки берут благословение молитвы и
+// полный модификатор благословения/голода/усталости (getBlessedSkill)
+import { getBlessedSkill } from '../data/questGenerator.js';
 
 /** Патч 66.73: значение навыка с голодным и усталостным штрафом (пол 1). */
 function hungrySkill(registry, base) {
@@ -120,6 +123,59 @@ export const LOOT_DEFS = {
     roe_antlers: {
         id: 'roe_antlers', name: 'Рога косули (трофей)', emoji: '🦌',
         edible: false, heal: 0, sell: 10, trophy: true,
+    },
+    // ============================================================
+    // ПАТЧ 66.74 (приказы 3, 12–15 владельца): ТОВАРЫ РУСИ XV ВЕКА —
+    // промысловые и ремесленные (мёд/воск — главный экспорт Руси;
+    // сукно/полотно/железо/горшки/убрус/зерно/сало — добро в сундуках
+    // жителей, добытое навыком «Взлом», и шедевр гончара при крите
+    // «Ремесла»). Все — на продажу (трактирщик/мясник); мёд и сало —
+    // ещё и простая еда (+1 HP, правила meal.js).
+    // ============================================================
+    honey: {
+        id: 'honey', name: 'Мёд лесной', emoji: '🍯',
+        edible: true, heal: 1, sell: 6,
+    },
+    wax: {
+        id: 'wax', name: 'Воск пчелиный', emoji: '🕯',
+        edible: false, heal: 0, sell: 8,
+    },
+    sukon: {
+        id: 'sukon', name: 'Сукно (отрез)', emoji: '🧵',
+        edible: false, heal: 0, sell: 12,
+    },
+    polotno: {
+        id: 'polotno', name: 'Полотно холщовое', emoji: '🧶',
+        edible: false, heal: 0, sell: 8,
+    },
+    iron: {
+        id: 'iron', name: 'Железная полоса', emoji: '🔩',
+        edible: false, heal: 0, sell: 7,
+    },
+    clay_pot: {
+        id: 'clay_pot', name: 'Горшок печёный', emoji: '🏺',
+        edible: false, heal: 0, sell: 3,
+    },
+    // Крит «Ремесла» у гончара — «шедевр»: горшок мастеровой (дороже вдвое)
+    master_pot: {
+        id: 'master_pot', name: 'Горшок мастеровой (шедевр)', emoji: '🏺',
+        edible: false, heal: 0, sell: 10, trophy: true,
+    },
+    ubrus: {
+        id: 'ubrus', name: 'Убрус вышитый', emoji: '🧣',
+        edible: false, heal: 0, sell: 6,
+    },
+    amber: {
+        id: 'amber', name: 'Оберег янтарный', emoji: '📿',
+        edible: false, heal: 0, sell: 15, trophy: true,
+    },
+    grain: {
+        id: 'grain', name: 'Зерно (мешечек)', emoji: '🌾',
+        edible: false, heal: 0, sell: 4,
+    },
+    salo: {
+        id: 'salo', name: 'Сало солёное', emoji: '🥓',
+        edible: true, heal: 1, sell: 4,
     },
 };
 
@@ -439,4 +495,47 @@ export function survivalButcher(registry, player, meatRange, hasSkin, opts = {},
     }
     if (registry) registry.set('player', player);
     return { ok: meat > 0, meat, skin, trophy, crit: res.result === 'critical', roll: res.roll, skill };
+}
+
+// ============================================================
+// ПАТЧ 66.74 (приказ владельца 3): БОРТНИЧЕСТВО — проверяемый навык.
+// «Навык: Бортничество — мёд и воск, дикие борти в лесу + пасека
+// (уже в игре); главный экспорт Руси».
+//  • дикие борти в лесу: провал — пчёлы ужалили (−1 HP, точка жива),
+//    успех — соты с мёдом (2 шт. в узел), крит — мёд ×2 И воск (+1);
+//  • пасека (культурные ульи): провал — впустую (без укусов — свой
+//    дымокур под рукой), та же лестница мёда/воска;
+//  • время и усталость — на стороне сцены (как у survivalGather).
+// ============================================================
+
+/**
+ * Проверка Бортничества при добыче мёда из борти/улья.
+ * @param {object} registry, @param {object} player
+ * @param {object} [opts] — { skill: значение Бортничества, wild: дикая борть (укусы) }.
+ * @returns {{ ok:boolean, honey:number, wax:number, stung:boolean, crit:boolean, roll:number, skill:number }}
+ */
+export function bortnikGather(registry, player, opts = {}) {
+    const bless = opts.bonus != null ? (Number(opts.bonus) || 0) : consumePrayerBless(registry);
+    const skill = Math.max(1, Math.min(99, hungrySkill(registry,
+        (Number(opts.skill) || (player && player.skills && player.skills.beekeeping) || 1) + bless)));
+    const res = skillCheck(skill);
+    const failed = res.result === 'fail' || res.result === 'fumble';
+    const crit = res.result === 'critical';
+    let honey = 0;
+    let wax = 0;
+    let stung = false;
+    if (failed) {
+        // Пчёлы жалят только у ДИКИХ бортей (на пасеке — дымокур и убор)
+        stung = !!opts.wild;
+        if (stung && player) player.HP = Math.max(1, (player.HP || 1) - 1);
+    } else {
+        honey = crit ? 4 : 2;              // успех — 2, крит — «полный сот» ×2
+        if (crit) wax = 1;                 // крит — ещё и воск (на продажу)
+        if (player) {
+            if (honey > 0) addItem(player, 'honey', honey);
+            if (wax > 0) addItem(player, 'wax', wax);
+        }
+    }
+    if (registry) registry.set('player', player);
+    return { ok: !failed, honey, wax, stung, crit, roll: res.roll, skill };
 }

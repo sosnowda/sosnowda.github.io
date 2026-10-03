@@ -107,7 +107,7 @@ ok(indexEn.includes('<link rel="manifest" href="/en/manifest.json">'),
     'en/index.html: link rel="manifest" ведёт на существующий /en/manifest.json (404 невозможен)');
 
 console.log('--- 6. SW: v112, v42 цел, механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v114';"),
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v115';"),
     'sw.js: const CACHE_NAME v112 (HTML RU+EN лендингов + webvitals.js → бамп §4)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"),
     'sw.js: const GAME_ASSETS_CACHE v42 (ассеты/vendor не тронуты)');

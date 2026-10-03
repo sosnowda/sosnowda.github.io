@@ -17,6 +17,8 @@
 //   m — грибы (проходимо, сбор: +2 HP, раз в игровой день)
 //   b — куст ягод (НЕПРОХОДИМ, сбор с соседнего тайла: +1 HP)
 //   h — зверобой (проходимо, сбор: +3 HP, раз в игровой день)
+//   B — БОРТНОЕ дерево — дикие пчёлы (НЕПРОХОДИМО; сбор мёда с соседней
+//       клетки — ПАТЧ 66.74, проверка «Бортничества»: мёд + воск)
 //   C — старое кострище лесников (НЕПРОХОДИМО, декор; отдых 1 час)
 //   E — выход к околице (проходимо, южная кромка)
 
@@ -27,7 +29,7 @@ export const FOREST_MAP = [
     'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
     'Tt..T,,f..T..tt....Tff,..t...T',
     'T.m..ffT....,....bT....m..T..T',
-    'T..T.,....T....T...TffT..T...T',
+    'T..T.,.B..T....T...TffT..T...T',
     'T..,C..L..,..T.....,....,...tT',
     'T.m....,..b...T..m....T......T',
     'T....T.....,......,..L...T.,.T',
@@ -41,16 +43,17 @@ export const FOREST_MAP = [
     'Tt....,....h........,..Tt....T',
     'T..L.......T...r..bT.........T',
     'T...,..T.m....,.....,..m...t.T',
-    'T.m....,....T....t...........T',
+    'T.m....,....T....t......B....T',
     'T....bT..,......,..L...T..b..T',
     'Tt......,..T......,......,...T',
     'T...T....m....,T.....,..T....T',
     'TTTTTTTTTTTTTTE TTTTTTTTTTTTTT',
 ];
 
-// Непроходимые буквы (с precision: 'b' куст — собирать с соседней клетки)
+// Непроходимые буквы (с precision: 'b' куст — собирать с соседней клетки;
+// 'B' бортное дерево — мёд с соседней клетки — патч 66.74)
 // Раунд 66.11: буква 'S' вырезана вместе с фичей.
-export const FOREST_SOLID = new Set(['T', 't', 'r', 'L', 'b', 'C']);
+export const FOREST_SOLID = new Set(['T', 't', 'r', 'L', 'b', 'C', 'B']);
 
 // Точка появления игрока (юг, у выхода)
 export const FOREST_SPAWN = { col: 14, row: 19 };
@@ -79,10 +82,15 @@ export const WOLF_CFG = {
 };
 
 // Точки сбора: читаются из карты. Возвращает массив
-// { id, kind: 'mushroom'|'berry'|'herb', col, row, hp, prompt, label }
+// { id, kind: 'mushroom'|'berry'|'herb'|'bort', col, row, hp, prompt, label }
 // Раунд 15: подписи сбора локализованы (i18n).
 // Раунд 66.70: сбор — проверка Выживания, добыча идёт в узел (не съедается на месте).
-import { t } from '../systems/i18n.js';
+import { t, tf } from '../systems/i18n.js';
+// Патч 66.74 (приказ 8): проверка Следопытства при входе в лес
+import { skillCheck } from '../systems/BRPEngine.js';
+import { getBlessedSkill } from '../data/questGenerator.js';
+import { dayKeyOf, isActionDoneToday, markActionDone } from '../data/daily.js';
+import { ActionLog } from '../data/actionLog.js';
 
 export function forestGatherSpots() {
     const spots = [];
@@ -116,6 +124,16 @@ export function forestGatherSpots() {
                     hp: 0, label: t('Зверобой'), prompt: t('Срезать зверобой (Выживание)'),
                     actionLog: 'Срезал зверобой на лесной поляне.',
                     floatText: '+🌿', tint: 0xffe9a0,
+                });
+            } else if (ch === 'B') {
+                // ПАТЧ 66.74 (приказ 3): ДИКАЯ БОРТЬ — бортное дерево с пчёлами.
+                // Сбор — проверка «Бортничества» (bortnikGather в loot.js):
+                // провал — пчёлы ужалили (−1 HP), успех — мёд, крит — мёд + воск.
+                spots.push({
+                    id: `B${col}_${row}`, kind: 'bort', col, row,
+                    hp: 0, label: t('Бортное дерево'), prompt: t('Достать мёд из борти (Бортничество)'),
+                    actionLog: 'Достал мёд из лесной борти.',
+                    floatText: '+🍯', tint: 0xffd960,
                 });
             }
         }
@@ -184,8 +202,12 @@ export const GAME_ANIMALS = {
  * { kind, col, row } по ПРОХОДИМЫМ тайлам (валидно для BFS-карты).
  * Зайцы (2–3) и глухари (1–2) — по всему лесу; косуля — шанс 25%,
  * только ряды 0..maxRow (чаща). rng подменяется в тестах.
+ * ПАТЧ 66.74 (приказ 8): удачная проверка «Следопытства» ПРИ ВХОДЕ в лес
+ * передаёт opts.tracking — зверя заметно больше (заяц/глухарь +1,
+ * шанс косули 25% → 50%): герой идёт звериными тропами.
  */
-export function planForestAnimals(rng = Math.random) {
+export function planForestAnimals(rng = Math.random, opts = {}) {
+    const tracking = !!opts.tracking;
     const passable = [];
     for (let row = 0; row < FOREST_ROWS; row++) {
         for (let col = 0; col < FOREST_COLS; col++) {
@@ -198,8 +220,8 @@ export function planForestAnimals(rng = Math.random) {
         return pool[Math.floor(rng() * pool.length)];
     };
     const plan = [];
-    const hares = 2 + Math.floor(rng() * 2);           // 2–3
-    const birds = 1 + Math.floor(rng() * 2);           // 1–2
+    const hares = 2 + Math.floor(rng() * 2) + (tracking ? 1 : 0);   // 2–3 (+1 по следопытству)
+    const birds = 1 + Math.floor(rng() * 2) + (tracking ? 1 : 0);   // 1–2 (+1 по следопытству)
     for (let i = 0; i < hares; i++) {
         const spot = pick(({ row }) => row >= 8 && row <= FOREST_ROWS - 3);
         if (spot) plan.push({ kind: 'hare', ...spot });
@@ -208,7 +230,7 @@ export function planForestAnimals(rng = Math.random) {
         const spot = pick(({ row }) => row >= 2 && row <= FOREST_ROWS - 3);
         if (spot) plan.push({ kind: 'bird', ...spot });
     }
-    if (rng() < 0.25) {                                 // косуля — редко, в чаще
+    if (rng() < (tracking ? 0.5 : 0.25)) {              // косуля — редко, в чаще (следопытство — вдвое чаще)
         const roeCfg = GAME_ANIMALS.roe;
         const spot = pick(({ row }) => row >= 1 && row <= roeCfg.maxRow);
         if (spot) plan.push({ kind: 'roe', ...spot });
@@ -219,6 +241,38 @@ export function planForestAnimals(rng = Math.random) {
 export function forestTileAt(col, row) {
     if (col < 0 || row < 0 || col >= FOREST_COLS || row >= FOREST_ROWS) return 'T';
     return FOREST_MAP[row][col] || 'T';
+}
+
+// ============================================================
+// ПАТЧ 66.74 (приказ владельца 8): СЛЕДОПЫТСТВО ПРИ ВХОДЕ В ЛЕС.
+// «Следопытство — вернуть обратно, специально как Навык, для поиска
+// следов вора и расчёта шансов появления дичи в лесу (проверка при
+// входе в локации леса)».
+//  • одна проверка на игровой день (первый вход в ЛЮБУЮ лесную локацию —
+//    цепочка Опушка/Поляна/Густой лес ИЛИ Тёмный лес);
+//  • успех — весь день зверя больше (+1 заяц, +1 глухарь, косуля вдвое
+//    чаще): planForestAnimals({ tracking: true });
+//  • вызывают сцены (LocationScene/ForestScene) при входе.
+// ============================================================
+export function rollForestTracking(registry) {
+    const player = registry ? registry.get('player') : null;
+    if (!player) return { boost: false, roll: 0, skill: 0 };
+    const today = dayKeyOf(registry.get('gameTime'));
+    const q = registry.get('quest') || {};
+    if (!isActionDoneToday(q, 'forest_track_daily', today)) {
+        markActionDone(q, 'forest_track_daily', today);
+        const skill = getBlessedSkill(registry, (player.skills && player.skills.track) || 20);
+        const res = skillCheck(skill);
+        const ok = res.result === 'critical' || res.result === 'success';
+        if (ok) q.forestTrackBoostDay = today;
+        registry.set('quest', q);
+        ActionLog.add(registry, ok
+            ? tf(t('Читал звериные тропы при входе в лес (Следопытство {0}%: бросок {1} — успех): дичь нынче ходит здесь.'), skill, res.roll)
+            : tf(t('Входя в лес, читал следы на тропе (Следопытство {0}%: бросок {1}) — следы старые, зверь не балует.'), skill, res.roll));
+        return { boost: ok, roll: res.roll, skill };
+    }
+    const qNow = registry.get('quest') || {};
+    return { boost: qNow.forestTrackBoostDay === today, roll: 0, skill: (player.skills && player.skills.track) || 20 };
 }
 
 export function isForestSolid(col, row) {

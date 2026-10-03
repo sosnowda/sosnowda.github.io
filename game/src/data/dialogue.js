@@ -19,6 +19,10 @@ import { t, tf } from '../systems/i18n.js';
 // Раунд 45 (пп.5,6 заявки): староста мирит игрока с разозлёнными НПЦ за виру
 // Раунд 46 (п.4): со СТАРОСТОЙ всегда можно помириться (getViraCandidates)
 import { getViraCandidates, payViraToElder, applyQuestRefusalPenalty } from './reputation.js';
+// Патч 66.74 (приказ 4): подёнка у гончара — та же проверка Ремесла, что и у кнопки
+import { craftDaywork } from '../systems/jobs.js';
+import { spendFatigue } from '../systems/fatigue.js';
+import { addItem } from '../systems/loot.js';
 
 /**
  * Раунд 22 (п.3): повторный расспрос того же NPC НЕВОЗМОЖЕН.
@@ -1708,13 +1712,22 @@ export const DIALOGUES = {
                         scene._lastAskResult = { message: t('Игнат щурится: «Сначала — хлеб да отдых. Обессиленного работником не нанимают». (Нужно больше здоровья)') };
                         return;
                     }
+                    // Патч 66.74 (приказ 4): та же лестница РЕМЕСЛА, что и у кнопки
+                    // в мастерской (провал — брак 2 д., успех 4–7 д., крит — шедевр);
+                    // время (1 час) и усталость — как у кнопки.
+                    tickTime(scene.registry, 60, 'work');
+                    spendFatigue(scene.registry, 2);
                     player.HP = Math.max(1, (player.HP || 1) - 3);
-                    const wage = 3 + Math.floor(Math.random() * 4); // 3..6 д. — как в амбаре раньше
-                    player.dengas = (player.dengas || 0) + wage;
+                    const jobRes = craftDaywork(scene.registry, (player.skills && player.skills.craft) || 15);
+                    if (jobRes.masterpiece) addItem(player, 'master_pot', 1);
+                    player.dengas = (player.dengas || 0) + jobRes.wage;
                     scene.registry.set('player', player);
                     if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
-                    ActionLog.add(scene.registry, `Отработал час в гончарной мастерской: +${wage} д., усталость −3 HP.`);
-                    scene._lastAskResult = { message: `Час у круга и печи: носил дрова, мешал глину, ставил горшки на обжиг. Игнат доволен.\n\nЗаработано: +${wage} д. Усталость: −3 здоровья.` };
+                    ActionLog.add(scene.registry, tf(t('Отработал час в гончарной мастерской: +{0} д., усталость −3 HP (Ремесло {1}%: бросок {2}).'), jobRes.wage, jobRes.skill, jobRes.roll));
+                    scene._lastAskResult = { message: t('Час у круга и печи: носил дрова, мешал глину, ставил горшки на обжиг.') + ' '
+                        + (jobRes.crit
+                            ? tf(t('Горшок вышел загляденье — сам мастер ахнул! Заработано: +{0} д. Усталость: −3 здоровья. Горшок мастеровой — в узел. (Ремесло {1}%: бросок {2} — крит.)'), jobRes.wage, jobRes.skill, jobRes.roll)
+                            : tf(t('Заработано: +{0} д. Усталость: −3 здоровья. (Ремесло {1}%: бросок {2} — {3}.)'), jobRes.wage, jobRes.skill, jobRes.roll, jobRes.ok ? t('успех') : t('брак на круге'))) };
                 },
                 choices: [
                     { text: t('(продолжить)'), next: 'ask_result' },

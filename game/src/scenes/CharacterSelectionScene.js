@@ -561,6 +561,8 @@ export class CharacterSelectionScene extends Phaser.Scene {
         // registry.remove возвращает meal.js к дефолту { lastAbsMin: -999999 }.
         this.registry.remove('mealState');
         this.registry.remove('sleepState');
+        // Патч 66.74: сундучное добро не переживает новую партию
+        this.registry.remove('chestState');
         initThiefHunt(this.registry);
         ActionLog.init(this.registry);
         // Инициализируем игровое время

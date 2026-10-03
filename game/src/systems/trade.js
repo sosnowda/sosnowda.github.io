@@ -26,6 +26,9 @@ export const HAGGLE_SUCCESS_MULT = 1.25;
 export const HAGGLE_CRITICAL_MULT = 1.5;
 export const HAGGLE_FUMBLE_MULT = 0.9;
 
+// Патч 66.74 (приказ 6): подсказка в меню продажи упоминает ОБА пути торга
+export const HAGGLE_HINT_COMMERCE = t('Сметка знает цену — торговаться можно и ею.');
+
 /** Ключ игрового дня (та же формула, что в hunger.js/meal.js). */
 function haggleDayKey(registry) {
     const time = registry ? registry.get('gameTime') : null;
@@ -70,20 +73,25 @@ export function haggleHintLine(registry, npcId) {
 
 /**
  * Попытка торга (одна на торговца в сутки).
+ * ПАТЧ 66.74 (приказ 6): СМЕТКА — синергия с торгом: вместо Убеждения
+ * можно торговаться ЗНАНИЕМ ЦЕН (кнопка «Сметить товар») — общий дневной
+ * лимит один: слово ИЛИ сметка, что раньше удастся.
  * @param {Object} registry — игровой registry
  * @param {string} npcId — id торговца ('tavernkeeper' | 'butcher')
- * @param {number} persuadeSkill — навык Убеждения игрока
+ * @param {number} skillValue — навык игрока (Убеждение ИЛИ Сметка)
+ * @param {object} [opts] — { skillLabel: подпись проверки ('Убеждение'|'Сметка') }
  * @returns {{ done:boolean, mult:number, message:string, checkLine:string|null }}
  */
-export function attemptHaggle(registry, npcId, persuadeSkill) {
+export function attemptHaggle(registry, npcId, skillValue, opts = {}) {
+    const label = opts.skillLabel || 'Убеждение';
     if (!canHaggleToday(registry, npcId)) {
         return { done: false, mult: haggleMultFor(registry, npcId),
             message: t('Торговец отмахивается: «Нынче у меня цены твёрдые, не приставай!»'), checkLine: null };
     }
     const opp = getNpcOpposition({ id: npcId }, 'persuade');
     const edge = getChaEdgeMod(registry);
-    const res = opposedSkillCheck((Number(persuadeSkill) || 1) + edge, opp.value, 0);
-    const checkLine = formatOpposedCheck(res, 'Убеждение' + (edge ? (edge > 0 ? ` (+${edge} обаяние)` : ` (${edge} обаяние)`) : ''),
+    const res = opposedSkillCheck((Number(skillValue) || 1) + edge, opp.value, 0);
+    const checkLine = formatOpposedCheck(res, label + (edge ? (edge > 0 ? ` (+${edge} обаяние)` : ` (${edge} обаяние)`) : ''),
         `${opp.ruNameGen} торговца`);
 
     let mult = 1;

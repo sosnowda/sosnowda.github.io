@@ -298,8 +298,9 @@ console.log('— 4. ВЫЖИВАНИЕ: сбор (провал/горсть/×2)
     ok(forestSrc.includes('survivalGather(this.registry, this.player, entry.kind)'),
         'ForestScene: сбор в лесу — проверка Выживания');
     const spots = forestGatherSpots();
-    ok(spots.length > 0 && spots.every(s => /Выживание/.test(s.prompt)),
-        'все точки сбора подписаны как проверка Выживания');
+    // 66.74: борть — своя проверка («Бортничество»), остальные — Выживание
+    ok(spots.length > 0 && spots.every(s => /Выживание|Бортничество/.test(s.prompt)),
+        'все точки сбора подписаны проверкой навыка (Выживание; борть — Бортничество)');
     ok(spots.every(s => !/\+1 ❤/.test(s.prompt)), 'подсказки «съедено на месте» убраны из подписей');
 }
 

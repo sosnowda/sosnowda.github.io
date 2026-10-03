@@ -583,10 +583,13 @@ export function examineFootprint(registry, locationId, fpId) {
     const player = registry.get('player');
     // Раунд 31 (п.4): ночью проверка Внимательности СЛОЖНЕЕ (штраф)
     // Раунд 59 (п.1): вторая попытка по тому же следу — штраф повторного поиска
+    // ПАТЧ 66.74 (приказ 8): «Следопытство» ВОЗВРАЩЕНО — след вора читает
+    // ЛУЧШИЙ из двух: Внимательность ИЛИ Следопытство (max).
     const nightPenalty = isNightCheck(registry) ? NIGHT_SPOT_PENALTY : 0;
     const retryPenalty = isRetry ? TRACK_RETRY_PENALTY : 0;
     const spotSkill = getBlessedSkill(registry, Math.max(
-        Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT) - nightPenalty - retryPenalty, 5));
+        Math.max(Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT),
+            (player.skills && player.skills.track) || 0) - nightPenalty - retryPenalty, 5));
     const res = skillCheck(spotSkill);
     const success = res.result === 'critical' || res.result === 'success';
 
@@ -1062,10 +1065,12 @@ export function searchLocation(registry, locationId) {
     // Раунд 22: нижний порог Внимательности + благословение (+10, одна проверка)
     // Раунд 31 (п.4): ночью проверка СЛОЖНЕЕ (штраф к Внимательности)
     // Раунд 59 (п.1): вторая попытка — ещё и штраф повторного поиска
+    // ПАТЧ 66.74 (приказ 8): следы вора читает ЛУЧШИЙ из Внимательность/Следопытство.
     const nightPenaltyS = isNightCheck(registry) ? NIGHT_SPOT_PENALTY : 0;
     const retryPenaltyS = isRetry ? TRACK_RETRY_PENALTY : 0;
     const spotSkill = getBlessedSkill(registry, Math.max(
-        Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT) - nightPenaltyS - retryPenaltyS, 5));
+        Math.max(Math.max((player.skills && player.skills.spot) || 25, MIN_SPOT),
+            (player.skills && player.skills.track) || 0) - nightPenaltyS - retryPenaltyS, 5));
 
     if (trace) {
         const res = skillCheck(spotSkill);
@@ -1443,13 +1448,22 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
         if (fn) fn();
     };
 
-    // Показать исход убеждения/оглушения
+    // Показать исход убеждения/оглушения/пряток
     const showOutcome = (result, howLabel) => {
         ActionLog.add(registry, howLabel);
         if (result.thiefEscaped) {
             // Последний шанс упущен — вор сбежал
             createDialog(scene, t('🏃 Вор скрылся!'), result.message, [
                 { text: t('Итоги похода'), callback: () => scene.scene.start('End') },
+            ], { singleton: false, portraitKey: getThiefPortraitKey(registry), typing: true, typingSpeed: 25 });
+            return;
+        }
+        if (result.hidden) {
+            // ПАТЧ 66.74: удачные прятки — вор потерял героя из виду,
+            // встреча разыгрывается заново (можно подкрасться/напасть/уйти)
+            try { sprite.destroy(); } catch (e) { /* ок */ }
+            createDialog(scene, t('🌫 Ты в тени'), result.message, [
+                { text: t('Продолжить'), callback: () => { scene.busyDialog = false; } },
             ], { singleton: false, portraitKey: getThiefPortraitKey(registry), typing: true, typingSpeed: 25 });
             return;
         }
@@ -1472,7 +1486,7 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
         ? 'Воровка в тёмном плаще сжимает краденую икону. Она тебя заметила!'
         : 'Вор в тёмном плаще сжимает краденую икону. Он тебя заметил!';
     createDialog(scene, tf(t('😱 Встреча с {0}!'), noun),
-        intro + t(' Можно напасть, убедить отдать краденое (проверка Убеждения) или подкрасться и оглушить (проверка Драки).'),
+        intro + t(' Можно напасть, убедить отдать краденое (проверка Убеждения), подкрасться и оглушить (проверка Драки) — или затаиться (Скрадывание).'),
         [
             {
                 text: t('⚔ Напасть'),
@@ -1495,6 +1509,11 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
             {
                 text: t('🌑 Оглушить'),
                 callback: finish(() => showOutcome(stunThief(registry), 'Пытался оглушить вора и взять его в плен.')),
+            },
+            {
+                // ПАТЧ 66.74 (приказ 1): Скрадывание — прятки от вора
+                text: t('🌫 Спрятаться (Скрадывание)'),
+                callback: finish(() => showOutcome(hideFromThief(registry), 'Пытался затаиться и спрятаться от вора.')),
             },
             {
                 text: t('◀ Отступить'),
@@ -1588,6 +1607,47 @@ export function stunThief(registry) {
         message: fled.escaped
             ? t('Ты наступил на сухую ветку — вор обернулся и скрылся во мраке. Это была твоя последняя возможность...')
             : t('Вор оказался проворнее: увернулся от захвата и пустился наутёк. Успей прочесть его следы!'),
+        thiefEscaped: fled.escaped,
+    };
+}
+
+/**
+ * ПАТЧ 66.74 (приказ владельца 1): СКРАДЫВАНИЕ — «прятки от вора».
+ * Затаиться при встрече: встречная проверка Скрадывания против
+ * внимательности вора (40). Успех — вор тебя теряет: он остаётся на месте
+ * (прибит на 2 часа), ты можешь осмотреться/подкрасться позже.
+ * Провал — вор чует человека и пускается наутёк (как при срыве оглушения).
+ */
+export const THIEF_ALERTNESS = 40;
+export function hideFromThief(registry) {
+    const q = registry.get('quest');
+    const c = getChase(registry);
+    if (!c) return { hidden: false, message: t('Погоня окончена.'), thiefEscaped: !!q.thiefEscaped };
+
+    const player = registry.get('player');
+    const stealthSkill = getBlessedSkill(registry, Math.max((player.skills && player.skills.stealth) || 10, 5));
+    const res = opposedSkillCheck(stealthSkill, THIEF_ALERTNESS, 0);
+    const checkLine = formatOpposedCheck(res, 'Скрадывание', 'Внимательности вора');
+
+    if (res.result === 'critical' || res.result === 'success') {
+        // Вор НЕ бежит — прибит к текущей остановке на 2 часа (успел затаиться)
+        pinThiefAtCurrentStop(registry, TRAIL_LOCK_HOURS, false);
+        ActionLog.add(registry, tf(t('Спрятался от вора ({0}) — он ходит рядом, но не чует тебя.'), checkLine));
+        return {
+            hidden: true,
+            message: t('Ты затаился в кустах у дороги. Вор кружит рядом, но взгляд скользит мимо — он тебя потерял. Пока он не ушёл, можно оглядеться, подкрасться — или уйти тихо по-прежнему.') + ` (${checkLine})`,
+            thiefEscaped: false,
+        };
+    }
+
+    // Провал — вор замечает движение и бежит
+    const fled = thiefFleesNow(registry);
+    ActionLog.add(registry, tf(t('Спрятаться не вышло ({0}){1}'), checkLine, fled.escaped ? t(' — вор скрылся!') : t(' — вор пустился наутёк!')));
+    return {
+        hidden: false,
+        message: fled.escaped
+            ? t('Хрустнула ветка под ногой — вор обернулся прямо на твой куст и скрылся во мраке. Это была твоя последняя возможность...')
+            : t('Вор резко обернулся на шорох и пустился наутёк. Успей прочесть его следы!'),
         thiefEscaped: fled.escaped,
     };
 }

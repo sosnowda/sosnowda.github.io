@@ -8,7 +8,7 @@ import {
     FOREST_COLS, FOREST_ROWS, FOREST_SPAWN, FOREST_EXIT,
     WOLF_DENS, WOLF_CFG, GAME_ANIMALS, planForestAnimals,
     forestGatherSpots, campfirePos, forestTileAt,
-    validateForestMap,
+    validateForestMap, rollForestTracking,
 } from '../data/forest.js';
 import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals, isRainy } from '../systems/Weather.js';
@@ -18,12 +18,15 @@ import { attachSunLight } from '../systems/SunLight.js';
 import { checkGameEnd } from '../data/thief.js';
 import { onLocationVisited, getBlessedSkill } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
-import { dayKeyOf } from '../data/daily.js'; // раунд 66.10: daily вместо удалённого chests.js
+import { dayKeyOf, isActionDoneToday, markActionDone } from '../data/daily.js'; // раунд 66.10: daily вместо удалённого chests.js
 // Раунд 66.16 (приказы 1–3): лесные грибы/ягоды — еда (+1 HP, час, кулдаун 4 ч)
 // Раунд 66.17 (приказы 8,10,11): готовка на костре, стрельба по дичи, мясо с туши
 // Раунд 66.70: еда по правилам meal.js теперь только в инвентаре («Съесть»);
 // сбор/готовка/обдир — проверяемые навыки (Выживание/Готовка) — см. loot.js
-import { survivalGather, survivalButcher, cookAtFire, getLootDef, countOf, shotChance, addItem, removeItem } from '../systems/loot.js';
+// Патч 66.74: бортничество (борть) — bortnikGather; выстрел со Скрадывания (+10)
+import { survivalGather, survivalButcher, bortnikGather, cookAtFire, getLootDef, countOf, shotChance, addItem, removeItem } from '../systems/loot.js';
+// Патч 66.74: проверки Следопытства при входе и Скрадывания перед выстрелом
+import { skillCheck } from '../systems/BRPEngine.js';
 // Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
 import { hungerStatusLine, hungerHours } from '../systems/hunger.js';
 // Патч 66.73 (приказ 14): усталость — траты за охоту, гард изнеможения, HUD
@@ -106,6 +109,7 @@ export class ForestScene extends Phaser.Scene {
         this.corpses = [];   // раунд 66.17: туши, которые можно обобрать
         this.fireflies = [];
         this.busyDialog = false;
+        this.sneakBonus = false;   // патч 66.74: +10 к выстрелу после удачного Скрадывания
         this.lastDir = 'down';
         this.lastStepTime = 0;
         this.stepInterval = 350;
@@ -136,6 +140,9 @@ export class ForestScene extends Phaser.Scene {
         this.drawExitMarker();
         this.spawnPlayer();
         this.spawnWolves();
+        // Патч 66.74 (приказ 8): проверка Следопытства при входе в лес —
+        // удача увеличивает шанс появления дичи (до спавна зверя)
+        this.rollTrackingOnEntry();
         this.spawnGameAnimals();   // раунд 66.17 (п.9): дичь в лесу
         this.buildAtmosphere();
         this.buildHUD();
@@ -238,10 +245,22 @@ export class ForestScene extends Phaser.Scene {
                     this.add.image(px, py + 10, 'deco_log').setScale(TS / 32 * 1.2).setDepth(0.2);
                 } else if (t === 'b') {
                     this.add.image(px, py + 8, 'deco_berry_bush').setScale(TS / 32 * 1.2).setDepth(y + 0.4);
+                } else if (t === 'B') {
+                    // ПАТЧ 66.74 (приказ 3): БОРТНОЕ дерево — дикие пчёлы в колоде.
+                    // Дерево как одинокое + колода-борть у подножия (deco_log).
+                    const jx = ((x * 43 + y * 31) % 9) - 4;
+                    const bortTex = this.textures.exists(`deco_tree_${(x * 3 + y) % 5}`)
+                        ? `deco_tree_${(x * 3 + y) % 5}` : `deco_pine_${(x + y) % 2}`;
+                    if (this.textures.exists(bortTex)) {
+                        this.add.image(px + jx, py + 6, bortTex).setScale(1.15).setOrigin(0.5, 0.92).setDepth(y + 0.55);
+                    }
+                    if (this.textures.exists('deco_log')) {
+                        this.add.image(px - 14, py + 14, 'deco_log').setScale(TS / 32 * 0.8).setDepth(y + 0.45).setTint(0xd8b060);
+                    }
                 }
 
                 // --- Физическое тело для непроходимых ---
-                if ('TtrLbCS'.includes(t)) {
+                if ('TtrLbCS'.includes(t) || t === 'B') {
                     const solid = this.solids.create(px, py, 'tile_grass_0');
                     solid.setScale(TS / 32).refreshBody();
                     solid.setVisible(false);
@@ -264,8 +283,10 @@ export class ForestScene extends Phaser.Scene {
             let img;
             if (spot.kind === 'mushroom') {
                 img = this.add.image(px, py + 8, 'deco_mushroom').setScale(TS / 32);
-            } else if (spot.kind === 'berry') {
-                // Куст уже нарисован в drawForest — тут только искра
+            } else if (spot.kind === 'berry' || spot.kind === 'bort') {
+                // Куст/борть уже нарисованы в drawForest — тут только искра
+                // (66.74: у борти — колода у подножия; img остаётся null —
+                // см. фикс updateNearestInteractable)
                 img = null;
             } else {
                 img = this.add.image(px, py + 6, 'deco_herb').setScale(TS / 32);
@@ -279,7 +300,7 @@ export class ForestScene extends Phaser.Scene {
             let marker = null;
             if (!taken) {
                 marker = this.add.image(px, py - 12, 'particle_spark')
-                    .setScale(0.5).setDepth(0.6).setTint(spot.kind === 'herb' ? 0xffe9a0 : SPARK_TINT);
+                    .setScale(0.5).setDepth(0.6).setTint(spot.kind === 'herb' ? 0xffe9a0 : (spot.kind === 'bort' ? 0xffd960 : SPARK_TINT));
                 this.tweens.add({
                     targets: marker,
                     y: py - 18,
@@ -294,6 +315,15 @@ export class ForestScene extends Phaser.Scene {
             this.gatherEntries.push(entry);
             this.gatherByTile.set(`${spot.col},${spot.row}`, entry);
         });
+    }
+
+    /**
+     * ПАТЧ 66.74 (приказ владельца 8): СЛЕДОПЫТСТВО ПРИ ВХОДЕ В ЛЕС —
+     * общая проверка data/forest.js rollForestTracking (раз в день,
+     * удача — дичи больше весь день в обеих лесных системах).
+     */
+    rollTrackingOnEntry() {
+        this.trackBoost = rollForestTracking(this.registry).boost;
     }
 
     spawnCampfire() {
@@ -415,7 +445,8 @@ export class ForestScene extends Phaser.Scene {
      * но близко не подпускают: подошёл — удирал (птица взлетает).
      */
     spawnGameAnimals() {
-        planForestAnimals().forEach((spot, i) => {
+        // Патч 66.74: удачное Следопытство при входе — дичи больше
+        planForestAnimals(Math.random, { tracking: !!this.trackBoost }).forEach((spot, i) => {
             const cfg = GAME_ANIMALS[spot.kind];
             if (!cfg || !this.textures.exists(cfg.tex)) return;
             const ax = spot.col * TS + TS / 2;
@@ -563,7 +594,10 @@ export class ForestScene extends Phaser.Scene {
         });
 
         // Раунд 66.71: благословение усиливает и выстрел по дичи (+10%)
-        const chance = shotChance(animal.cfg.base, getBlessedSkill(this.registry, (player.skills && player.skills.bow) || 15));
+        // Патч 66.74: удачное Скрадывание даёт +10 к выстрелу (списывается)
+        const sneakBonus = this.sneakBonus ? 10 : 0;
+        this.sneakBonus = false;
+        const chance = shotChance(animal.cfg.base + sneakBonus, getBlessedSkill(this.registry, (player.skills && player.skills.bow) || 15));
         const roll = Math.random() * 100;
         this.time.delayedCall(180, () => {
             if (roll < chance) {
@@ -953,7 +987,10 @@ export class ForestScene extends Phaser.Scene {
                 if (dist >= bestDist) continue;
 
                 const g = this.gatherByTile.get(`${cx},${cy}`);
-                if (g && g.img && g.img.visible) {
+                // Патч 66.74: у кустов ягод и бортей img нет (рисованы в drawForest) —
+                // раньше они не доходили до ближайшего действия (ягоды в Тёмном лесу
+                // нельзя было собрать со времён 66.70). Пустой img — тоже точка сбора.
+                if (g && (!g.img || g.img.visible)) {
                     bestDist = dist;
                     nearest = { type: 'gather', entry: g, label: g.prompt };
                     continue;
@@ -1017,7 +1054,8 @@ export class ForestScene extends Phaser.Scene {
         if (n.type === 'gather') this.gatherResource(n.entry);
         else if (n.type === 'campfire') this.restAtCampfire();
         else if (n.type === 'exit') this.leaveForest();
-        else if (n.type === 'shoot') this.shootAnimal(n.animal);
+        // Патч 66.74 (приказ 1): перед выстрелом — выбор «стрелять / подкрасться»
+        else if (n.type === 'shoot') this.showStalkDialog(n.animal);
         else if (n.type === 'loot_animal') this.lootAnimalCorpse(n.animal);
         else if (n.type === 'need_bow') {
             this.busyDialog = true;
@@ -1025,6 +1063,64 @@ export class ForestScene extends Phaser.Scene {
                 t('Дичь так просто не догнать — нужна стрельба. Лук должен лежать в узле и быть экипирован (Персонаж → Оружие). Луки куёт кузнец Данила.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }], { singleton: false });
         }
+    }
+
+    /**
+     * ПАТЧ 66.74 (приказ владельца 1): СКРАДЫВАНИЕ ПЕРЕД ВЫСТРЕЛОМ.
+     * «Навык: Скрадывание — подкрадывание к дичи (+10 к выстрелу)».
+     *  • «Подкрасться» — проверка Скрадывания: успех — следующий выстрел
+     *    по этому зверю +10 к шансу (флаг сцены, списывается выстрелом);
+     *    провал — зверь чует человека: удирает/взлетает БЕЗ выстрела;
+     *  • «Стрелять» — прежний выстрел (5 минут, стрела).
+     */
+    showStalkDialog(animal) {
+        if (this.busyDialog || !animal || animal.dead) return;
+        const player = this.player;
+        if (!player) return;
+        // Гейты лука/колчана — как в shootAnimal (там же тратится время)
+        if (player.weaponId !== 'bow') {
+            createDialog(this, t('🏹 Без лука'),
+                t('Стрелять можно только из лука — и он должен быть экипирован (Персонаж → Оружие). Кузнец Данила кует луки.'),
+                [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+            return;
+        }
+        if (getQuiver(player) <= 0) {
+            createDialog(this, '🪶 ' + t('Колчан пуст!'),
+                t('Стрел в колчане нет — стрелять нечем. Пачку стрел (10 шт.) продают кузнец Данила и ремесленник Аверьян. Стрелы из узла наложи в колчан на экране персонажа (Персонаж → Инвентарь).'),
+                [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+            return;
+        }
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+        createDialog(this, '🏹 ' + t(animal.cfg.name),
+            tf(t('{0} ходит рядом, но настороже. Стрелять сразу — или попытаться подкрасться (+10 к выстрелу, при неудаче зверь сорвётся)?'), t(animal.cfg.name)),
+            [
+                { text: tf(t('🏹 Стрелять из лука ({0})'), t(animal.cfg.name)), callback: () => { close(); this.shootAnimal(animal); } },
+                { text: t('🌑 Подкрасться (Скрадывание)'), callback: () => {
+                    close();
+                    const stealth = getBlessedSkill(this.registry, (player.skills && player.skills.stealth) || 10);
+                    const res = skillCheck(stealth);
+                    if (res.result === 'fail' || res.result === 'fumble') {
+                        ActionLog.add(this.registry, tf(t('Пытался подкрасться к {0} (Скрадывание {1}%: бросок {2}) — зверь чует человека и удирает без выстрела.'), t(animal.cfg.name), stealth, res.roll));
+                        this.showFloatingText(animal.sprite.x, animal.sprite.y - 20, t('Упорхнул!'), '#e8cc7a');
+                        if (animal.cfg.flying) {
+                            animal.dead = true;
+                            animal.sprite.setVelocity(0, 0);
+                            this.tweens.add({ targets: animal.sprite, y: animal.sprite.y - 90, alpha: 0, duration: 900, ease: 'Quad.easeOut', onComplete: () => animal.sprite.destroy() });
+                        } else {
+                            animal.state = 'flee';
+                            animal.fleeUntil = this.time.now + 2600;
+                        }
+                    } else {
+                        // Успех: +10 к СЛЕДУЮЩЕМУ выстрелу по этому зверю
+                        this.sneakBonus = true;
+                        this.showFloatingText(animal.sprite.x, animal.sprite.y - 20, t('Ты в кустах — выстрел вернее (+10)'), '#8adf8a');
+                        ActionLog.add(this.registry, tf(t('Подкрался к {0} (Скрадывание {1}%: бросок {2} — успех): следующий выстрел +10 к шансу.'), t(animal.cfg.name), stealth, res.roll));
+                    }
+                    this.updateHUD();
+                } },
+                { text: t('Отойти'), callback: close },
+            ], { singleton: false });
     }
 
     /**
@@ -1132,6 +1228,47 @@ export class ForestScene extends Phaser.Scene {
 
         if (gathered[entry.id] === today) {
             this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, 'Уже собрано', '#b8a88a');
+            return;
+        }
+
+        // ПАТЧ 66.74 (приказ 3): БОРТЬ — проверка БОРТНИЧЕСТВА (не Выживания):
+        // провал — пчёлы ужалили (−1 HP), точка жива; успех — мёд в узел;
+        // крит — мёд ×2 и воск. Раз в игровой день, как прочие точки сбора.
+        if (entry.kind === 'bort') {
+            const res66 = bortnikGather(this.registry, this.player, { wild: true });
+            if (!res66.ok) {
+                tickTime(this.registry, 20, 'work');
+                spendFatigue(this.registry, 1);
+                const stingLine = res66.stung
+                    ? t('Пчёлы встретили тумаком: в шею вонзилось жало — минус здоровье.')
+                    : t('Рой ходил сердитый — пришлось отступить без мёда.');
+                this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, t('Пчёлы!'), '#e8cc7a');
+                ActionLog.add(this.registry, tf(t('Лез к борти (Бортничество {0}%: бросок {1}) — впустую.'), res66.skill, res66.roll));
+                createDialog(this, t('🐝 Бортное дерево'),
+                    tf(t('Дикие пчёлы живут в колоде на старой сосне. {0}\n\n(Бортничество {1}%: бросок {2} — провал.)'), stingLine, res66.skill, res66.roll),
+                    [{ text: t('Отойти'), callback: () => {} }], { singleton: false });
+                this.updateHUD();
+                return;
+            }
+            gathered[entry.id] = today;
+            q.forestGathered = gathered;
+            this.registry.set('quest', q);
+            tickTime(this.registry, 40, 'work');
+            spendFatigue(this.registry, 1);
+            if (entry.marker) { entry.marker.destroy(); entry.marker = null; }
+            if (this.audioManager) this.audioManager.playHeal();
+            const critLine = res66.crit
+                ? '\n' + t('Соты сняты чисто, до самого лета — мёда вдвое больше, и воск нашёлся (крит).')
+                : '';
+            this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, `+${res66.honey} 🍯`, '#ffd960');
+            if (res66.crit) this.showFloatingText(this.playerObj.x, this.playerObj.y - 26, t('Полный сот! (×2 + воск)'), '#ffd9a0');
+            ActionLog.add(this.registry, tf(t('Достал мёд из борти: +{0} мёд{1} (Бортничество {2}%: бросок {3}).'), res66.honey, res66.wax > 0 ? ' и воск' : '', res66.skill, res66.roll));
+            createDialog(this, t('🐝 Бортное дерево'),
+                tf(t('Поднапёк дымом, подрубишь соты ладонью — золотой мёд течёт в туесок. +{0} мёд{1} в узел.\nМёд — простая еда (+1 к здоровью) и товар: главный экспорт Руси.{2}\n\n(Бортничество {3}%: бросок {4} — {5}.)'),
+                    res66.honey, res66.wax > 0 ? tf(t(' и {0} воск'), res66.wax) : '', critLine, res66.skill, res66.roll,
+                    res66.crit ? t('крит') : t('успех')),
+                [{ text: t('Слава Роду и меду!'), callback: () => {} }], { singleton: false });
+            this.updateHUD();
             return;
         }
 

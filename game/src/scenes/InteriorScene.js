@@ -37,7 +37,7 @@ import {
     applyQuestCompleteBonus, applyThreat, willNpcRefuseTrade,
     getPriceModifier,
     canMarry, marry, getMarriageCost, getMarriageNpcRepThreshold, getMarriageVillageRepThreshold, getAgeOfMajority,
-    getVillageRep, changeVillageRep,
+    getVillageRep, changeVillageRep, changeNpcRepExact,
     isNpcKilled, canBuyMilitaryGear, MILITARY_GEAR_IDS,
     getSmithNpcId, // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели мастера
     repActionAllowedToday, markRepActionDone, // 66.21/66.22: дневной лимит похвалы (угрозы не лимитируются)
@@ -53,7 +53,8 @@ import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 // Раунд 66.17: пропорциональный отдых (8 ч = 100%), минимальный сон 2 часа
 import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal, canSleep, registerSleep, showMealBlockedPopup, showSleepBlockedPopup, restHealPct, SLEEP_MIN_MIN, canUseHerb, registerHerb, showHerbBlockedPopup, HERB_HEAL_HP } from '../systems/meal.js';
 // Раунд 66.17 (п.5): ПРОДАЖА ДОБЫЧИ — трактирщик берёт рыбу/дичь на кухню
-import { sellableLoot, removeItem, cookAtFire, getLootDef, countOf } from '../systems/loot.js';
+// Патч 66.74: сундучный лут идёт в узел через addItem
+import { sellableLoot, removeItem, cookAtFire, getLootDef, countOf, addItem } from '../systems/loot.js';
 // Раунд 66.70 (приказ 11): МОЛИТВА — откат 8 часов, «Молитва не услышана!»,
 // благословение +5 к одной проверке навыка (списывается первой проверкой)
 import { canPray, registerPrayer, consumePrayerBless } from '../systems/prayer.js';
@@ -63,9 +64,17 @@ import { overheardRumorLine } from '../data/rumors.js';
 // Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
 import { hungerStatusLine } from '../systems/hunger.js';
 // Патч 66.73 (приказ 14): усталость — сон/отдых восстанавливают ОУ, HUD
-import { restFatigueFull, fatigueStatusLine } from '../systems/fatigue.js';
+// Патч 66.74: spendFatigue теперь и в интерьерах (работы/взлом) — ФИКС:
+// workInPotter 66.73 вызывал spendFatigue без импорта (ReferenceError при клике)
+import { restFatigueFull, fatigueStatusLine, spendFatigue } from '../systems/fatigue.js';
 // Патч 66.73 (приказ 5): ТОРГ — продажа через меню торговли с торгом за цену
 import { attemptHaggle, haggleMultFor, canHaggleToday, haggleHintLine } from '../systems/trade.js';
+// Патч 66.74 (приказы 4, 5, 7, 12): РЕМЕСЛО/КУЗНЕЧНОЕ ДЕЛО/ГРАМОТА/СКОМОРОШЕСТВО
+import { craftDaywork, smithyDaywork, acolyteServe, tavernPerformance } from '../systems/jobs.js';
+// Патч 66.74 (приказы 13–18): ВЗЛОМ И СУНДУКИ (жилые дома)
+import { hasChest, canPickChest, attemptChestPick, CHEST_HOUSES } from '../systems/burglary.js';
+// Патч 66.74 (приказ 5): служка — окно богослужения (SERVICES)
+import { SERVICES } from '../systems/ChurchBells.js';
 // Патч 66.73 (приказ 16): обаяние беседы — ±5/±10 к разговорным проверкам
 import { chaAdjustedTalkSkill } from '../systems/charisma.js';
 // Раунд 66.17 (п.6): ставка подёнки — +1 к славе за отработанный день
@@ -79,6 +88,9 @@ export class InteriorScene extends Phaser.Scene {
     init(data) {
         this.interiorId = data?.interiorId || 'elder_house';
         this.from = data?.from || 'Village';
+        // Патч 66.74 (приказ 13): режим ВЗЛОМА — игрок вскрыл замок пустого дома
+        // (VillageScene attemptBreakIn). В пустом доме доступен сундук.
+        this.burglary = !!(data && data.burglary);
     }
 
     create() {
@@ -234,6 +246,14 @@ export class InteriorScene extends Phaser.Scene {
         // Раунд 45 (п.3 заявки): убитый героем хозяин больше не живёт в доме —
         // стоит тишина, никаких разговоров и кнопок
         const ownerKilled = hasNpc && isNpcKilled(this.registry, interior.npcId);
+        // Патч 66.74 (приказ 16): ПУСТОЙ ЛИ ДОМ (взлом сундука — только когда
+        // никого нет): хозяин не дома И вторая родня (жена) тоже не дома.
+        let secondaryHere = false;
+        if (hasNpc && interior.secondaryNpcId) {
+            const secPresence = getPresence(this.registry, interior.secondaryNpcId);
+            secondaryHere = secPresence.place === 'home' || secPresence.place === this.interiorId;
+        }
+        this.houseEmpty = hasNpc && !ownerHere && !secondaryHere;
         // Портрет для диалогов интерьера (с учётом варианта внешности NPC);
         // для интерьеров без NPC — базовый портрет интерьера
         this.npcPortraitKey = (this.npcData && this.npcData.portrait) || interior.portrait;
@@ -532,6 +552,15 @@ export class InteriorScene extends Phaser.Scene {
         this.updateHUD();
 
         // ============================================================
+        // ПАТЧ 66.74 (приказы 14–16): СУНДУК В КАЖДОМ ЖИЛОМ ДОМЕ.
+        // Рисуется в углу (до кнопок); взаимодействие — кнопкой в ряду
+        // (только в ПУСТОМ доме: приказ 16 «только если в доме никого нету»).
+        // ============================================================
+        if (hasChest(interior.id)) {
+            this.drawChestInterior(interior, width, height);
+        }
+
+        // ============================================================
         // П.8: ВСЕ КНОПКИ ДЕЙСТВИЙ — В ОДНУ СТРОКУ, БЕЗ ПЕРЕКРЫТИЙ
         // ============================================================
         const btnY = height - 50;
@@ -579,6 +608,9 @@ export class InteriorScene extends Phaser.Scene {
                 // подслушать молву за столами постоялого двора (исторично: двор —
                 // средоточие вестей на Руси XV века)
                 buttons.push({ label: t('\u{1F442} Подслушать (Слух)'), bg: 0x4a4a2a, hover: 0x5a5a3a, cb: () => this.eavesdropTavern(interior) });
+                // Патч 66.74 (приказ 7): СКОМОРОШЕСТВО — гусли за столом
+                // (сбор со стола за успех; риск гнева Церкви)
+                buttons.push({ label: t('\u{1FA95} Скоморошить (Скоморошество)'), bg: 0x5a3a1a, hover: 0x6a4a2a, cb: () => this.performAtTavern(interior) });
                 buttons.push({ label: t('\u{1F6CF} Отдых'), bg: 0x4a3a5a, hover: 0x5a4a6a, cb: () => this.showTavernRestMenu(interior) });
                 // Раунд 40 (заявка): «⏳ Провести время» — перемотка 1–24 ч /
                 // до утра / до полудня / до вечера, чтобы не мотаться
@@ -587,6 +619,8 @@ export class InteriorScene extends Phaser.Scene {
                 // Раунд 39 (п.13): кнопка «Мой тюк» УДАЛЕНА вместе со всеми тюками
             } else if (interior.id === 'blacksmith') {
                 buttons.push({ label: t('\u{1F6D2} Купить оружие'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
+                // Патч 66.74 (приказ 12): КУЗНЕЧНОЕ ДЕЛО — работа у горна за деньги
+                buttons.push({ label: t('\u{1F528} Помочь кузнецу (1 час)'), bg: 0x6a3a1a, hover: 0x7a4a2a, cb: () => this.helpBlacksmith(interior) });
                 // Раунд 40: кнопка «Персонаж» теперь ПОСТОЯННАЯ вверху справа
                 // ВО ВСЕХ помещениях (addSceneMenuButtons) — дубликат у кузнеца снят
             } else if (interior.id === 'butcher_house') {
@@ -600,12 +634,20 @@ export class InteriorScene extends Phaser.Scene {
                 // (меню 5/10/25/50 д.), личная репутация священника + деревенская
                 buttons.push({ label: t('\u{1F56F} Пожертвование'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.donateInChurch() });
                 buttons.push({ label: t('\u{1F50D} Осмотреть киот'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectChurchKiot() });
+                // Патч 66.74 (приказ 5): ГРАМОТА — служка при богослужении
+                buttons.push({ label: t('\u{1F4D6} Служить при службе (Грамота)'), bg: 0x2a5a4a, hover: 0x3a6a5a, cb: () => this.serveAtChurch(interior) });
             }
         } else if (interior.id === 'potter_house') {
             // Раунд 37 (вариант Б): мастерская гончара — подённая работа
             // переехала сюда из удалённого амбара (п.18 заявки)
             buttons.push({ label: t('\u{1FAB5} Помочь в мастерской (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInPotter() });
             // Раунд 39 (п.13): кнопка «Мой узел» УДАЛЕНА вместе со всеми тюками
+            // Патч 66.74 (приказ 14): сундук гончара — только если дом ПУСТ
+            if (this.houseEmpty) this.pushChestButton(interior, buttons);
+        } else if (this.houseEmpty && hasChest(interior.id)) {
+            // Патч 66.74 (приказы 13–16): в ПУСТОМ доме доступен сундук
+            // (взлом замка двери — на улице, через поп-ап «Дом закрыт»)
+            this.pushChestButton(interior, buttons);
         }
         const exitAction = () => {
             // Раунд 40: пока открыто меню «Провести время» — ESC закрывает
@@ -1606,27 +1648,40 @@ export class InteriorScene extends Phaser.Scene {
             }
         });
 
-        // ----- Патч 66.73 (приказ 5): кнопка ТОРГА -----
-        // Одна попытка в день на торговца; встречная проверка Убеждения
-        // (с бонусом обаяния беседы, приказ 16); множитель до конца дня.
+        // ----- Патч 66.73 (приказ 5): кнопка ТОРГА; патч 66.74 (приказ 6):
+        // кнопка «Сметить» — торг от СМЕТКИ (знание цен) вместо Убеждения.
+        // Одна попытка в день на торговца ОБЩАЯ: слово ИЛИ сметка.
         const haggleY = height / 2 + panelH / 2 - 34;
+        const haggleOpts = {
+            backgroundColor: 0x4a3a2a, hoverColor: 0x5a4a3a, textColor: RUS.text,
+            fontSize: 13, padding: { left: 10, right: 10, top: 7, bottom: 7 },
+        };
+        const haggleResult = (res, interiorRef, portraitKey) => {
+            closeMenu();
+            createDialog(this, t('🤝 Торг'),
+                (res.checkLine ? res.checkLine + '\n\n' : '') + res.message,
+                [{ text: t('К делу'), callback: () => this.showSellLootMenu(interiorRef) }],
+                { singleton: false, portraitKey });
+        };
         if (canHaggleToday(this.registry, buyerNpcId)) {
-            createButton(this, width / 2 - 110, haggleY, t('🤝 Поторговаться'), () => {
+            createButton(this, width / 2 - 180, haggleY, t('⚖ Сметить (Сметка)'), () => {
+                const res = attemptHaggle(this.registry, buyerNpcId, (player.skills && player.skills.commerce) || 10, { skillLabel: 'Сметка' });
+                haggleResult(res, interior, isButcher ? 'portrait_peasant' : 'portrait_tavernkeeper');
+            }, haggleOpts).setDepth(202);
+            createButton(this, width / 2 - 20, haggleY, t('🤝 Поторговаться'), () => {
                 const res = attemptHaggle(this.registry, buyerNpcId, player.skills.persuade);
-                closeMenu();
-                createDialog(this, t('🤝 Торг'),
-                    (res.checkLine ? res.checkLine + '\n\n' : '') + res.message,
-                    [{ text: t('К делу'), callback: () => this.showSellLootMenu(interior) }],
-                    { singleton: false, portraitKey: isButcher ? 'portrait_peasant' : 'portrait_tavernkeeper' });
-            }, {
-                backgroundColor: 0x4a3a2a, hoverColor: 0x5a4a3a, textColor: RUS.text,
-                fontSize: 14, padding: { left: 14, right: 14, top: 7, bottom: 7 },
+                haggleResult(res, interior, isButcher ? 'portrait_peasant' : 'portrait_tavernkeeper');
+            }, haggleOpts).setDepth(202);
+            createButton(this, width / 2 + 140, haggleY, t('Закрыть'), closeMenu, {
+                backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
+                fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
+            }).setDepth(202);
+        } else {
+            createButton(this, width / 2, haggleY, t('Закрыть'), closeMenu, {
+                backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
+                fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
             }).setDepth(202);
         }
-        createButton(this, width / 2 + 110, haggleY, t('Закрыть'), closeMenu, {
-            backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
-            fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
-        }).setDepth(202);
     }
 
     /**
@@ -2497,6 +2552,103 @@ export class InteriorScene extends Phaser.Scene {
     // ================================================================
 
     /**
+     * ПАТЧ 66.74 (приказы 14–16): СУНДУК В ЖИЛОМ ДОМЕ — рисунок + кнопка.
+     * Сундук рисуется у левой стены (3 прямоугольника — дубовый окованный
+     * ларь с замком); кнопка в ряду — только в ПУСТОМ доме (приказ 16).
+     */
+    drawChestInterior(interior, width, height) {
+        const cx = width * 0.135;
+        const cy = height * 0.735;
+        const depth = 6;
+        this.add.rectangle(cx, cy, 66, 38, 0x6a4a26).setStrokeStyle(2, 0x3a2814).setDepth(depth);
+        this.add.rectangle(cx, cy - 14, 66, 14, 0x7d5a30).setStrokeStyle(2, 0x3a2814).setDepth(depth);
+        this.add.rectangle(cx, cy, 10, 12, 0xc9a14a).setStrokeStyle(1, 0x3a2814).setDepth(depth + 1); // замок
+        this.add.text(cx, cy + 30, t('🧰 Сундук'), {
+            fontSize: '10px', color: '#c9a14a', backgroundColor: '#00000088',
+            padding: { x: 4, y: 2 }, stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setDepth(depth + 1);
+    }
+
+    /** Кнопка сундука в ряду действий (только в пустом доме — приказ 16). */
+    pushChestButton(interior, buttons) {
+        const cfg = CHEST_HOUSES[interior.id];
+        if (!cfg) return;
+        const timeState = getTime(this.registry);
+        const picked = !canPickChest(this.registry, interior.id, timeState);
+        const label = picked ? t('🧰 Сундук (обчищен)') : t('🧰 Взломать сундук (Взлом)');
+        buttons.push({ label, bg: 0x5a4a1a, hover: 0x6a5a2a, cb: () => this.openChest(interior) });
+    }
+
+    /**
+     * ПАТЧ 66.74 (приказы 14–18): ВЗЛОМ СУНДУКА.
+     *  • раз в месяц на дом (canPickChest); только в пустом доме —
+     *    кнопка и так появляется лишь тогда;
+     *  • попытка: СКРАДЫВАНИЕ (провал — −2 репутации, приказ 18),
+     *    затем ВЗЛОМ: успех — лут 1–5 штук по таблице дома, крит — все 5;
+     *    провал — можно повторить (каждая попытка — время и риск);
+     *  • попытка — 30 минут, усталость −1.
+     */
+    openChest(interior) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const timeState = getTime(this.registry);
+        const cfg = CHEST_HOUSES[interior.id];
+        if (!cfg) return;
+        if (!canPickChest(this.registry, interior.id, timeState)) {
+            createDialog(this, t('🧰 Сундук'),
+                t('Сундук пуст: ты уже обчистил его в этом месяце. Хозяева ещё не успели нажить добро — приходи через месяц.') +
+                '\n\n' + t('(Приказ 16: сундук можно вскрывать не чаще раза в месяц.)'),
+                [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+            return;
+        }
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+        tickTime(this.registry, 30, 'walk');   // ковырять замок — полчаса
+        spendFatigue(this.registry, 1);
+        const res = attemptChestPick(this.registry, player, interior.id, timeState, {
+            stealth: (player.skills && player.skills.stealth) || 10,
+            lock: (player.skills && player.skills.lockpicking) || 10,
+        });
+        // 1) Скрадывание провалено (приказ 18): −2 репутации уже списаны
+        if (res.stealthFailed) {
+            createDialog(this, t('👣 Шорох за стеной'),
+                tf(t('Ты ковырял замок, как вдруг в сенях хрустнула половица — кто-то идёт к дому! Ты скрылся задворками, но приметили тебя: по деревне пойдёт дурная молва.\n\n(Скрадывание {0}%: бросок {1} — провал; −2 к славе в деревне.)'), res.stealthSkill, res.stealthRoll),
+                [{ text: t('Уйти пока цел'), callback: close }], { singleton: false });
+            this.registry.set('player', player);
+            this.updateHUD();
+            return;
+        }
+        // 2) Замок не поддался
+        if (res.lockFailed) {
+            ActionLog.add(this.registry, tf(t('Ковырял замок сундука в «{0}» (Взлом {1}%: бросок {2}) — замок крепок, сундук не открылся.'), interior.name, res.skill, res.roll));
+            createDialog(this, t('🧰 Крепкий замок'),
+                tf(t('Замок дубовый, окованный — отмычка скребёт да соскальзывает. Сундук цел, добро за хозяином.\n\n(Взлом {0}%: бросок {1} — провал. Пока дом пуст, можно пробовать снова — время и риск на тебе.)'), res.skill, res.roll),
+                [{ text: t('Отступить от сундука'), callback: close }], { singleton: false });
+            this.registry.set('player', player);
+            this.updateHUD();
+            return;
+        }
+        // 3) УДАЧА: лут 1–5 штук по таблице дома (крит — все 5)
+        res.items.forEach(it => addItem(player, it.id, it.count));
+        if (res.dengas > 0) player.dengas = (player.dengas || 0) + res.dengas;
+        this.registry.set('player', player);
+        const lootLines = [];
+        res.items.forEach(it => {
+            const def = getLootDef(it.id);
+            lootLines.push(`${def ? def.emoji : '📦'} ${def ? t(def.name) : it.id} ×${it.count}`);
+        });
+        if (res.dengas > 0) lootLines.push(`💰 ${t('деньги из шкатулки')} : ${res.dengas} ${t('д.')}`);
+        ActionLog.add(this.registry, tf(t('Вскрыл сундук в «{0}»: {1} (Взлом {2}%: бросок {3}{4}).'), interior.name,
+            lootLines.join(', '), res.skill, res.roll, res.crit ? t(' — крит') : ''));
+        createDialog(this, res.crit ? t('🧰 До донышка!') : t('🧰 Замок поддался!'),
+            tf(t('Отмычка нашла щёлк — крышка откинулась. В сундуке:{0}\n\n(Взлом {1}%: бросок {2}{3}. В этот месяц здесь больше нечего взять.)'),
+                '\n· ' + lootLines.join('\n· '), res.skill, res.roll, res.crit ? t(' — КРИТ: вытянул всё до донышка!') : ''),
+            [{ text: t('Взять добро'), callback: close }], { singleton: false });
+        this.updateHUD();
+    }
+
+    /**
      * Подённая работа (молотьба): 1 час времени, −4 здоровья, +3..6 денег,
      * 15% шанс найти монетку в соломе. При истощении (HP ≤ 5) отказ.
      */
@@ -2512,6 +2664,13 @@ export class InteriorScene extends Phaser.Scene {
         return 1;
     }
 
+    /**
+     * Подёнка у гончара — ПАТЧ 66.74 (приказ 4): ПРОВЕРКА «РЕМЕСЛА»:
+     *  • провал — брак на круге: ставка всего 2 д.;
+     *  • успех — честная ставка 4–7 д.;
+     *  • крит — «шедевр»: 6–9 д. И горшок мастеровой в узел (10 д. на продаже).
+     * Найти монетку (15%) и слава подёнщика (+1, раз в сутки) — как прежде.
+     */
     workInPotter() {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
@@ -2527,7 +2686,12 @@ export class InteriorScene extends Phaser.Scene {
         tickTime(this.registry, 60, 'work');
         spendFatigue(this.registry, 2);
         player.HP = Math.max(1, (player.HP || 1) - 3);
-        const wage = Phaser.Math.Between(3, 6);
+        // ПАТЧ 66.74 (приказ 4): РЕМЕСЛО — проверка навыка
+        const jobRes = craftDaywork(this.registry, (player.skills && player.skills.craft) || 15);
+        const wage = jobRes.wage;
+        if (jobRes.masterpiece) {
+            addItem(player, 'master_pot', 1);
+        }
         let bonus = 0;
         let bonusMsg = '';
         if (Math.random() < 0.15) {
@@ -2537,7 +2701,10 @@ export class InteriorScene extends Phaser.Scene {
         player.dengas = (player.dengas || 0) + wage + bonus;
         this.registry.set('player', player);
         this.updateHUD();
-        ActionLog.add(this.registry, tf(t('Отработал час в гончарной мастерской: +{0} д., усталость −3 HP.'), wage + bonus));
+        const craftNote = jobRes.crit
+            ? tf(t('Ремесло {0}%: бросок {1} — КРИТ: горшок вышел загляденье — мастеровой шедевр, в узле (продать за 10 д.)!'), jobRes.skill, jobRes.roll)
+            : tf(t('(Ремесло {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.ok ? t('успех') : t('брак на круге'));
+        ActionLog.add(this.registry, tf(t('Отработал час в гончарной мастерской: +{0} д., усталость −3 HP.{1}'), wage + bonus, jobRes.masterpiece ? t(' Шедевр — горшок мастеровой в узел.') : ''));
 
         // РАУНД 66.17 (п.6): СТАВКА ПОДЁНКИ — за отработанный день герою
         // начисляется МИНИМУМ 1 очко репутации в деревне (раз в сутки;
@@ -2553,9 +2720,16 @@ export class InteriorScene extends Phaser.Scene {
             ActionLog.add(this.registry, t('Ставка подёнки: +1 к славе в деревне за отработанный день.'));
         }
 
-        createDialog(this, t('Помощь в мастерской'),
-            t('Час у круга и печи: носил дрова, мешал глину, ставил горшки на обжиг. Игнат доволен: «Работник, что надо!»\n\n') +
-            tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), wage) + bonusMsg + repMsg,
+        createDialog(this, jobRes.crit ? t('🏺 Шедевр на круге!') : t('Помощь в мастерской'),
+            (jobRes.crit
+                ? t('Час у круга и печи — и вдруг руки сами ведут: горшок вышел ровный, звонкий, как у самого Игната. «Эк ты горазд!» — ахает гончар.\n\n')
+                : jobRes.ok
+                    ? t('Час у круга и печи: носил дрова, мешал глину, ставил горшки на обжиг. Игнат доволен: «Работник, что надо!»\n\n')
+                    : t('Час у круга — а глина в руки не идёт: пара горшков перекосилась на сушке. Игнат вздыхает: «Не твоя ли это работа, путник?»\n\n'))
+            + tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), wage)
+            + '\n' + craftNote
+            + (jobRes.masterpiece ? t('\n+1 Горшок мастеровой (шедевр) — в узел.') : '')
+            + bonusMsg + repMsg,
             [
                 { text: t('Спасибо'), callback: () => {} },
             ]);
@@ -2565,6 +2739,169 @@ export class InteriorScene extends Phaser.Scene {
         // Раунд 37: амбар удалён (п.18) — работа переехала в мастерскую гончара
         // (workInPotter). Метод оставлен для старых сейвов/ссылок.
         this.workInPotter();
+    }
+
+    /**
+     * ПАТЧ 66.74 (приказ 12): КУЗНЕЧНОЕ ДЕЛО — работа в кузне в помощь
+     * кузнецу, за деньги. 1 час, −3 здоровья, −2 ОУ:
+     *  • провал — черновая работа (дрова, меха, вода): 2–3 д.;
+     *  • успех — у наковальни: 4–7 д.;
+     *  • крит — «скоба как у мастера»: 8–12 д.
+     * Кнопка видна, когда кузнец (или ученик) на месте.
+     */
+    helpBlacksmith(interior) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        if ((player.HP || 0) <= 5) {
+            createDialog(this, t('Силы кончились'), t('У горна жарко, молот тяжёл: ослабевшего подручного кузнец не возьмёт. Поешь и отдохни.'), [
+                { text: t('Справедливо...'), callback: () => {} },
+            ]);
+            return;
+        }
+        tickTime(this.registry, 60, 'work');
+        spendFatigue(this.registry, 2);
+        player.HP = Math.max(1, (player.HP || 1) - 3);
+        const jobRes = smithyDaywork(this.registry, (player.skills && player.skills.smithing) || 15);
+        player.dengas = (player.dengas || 0) + jobRes.wage;
+        this.registry.set('player', player);
+        this.updateHUD();
+        const smithName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : t('кузнец');
+        const checkNote = jobRes.crit
+            ? tf(t('(Кузнечное дело {0}%: бросок {1} — КРИТ!)'), jobRes.skill, jobRes.roll)
+            : tf(t('(Кузнечное дело {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.ok ? t('успех') : t('черновая работа'));
+        ActionLog.add(this.registry, tf(t('Отработал час в кузнице в помощь кузнецу: +{0} д., усталость −3 HP.'), jobRes.wage));
+        createDialog(this, jobRes.crit ? t('🔥 Ладная скоба!') : t('Помощь в кузнице'),
+            (jobRes.crit
+                ? tf(t('Ты держал клещи и бил молотом в лад — и вышла скоба, ровная, как у самого мастера. {0} глядит с уважением: «Поступай ко мне в подручные!»\n\n'), smithName)
+                : jobRes.ok
+                    ? tf(t('Час у горна: держал клещи, качал меха, бил по наковальне, куда мастер укажет. Работа ладится.\n\n'))
+                    : tf(t('К молоту тебя не подпустили — носил дрова, качал меха да таскал воду. Работа черновая, и плата черновая.\n\n')))
+            + tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), jobRes.wage)
+            + '\n' + checkNote,
+            [{ text: t('Спасибо'), callback: () => {} }]);
+    }
+
+    /**
+     * ПАТЧ 66.74 (приказ 5): ГРАМОТА — служка в храме. Помощь священнику
+     * во время богослужения: читать псалтырь, держать кадило, выводить
+     * клиросное. Кнопка видна, когда священник на месте; работает ТОЛЬКО
+     * в окно службы (SERVICES: благовест … 2 часа после начала службы) —
+     * в остальное время служке при пустом храме делать нечего.
+     * Раз в сутки. Успех — 3–6 д., крит — 7–10 д. и похвала (+2 славы у
+     * батюшки); провал — сбился со строки, служа без платы.
+     */
+    serveAtChurch(interior) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const timeState = getTime(this.registry);
+        const hour = timeState ? (timeState.hour ?? 12) : 12;
+        // Окно богослужения: благовест (за полчаса) … 2 часа после начала
+        const svc = SERVICES.find(s => hour >= s.blagoAt && hour < s.startAt + 2);
+        if (!svc) {
+            createDialog(this, t('📖 Не время службы'),
+                t('Храм тих, свечи дремлют. Служке работа при богослужении: приди на заутреню (~6:00), обедню (~12:00), вечерню (~15:00) или повечерие (~18:00) — и предложи батюшке помощь.'),
+                [{ text: t('Приду вовремя'), callback: () => {} }], { singleton: false });
+            return;
+        }
+        const today = dayKeyOf(timeState);
+        const q = this.registry.get('quest') || {};
+        if (q.serveChurchDay === today) {
+            createDialog(this, t('📖 Служба отошла'),
+                t('Ты уже помогал при сегодняшней службе — не пристало одному мирянину служить без передышки. Приходи на другую службу завтра.'),
+                [{ text: t('Справедливо'), callback: () => {} }], { singleton: false });
+            return;
+        }
+        q.serveChurchDay = today;
+        this.registry.set('quest', q);
+        tickTime(this.registry, 60, 'work');
+        spendFatigue(this.registry, 1);
+        const jobRes = acolyteServe(this.registry, (player.skills && player.skills.literacy) || 5);
+        if (jobRes.ok) {
+            player.dengas = (player.dengas || 0) + jobRes.wage;
+            changeNpcRepExact(this.registry, 'priest', jobRes.crit ? 3 : 2, 'служба служкой');
+            ActionLog.add(this.registry, tf(t('Служил при богослужении ({0}): +{1} д. от батюшки (Грамота {2}%: бросок {3}{4}).'),
+                t(svc.name), jobRes.wage, jobRes.skill, jobRes.roll, jobRes.crit ? t(' — крит') : ''));
+            createDialog(this, jobRes.crit ? t('📖 Чисто читаешь!') : t('📖 Служба отслужена'),
+                (jobRes.crit
+                    ? t('Ты читал псалтырь чисто и складно, кадило нёс ровно — сам священник похвалил на клиросе: «Дар у тебя, отрок». ')
+                    : t('Час при службе: держал свечи, подавал кадило, подтягивал на клиросе где смог. '))
+                + tf(t('Батюшка дал служке за службу: +{0} д.'), jobRes.wage)
+                + tf(t('\n\n(Грамота {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.crit ? t('КРИТ') : t('успех'))
+                + '\n' + t('Священник запомнил помощь: +2 к личной славе у батюшки.'),
+                [{ text: t('Слава Богу'), callback: () => {} }]);
+        } else {
+            ActionLog.add(this.registry, tf(t('Пытался служить при богослужении ({0}) — сбился со строки (Грамота {1}%: бросок {2}).'), t(svc.name), jobRes.skill, jobRes.roll));
+            createDialog(this, t('📖 Строка уплывает'),
+                t('Без грамоты при службе туго: буквы в псалтыри сливаются, ты сбился дважды, кадило чуть не опрокинул. Священник мягко отсылает тебя с миром — без платы: «Учись, отрок, потом придёшь».')
+                + tf(t('\n\n(Грамота {0}%: бросок {1} — провал.)'), jobRes.skill, jobRes.roll),
+                [{ text: t('Смиренно поклониться'), callback: () => {} }]);
+        }
+        this.registry.set('player', player);
+        this.updateHUD();
+    }
+
+    /**
+     * ПАТЧ 66.74 (приказ 7): СКОМОРОШЕСТВО — гусли за столом постоялого
+     * двора. Раз в сутки. 1 час, −1 ОУ:
+     *  • успех — сбор со стола 3–8 д.; крит — 9–16 д. («стар и млад плясал»);
+     *  • провал — струны вразлад, стол молчит;
+     *  • fumble — переполох: скамья опрокинута (−2 к славе деревни);
+     *  • РИСК ГНЕВА ЦЕРКВИ (20% при любом исходе): молва о потешнике
+     *    доходит до батюшки — −2 к личной славе у священника.
+     */
+    performAtTavern(interior) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const today = dayKeyOf(getTime(this.registry));
+        const q = this.registry.get('quest') || {};
+        if (q.performanceDay === today) {
+            createDialog(this, t('🪕 Струны отдохнули'),
+                t('Сегодня ты уже тешил двор — и горло, и струны просят покоя. Завтра выйдет по-новому.'),
+                [{ text: t('Ладно'), callback: () => {} }], { singleton: false });
+            return;
+        }
+        q.performanceDay = today;
+        this.registry.set('quest', q);
+        tickTime(this.registry, 60, 'work');
+        spendFatigue(this.registry, 1);
+        const jobRes = tavernPerformance(this.registry, (player.skills && player.skills.performance) || 10);
+        let repNote = '';
+        if (jobRes.fumble) {
+            changeVillageRep(this.registry, -2, 'скомороший переполох');
+            repNote = '\n' + t('Переполох заметили все: −2 к славе в деревне.');
+        }
+        if (jobRes.churchAngry) {
+            changeNpcRepExact(this.registry, 'priest', -2, 'скоморошество');
+            ActionLog.add(this.registry, t('Молва о скоморошестве дошла до батюшки: −2 к личной славе у священника.'));
+            repNote += '\n' + t('⛪ А поутру молва о потешнике дошла и до батюшки: Церковь скоморохов не жалует (−2 к славе у священника).');
+        }
+        if (jobRes.ok) {
+            player.dengas = (player.dengas || 0) + jobRes.coins;
+            ActionLog.add(this.registry, tf(t('Скоморошил на гуслях за столом постоялого двора: собрал {0} д. со стола (Скоморошество {1}%: бросок {2}{3}).'),
+                jobRes.coins, jobRes.skill, jobRes.roll, jobRes.crit ? t(' — крит') : ''));
+            createDialog(this, jobRes.crit ? t('🪕 Стар и млад пляшет!') : t('🪕 Струны запели'),
+                (jobRes.crit
+                    ? t('Гусли запели так, что встал весь двор: плясали стар и млад, кошель ходил по кругу дважды! ')
+                    : t('Перебирал струны под гул голосов — про Илью Муромца, про купца соболиного. За игру стол швырял медяки. '))
+                + tf(t('Собрано со стола: +{0} д.'), jobRes.coins)
+                + tf(t('\n\n(Скоморошество {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.crit ? t('КРИТ') : t('успех'))
+                + repNote,
+                [{ text: t('Поклониться столу'), callback: () => {} }]);
+        } else {
+            ActionLog.add(this.registry, tf(t('Скоморошил за столом — струны вразлад (Скоморошество {0}%: бросок {1}).'), jobRes.skill, jobRes.roll));
+            createDialog(this, jobRes.fumble ? t('💥 Переполох!') : t('🪕 Не поётся'),
+                (jobRes.fumble
+                    ? t('Заволновался, задел локтем кружку, смахнул гусли — скамья грохнула, двое дрались уже не на шутку. Двор осерчал. ')
+                    : t('Струны вразлад, пальцы чужие — двор не слушал, медяков никто не собрал. '))
+                + tf(t('(Скоморошество {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.fumble ? 'fumble' : t('провал'))
+                + repNote,
+                [{ text: t('Смущённо сесть за стол'), callback: () => {} }]);
+        }
+        this.registry.set('player', player);
+        this.updateHUD();
     }
 
     inspectBarnGrain() {

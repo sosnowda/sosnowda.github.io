@@ -27,6 +27,22 @@
 //     «Следопытство» (track — вместо него «Внимательность»/spot),
 //     «Красноречие» (oratory — вместо него «Болтовня»/fast_talk);
 //   • ДОБАВЛЕН: «Ударное оружие» (blunt) — булавы, кистени, дубины, палицы.
+//
+// ПАТЧ 66.74 (приказы владельца 1–18, ответ на предложение
+// docs/SKILLS_PROPOSAL_6673.md): НОВАЯ ВОЛНА НАВЫКОВ — 10 штук:
+//   • Скрадывание (stealth) — категория «Скрытность» заполнена;
+//   • Рыболовство (fishing) — рыбалка стала проверяемой;
+//   • Бортничество (beekeeping) — борти в лесу + пасека (мёд и воск);
+//   • Ремесло (craft) — подёнка у гончара и мастеров;
+//   • Грамота (literacy) — служка в храме во время богослужений;
+//   • Сметка (commerce) — оценка цен, синергия с торгом;
+//   • Скоморошество (performance) — гусли за столом постоялого двора;
+//   • Следопытство (track) — ВОЗВРАЩЁН приказом владельца (следы вора,
+//     расчёт шансов дичи в лесу); Внимательность остаётся;
+//   • Кузнечное дело (smithing) — помощь кузнецу за деньги;
+//   • Взлом (lockpicking) — замки домов и сундуков (лут 1–5, раз в месяц).
+//   «Плавание» и «Погодные приметы» — НЕ добавлены: ждут решения
+//   владельца (варианты механики отправлены с патчем).
 
 import { rollCharacteristic, damageBonus } from './BRPEngine.js';
 import { AGE_DEFAULT, AGE_MIN, AGE_MAX, applyAgeModifiers, applyAgeSkillModifiers } from './AgeRules.js';
@@ -80,6 +96,23 @@ export const SKILLS = [
     { key: 'cooking', name: 'Готовка', base: 15, attr: 'POW', factor: 1, category: 'knowledge' },
     { key: 'listen', name: 'Слух', base: 25, attr: 'CON', factor: 0.5, category: 'perception' },
     // Раунд 66.71 (п.11): «Исследование» удалено (кнопка снята ещё в 66.44).
+    // ================= ПАТЧ 66.74 — НОВАЯ ВОЛНА НАВЫКОВ =================
+    // Скрытность (категория пустовала с 66.71 — приказ 1 владельца)
+    { key: 'stealth', name: 'Скрадывание', base: 10, attr: 'DEX', factor: 2, category: 'stealth' },
+    // Знания — промыслы Руси (приказы 2, 3, 5)
+    { key: 'fishing', name: 'Рыболовство', base: 20, attr: 'CON', factor: 1, category: 'knowledge' },
+    { key: 'beekeeping', name: 'Бортничество', base: 15, attr: 'POW', factor: 1, category: 'knowledge' },
+    // Грамота — редкий навык (берестяные грамоты; служка в храме)
+    { key: 'literacy', name: 'Грамота', base: 5, attr: 'POW', factor: 1, category: 'knowledge' },
+    // Восприятие: Следопытство ВОЗВРАЩЁН приказом 8 (следы вора, дичь в лесу)
+    { key: 'track', name: 'Следопытство', base: 20, attr: 'POW', factor: 1.5, category: 'perception' },
+    // Общение (приказы 6, 7)
+    { key: 'commerce', name: 'Сметка', base: 15, attr: 'CHA', factor: 1, category: 'communication' },
+    { key: 'performance', name: 'Скоморошество', base: 10, attr: 'CHA', factor: 2, category: 'communication' },
+    // Манипуляции (приказы 4, 12, 13)
+    { key: 'craft', name: 'Ремесло', base: 15, attr: 'DEX', factor: 1, category: 'manipulation' },
+    { key: 'smithing', name: 'Кузнечное дело', base: 10, attr: 'STR', factor: 1.5, category: 'manipulation' },
+    { key: 'lockpicking', name: 'Взлом', base: 5, attr: 'DEX', factor: 1.5, category: 'manipulation' },
 ];
 
 // === ДОСПЕХИ И ОРУЖИЕ (Chronicles of Ruthenia) ===
@@ -173,10 +206,16 @@ export const PRESET_HEROES = [
         stats: { STR: 45, CON: 60, POW: 55, DEX: 70, CHA: 35 },
         skillOverrides: {
             // Раунд 66.71: spot = max(старый spot, track 75); fast_talk = max(20, oratory 25)
+            // Патч 66.74 (приказ 9): специализация «Следопыт» — высокие Скрадывание,
+            // Следопытство, Рыболовство и Бортничество (охотничье-промысловая триада)
             spot: 75, survival: 70, listen: 65,
             sword: 45, bow: 55, brawl: 40, dodge: 50,
             persuade: 30, fast_talk: 25, intimidate: 35,
             medicine: 35,
+            // 66.74: новые навыки
+            track: 75, stealth: 68, fishing: 62, beekeeping: 55,
+            craft: 38, literacy: 20, commerce: 28, performance: 20,
+            smithing: 25, lockpicking: 30,
         },
         startWeapon: 'bow',
         startArmor: 'leather',
@@ -196,6 +235,10 @@ export const PRESET_HEROES = [
             sword: 42, bow: 60, brawl: 38, dodge: 55,
             persuade: 32, fast_talk: 28, intimidate: 30,
             medicine: 38,
+            // 66.74: новые навыки (следопытская специализация)
+            track: 78, stealth: 70, fishing: 64, beekeeping: 57,
+            craft: 40, literacy: 22, commerce: 30, performance: 22,
+            smithing: 26, lockpicking: 32,
         },
         startWeapon: 'bow',
         startArmor: 'leather',
@@ -216,6 +259,11 @@ export const PRESET_HEROES = [
             spot: 30, survival: 35, listen: 30,
             persuade: 25, fast_talk: 20, intimidate: 60,
             medicine: 15,
+            // 66.74: новые навыки — ратник силён в кузнечном деле (молот и горн
+            // ему родня), остальные — по-крестьянски в меру
+            smithing: 55, craft: 42, stealth: 35, track: 40,
+            fishing: 35, beekeeping: 25, literacy: 12, commerce: 22,
+            performance: 20, lockpicking: 18,
         },
         startWeapon: 'sword',
         startArmor: 'chain',
@@ -235,6 +283,10 @@ export const PRESET_HEROES = [
             spot: 35, survival: 38, listen: 32,
             persuade: 28, fast_talk: 22, intimidate: 55,
             medicine: 18,
+            // 66.74: новые навыки (воинская специализация — кузня)
+            smithing: 52, craft: 40, stealth: 38, track: 42,
+            fishing: 36, beekeeping: 26, literacy: 14, commerce: 24,
+            performance: 22, lockpicking: 20,
         },
         startWeapon: 'sword',
         startArmor: 'chain',
@@ -259,6 +311,11 @@ export const PRESET_HEROES = [
             spot: 68, listen: 72,
             sword: 42, brawl: 45, dodge: 52, bow: 28,
             survival: 48, medicine: 42,
+            // 66.74: новые навыки — дознаватель: грамотен, сметит цену,
+            // знает устройство замков (раскрывает кражи — и умеет сам)
+            literacy: 65, commerce: 62, lockpicking: 60, track: 55,
+            performance: 45, stealth: 48, craft: 32,
+            fishing: 30, beekeeping: 20, smithing: 20,
         },
         startWeapon: 'knife',
         startArmor: 'padded',
@@ -278,6 +335,10 @@ export const PRESET_HEROES = [
             spot: 70, listen: 75,
             sword: 45, brawl: 45, dodge: 55, bow: 30,
             survival: 50, medicine: 45,
+            // 66.74: новые навыки (дознавательская специализация)
+            literacy: 68, commerce: 64, lockpicking: 62, track: 58,
+            performance: 48, stealth: 50, craft: 34,
+            fishing: 32, beekeeping: 22, smithing: 22,
         },
         startWeapon: 'knife',
         startArmor: 'padded',
@@ -298,6 +359,10 @@ export const PRESET_HEROES = [
             persuade: 55, fast_talk: 55, intimidate: 45,
             spot: 55, listen: 55,
             survival: 55, medicine: 50,
+            // 66.74: новые навыки — универсал, всё в меру
+            track: 52, stealth: 50, fishing: 48, beekeeping: 45,
+            craft: 46, literacy: 35, commerce: 48, performance: 45,
+            smithing: 42, lockpicking: 46,
         },
         startWeapon: 'sword',
         startArmor: 'leather',
@@ -317,6 +382,10 @@ export const PRESET_HEROES = [
             persuade: 56, fast_talk: 56, intimidate: 44,
             spot: 55, listen: 56,
             survival: 55, medicine: 51,
+            // 66.74: новые навыки — универсал, всё в меру
+            track: 54, stealth: 52, fishing: 50, beekeeping: 46,
+            craft: 48, literacy: 36, commerce: 50, performance: 46,
+            smithing: 44, lockpicking: 48,
         },
         startWeapon: 'sword',
         startArmor: 'leather',
@@ -335,6 +404,10 @@ export const PRESET_HEROES = [
 //   • возраст — от возраста базового паттерна (±2..6 лет, 15..50);
 //   • снаряжение то же, деньги ±(5..10) от базовых;
 //   • имя — случайное историческое по полу (можно переименовать в превью).
+// ПАТЧ 66.74 (приказ 9): ВСЕ новые навыки заданы в skillOverrides каждого
+// прегена — случайная генерация дрейфует от них, высокие значения —
+// по основной специализации паттерна (следопыт — тихий следопыт,
+// воин — кузнец, сыщик — грамотен и вскрывает замки).
 // ============================================================
 export const GENERATION_PATTERNS = [
     { id: 'ranger',     name: 'Следопыт',    desc: 'Разведка, следы и лук — разброс от базы', basePresetId: ['ranger_m', 'ranger_f'] },

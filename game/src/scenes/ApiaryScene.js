@@ -1,9 +1,10 @@
-// Пасека — ходячая локация за околицей (раунд 16; раунд 17 — пчёлы ТОЛЬКО
-// как антураж и анимации: ни боя с роем, ни добычи мёда, ни дымокура-
-// механики — по прямому указанию владельца). Поляна с колодными ульями:
+// Пасека — ходячая локация за околицей (раунд 16). Поляна с колодными ульями:
 // пчёлы кружат орбитами, над ульями «кипят» анимированные рои-мерцания,
 // дымокур у избушки мирно тлеет, светлячки/пыльца/погода живут как раньше.
 // Выход к околице — на юге.
+// ПАТЧ 66.74 (приказ 3 владельца): БОРТНИЧЕСТВО — улей стал точкой добычи:
+// раз в день с улья можно доставать мёд (крит — мёд ×2 и воск); прежний
+// запрет «пчёлы только антураж» (66.11) отменён ПРЯМЫМ приказом владельца.
 // Phaser загружен глобально через CDN
 import {
     APIARY_COLS, APIARY_ROWS, APIARY_SPAWN, APIARY_EXIT,
@@ -14,6 +15,9 @@ import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../system
 import { applyWeatherVisuals, getWeather } from '../systems/Weather.js';
 import { checkGameEnd, searchLocation, getHuntState, isChaseActive, isThiefAt, presentThiefEncounter } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
+// Патч 66.74 (приказ 3): БОРТНИЧЕСТВО на ульях — мёд и воск (loot.js)
+import { bortnikGather, getLootDef } from '../systems/loot.js';
+import { dayKeyOf } from '../data/daily.js';
 import { createDialog, createButton } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
@@ -820,7 +824,9 @@ export class ApiaryScene extends Phaser.Scene {
                 const h = this.hiveByTile.get(`${cx},${cy}`);
                 if (h) {
                     bestDist = dist;
-                    nearest = { type: 'hive', entry: h, label: h.prompt };
+                    // Патч 66.74: при живых пчёлах улей — точка добычи мёда
+                    const honeyNow = beesActive(getTime(this.registry), this.weather);
+                    nearest = { type: 'hive', entry: h, label: honeyNow ? t('Достать мёд из улья (Бортничество)') : h.prompt };
                     continue;
                 }
                 if (cx === APIARY_EXIT.col && cy === APIARY_EXIT.row) {
@@ -847,12 +853,47 @@ export class ApiaryScene extends Phaser.Scene {
 
     // ================= МЕХАНИКИ =================
 
-    // Наблюдение за ульем — чистый антураж (раунд 17: ни мёда, ни риска).
+    /**
+     * Улей: ПАТЧ 66.74 (приказ 3) — БОРТНИЧЕСТВО.
+     *  • пчёлы активны (день, без дождя/снега, не зима) и улей не обчищен
+     *    сегодня → проверка Бортничества: провал — рой сердит, мёда нет;
+     *    успех — +2 мёд в узел; крит — +4 мёд И +1 воск;
+     *  • пчёлы спят/зима/дождь → прежнее наблюдение (антураж).
+     * Попытка — 20 минут, усталость −1.
+     */
     observeHive(entry) {
+        const timeState = getTime(this.registry);
+        const beesOn = beesActive(timeState, this.weather);
+        const q = this.registry.get('quest') || {};
+        const today = dayKeyOf(timeState);
+        const gathered = q.apiaryGathered || {};
+
+        if (beesOn && gathered[entry.id] !== today) {
+            const res = bortnikGather(this.registry, this.player, { wild: false });
+            tickTime(this.registry, 20, 'work');
+            if (!res.ok) {
+                ActionLog.add(this.registry, tf(t('Подходил к улью с туеском (Бортничество {0}%: бросок {1}) — рой ходил сердитый, пришлось отступить.'), res.skill, res.roll));
+                this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, t('Рой сердит!'), '#e8cc7a');
+            } else {
+                gathered[entry.id] = today;
+                q.apiaryGathered = gathered;
+                this.registry.set('quest', q);
+                const def = getLootDef('honey');
+                ActionLog.add(this.registry, tf(t('Достал мёд из улья на пасеке: +{0} мёд{1} (Бортничество {2}%: бросок {3}).'), res.honey, res.wax > 0 ? ' и воск' : '', res.skill, res.roll));
+                this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, `+${res.honey} 🍯`, '#ffd960');
+                if (res.crit) this.showFloatingText(this.playerObj.x, this.playerObj.y - 26, t('Полный сот! (×2 + воск)'), '#ffd9a0');
+                if (this.audioManager) this.audioManager.playHeal();
+            }
+            this.registry.set('player', this.player);
+            this.updateHUD();
+            return;
+        }
+
+        // Прежнее наблюдение (пчёлы спят или улей уже обчищен сегодня)
         const note = t(HIVE_NOTES[
             (entry.col * 7 + entry.row * 13 + (this.hiveNoteIdx = (this.hiveNoteIdx || 0) + 1)) % HIVE_NOTES.length
         ]);
-        this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, note, '#e8cc7a');
+        this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, beesOn ? note : t('🐝 Ульи тихи: пчёлы не летают'), '#e8cc7a');
         ActionLog.add(this.registry, t('Пасека: наблюдал за пчёлами у колодного улья.'));
         tickTime(this.registry, 2);
         this.updateHUD();

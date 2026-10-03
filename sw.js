@@ -8,11 +8,11 @@
 // ~200 строк комментариев раздували Service Worker. Новые записи о версиях
 // добавляются в docs/SW_CHANGELOG.md и CHANGES.md, но НЕ в этот файл.
 
-// 66.71 (приказы владельца 1–16): бамп v112→v113 — HTML лендингов не менялся,
-// но заменены 6 и обновлены +24 файла game/assets/icons/*.png (иконки
-// предметов/оружия/брони — CC0-пак с opengameart.org) — cache-first бакет
-// ассетов обязан перевернуться. game-assets-v42→v43.
-const CACHE_NAME = 'chronicles-ruthenia-v114';
+// 66.74 (приказы владельца 1–18, новая волна навыков): бамп v114→v115 —
+// исходники game/src/** (10 новых навыков, burglary.js/jobs.js, сундуки,
+// борть, пасека-мёд) и game/index.html не трогали ассеты и vendor —
+// game-assets-v43 без изменений.
+const CACHE_NAME = 'chronicles-ruthenia-v115';
 const GAME_ASSETS_CACHE = 'game-assets-v43';
 
 self.addEventListener('install', function (event) {

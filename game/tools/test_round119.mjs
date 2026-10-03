@@ -80,8 +80,8 @@ ok(!/mpHeal/.test(interiors), 'interiors.js: свеча «+1 MP» снята, о
 ok(/Здоровье восстановлено ПОЛНОСТЬЮ\./.test(i18n), 'i18n: полный отдых — только Здоровье');
 
 console.log('--- 3. Навыки (приказы 9–11, 13–14) ---');
-ok(!/key: 'oratory'|key: 'ride'|key: 'track'|key: 'investigate'/.test(character),
-    'Character.js: Красноречие/Верховая езда/Следопытство/Исследование удалены');
+ok(!/key: 'oratory'|key: 'ride'|key: 'investigate'/.test(character),
+    'Character.js: Красноречие/Верховая езда/Исследование удалены (Следопытство ВОЗВРАЩЁН приказом 66.74 п.8)');
 ok(/key: 'blunt', name: 'Ударное оружие'/.test(character), 'Character.js: НОВЫЙ навык «Ударное оружие» (blunt)');
 for (const w of ['club', 'palitsa', 'mace', 'flail']) {
     const re = new RegExp(`${w}:\\s*\\{ id: '${w}',[^}]*skill: 'blunt'`);
@@ -186,8 +186,8 @@ console.log('--- 10. Runtime: модель, благословение, трав
     const { CHARACTER_KEYS, SKILLS, WEAPONS, createCharacter } = await import('../src/systems/Character.js');
     ok(CHARACTER_KEYS.length === 5 && CHARACTER_KEYS.map(c => c.key).join(',') === 'STR,CON,POW,DEX,CHA',
         'runtime: 5 характеристик в порядке SRD');
-    ok(SKILLS.some(s => s.key === 'blunt') && !SKILLS.some(s => ['oratory','ride','track','investigate'].includes(s.key)),
-        'runtime: SKILLS — blunt есть, удалённых нет');
+    ok(SKILLS.some(s => s.key === 'blunt') && !SKILLS.some(s => ['oratory','ride','investigate'].includes(s.key)),
+        'runtime: SKILLS — blunt есть, удалённых нет (track возвращён 66.74)');
     ok(WEAPONS.club.skill === 'blunt' && WEAPONS.palitsa.skill === 'blunt' && WEAPONS.mace.skill === 'blunt' && WEAPONS.flail.skill === 'blunt',
         'runtime: 4 дробящих оружия на навыке blunt');
     const hero = createCharacter('Тест', { STR: 45, CON: 60, POW: 55, DEX: 70, CHA: 35 });
@@ -245,7 +245,7 @@ for (const f of files) {
 ok(syntaxFail === 0, `node --check ×${files.length} — все зелёные`);
 
 console.log('--- 12. SW v113 / game-assets-v43 / доки ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v114';") && sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"),
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v115';") && sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"),
     'sw.js: v113 + game-assets-v43 (иконки в cache-first бакете перевернулись)');
 ok(/66\.71/.test(swlog) && /v113/.test(swlog), 'SW_CHANGELOG: запись 66.71/v113');
 ok(/66\.71/.test(changes), 'CHANGES.md: запись 66.71');

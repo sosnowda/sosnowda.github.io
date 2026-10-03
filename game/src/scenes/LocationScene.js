@@ -25,10 +25,14 @@ import { addItem, countOf, fishingCatchCount, shotChance, getLootDef, removeItem
 // Патч 66.73 (приказы 3,4,14): голод по активности + усталость (BRP SRD)
 import { spendFatigue, restFatigueFull, exhaustedGuardPopup, fatigueStatusLine } from '../systems/fatigue.js';
 import { hungerStatusLine } from '../systems/hunger.js';
+// Патч 66.74 (приказ 2): молитва +5 списывается проверкой Рыболовства
+import { consumePrayerBless } from '../systems/prayer.js';
 // Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
 import { getQuiver, spendArrow } from '../systems/ammo.js';
 // Раунд 66.17 (п.9): дичь на Лесной поляне — зайцы и глухари
-import { GAME_ANIMALS } from '../data/forest.js';
+// Патч 66.74: Следопытство при входе в лес + Скрадывание перед выстрелом
+import { GAME_ANIMALS, rollForestTracking } from '../data/forest.js';
+import { skillCheck } from '../systems/BRPEngine.js';
 // Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
 import { MAP_TRAVEL_MINUTES } from './ForkScene.js';
 // Раунд 29: счёт времени «как на Руси XV века» — эра, косые часы, народные ориентиры
@@ -418,6 +422,13 @@ export class LocationScene extends Phaser.Scene {
 
         // ----- РАУНД 66.17 (п.9): ДИЧЬ на Лесной поляне — зайцы/глухари
         // (косуля — только в чаще Густого леса), клик — стрельба из лука ---
+        // Патч 66.74: на лесных локациях — проверка Следопытства при входе
+        // (раз в день; успех — зверя больше на весь день)
+        this.sneakBonus = false;
+        this.trackBoost = false;
+        if (inForest) {
+            this.trackBoost = rollForestTracking(this.registry).boost;
+        }
         if (this.locationId === 'forest_glade') {
             this.spawnGladeAnimals(width, height);
         }
@@ -496,17 +507,36 @@ export class LocationScene extends Phaser.Scene {
             spendFatigue(this.registry, 1);
             markActionDone(q, 'fish_daily', today);
             this.registry.set('quest', q);
-            // РАУНД 66.17 (п.7): улов — СЫРАЯ РЫБА В УЗЕЛ (не съедается на месте):
-            // штук — по погоде/сезону; с чужой удочки — доля хозяину (−1).
+            // ПАТЧ 66.74 (приказ 2): РЫБОЛОВСТВО — проверяемый навык.
+            // «Рыбалка уже есть, станет проверяемой: успех +рыба, крит —
+            // полный садок, провал — нет рыбы». Лестница погоды/сезона
+            // (fishingCatchCount) остаётся при успехе; крит удваивает улов
+            // («полный садок»); провал — часы у воды впустую.
+            const bless66 = consumePrayerBless(this.registry);
+            const fishingSkill = Math.max(1, Math.min(99, getBlessedSkill(this.registry,
+                ((player.skills && player.skills.fishing) || 15) + bless66)));
+            const fishRes = skillCheck(fishingSkill);
             const weather = getWeather(this.registry);
             const raining = weather && isRainy(weather);
-            const catchN = fishingCatchCount({
-                seasonId: season.id, raining, winter, ownRod: hasOwnRod,
-            });
-            addItem(player, 'fish_raw', catchN);
-            this.registry.set('player', player);
+            let catchN = 0;
+            if (fishRes.result === 'fail' || fishRes.result === 'fumble') {
+                catchN = 0;
+            } else {
+                catchN = fishingCatchCount({
+                    seasonId: season.id, raining, winter, ownRod: hasOwnRod,
+                });
+                if (fishRes.result === 'critical') catchN = Math.max(2, catchN * 2); // полный садок
+            }
+            if (catchN > 0) {
+                addItem(player, 'fish_raw', catchN);
+                this.registry.set('player', player);
+            }
             let catchLine;
-            if (winter) {
+            if (catchN <= 0) {
+                catchLine = winter
+                    ? t('Прорубил лунку и сторожил поплавок до онемения пальцев... Налим нынче не идёт — не судьба.')
+                    : t('Забросил удочку, менял наживку, мерил берег шагами... Рыба сыта: за целый час ни одной поклёвки.');
+            } else if (winter) {
                 catchLine = t('Прорубаешь лунку на реке и долго ждёшь, грея пальцы... Поплавок дёргается — на льду бьётся налим.');
             } else if (raining) {
                 catchLine = t('Забросил удочку с берега под моросящим дождём... Рыба клюёт одна за другой — вёдра полные!');
@@ -515,16 +545,26 @@ export class LocationScene extends Phaser.Scene {
             } else {
                 catchLine = t('Забросил удочку с песчаного брода... Через час в корзине бьётся улов.');
             }
-            const rodNote = hasOwnRod
-                ? ''
-                : '\n' + t('(Ловил Ерёминой удой с брода: одна рыба — хозяину.)');
-            ActionLog.add(this.registry, tf(t('Наловил рыбы на реке: +{0} сырая рыба в узел{1}.'), catchN, hasOwnRod ? '' : t(' (чужая уда, доля хозяину)')));
+            const skillNote = catchN > 0
+                ? (fishRes.result === 'critical'
+                    ? tf(t('\n\n(Рыболовство {0}%: бросок {1} — КРИТ: полный садок, улов вдвое!)'), fishingSkill, fishRes.roll)
+                    : tf(t('\n\n(Рыболовство {0}%: бросок {1} — успех.)'), fishingSkill, fishRes.roll))
+                : tf(t('\n\n(Рыболовство {0}%: бросок {1} — провал: не клюёт.)'), fishingSkill, fishRes.roll);
+            const rodNote = (catchN > 0 && !hasOwnRod)
+                ? '\n' + t('(Ловил Ерёминой удой с брода: одна рыба — хозяину.)')
+                : '';
+            if (catchN > 0) {
+                ActionLog.add(this.registry, tf(t('Наловил рыбы на реке: +{0} сырая рыба в узел{1} (Рыболовство {2}%: бросок {3}).'), catchN, hasOwnRod ? '' : t(' (чужая уда, доля хозяину)'), fishingSkill, fishRes.roll));
+            } else {
+                ActionLog.add(this.registry, tf(t('Порыбачил на реке — пусто (Рыболовство {0}%: бросок {1}).'), fishingSkill, fishRes.roll));
+            }
             createDialog(this, title,
                 catchLine
-                + `\n\n${t('🐟 Улов')} : +${catchN} × ${t('Рыба (сырая)')} — ${t('в узел')}.`
-                + `\n${t('Сырую рыбу не едят: приготовь на костре или продай трактирщику/мяснику.')}`
+                + (catchN > 0 ? `\n\n${t('🐟 Улов')} : +${catchN} × ${t('Рыба (сырая)')} — ${t('в узел')}.` : '\n')
+                + (catchN > 0 ? `\n${t('Сырую рыбу не едят: приготовь на костре или продай трактирщику/мяснику.')}` : '')
+                + skillNote
                 + rodNote
-                + (season.id === 'autumn_feed' ? `\n${t('(Осенний жор: рыба берёт жадно — улов щедрее.)')}` : ''),
+                + (season.id === 'autumn_feed' && catchN > 0 ? `\n${t('(Осенний жор: рыба берёт жадно — улов щедрее.)')}` : ''),
                 [{ text: t('Взять улов'), callback: () => {} }]);
         } else {
             // Патч 66.73: плохой клёв — тоже труд на берегу (−1 ОУ)
@@ -864,10 +904,14 @@ export class LocationScene extends Phaser.Scene {
      * Косуля на поляну не выходит — только в чаще (ForestScene).
      */
     spawnGladeAnimals(width, height) {
+        // Патч 66.74 (приказ 8): удачное Следопытство при входе в лес —
+        // зверя на поляне заметно больше (заяц 0.7→0.9, глухарь 0.5→0.75)
+        const hareChance = this.trackBoost ? 0.9 : 0.7;
+        const birdChance = this.trackBoost ? 0.75 : 0.5;
         const roll = Math.random();
         const present = [];
-        if (roll < 0.7) present.push({ kind: 'hare', x: width * 0.3, y: height * 0.58 });
-        if (Math.random() < 0.5) present.push({ kind: 'bird', x: width * 0.66, y: height * 0.4 });
+        if (roll < hareChance) present.push({ kind: 'hare', x: width * 0.3, y: height * 0.58 });
+        if (Math.random() < birdChance) present.push({ kind: 'bird', x: width * 0.66, y: height * 0.4 });
         present.forEach((entry, i) => {
             const cfg = GAME_ANIMALS[entry.kind];
             if (!cfg || !this.textures.exists(cfg.tex)) return;
@@ -915,7 +959,7 @@ export class LocationScene extends Phaser.Scene {
         }
 
         createDialog(this, '🏹 ' + t(cfg.name),
-            tf(t('{0} близко, но настороже. Тянуть тетиву? (шанс зависит от твоего навыка стрельбы)\nВыстрел — 5 минут времени, стрела — из колчана.'), t(cfg.name)),
+            tf(t('{0} близко, но настороже. Стрелять сразу — или подкрасться (+10 к выстрелу; при неудаче зверь сорвётся)?\nВыстрел — 5 минут времени, стрела — из колчана.'), t(cfg.name)),
             [
                 { text: tf(t('Стрелять из лука ({0})'), t(cfg.name)), callback: () => {
                     close();
@@ -927,7 +971,10 @@ export class LocationScene extends Phaser.Scene {
                     this.registry.set('player', player);
                     if (this.audioManager) this.audioManager.playShoot();
                     // Раунд 66.71: благословение усиливает и выстрел (+10%)
-                    const chance = shotChance(cfg.base, getBlessedSkill(this.registry, (player.skills && player.skills.bow) || 15));
+                    // Патч 66.74: удачное Скрадывание даёт +10 к выстрелу (списывается)
+                    const sneak = this.sneakBonus ? 10 : 0;
+                    this.sneakBonus = false;
+                    const chance = shotChance(cfg.base + sneak, getBlessedSkill(this.registry, (player.skills && player.skills.bow) || 15));
                     const hit = Math.random() * 100 < chance;
                     if (hit) {
                         // Раунд 66.70 (приказ 8): обдир туши на поляне — проверка
@@ -958,6 +1005,25 @@ export class LocationScene extends Phaser.Scene {
                     }
                 } },
                 { text: t('Не сейчас'), callback: close },
+                // Патч 66.74 (приказ 1): Скрадывание — подкрадывание к дичи
+                { text: t('🌑 Подкрасться (Скрадывание)'), callback: () => {
+                    close();
+                    const stealth = getBlessedSkill(this.registry, (player.skills && player.skills.stealth) || 10);
+                    const res = skillCheck(stealth);
+                    if (res.result === 'fail' || res.result === 'fumble') {
+                        ActionLog.add(this.registry, tf(t('Пытался подкрасться к {0} на поляне (Скрадывание {1}%: бросок {2}) — зверь чует человека и прыгает в кусты.'), t(cfg.name), stealth, res.roll));
+                        createDialog(this, t('💨 Сорвалось!'),
+                            tf(t('Половица хрустнула под ногой — {0} мгновенно скрылся в чаще без выстрела.'), t(cfg.name)),
+                            [{ text: t('Эх…'), callback: close }], { singleton: false });
+                        spr.destroy();
+                    } else {
+                        this.sneakBonus = true;
+                        ActionLog.add(this.registry, tf(t('Подкрался к {0} на поляне (Скрадывание {1}%: бросок {2} — успех): выстрел из засады +10 к шансу.'), t(cfg.name), stealth, res.roll));
+                        createDialog(this, t('🌑 Из засады'),
+                            tf(t('Ты замер за кустом, слившись с тенью. {0} не чует человека — следующий выстрел будет вернее (+10 к шансу).'), t(cfg.name)),
+                            [{ text: t('Хорошо'), callback: close }], { singleton: false });
+                    }
+                } },
             ], { singleton: false });
     }
 
