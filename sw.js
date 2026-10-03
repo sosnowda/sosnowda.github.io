@@ -12,7 +12,7 @@
 // но заменены 6 и обновлены +24 файла game/assets/icons/*.png (иконки
 // предметов/оружия/брони — CC0-пак с opengameart.org) — cache-first бакет
 // ассетов обязан перевернуться. game-assets-v42→v43.
-const CACHE_NAME = 'chronicles-ruthenia-v113';
+const CACHE_NAME = 'chronicles-ruthenia-v114';
 const GAME_ASSETS_CACHE = 'game-assets-v43';
 
 self.addEventListener('install', function (event) {

@@ -11,6 +11,10 @@ import { t, tf } from '../systems/i18n.js';
 import { applyQuestFailurePenalty } from './reputation.js';
 // Раунд 66.12 (п.5): сезонная привязка — зимой грибы/травы не выдаются
 import { getSeason } from '../systems/TimeSystem.js';
+// Патч 66.73: штраф голода (>48 ч без еды → −1% навыков) в getBlessedSkill
+import { hungerSkillPenalty } from '../systems/hunger.js';
+// Патч 66.73: усталость (BRP SRD «Очки усталости») — −1% за отрицательный ОУ
+import { fatigueSkillMod } from '../systems/fatigue.js';
 
 // ============================================================
 // БЛАГОСЛОВЕНИЕ (раунд 22, п.11) — ПЕРЕРАБОТАНО РАУНДОМ 66.71 (приказ 4
@@ -70,14 +74,19 @@ export function blessPlayer(registry) {
 }
 
 /**
- * Значение навыка с учётом действующего благословения (+10%, потолок 99).
+ * Значение навыка с учётом действующего благословения (+10%, потолок 99)
+ * и ДОЛГОГО ГОЛОДА (патч 66.73, приказ 7: голод > 48 ч — −1% за каждые
+ * полные 24 часа; штраф вычитается ПОСЛЕ благословения, пол 1).
  * Применяется ко ВСЕМ проверкам навыков героя (приказ 4: «всех навыков»).
  * @returns {number} значение для skillCheck/opposedSkillCheck
  */
 export function getBlessedSkill(registry, skillValue) {
     const v = Math.max(1, Number(skillValue) || 0);
-    if (!isBlessingActive(registry)) return v;
-    return Math.min(99, Math.round(v * BLESSING_SKILL_MULT));
+    const blessed = isBlessingActive(registry) ? Math.min(99, Math.round(v * BLESSING_SKILL_MULT)) : v;
+    // Патч 66.73: голод изнуряет — навыки тают (−1 пункт за 24 ч после 48 ч)
+    // и УСТАЛОСТЬ бьёт по всем проверкам (BRP SRD: −1% за отрицательный ОУ)
+    const eff = blessed - hungerSkillPenalty(registry) + fatigueSkillMod(registry);
+    return Math.max(1, Math.min(99, Math.round(eff)));
 }
 
 // ============================================================

@@ -2179,6 +2179,85 @@ const EN = {
         '🏹 Game (hares, capercaillies, roe deer in the thickets): with a bow equipped, come close and press E; carcasses are butchered with Survival — meat and hide.\n',
     '🔥 У старого кострища (северо-запад) можно пересидеть час и готовить сырую рыбу/мясо/грибы (проверка Готовки; провал — продукты пропали).\n':
         '🔥 At the old campfire (north-west) you may sit out an hour and cook raw fish/meat/mushrooms (a Cooking check; on a failure the food is lost).\n',
+
+    // ================= Патч 66.73 (приказы владельца 1–16) =================
+    // — приказ 12: несъедобная еда —
+    '⚠ Еда не пригодна в пищу!': '⚠ The food is not fit to eat!',
+    'Сырым это не едят — сырые грибы, мясо и рыба непригодны в пищу! Приготовь на костре (лесное кострище, костёр пастухов или печь постоялого двора — 30 мин) или продай трактирщику/мяснику.':
+        'Raw food is not eaten — raw mushrooms, meat and fish are not fit to eat! Cook it on a fire (forest campfire, shepherds\' fire or the inn stove — 30 min) or sell it to the innkeeper/butcher.',
+    // — приказы 3,4,6,7: голод по часам —
+    'Голод томит не первый день — Здоровье тает (−1 за каждые сутки без еды).':
+        'Hunger has been gnawing for more than a day — Health is fading (−1 for every 24 hours without food).',
+    // — приказ 8: печь на постоялом дворе —
+    '🔥 Печь (Готовка)': '🔥 Stove (Cooking)',
+    '🔥 Русская печь постоялого двора': '🔥 The Inn\'s Russian Stove',
+    'Устье печи дышит жаром, на шестке чугун и ухват. Здесь путник может сам приготовить сырую добычу (Готовка; при неудаче продукты пропадут, при критической удаче блюдо выйдет сытнее на +1).':
+        'The stove mouth breathes heat; iron pots and a grip rest on the hearth ledge. Here a traveller may cook the raw catch himself (a Cooking check; on a failure the food is lost, on a critical success the dish is worth +1 more).',
+    '🐟 Запечь рыбу в печи ({0} мин)': '🐟 Bake the fish in the stove ({0} min)',
+    '🍖 Томить мясо дичи в печи ({0} мин)': '🍖 Stew the game meat in the stove ({0} min)',
+    '🍄 Жарить грибы в печи ({0} мин)': '🍄 Fry the mushrooms in the stove ({0} min)',
+    'В узле нечего готовить: сырые грибы, мясо дичи или рыба продаются на постоялом дворе, а несут их из леса и с реки.':
+        'There is nothing to cook in your pack: raw mushrooms, game meat or fish are sold at the inn — and are brought from the forest and the river.',
+    // («Не сейчас» — в словаре ранее)
+    '💀 Прогорело!': '💀 Burnt!',
+    'Прогоревал у печи постоялого двора: {0} пригорели (Готовка {1}%: бросок {2}).':
+        'A mishap at the inn stove: {0} got scorched (Cooking {1}%: roll {2}).',
+    '{0} подгорели на печи — продукты пропали (Готовка {1}%: бросок {2}).':
+        '{0} burnt on the stove — the food is lost (Cooking {1}%: roll {2}).',
+    ' — удалось на славу (+1 к сытости)!': ' — it turned out a treat (+1 to fullness)!',
+    'Пир в печи! {0} → {1} сытнее на +1 (Готовка {2}%: бросок {3} — крит).':
+        'A feast from the stove! {0} → {1}, worth +1 more fullness (Cooking {2}%: roll {3} — critical).',
+    'Приготовил в печи постоялого двора: {0} → {1} (Готовка {2}%: бросок {3}).':
+        'Cooked at the inn stove: {0} → {1} (Cooking {2}%: roll {3}).',
+    '🍲 Удалось на славу!': '🍲 It turned out a treat!',
+    '🍲 С печи — горячее': '🍲 Hot from the stove',
+    'На печи поспело: {0}{1}\nТеперь в узле — можно съесть (Персонаж → Инвентарь → «Съесть») или продать.':
+        'Ready from the stove: {0}{1}\nIt is in your pack now — eat it (Character → Inventory → "Eat") or sell it.',
+    // («Понятно»/«Хорошо»/«Закрыть»/«Не сейчас» и цены продажи — в словаре ранее)
+    // — приказ 13: трофеи при критическом разделке —
+    'Критическая удача разделки: в узле ценный трофей — {0} (продать трактирщику или мяснику).':
+        'A critical carving luck: a valuable trophy is in your pack — {0} (sell it to the innkeeper or the butcher).',
+    '🏆 Критическая удача: при разделке добыт ценный трофей — {0} (продай на постоялом дворе или мяснику).':
+        '🏆 Critical luck: butchering yielded a valuable trophy — {0} (sell it at the inn or to the butcher).',
+    'Стрела дошла — {0} повержен. Освежевал тушу (Выживание {1}%: бросок {2}): +{3} сырое мясо и шкура в узел.\nСырым не едят: приготовь на костре или продай.{4}':
+        'The arrow flew true — {0} is down. Skinned the carcass (Survival {1}%: roll {2}): +{3} raw meat and the hide in your pack.\nRaw food is not eaten: cook it on a fire or sell it.{4}',
+    'Стрела дошла — {0} повержен. Обобрал тушу (Выживание {1}%: бросок {2}): +{3} сырое мясо в узел.\nСырым не едят: приготовь на костре или продай.{4}':
+        'The arrow flew true — {0} is down. Gutted the carcass (Survival {1}%: roll {2}): +{3} raw meat in your pack.\nRaw food is not eaten: cook it on a fire or sell it.{4}',
+    'Освежевал тушу убитого волка (Выживание {0}%: бросок {1}): +{2} сырое мясо, шкура и ЦЕННЫЙ ТРОФЕЙ — волчьи клыки (продать на постоялом дворе).':
+        'Skinned the slain wolf (Survival {0}%: roll {1}): +{2} raw meat, the hide and a VALUABLE TROPHY — wolf fangs (sell at the inn).',
+    // — приказ 5: торг —
+    '🤝 Поторговаться': '🤝 Haggle',
+    '🤝 Торг': '🤝 Haggle',
+    'К делу': 'To business',
+    '🤝 Торг удался: цены +{0}% до конца дня.': '🤝 The haggle worked: prices +{0}% until the end of the day.',
+    '🤝 Торговец обиделся: цены −10% до конца дня.': '🤝 The trader took offence: prices −10% until the end of the day.',
+    '🤝 Сегодня торговец уже наслушался тебя — торговаться больше не станет.': '🤝 The trader has heard enough of you today — he will not haggle again.',
+    '🤝 Можно поторговаться (Убеждение; одна попытка в день).': '🤝 You may haggle (Persuasion; one attempt per day).',
+    'Торговец отмахивается: «Нынче у меня цены твёрдые, не приставай!»': 'The trader waves you off: "My prices are firm today, do not pester me!"',
+    'Торговец ахает от твоей прыти: «Эк, какой юркий! Ладно, последняя цена — и то из уважения к дару слова!»': 'The trader gasps at your gumption: "What a slippery tongue! Fine, the final price — out of respect for your gift of speech!"',
+    'Торг (крит Убеждения): цены продажи +{0}% на сутки.': 'Haggle (critical Persuasion): selling prices +{0}% for a day.',
+    'Торговец крякает и нехотя поддаётся: «Уж больно слово у тебя липкое. Ладно, накину по малой части». Цены +25% до конца дня.': 'The trader grunts and grudgingly gives in: "Your tongue is too smooth. Fine, I shall add a small bit." Prices +25% until the end of the day.',
+    'Торг удался (Убеждение): цены продажи +{0}% на сутки.': 'The haggle worked (Persuasion): selling prices +{0}% for a day.',
+    'Торговец осерчал: «Мне тут не хами! Платят у меня и так сполна — а ежели не люб, так и по дешёвке возьму». Цены −10% до конца дня.': 'The trader grew angry: "Do not be rude here! People pay me well enough — and if you are disliked, I shall buy at a discount." Prices −10% until the end of the day.',
+    'Торг провалился (fumble): торговец обиделся — цены −10% на сутки.': 'The haggle failed badly (fumble): the trader took offence — prices −10% for a day.',
+    'Торговец стоит как стена: «Не гни свою линию, путник. Цены у меня честные — бери, что дают». Попытка за день потрачена.': 'The trader stands like a wall: "Do not bend your line, traveller. My prices are honest — take what is given." The attempt for today is spent.',
+    'Торг не удался (Убеждение): торговец не поддался.': 'The haggle failed (Persuasion): the trader did not give in.',
+    // («Печёное и жаркое дороже сырого» — в словаре ранее)
+    // — приказ 16: харизма беседы —
+    'впечатляющее обаяние': 'impressive charm',
+    'благоприятное впечатление': 'a favourable impression',
+    'антипатия': 'antipathy',
+    'неприязнь': 'dislike',
+    '✨ Обаяние {0} против {1} (броски {2}/{3}): {4} — разговорные проверки {5}{6}.':
+        '✨ Charm {0} against {1} (rolls {2}/{3}): {4} — talk checks {5}{6}.',
+    // — приказ 14: усталость —
+    'Герой выбился из сил: усталость бьёт по всем проверкам (−1% за пункт).':
+        'The hero is worn out: fatigue strikes all checks (−1% per point).',
+    'Герой ИЗНЕМОЖЁН: нужен отдых, охота и работа не по силам.':
+        'The hero is EXHAUSTED: rest is needed — hunting and labour are beyond his strength.',
+    '💀 Герой изнеможён!': '💀 The hero is exhausted!',
+    'Герой выбился из сил совсем — охота, сбор и рыбалка не по силам. Отдохни: сон на постоялом дворе, час у костра или бездельное время вернут силы.':
+        'The hero is utterly worn out — hunting, gathering and fishing are beyond him. Take a rest: sleep at the inn, an hour by the fire, or idle time will restore his strength.',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----

@@ -13,6 +13,9 @@ import { appendWeatherChoice } from '../data/dialogue.js';
 // Раунд 66.21 (приказы 2,13): выбор «📜 Есть ли дело?» всем взрослым НПЦ
 // с пулом поручений и «🕯 Пожертвовать церкви» в беседе священника
 import { appendQuestChoice, appendDonationChoice } from '../data/dialogue.js';
+// Патч 66.73 (приказ 16): проверка Харизмы игрок vs НПЦ при ВСЕХ диалогах —
+// бонус/пенальти к разговорным проверкам беседы (Похвала/Угроза/Убеждение…)
+import { rollCharismaEdge, clearChaEdge, getChaEdgeLine } from '../systems/charisma.js';
 
 export class DialogueRunner {
     constructor(scene) {
@@ -61,6 +64,16 @@ export class DialogueRunner {
             }
         } catch (e) {
             console.error('Ошибка действия узла', nodeId, e);
+        }
+
+        // Патч 66.73 (приказ 16): при начале беседы — проверка Харизмы
+        // игрока против Харизмы НПЦ; бонус/пенальти применяются ко всем
+        // разговорным проверкам этой беседы (systems/charisma.js).
+        if (nodeId === d.start && !this._chaRolled) {
+            this._chaRolled = true;
+            if (this.scene && this.scene.activeNpc && this.scene.activeNpc.id) {
+                rollCharismaEdge(this.scene.registry, this.scene.activeNpc.id);
+            }
         }
 
         // Раунд 66.7 (п.5): в стартовом узле КАЖДОГО взрослого НПЦ — выбор
@@ -161,6 +174,14 @@ export class DialogueRunner {
         const address = this._getPlayerAddress();
         displayText = displayText.replace(/\{address\}/g, address);
 
+        // Патч 66.73 (приказ 16): итог проверки Харизмы виден в первом узле
+        // беседы — короткая строка «✨ Обаяние …: благоприятное впечатление —
+        // разговорные проверки +5» (только в стартовом узле, один раз)
+        if (nodeId === d.start) {
+            const chaLine = getChaEdgeLine(this.scene.registry);
+            if (chaLine) displayText += '\n\n' + chaLine;
+        }
+
         // Динамическое имя спикера (п.2-5): до знакомства — «старик священник»,
         // после — «Отец Савватий (священник)»
         let speakerName = node.speaker || '...';
@@ -218,6 +239,8 @@ export class DialogueRunner {
             this._currentDialog.destroy();
         }
         this._currentDialog = null;
+        // Патч 66.73 (приказ 16): обаяние беседы живёт до её конца
+        if (this.scene && this.scene.registry) clearChaEdge(this.scene.registry);
         if (this.scene && this.scene.registry) {
             // Раунд 31 (п.11): разговор с НПЦ — ВСЕГДА 1 час, списывается
             // один раз при закрытии беседы (вор за час делает 4 шага).

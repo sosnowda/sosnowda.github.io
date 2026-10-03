@@ -169,6 +169,8 @@ export const GAME_ANIMALS = {
         tex: 'game_roe', corpseTex: 'game_roe_dead',
         base: 55,
         meat: [4, 6],        // крупная добыча — мяса много (п.13)
+        // Патч 66.73 (приказ 13): ценный трофей при критическом разделке
+        trophy: 'roe_antlers',
         fleeRadius: 140,
         speed: 215,
         scale: 2.0,

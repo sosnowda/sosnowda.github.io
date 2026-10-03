@@ -30,6 +30,16 @@ import { consumePrayerBless } from './prayer.js';
 // Раунд 66.72: лекарственная трава — кулдаун 12 ч сохранён из 66.71 (canUseHerb);
 // применение — проверка Знахарства (приказ 13), время НЕ тратится (канон 66.71).
 import { canUseHerb, registerHerb } from './meal.js';
+// Патч 66.73 (приказ 7): голод > 48 ч — штраф ко всем проверкам навыков,
+// включая собранные тут Выживание/Готовку/Знахарство.
+import { hungerSkillPenalty } from './hunger.js';
+// Патч 66.73 (приказ 14): усталость — −1% за каждый отрицательный ОУ (BRP SRD)
+import { fatigueSkillMod } from './fatigue.js';
+
+/** Патч 66.73: значение навыка с голодным и усталостным штрафом (пол 1). */
+function hungrySkill(registry, base) {
+    return Math.max(1, Math.round(Number(base) || 1) - hungerSkillPenalty(registry) + fatigueSkillMod(registry));
+}
 
 /**
  * Определения добычи/припасов узла.
@@ -99,6 +109,17 @@ export const LOOT_DEFS = {
     skin: {
         id: 'skin', name: 'Шкура (зверя)', emoji: '🟫',
         edible: false, heal: 0, sell: 4,
+    },
+    // Патч 66.73 (приказ 13): ЦЕННЫЙ ЛУТ при критическом разделке —
+    // клыки волка и рога косули уходят на продажу (товар, не еда).
+    // Выпадают ТОЛЬКО при критической удаче (крит проверки Выживания).
+    wolf_fangs: {
+        id: 'wolf_fangs', name: 'Волчьи клыки (трофей)', emoji: '🦷',
+        edible: false, heal: 0, sell: 8, trophy: true,
+    },
+    roe_antlers: {
+        id: 'roe_antlers', name: 'Рога косули (трофей)', emoji: '🦌',
+        edible: false, heal: 0, sell: 10, trophy: true,
     },
 };
 
@@ -200,10 +221,12 @@ export function tryEatFood(scene, player, itemId) {
     if (countOf(player, itemId) <= 0) return { ok: false, reason: 'no_item', heal: 0 };
 
     // П.7: сырая рыба/мясо не едятся — только готовка или продажа.
+    // Патч 66.73 (приказ 12): поп-ап с ДОСЛОВНЫМ предупреждением владельца
+    // «Еда не пригодна в пищу!» — при попытке съесть сырые грибы, мясо, рыбу.
     if (!def.edible) {
         if (scene && scene.add) {
-            createDialog(scene, def.emoji + ' ' + t(def.name),
-                t('Сырым это не едят: приготовь на костре (лесное кострище или костёр пастухов — 30 мин) или продай трактирщику/мяснику.'),
+            createDialog(scene, t('⚠ Еда не пригодна в пищу!'),
+                t('Сырым это не едят — сырые грибы, мясо и рыба непригодны в пищу! Приготовь на костре (лесное кострище, костёр пастухов или печь постоялого двора — 30 мин) или продай трактирщику/мяснику.'),
                 [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
         }
         return { ok: false, reason: 'not_edible', heal: 0 };
@@ -253,7 +276,7 @@ export function cookAtFire(registry, player, rawId, opts = {}) {
     removeItem(player, rawId, 1);
     // Бонус молитвы: явный opts.bonus (тесты) ИЛИ списание активного благословения.
     const bless = opts.bonus != null ? (Number(opts.bonus) || 0) : consumePrayerBless(registry);
-    const skillValue = Math.max(1, Math.min(99, (Number(opts.skill) || 1) + bless));
+    const skillValue = Math.max(1, Math.min(99, hungrySkill(registry, (Number(opts.skill) || 1) + bless)));
     const res = skillCheck(skillValue);
 
     if (res.result === 'fail' || res.result === 'fumble') {
@@ -313,7 +336,7 @@ export function applyHerb(registry, player, herbId, opts = {}) {
 
     // Бонус молитвы: явный opts.bonus (тесты) ИЛИ списание благословения.
     const bless = opts.bonus != null ? (Number(opts.bonus) || 0) : consumePrayerBless(registry);
-    const skillValue = Math.max(1, Math.min(99, (Number(opts.skill) || 1) + bless));
+    const skillValue = Math.max(1, Math.min(99, hungrySkill(registry, (Number(opts.skill) || 1) + bless)));
     const res = skillCheck(skillValue);
 
     // Трава тратится при любой броске (кроме full_hp): даже при провале
@@ -368,7 +391,7 @@ export function survivalGather(registry, player, kind, opts = {}) {
     const itemId = gatherItemId(kind);
     if (!itemId) return { ok: false, gathered: 0, itemId: null, crit: false, roll: 0, skill: 0 };
     const bless = opts.bonus != null ? (Number(opts.bonus) || 0) : consumePrayerBless(registry);
-    const skill = Math.max(1, Math.min(99, (Number(opts.skill) || (player && player.skills && player.skills.survival) || 1) + bless));
+    const skill = Math.max(1, Math.min(99, hungrySkill(registry, (Number(opts.skill) || (player && player.skills && player.skills.survival) || 1) + bless)));
     const res = skillCheck(skill);
     const failed = res.result === 'fail' || res.result === 'fumble';
     const crit = res.result === 'critical';
@@ -384,21 +407,28 @@ export function survivalGather(registry, player, kind, opts = {}) {
  * @param {Array<number>} meatRange — [мин, макс] по лестнице размера.
  * @param {boolean} hasSkin — есть ли шкура у зверя (заяц/косуля/волк — да; глухарь — нет).
  * @param {Function} [rng] — подмена в тестах (по умолчанию Math.random).
- * @returns {{ ok:boolean, meat:number, skin:number, crit:boolean, roll:number, skill:number }}
+ * @returns {{ ok:boolean, meat:number, skin:number, trophy:number, crit:boolean, roll:number, skill:number }}
  */
 export function survivalButcher(registry, player, meatRange, hasSkin, opts = {}, rng = Math.random) {
     const bless = opts.bonus != null ? (Number(opts.bonus) || 0) : consumePrayerBless(registry);
-    const skill = Math.max(1, Math.min(99, (Number(opts.skill) || (player && player.skills && player.skills.survival) || 1) + bless));
+    const skill = Math.max(1, Math.min(99, hungrySkill(registry, (Number(opts.skill) || (player && player.skills && player.skills.survival) || 1) + bless)));
     const res = skillCheck(skill);
     const [min, max] = Array.isArray(meatRange) ? meatRange : [1, 1];
     const roll = () => min + Math.floor(rng() * (max - min + 1));
     let meat;
     let skin = 0;
+    let trophy = 0;
     if (res.result === 'fail' || res.result === 'fumble') {
         meat = Math.max(1, Math.floor(roll() / 2)); // неловкий обдир — половина, без шкуры
     } else if (res.result === 'critical') {
         meat = roll() * 2;                          // крит: мясо ×2
         skin = hasSkin ? 1 : 0;
+        // Патч 66.73 (приказ 13): КРИТИЧЕСКАЯ УДАЧА при разделке зверя
+        // с ценным лутом — трофей в узел (клыки волка, рога косули — на продажу).
+        if (opts.trophy && player) {
+            addItem(player, opts.trophy, 1);
+            trophy = 1;
+        }
     } else {
         meat = roll();                              // обычный успех
         skin = hasSkin ? 1 : 0;
@@ -408,5 +438,5 @@ export function survivalButcher(registry, player, meatRange, hasSkin, opts = {},
         if (skin > 0) addItem(player, 'skin', skin);
     }
     if (registry) registry.set('player', player);
-    return { ok: meat > 0, meat, skin, crit: res.result === 'critical', roll: res.roll, skill };
+    return { ok: meat > 0, meat, skin, trophy, crit: res.result === 'critical', roll: res.roll, skill };
 }

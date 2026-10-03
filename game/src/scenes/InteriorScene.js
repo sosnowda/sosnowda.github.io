@@ -53,7 +53,7 @@ import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 // Раунд 66.17: пропорциональный отдых (8 ч = 100%), минимальный сон 2 часа
 import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal, canSleep, registerSleep, showMealBlockedPopup, showSleepBlockedPopup, restHealPct, SLEEP_MIN_MIN, canUseHerb, registerHerb, showHerbBlockedPopup, HERB_HEAL_HP } from '../systems/meal.js';
 // Раунд 66.17 (п.5): ПРОДАЖА ДОБЫЧИ — трактирщик берёт рыбу/дичь на кухню
-import { sellableLoot, removeItem } from '../systems/loot.js';
+import { sellableLoot, removeItem, cookAtFire, getLootDef, countOf } from '../systems/loot.js';
 // Раунд 66.70 (приказ 11): МОЛИТВА — откат 8 часов, «Молитва не услышана!»,
 // благословение +5 к одной проверке навыка (списывается первой проверкой)
 import { canPray, registerPrayer, consumePrayerBless } from '../systems/prayer.js';
@@ -62,6 +62,12 @@ import { skillCheck } from '../systems/BRPEngine.js';
 import { overheardRumorLine } from '../data/rumors.js';
 // Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
 import { hungerStatusLine } from '../systems/hunger.js';
+// Патч 66.73 (приказ 14): усталость — сон/отдых восстанавливают ОУ, HUD
+import { restFatigueFull, fatigueStatusLine } from '../systems/fatigue.js';
+// Патч 66.73 (приказ 5): ТОРГ — продажа через меню торговли с торгом за цену
+import { attemptHaggle, haggleMultFor, canHaggleToday, haggleHintLine } from '../systems/trade.js';
+// Патч 66.73 (приказ 16): обаяние беседы — ±5/±10 к разговорным проверкам
+import { chaAdjustedTalkSkill } from '../systems/charisma.js';
 // Раунд 66.17 (п.6): ставка подёнки — +1 к славе за отработанный день
 import { dayKeyOf } from '../data/daily.js';
 
@@ -295,11 +301,15 @@ export class InteriorScene extends Phaser.Scene {
                 y: { from: bobY, to: bobY - 2.5 },
                 duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
             });
-            // П.7: NPC интерактивен — ЛКМ запускает разговор
+            // П.7: NPC интерактивен — ЛКМ запускает разговор.
+            // Патч 66.73 (приказ 1): разговор открывается по pointerup, НЕ по
+            // pointerdown: диалог, созданный в pointerdown, ловил pointerup ТОГО
+            // ЖЕ клика — кнопка выбора под курсором срабатывала мгновенно
+            // («автоматический двойной клик»), начальный экран пропускался.
             this.npcSprite.setInteractive({ useHandCursor: true });
-            this.npcSprite.on('pointerdown', (pointer) => {
-                // Только ЛКМ
-                if (pointer.leftButtonDown() && !this.busyDialog) {
+            this.npcSprite.on('pointerup', (pointer) => {
+                // Только ЛКМ (кнопка отпущена)
+                if (pointer.leftButtonReleased() && !this.busyDialog) {
                     this.talkToNpc(interior);
                 }
             });
@@ -380,8 +390,10 @@ export class InteriorScene extends Phaser.Scene {
                     duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
                 });
                 secSpr.setInteractive({ useHandCursor: true });
-                secSpr.on('pointerdown', (pointer) => {
-                    if (pointer.leftButtonDown() && !this.busyDialog) {
+                // Патч 66.73: pointerup вместо pointerdown — защита от
+                // «двойного клика» (см. комментарий у npcSprite выше)
+                secSpr.on('pointerup', (pointer) => {
+                    if (pointer.leftButtonReleased() && !this.busyDialog) {
                         this.busyDialog = true;
                         this.dialogue.run(interior.secondaryDialogueId, () => { this.busyDialog = false; });
                     }
@@ -424,8 +436,10 @@ export class InteriorScene extends Phaser.Scene {
                 const vAnim = `${vFinal}_idle_down`;
                 if (this.anims.exists(vAnim)) vSpr.play(vAnim);
                 vSpr.setInteractive({ useHandCursor: true });
-                vSpr.on('pointerdown', (pointer) => {
-                    if (pointer.leftButtonDown() && !this.busyDialog) {
+                // Патч 66.73: pointerup вместо pointerdown — защита от
+                // «двойного клика» (см. комментарий у npcSprite выше)
+                vSpr.on('pointerup', (pointer) => {
+                    if (pointer.leftButtonReleased() && !this.busyDialog) {
                         this.busyDialog = true;
                         const dId = NPC_DIALOGUE[vId];
                         if (dId) {
@@ -507,7 +521,7 @@ export class InteriorScene extends Phaser.Scene {
         if (timeState) {
             // Раунд 66.70 (приказы 1–2): рядом с датой — норма трапез (2/сутки);
             // ссылка сохраняется — счётчик обновляется в updateHUD
-            this.dateHungerLine = this.add.text(width / 2, 55, `📅 ${formatDateTime(timeState)}  ·  ${hungerStatusLine(this.registry)}`, {
+            this.dateHungerLine = this.add.text(width / 2, 55, `📅 ${formatDateTime(timeState)}  ·  ${hungerStatusLine(this.registry)}  ·  ${fatigueStatusLine(this.registry)}`, {
                 fontSize: '11px', color: '#8ab4f8',
                 fontFamily: 'Georgia, serif',
                 stroke: '#000', strokeThickness: 2,
@@ -558,6 +572,9 @@ export class InteriorScene extends Phaser.Scene {
                 buttons.push({ label: t('\u{1F6D2} Купить еды'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showTavernShop() });
                 // Раунд 66.17 (п.5): ПРОДАЖА ДОБЫЧИ — Фёдор берёт рыбу и дичь на кухню
                 buttons.push({ label: t('\u{1F4B0} Продать добычу'), bg: 0x5a4a2a, hover: 0x6a5a3a, cb: () => this.showSellLootMenu(interior) });
+                // Патч 66.73 (приказ 8): ПЕЧЬ ПОСТОЯЛОГО ДВОРА — самостоятельная
+                // готовка игрока (сырые грибы/мясо/рыба → готовое блюдо, Готовка)
+                buttons.push({ label: t('\u{1F525} Печь (Готовка)'), bg: 0x6a3a1a, hover: 0x7a4a2a, cb: () => this.showStoveCookMenu(interior) });
                 // Раунд 66.70 (приказ 14): «Слух» получил игровое применение —
                 // подслушать молву за столами постоялого двора (исторично: двор —
                 // средоточие вестей на Руси XV века)
@@ -1023,7 +1040,9 @@ export class InteriorScene extends Phaser.Scene {
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
         // Раунд 66.71 (п.10): похвала идёт от навыка «Болтовня» (fast_talk);
         // «Красноречие» удалено. Благословение батюшки усиливает навык (+10%).
-        const fastTalkSkill = getBlessedSkill(this.registry, player.skills.fast_talk || 10);
+        // Патч 66.73 (приказ 16): обаяние беседы (Харизма vs Харизма) даёт ±5/±10
+        const fastTalkSkill = chaAdjustedTalkSkill(this.registry,
+            getBlessedSkill(this.registry, player.skills.fast_talk || 10));
         const result = applyCompliment(this.registry, interior.npcId, fastTalkSkill);
         markRepActionDone(this.registry, interior.npcId, 'compliment');
         
@@ -1050,7 +1069,9 @@ export class InteriorScene extends Phaser.Scene {
         const player = this.registry.get('player');
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
         // Раунд 66.71: благословение усиливает и Запугивание (+10%)
-        const intimidateSkill = getBlessedSkill(this.registry, player.skills.intimidate || 15);
+        // Патч 66.73 (приказ 16): обаяние беседы — разговорные проверки ±5/±10
+        const intimidateSkill = chaAdjustedTalkSkill(this.registry,
+            getBlessedSkill(this.registry, player.skills.intimidate || 15));
         const playerGender = player.gender || 'male';
         
         const result = applyThreat(this.registry, interior.npcId, intimidateSkill, playerGender);
@@ -1469,6 +1490,9 @@ export class InteriorScene extends Phaser.Scene {
      * и мясник (Потап — на столешню) скупают добычу: сырую/печёную рыбу,
      * сырое мясо и жаркое. Цены за штуку — из LOOT_DEFS (приготовленное
      * дороже сырого). «Продать 1» и «Продать всё» на каждый товар.
+     * Патч 66.73 (приказ 5): ТОРГ за цену — встречная проверка Убеждения,
+     * множитель цен до конца дня (+25%/+50% при крите/−10% при fumble);
+     * панель растёт по числу товаров — всё влезает без скролла (п.2).
      */
     showSellLootMenu(interior) {
         const player = this.registry.get('player');
@@ -1496,10 +1520,18 @@ export class InteriorScene extends Phaser.Scene {
             return;
         }
 
+        // Патч 66.73 (приказ 5): действующий множитель торга
+        const haggleMult = haggleMultFor(this.registry, buyerNpcId);
+        const priceOf = (base) => Math.max(1, Math.round(base * haggleMult));
+
         const rows = sellableLoot(player);
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
             .setOrigin(0).setInteractive().setDepth(200);
-        const panelW = 560, panelH = 420;
+        // Патч 66.73 (п.2, аудит размеров): высота панели РАСТЁТ по числу
+        // товаров — раньше фиксированные 420px при 8+ видах добычи выталкивали
+        // нижние строки и кнопку «Закрыть» за пергамент. Потолок — 88% экрана.
+        const panelW = 560;
+        const panelH = Math.min(Math.round(height * 0.88), 160 + rows.length * 52 + 78);
         const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
             .setStrokeStyle(3, 0xC9A961).setDepth(201);
         const closeMenu = () => {
@@ -1519,8 +1551,9 @@ export class InteriorScene extends Phaser.Scene {
             }).setOrigin(0.5).setDepth(202);
         // РАУНД 66.20: подсказка о ценах вынесена в общую строку (раньше
         // дублировалась в каждой строке списка и вынуждала держать мелкий кегль)
+        // Патч 66.73 (приказ 5): рядом — строка состояния торга
         this.add.text(width / 2, height / 2 - panelH / 2 + 88,
-            t('Печёное и жаркое дороже сырого'), {
+            t('Печёное и жаркое дороже сырого') + '  ·  ' + haggleHintLine(this.registry, buyerNpcId), {
                 fontSize: '13px', color: RUS.textDim, fontStyle: 'italic',
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5).setDepth(202);
@@ -1537,16 +1570,17 @@ export class InteriorScene extends Phaser.Scene {
         rows.forEach((row, i) => {
             const y = startY + i * 52;
             const def = row.def;
+            const unitPrice = priceOf(row.price); // патч 66.73: цена с учётом торга
             this.add.text(width / 2 - panelW / 2 + 30, y - 22,
-                `${def.emoji} ${t(def.name)} ×${row.count} — ${row.price} ${t('д.')}`, {
+                `${def.emoji} ${t(def.name)} ×${row.count} — ${unitPrice} ${t('д.')}`, {
                     fontSize: '15px', color: RUS.text, stroke: '#000', strokeThickness: 1,
                 }).setOrigin(0, 0.5).setDepth(202);
-            createButton(this, width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), row.price), () => {
+            createButton(this, width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), unitPrice), () => {
                 removeItem(player, def.id, 1);
-                player.dengas = (player.dengas || 0) + row.price;
+                player.dengas = (player.dengas || 0) + unitPrice;
                 this.registry.set('player', player);
                 if (this.audioManager) this.audioManager.playGoldReceive();
-                ActionLog.add(this.registry, tf(t('Продал «{0}» ({1}) за {2} д.'), t(def.name), buyerName, row.price));
+                ActionLog.add(this.registry, tf(t('Продал «{0}» ({1}) за {2} д.'), t(def.name), buyerName, unitPrice));
                 this.updateHUD();
                 closeMenu();
                 this.showSellLootMenu(interior);
@@ -1555,13 +1589,13 @@ export class InteriorScene extends Phaser.Scene {
                 fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 },
             }).setDepth(202);
             if (row.count > 1) {
-                createButton(this, width / 2 + 205, y + 4, tf(t('Всё ({0} д.)'), row.price * row.count), () => {
+                createButton(this, width / 2 + 205, y + 4, tf(t('Всё ({0} д.)'), unitPrice * row.count), () => {
                     const n = row.count;
                     removeItem(player, def.id, n);
-                    player.dengas = (player.dengas || 0) + row.price * n;
+                    player.dengas = (player.dengas || 0) + unitPrice * n;
                     this.registry.set('player', player);
                     if (this.audioManager) this.audioManager.playGoldReceive();
-                    ActionLog.add(this.registry, tf(t('Продал всё «{0}» ×{1} ({2}) за {3} д.'), t(def.name), n, buyerName, row.price * n));
+                    ActionLog.add(this.registry, tf(t('Продал всё «{0}» ×{1} ({2}) за {3} д.'), t(def.name), n, buyerName, unitPrice * n));
                     this.updateHUD();
                     closeMenu();
                     this.showSellLootMenu(interior);
@@ -1572,10 +1606,92 @@ export class InteriorScene extends Phaser.Scene {
             }
         });
 
-        createButton(this, width / 2, height / 2 + panelH / 2 - 34, t('Закрыть'), closeMenu, {
+        // ----- Патч 66.73 (приказ 5): кнопка ТОРГА -----
+        // Одна попытка в день на торговца; встречная проверка Убеждения
+        // (с бонусом обаяния беседы, приказ 16); множитель до конца дня.
+        const haggleY = height / 2 + panelH / 2 - 34;
+        if (canHaggleToday(this.registry, buyerNpcId)) {
+            createButton(this, width / 2 - 110, haggleY, t('🤝 Поторговаться'), () => {
+                const res = attemptHaggle(this.registry, buyerNpcId, player.skills.persuade);
+                closeMenu();
+                createDialog(this, t('🤝 Торг'),
+                    (res.checkLine ? res.checkLine + '\n\n' : '') + res.message,
+                    [{ text: t('К делу'), callback: () => this.showSellLootMenu(interior) }],
+                    { singleton: false, portraitKey: isButcher ? 'portrait_peasant' : 'portrait_tavernkeeper' });
+            }, {
+                backgroundColor: 0x4a3a2a, hoverColor: 0x5a4a3a, textColor: RUS.text,
+                fontSize: 14, padding: { left: 14, right: 14, top: 7, bottom: 7 },
+            }).setDepth(202);
+        }
+        createButton(this, width / 2 + 110, haggleY, t('Закрыть'), closeMenu, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
             fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
         }).setDepth(202);
+    }
+
+    /**
+     * Патч 66.73 (приказ 8): ПЕЧЬ НА ПОСТОЯЛОМ ДВОРЕ — самостоятельная
+     * готовка еды игроком. Русская печь у стойки Фёдора: сырые грибы,
+     * мясо дичи и рыба превращаются в готовые блюда (проверка «Готовки»;
+     * провал — продукты пропали, крит — «удалось на славу» +1).
+     * Механика — cookAtFire (systems/loot.js), как на лесном кострище,
+     * но под крышей: деревенский двор — место путника, посуда найдётся.
+     */
+    showStoveCookMenu(interior) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+        const fishRaw = countOf(player, 'fish_raw');
+        const meatRaw = countOf(player, 'meat_raw');
+        const mushRaw = countOf(player, 'mushroom_raw');
+        const cookOpts = [];
+        if (fishRaw > 0) {
+            cookOpts.push({ text: tf(t('🐟 Запечь рыбу в печи ({0} мин)'), 30), callback: () => { close(); this.cookAtStove('fish_raw'); } });
+        }
+        if (meatRaw > 0) {
+            cookOpts.push({ text: tf(t('🍖 Томить мясо дичи в печи ({0} мин)'), 30), callback: () => { close(); this.cookAtStove('meat_raw'); } });
+        }
+        if (mushRaw > 0) {
+            cookOpts.push({ text: tf(t('🍄 Жарить грибы в печи ({0} мин)'), 30), callback: () => { close(); this.cookAtStove('mushroom_raw'); } });
+        }
+        const noFoodLine = cookOpts.length === 0
+            ? '\n\n' + t('В узле нечего готовить: сырые грибы, мясо дичи или рыба продаются на постоялом дворе, а несут их из леса и с реки.')
+            : '';
+        createDialog(this, t('🔥 Русская печь постоялого двора'),
+            t('Устье печи дышит жаром, на шестке чугун и ухват. Здесь путник может сам приготовить сырую добычу (Готовка; при неудаче продукты пропадут, при критической удаче блюдо выйдет сытнее на +1).') + noFoodLine,
+            [
+                ...cookOpts,
+                { text: t('Не сейчас'), callback: close },
+            ], { portraitKey: 'portrait_tavernkeeper' });
+    }
+
+    /** Готовка одной штуки на печи постоялого двора (механика cookAtFire). */
+    cookAtStove(rawId) {
+        const player = this.registry.get('player');
+        if (!player || countOf(player, rawId) <= 0) return;
+        const def = getLootDef(rawId);
+        if (!def || !def.cookTo) return;
+        const res = cookAtFire(this.registry, player, rawId, { skill: player.skills.cooking });
+        const cooked = getLootDef(res.producedId || def.cookTo);
+        if (res.lost) {
+            ActionLog.add(this.registry, tf(t('Прогоревал у печи постоялого двора: {0} пригорели (Готовка {1}%: бросок {2}).'), t(def.name).toLowerCase(), res.skill, res.roll));
+            createDialog(this, t('💀 Прогорело!'),
+                tf(t('{0} подгорели на печи — продукты пропали (Готовка {1}%: бросок {2}).'), t(def.name).toLowerCase(), res.skill, res.roll),
+                [{ text: t('Понятно'), callback: () => {} }]);
+            this.updateHUD();
+            return;
+        }
+        if (this.audioManager) this.audioManager.playHeal();
+        const suffix = res.crit ? tf(t(' — удалось на славу (+1 к сытости)!')) : '';
+        ActionLog.add(this.registry, res.crit
+            ? tf(t('Пир в печи! {0} → {1} сытнее на +1 (Готовка {2}%: бросок {3} — крит).'), t(def.name), t(cooked.name), res.skill, res.roll)
+            : tf(t('Приготовил в печи постоялого двора: {0} → {1} (Готовка {2}%: бросок {3}).'), t(def.name), t(cooked.name), res.skill, res.roll));
+        createDialog(this, res.crit ? t('🍲 Удалось на славу!') : t('🍲 С печи — горячее'),
+            tf(t('На печи поспело: {0}{1}\nТеперь в узле — можно съесть (Персонаж → Инвентарь → «Съесть») или продать.'), t(cooked.name), suffix),
+            [{ text: t('Хорошо'), callback: () => {} }]);
+        this.updateHUD();
     }
 
     /**
@@ -1711,8 +1827,12 @@ export class InteriorScene extends Phaser.Scene {
 
             // Время реально течёт (8 часов = 32 тика погони!);
             // приказ 4: после пробуждения — кулдаун сна на 12 часов
-            tickTime(this.registry, sleepMinutes);
+            // Патч 66.73 (п.3): во сне голод копится МЕДЛЕННЕЕ (вес ×0.4)
+            tickTime(this.registry, sleepMinutes, 'sleep');
             registerSleep(this.registry);
+            // Патч 66.73 (приказ 14): сон — бездеятельность, ОУ восстанавливаются
+            // полностью (канон BRP: полное восстановление за ~20 минут покоя)
+            restFatigueFull(this.registry);
 
             // Раунд 66.17: доля восстановления — 8 часов = 100%, меньше — пропорция
             const pct = restHealPct(sleepMinutes);
@@ -1939,7 +2059,9 @@ export class InteriorScene extends Phaser.Scene {
             sceneRef.cameras.main.fadeOut(500, 0, 0, 0);
             sceneRef.time.delayedCall(550, () => {
                 // Время реально течёт: вор делает шаги, поручения тикают
-                tickTime(sceneRef.registry, minutes);
+                // Патч 66.73: бездельная перемотка — отдых (вес ×0.6, ОУ восстанавливаются)
+                tickTime(sceneRef.registry, minutes, 'rest');
+                restFatigueFull(sceneRef.registry);
                 sceneRef.updateHUD();
                 ActionLog.add(sceneRef.registry, tf(t('Провёл время на постоялом дворе ({0}).'), sceneRef.spendHoursLabel(minutes)));
                 sceneRef.cameras.main.fadeIn(500, 0, 0, 0);
@@ -2401,7 +2523,9 @@ export class InteriorScene extends Phaser.Scene {
             ]);
             return;
         }
-        tickTime(this.registry, 60);
+        // Патч 66.73: подённая работа — тяжёлый труд (вес ×1.75, −2 ОУ)
+        tickTime(this.registry, 60, 'work');
+        spendFatigue(this.registry, 2);
         player.HP = Math.max(1, (player.HP || 1) - 3);
         const wage = Phaser.Math.Between(3, 6);
         let bonus = 0;
@@ -3236,7 +3360,7 @@ export class InteriorScene extends Phaser.Scene {
         // Раунд 66.70: счётчик трапез при дате — живой (обновляется с HUD)
         if (this.dateHungerLine) {
             const timeState = getTime(this.registry);
-            if (timeState) this.dateHungerLine.setText(`📅 ${formatDateTime(timeState)}  ·  ${hungerStatusLine(this.registry)}`);
+            if (timeState) this.dateHungerLine.setText(`📅 ${formatDateTime(timeState)}  ·  ${hungerStatusLine(this.registry)}  ·  ${fatigueStatusLine(this.registry)}`);
         }
         // Патч 66.46 (приказ 2): тёплый свет зари/заката живой
         if (this.sunLight) this.sunLight.update(getTime(this.registry));

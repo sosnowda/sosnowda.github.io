@@ -61,7 +61,7 @@ ok(styles.indexOf('clip-path: inset(50%)') > styles.indexOf('.sr-only {') &&
 
 console.log('--- 2. P4-2: sw.js — var→const ×5, v112, механика не тронута ---');
 ok((sw.match(/\bvar\s+[A-Za-z_$]/gm) || []).length === 0, 'sw.js: объявлений var — ноль (no-var §9.2)');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v113';"), 'sw.js: const CACHE_NAME v112 (HTML/CSS менялись → бамп §4)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v114';"), 'sw.js: const CACHE_NAME v112 (HTML/CSS менялись → бамп §4)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'sw.js: const GAME_ASSETS_CACHE v42 (ассеты/vendor не тронуты)');
 ok(sw.includes("const url = new URL(event.request.url);") &&
    sw.includes("const clone = response.clone();") &&

@@ -55,6 +55,8 @@ import { isNightHour, isChurchOpen, churchClosedReason } from '../systems/Access
 import { knockAtDoor as knockAtDoorLogic, doorResponder, responderName } from '../systems/NightKnock.js';
 // Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
 import { hungerStatusLine } from '../systems/hunger.js';
+// Патч 66.73 (приказ 14): усталость в HUD деревни (ОУ = СИЛ+ТЕЛ, BRP SRD)
+import { fatigueStatusLine } from '../systems/fatigue.js';
 // Раунд 66.21 (приказ 2): выбор «📜 Есть ли дело?» в улице — единая точка выдачи
 import { makeQuestOffer, acceptQuest, canOfferQuestToday, hasActiveQuestFrom } from '../data/questGenerator.js';
 
@@ -1086,7 +1088,8 @@ export class VillageScene extends Phaser.Scene {
                 // Раунд 22 (п.5): 1 минута за шаг (было 0.25) — время в деревне
                 // реально течёт, и счётчик действий вора тикает во время ходьбы
                 // (15 шагов = 1 действие вора).
-                tickTime(this.registry, 1);
+                // Патч 66.73: шаг по деревне — перемещение (голод ×1.5)
+                tickTime(this.registry, 1, 'walk');
             }
         } else {
             // П.22: стоя — idle-кадр в последнем направлении
@@ -1176,8 +1179,11 @@ export class VillageScene extends Phaser.Scene {
                 backgroundColor: '#00000088', padding: { x: 4, y: 2 },
             }).setOrigin(0.5).setDepth(y / ts + 20.5);   // 66.44 (п.10)
             spr.setInteractive({ useHandCursor: true });
-            spr.on('pointerdown', (pointer) => {
-                if (pointer.leftButtonDown() && !this.busyDialog) this.talkToStreetNpc(id);
+            // Патч 66.73 (приказ 1): разговор по pointerup — диалог, созданный
+            // в pointerdown, ловил pointerup ТОГО ЖЕ клика и мгновенно
+            // выполнял первый выбор («автоматический двойной клик»).
+            spr.on('pointerup', (pointer) => {
+                if (pointer.leftButtonReleased() && !this.busyDialog) this.talkToStreetNpc(id);
             });
             const entry = { id, spr, label, hint, wander: null };
             // Раунд 37 (пп.13,15): осмысленное блуждание по проходимым тайлам
@@ -1249,8 +1255,9 @@ export class VillageScene extends Phaser.Scene {
                 backgroundColor: '#00000088', padding: { x: 4, y: 2 },
             }).setOrigin(0.5).setDepth(y / ts + 20.5);   // 66.44 (п.10)
             spr.setInteractive({ useHandCursor: true });
-            spr.on('pointerdown', (pointer) => {
-                if (pointer.leftButtonDown() && !this.busyDialog) this.talkToStreetNpc('elder');
+            // Патч 66.73 (приказ 1): pointerup вместо pointerdown — см. выше
+            spr.on('pointerup', (pointer) => {
+                if (pointer.leftButtonReleased() && !this.busyDialog) this.talkToStreetNpc('elder');
             });
             this.elderWalker = { spr, label, hint };
         }
@@ -1576,6 +1583,8 @@ export class VillageScene extends Phaser.Scene {
         // деревни, с явной подписью (раньше была только безымянная звезда ⭐).
         // Раунд 66.70 (приказы 1–2): счётчик трапез за сутки (норма 2, полдень и вечер).
         statusLine += `  ${hungerStatusLine(this.registry)}`;
+        // Патч 66.73 (приказ 14): усталость в HUD (ОУ = СИЛ+ТЕЛ, BRP SRD)
+        statusLine += `  ${fatigueStatusLine(this.registry)}`;
         statusLine += `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}`;
 
         // ФИКС аудита UI (этот раунд): длинная строка статуса наезжала на кнопки

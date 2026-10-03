@@ -154,7 +154,8 @@ ok(uiSrc.includes('dialogWidth - pad.left - pad.right'), 'перенос стр�
 console.log('\nп.1 Отдых у костра');
 ok(forestSrc.includes('ТОЛЬКО промотка времени') && forestSrc.includes('restAtCampfire'), 'ForestScene: restAtCampfire — только время');
 ok(!/restAtCampfire[\s\S]{0,1400}player\.HP\s*=\s*hpMax/.test(forestSrc), 'ForestScene: HP у костра не восстанавливается');
-ok(forestSrc.includes('tickTime(this.registry, 60)'), 'ForestScene: +60 минут времени');
+// Патч 66.73: час у костра — отдых: голод ×0.6 + полное восстановление ОУ
+ok(forestSrc.includes("tickTime(this.registry, 60, 'rest')"), 'ForestScene: +60 минут времени');
 ok(locSrc.includes('Пересидел час у костра на выпасе'), 'LocationScene: отдых на выпасе — только время');
 ok(!/restAtCampfire[\s\S]{0,1400}playHeal/.test(forestSrc + locSrc), 'звук лечения у костра убран');
 

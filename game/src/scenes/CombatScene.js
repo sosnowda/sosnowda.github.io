@@ -32,6 +32,10 @@ import { applyWeatherVisuals } from '../systems/Weather.js';
 // Раунд 66.17 (п.11): с убитого волка — мясо (сырое; готовить на костре или продать)
 // Раунд 66.70 (приказ 8): обдир волчьей туши — проверка ВЫЖИВАНИЯ
 import { addItem, survivalButcher } from '../systems/loot.js';
+// Патч 66.73 (приказ 14, Усталость): каждый боевой раунд с напряжённой
+// деятельностью стоит 1 ОУ — BRP SRD «Очки усталости» (СИЛ+ТЕЛ максимум).
+// Патч 66.73 (приказ 4, Голод): бой — самая трудная задача, голод ×2.5.
+import { spendFatigue, noteHungerActivity, combatExhaustionPenalty, isExhausted } from '../systems/fatigue.js';
 // Раунд 32 (пп.14,15): F1 — «Информация по игре» и в бою
 import { timeRatioInfoLine } from '../systems/WorldClock.js';
 import { t, tf } from '../systems/i18n.js';
@@ -763,8 +767,15 @@ export class CombatScene extends Phaser.Scene {
 
         // Раунд 22 (п.11): благословение батюшки усиливает ОДНУ проверку навыка
         // Раунд 66.71: благословение батюшки усиливает и удар оружием (+10%, приказ 4)
-        const skill = getBlessedSkill(this.registry, this.player.skills[w.skill] || 20);
+        // Патч 66.73: при изнеможении удар возможен, но с дополнительным штрафом −20
+        // (мягкая адаптация BRP «недееспособности» — бой без мягкого блока)
+        const skill = Math.max(1, getBlessedSkill(this.registry, this.player.skills[w.skill] || 20)
+            - combatExhaustionPenalty(this.registry));
         const res = skillCheck(skill);
+
+        // Патч 66.73: боевой раунд — напряжённая деятельность (−1 ОУ, голод ×2.5)
+        spendFatigue(this.registry, 1);
+        noteHungerActivity(this.registry, 3, 'combat');
 
         if (weaponKey === 'bow') {
             // Раунд 66.28 (п.2): стрельба — стрела летит от героя к врагу,
@@ -1102,10 +1113,14 @@ export class CombatScene extends Phaser.Scene {
             // шкура; неудача — неловкий обдир (половина мяса, без шкуры); крит —
             // мясо ×2 и шкура. Сырое: готовить или продавать.
             if (this.enemyKeys && this.enemyKeys.includes('wolf')) {
-                const res = survivalButcher(this.registry, this.player, [5, 9], true);
-                ActionLog.add(this.registry, res.skin > 0
-                    ? tf(t('Освежевал тушу убитого волка (Выживание {0}%: бросок {1}): +{2} сырое мясо и шкура (приготовить на костре или продать).'), res.skill, res.roll, res.meat)
-                    : tf(t('Обобрал тушу убитого волка (Выживание {0}%: бросок {1}): лишь +{2} сырое мясо — шкура порвана.'), res.skill, res.roll, res.meat));
+                // Патч 66.73 (приказ 13): у волка ценный лут — крит разделки
+                // даёт волчьи клыки (трофей на продажу).
+                const res = survivalButcher(this.registry, this.player, [5, 9], true, { trophy: 'wolf_fangs' });
+                ActionLog.add(this.registry, (res.trophy > 0
+                    ? tf(t('Освежевал тушу убитого волка (Выживание {0}%: бросок {1}): +{2} сырое мясо, шкура и ЦЕННЫЙ ТРОФЕЙ — волчьи клыки (продать на постоялом дворе).'), res.skill, res.roll, res.meat)
+                    : (res.skin > 0
+                        ? tf(t('Освежевал тушу убитого волка (Выживание {0}%: бросок {1}): +{2} сырое мясо и шкура (приготовить на костре или продать).'), res.skill, res.roll, res.meat)
+                        : tf(t('Обобрал тушу убитого волка (Выживание {0}%: бросок {1}): лишь +{2} сырое мясо — шкура порвана.'), res.skill, res.roll, res.meat))));
             }
         } else {
             q.currentObjective = t('Икона у тебя! Верни её старосте или священнику.');

@@ -124,8 +124,8 @@ console.log('— 1. ГОЛОД: норма 2 трапезы/сутки (прик
 
     // tickTime вызывает ролловер-проверку (статика)
     const ts = read('game/src/systems/TimeSystem.js');
-    ok(ts.includes("import { hungerRolloverCheck } from './hunger.js'") && ts.includes('hungerRolloverCheck(registry);'),
-        'TimeSystem.tickTime вызывает hungerRolloverCheck при каждом тике');
+    ok(ts.includes("hungerRolloverCheck, noteHungerTick } from './hunger.js'") && ts.includes('hungerRolloverCheck(registry);'),
+        'TimeSystem.tickTime вызывает hungerRolloverCheck при каждом тике (66.73: и noteHungerTick — часы голода)');
     const mealSrc = read('game/src/systems/meal.js');
     ok(mealSrc.includes('noteHungerMeal(registry)'), 'meal.js registerMeal отмечает трапезу в системе голода');
 }
@@ -289,11 +289,11 @@ console.log('— 4. ВЫЖИВАНИЕ: сбор (провал/горсть/×2)
 
     // Статика сцен: шкуры/обдир через Выживание
     const combatSrc = read('game/src/scenes/CombatScene.js');
-    ok(combatSrc.includes('survivalButcher(this.registry, this.player, [5, 9], true)'),
-        'CombatScene: волчья туша — проверка Выживания (5–9, шкура)');
+    ok(combatSrc.includes('survivalButcher(this.registry, this.player, [5, 9], true'),
+        'CombatScene: волчья туша — проверка Выживания (5–9, шкура; 66.73 — трофей клыков)');
     const locSrc = read('game/src/scenes/LocationScene.js');
-    ok(locSrc.includes("survivalButcher(this.registry, player, cfg.meat, cfg.id !== 'bird')"),
-        'LocationScene: обдир на поляне — Выживание (глухарь без шкуры)');
+    ok(locSrc.includes("survivalButcher(this.registry, player, cfg.meat, cfg.id !== 'bird'"),
+        'LocationScene: обдир на поляне — Выживание (глухарь без шкуры; 66.73 — трофей рогов у косули)');
     const forestSrc = read('game/src/scenes/ForestScene.js');
     ok(forestSrc.includes('survivalGather(this.registry, this.player, entry.kind)'),
         'ForestScene: сбор в лесу — проверка Выживания');

@@ -12,7 +12,11 @@ import { tickQuestTime } from '../data/questGenerator.js';
 import { sunTimes } from './AccessHours.js';
 // Раунд 66.70 (приказы 1–2): ролловер суток проверяет НОРМУ ЕДЫ (2 трапезы);
 // недоел — голодный штраф (−1 HP за пропуск, HP не ниже 1).
-import { hungerRolloverCheck } from './hunger.js';
+// Патч 66.73 (приказы 3,4,6,7): каждый тик копит ЧАСЫ ГОЛОДА с весом
+// активности (сон ×0.4, бой ×2.5…); голод > 24 ч — бьёт по Здоровью.
+import { hungerRolloverCheck, noteHungerTick } from './hunger.js';
+// Патч 66.73: у fatigue.js нет зависимостей от TimeSystem — импорт не нужен
+// здесь; траты/восстановления ОУ вызывают сцены точечно.
 
 // Месяцы церковного календаря Руси XV века (сентябрьский стиль)
 export const MONTHS = [
@@ -212,7 +216,10 @@ export function getTime(registry) {
 // Продвинуть время и сохранить в registry.
 // Раунд 21: на каждый тик времени реагирует мировая погоня за вором —
 // вор ждёт на локации или перемещается (хук из data/thief.js).
-export function tickTime(registry, minutes = 15) {
+// Патч 66.73: третий аргумент activity ('sleep'|'rest'|'idle'|'walk'|
+// 'work'|'hunt'|'combat') — вес накопления голода (см. hunger.HUNGER_RATES);
+// без подсказки считается «быт» (idle ×1).
+export function tickTime(registry, minutes = 15, activity = 'idle') {
     let timeState = registry.get('gameTime');
     if (!timeState) {
         timeState = initTime(registry);
@@ -222,6 +229,8 @@ export function tickTime(registry, minutes = 15) {
     const prevMonth = timeState.month, prevDay = timeState.day;
     advanceTime(timeState, minutes);
     registry.set('gameTime', timeState);
+    // Патч 66.73: часы голода копятся от ПРОШЕДШЕГО отрезка с весом активности.
+    noteHungerTick(registry, minutes, activity);
     let novoletie = null;
     if (timeState.month === 0 && timeState.day === 1 && !(prevMonth === 0 && prevDay === 1)) {
         // Сентябрьский год = stored yearFromChrist + 5509 (см. RusTime.eraYear)

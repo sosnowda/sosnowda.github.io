@@ -626,6 +626,17 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     const centerX = cam.centerX;
     const centerY = cam.centerY;
 
+    // ----- Патч 66.73 (приказ 1 «автоматический ошибочный двойной клик») -----
+    // Диалог, созданный ВНУТРИ обработки pointerdown/pointerup по НПЦ/кнопке,
+    // мог поймать ПОДНЕСЁННОЕ событие ТОГО ЖЕ физического клика: кнопка выбора
+    // под курсором срабатывала мгновенно (начальный экран пропускался), а
+    // блокиратор — сбрасывал печатную машинку. Страховка: первые
+    // DIALOG_INPUT_GRACE_MS после создания окна ввод игнорируется.
+    const DIALOG_INPUT_GRACE_MS = 350;
+    const bornAt = (scene && scene.time && typeof scene.time.now === 'number') ? scene.time.now : 0;
+    const inputGraceOk = () =>
+        !bornAt || !(scene && scene.time) || ((scene.time.now - bornAt) >= DIALOG_INPUT_GRACE_MS);
+
     // Подложка (блокер)
     // РАУНД 50 (п.1 заявки): нижняя панель действий должна нажиматься И ПРИ
     // открытом диалоге — раньше полноэкранный блокиратор перехватывал клики.
@@ -725,6 +736,8 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
         const shouldCloseDialog = btnConfig.closeDialog !== false;
 
         const wrappedCallback = () => {
+            // Патч 66.73: события того же клика, что открыл окно, игнорируются
+            if (!inputGraceOk()) return;
             // Если сейчас идёт эффект печатной машинки — пропускаем анимацию, не закрываем
             if (typingActive) {
                 skipTyping();
@@ -1158,7 +1171,9 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     };
 
     // Клик по подложке во время печати — пропускает анимацию
+    // (патч 66.73: только ПОСЛЕ grace-периода — не тем же кликом, что открыл окно)
     blocker.on('pointerup', () => {
+        if (!inputGraceOk()) return;
         if (typingActive) {
             skipTyping();
         }
@@ -1220,7 +1235,7 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
     };
 
     if (closeOnBlocker && !useTyping) {
-        blocker.on('pointerup', () => closeDialog());
+        blocker.on('pointerup', () => { if (inputGraceOk()) closeDialog(); });
     }
 
     // ----- API -----

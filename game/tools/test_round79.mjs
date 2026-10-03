@@ -111,7 +111,7 @@ console.log('— п.4: кнопка «Съесть» для инвентаря �
     ok(res2.ok === false && res2.reason === 'cooldown', 'вторая попытка — «герой сытый» (cooldown)');
     ok(countOf(player, 'fish_cooked') === 1, 'кукдаун: штука НЕ потрачена');
     const loot = read('game/src/systems/loot.js');
-    ok(loot.includes('Сырым это не едят: приготовь на костре'), 'поп-ап «сырым не едят» с советом готовить/продавать');
+    ok(loot.includes('Сырым это не едят — сырые грибы, мясо и рыба непригодны в пищу!'), 'поп-ап «Еда не пригодна в пищу!» с советом готовить/продавать (66.73 приказ 12);');
     ok(loot.includes('showMealBlockedPopup(scene)'), 'поп-ап «герой сытый» — общий с meal.js');
 }
 
@@ -242,13 +242,13 @@ console.log('— п.11: мясо с туши дичи/волка —');
     ok(forest.includes('lootAnimalCorpse'), 'лес: обдир туши lootAnimalCorpse()');
     // РАУНД 66.70 (приказ 8): обдир — ПРОВЕРКА ВЫЖИВАНИЯ (мясо зависит от броска,
     // шкура у зверей; при провале — половина мяса без шкуры, при крите — ×2)
-    ok(forest.includes('survivalButcher(this.registry, player, animal.cfg.meat, hasSkin)'),
-        '66.70: обдир туши — проверка Выживания (мясо/шкура по броску)');
+    ok(forest.includes('survivalButcher(this.registry, player, animal.cfg.meat, hasSkin'),
+        '66.70/66.73: обдир туши — проверка Выживания (мясо/шкура по броску, трофей при крите)');
     ok(forest.includes("animal.cfg.id !== 'bird'"), '66.70: у глухаря шкуры нет');
     const combat = read('game/src/scenes/CombatScene.js');
     ok(combat.includes("this.enemyKeys.includes('wolf')"), 'волк: мясо начисляется после победы');
-    ok(combat.includes('survivalButcher(this.registry, this.player, [5, 9], true)'),
-        'волк: обдир по Выживанию, лестница размера сохранена 5–9 (66.28 п.13 + 66.70 приказ 8)');
+    ok(combat.includes('survivalButcher(this.registry, this.player, [5, 9], true'),
+        'волк: обдир по Выживанию, лестница размера сохранена 5–9 (66.28 п.13 + 66.70 приказ 8; 66.73 — трофей клыков)');
 }
 
 // ============================================================

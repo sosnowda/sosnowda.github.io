@@ -16,6 +16,8 @@ import { getLocationById } from '../data/mapLocations.js';
 // 66.24: полноценная карта местности; 66.34: + клик-зоны (TERRAIN_ZONES)
 import { drawTerrainMap, TERRAIN_W, TERRAIN_H, TERRAIN, TERRAIN_LABELS, TERRAIN_ZONES } from '../systems/TerrainMap.js';
 import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
+// Патч 66.73 (приказ 14): усталость — переходы тратят ОУ (BRP SRD)
+import { spendFatigue } from '../systems/fatigue.js';
 // Патч 66.46 (приказ 2): тёплый свет зари/заката на карте местности
 import { attachSunLight } from '../systems/SunLight.js';
 // Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
@@ -248,7 +250,9 @@ export class ForkScene extends Phaser.Scene {
 
             createButton(this, width / 2 - 140, height - 30, t('🌲 Тёмный лес — прогулка'), () => {
                 ActionLog.add(this.registry, t('Игрок отправился гулять в Тёмный лес.'));
-                tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
+                // Патч 66.73: дорога — перемещение (голод ×1.5, −1 ОУ форс-марша)
+                tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk'); // раунд 32 (п.5): ровно 1 час
+                spendFatigue(this.registry, 1);
                 this.scene.start('Forest', { from: 'Fork' });
             }, {
                 backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, pressColor: 0x1e321e,
@@ -257,7 +261,9 @@ export class ForkScene extends Phaser.Scene {
                 cornerRadius: 6,
             });
             createButton(this, width / 2 + 140, height - 30, t('◀ Вернуться в деревню'), () => {
-                tickTime(this.registry, MAP_TRAVEL_MINUTES); // раунд 32 (п.5): ровно 1 час
+                // Патч 66.73: дорога — перемещение (голод ×1.5, −1 ОУ форс-марша)
+                tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk'); // раунд 32 (п.5): ровно 1 час
+                spendFatigue(this.registry, 1);
                 this.scene.start('Village');
             }, {
                 backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,

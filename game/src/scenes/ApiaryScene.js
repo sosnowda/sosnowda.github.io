@@ -789,7 +789,8 @@ export class ApiaryScene extends Phaser.Scene {
                 this.lastStepTime = now;
                 // Раунд 22 (п.5): 1 минута за шаг (было 0.25) — время течёт
                 // и во время ходьбы по пасеке (счётчик вора тикает)
-                tickTime(this.registry, 1);
+                // Патч 66.73: шаг — перемещение (голод ×1.5)
+                tickTime(this.registry, 1, 'walk');
             }
         } else if (!this.player.useComposite) {
             this.playerObj.anims.pause();
@@ -859,7 +860,8 @@ export class ApiaryScene extends Phaser.Scene {
 
     leaveApiary() {
         ActionLog.add(this.registry, t('Вернулся с пасеки к околице.'));
-        tickTime(this.registry, 15);
+        // Патч 66.73: дорога — перемещение (голод ×1.5)
+        tickTime(this.registry, 15, 'walk');
         this.scene.start('Fork');
     }
 

@@ -25,7 +25,9 @@ import { dayKeyOf } from '../data/daily.js'; // раунд 66.10: daily вмес
 // сбор/готовка/обдир — проверяемые навыки (Выживание/Готовка) — см. loot.js
 import { survivalGather, survivalButcher, cookAtFire, getLootDef, countOf, shotChance, addItem, removeItem } from '../systems/loot.js';
 // Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
-import { hungerStatusLine } from '../systems/hunger.js';
+import { hungerStatusLine, hungerHours } from '../systems/hunger.js';
+// Патч 66.73 (приказ 14): усталость — траты за охоту, гард изнеможения, HUD
+import { spendFatigue, restFatigueFull, exhaustedGuardPopup, fatigueStatusLine } from '../systems/fatigue.js';
 // Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
 import { getQuiver, spendArrow } from '../systems/ammo.js';
 import { createDialog } from '../utils/ui.js';
@@ -521,6 +523,8 @@ export class ForestScene extends Phaser.Scene {
      */
     shootAnimal(animal) {
         if (this.busyDialog || !animal || animal.dead) return;
+        // Патч 66.73 (приказ 14): изнеможённый герой не в силах охотиться
+        if (exhaustedGuardPopup(this, this.registry)) return;
         const player = this.player;
         if (!player) return;
         if (player.weaponId !== 'bow') {
@@ -539,7 +543,9 @@ export class ForestScene extends Phaser.Scene {
         }
         this.busyDialog = true;
         const s = animal.sprite;
-        tickTime(this.registry, 5);
+        // Патч 66.73: выстрел по зверю — охота (голод ×2, −1 ОУ)
+        tickTime(this.registry, 5, 'hunt');
+        spendFatigue(this.registry, 1);
         // Раунд 66.28 (п.7): стрела уходит из колчана при КАЖДОМ выстреле (попал/промах)
         spendArrow(player);
         this.registry.set('player', player);
@@ -600,11 +606,17 @@ export class ForestScene extends Phaser.Scene {
      */
     lootAnimalCorpse(animal) {
         if (this.busyDialog || !animal || !animal.dead) return;
+        // Патч 66.73 (приказ 14): изнеможённый герой не в силах разделывать тушу
+        if (exhaustedGuardPopup(this, this.registry)) return;
         const player = this.player;
         if (!player) return;
         const hasSkin = animal.cfg.id !== 'bird'; // у глухаря шкуры нет
-        const res = survivalButcher(this.registry, player, animal.cfg.meat, hasSkin);
-        tickTime(this.registry, 10);
+        // Патч 66.73 (приказ 13): у зверя с ценным лутом крит разделки даёт трофей
+        const res = survivalButcher(this.registry, player, animal.cfg.meat, hasSkin,
+            animal.cfg.trophy ? { trophy: animal.cfg.trophy } : {});
+        // Патч 66.73: обдир туши — охота (голод ×2, −1 ОУ)
+        tickTime(this.registry, 10, 'hunt');
+        spendFatigue(this.registry, 1);
         const spr = animal.sprite;
         this.animals = this.animals.filter(x => x !== animal);
         this.corpses = this.corpses.filter(x => x !== animal);
@@ -612,6 +624,12 @@ export class ForestScene extends Phaser.Scene {
         if (this.audioManager) this.audioManager.playHeal();
         let msg = tf(t('Обобрал тушу {0}: +{1} сырое мясо (приготовить на костре или продать).'), t(animal.cfg.name), res.meat);
         let float = `+${res.meat} 🥩`;
+        if (res.trophy > 0) {
+            // Патч 66.73 (приказ 13): критическая удача — ценный трофей (на продажу)
+            const trophyDef = getLootDef(animal.cfg.trophy);
+            msg += ' ' + tf(t('Критическая удача разделки: в узле ценный трофей — {0} (продать трактирщику или мяснику).'), trophyDef ? t(trophyDef.name) : animal.cfg.trophy);
+            float += ` +1 ${trophyDef ? trophyDef.emoji : '🏆'}`;
+        }
         if (res.skin > 0) {
             msg = tf(t('Освежевал {0}: +{1} сырое мясо и шкура (Выживание {2}%: бросок {3}).'), t(animal.cfg.name), res.meat, res.skill, res.roll);
             float += ' +1 🟫';
@@ -839,7 +857,8 @@ export class ForestScene extends Phaser.Scene {
             if (now - this.lastStepTime > this.stepInterval) {
                 this.audioManager.playStep();
                 this.lastStepTime = now;
-                tickTime(this.registry, 0.25);
+                // Патч 66.73: шаг по лесу — перемещение (голод ×1.5)
+                tickTime(this.registry, 0.25, 'walk');
             }
         } else if (!this.player.useComposite) {
             this.playerObj.anims.pause();
@@ -1049,7 +1068,9 @@ export class ForestScene extends Phaser.Scene {
                     this.cameras.main.fadeOut(700, 0, 0, 0);
                     this.time.delayedCall(750, () => {
                         // п.1 раунда 66: ТОЛЬКО промотка времени на 1 час
-                        tickTime(this.registry, 60);
+                        // Патч 66.73: час у костра — отдых (голод ×0.6, ОУ восстанавливаются)
+                        tickTime(this.registry, 60, 'rest');
+                        restFatigueFull(this.registry);
                         this.registry.set('player', player);
                         this.updateHUD();
                         ActionLog.add(this.registry, t('Пересидел час у костра в лесу — время шло мимо.'));
@@ -1102,6 +1123,8 @@ export class ForestScene extends Phaser.Scene {
      *  • при успехе точка истощается до конца игрового дня (как раньше).
      */
     gatherResource(entry) {
+        // Патч 66.73 (приказ 14): изнеможённый герой не в силах собирать
+        if (exhaustedGuardPopup(this, this.registry)) return;
         const q = this.registry.get('quest') || {};
         const timeState = getTime(this.registry);
         const today = dayKeyOf(timeState);
@@ -1117,7 +1140,9 @@ export class ForestScene extends Phaser.Scene {
 
         if (res.gathered <= 0) {
             // НЕУДАЧА — ничего не собрал: точка не истощена, время потрачено.
-            tickTime(this.registry, 15);
+            // Патч 66.73: неудачный сбор — работа (голод ×1.75, −1 ОУ)
+            tickTime(this.registry, 15, 'work');
+            spendFatigue(this.registry, 1);
             this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, t('Ничего не собрал'), '#b8a88a');
             ActionLog.add(this.registry, tf(t('Обыскал {0} (Выживание {1}%: бросок {2}) — ничего не нашёл.'), t(entry.label).toLowerCase(), res.skill, res.roll));
             this.updateHUD();
@@ -1131,7 +1156,9 @@ export class ForestScene extends Phaser.Scene {
 
         const def = getLootDef(res.itemId);
         const minutes = entry.kind === 'herb' ? 8 : 30;
-        tickTime(this.registry, minutes);
+        // Патч 66.73: сбор ягод/грибов/трав — работа (голод ×1.75, −1 ОУ)
+        tickTime(this.registry, minutes, 'work');
+        spendFatigue(this.registry, 1);
 
         if (entry.img) entry.img.setVisible(false);
         if (entry.marker) { entry.marker.destroy(); entry.marker = null; }
@@ -1151,13 +1178,15 @@ export class ForestScene extends Phaser.Scene {
         wolf.cooldownUntil = this.time.now + 4000;
         this.registry.set('forestReturnPos', { x: this.playerObj.x, y: this.playerObj.y });
         ActionLog.add(this.registry, t('Волк напал в Тёмном лесу!'));
-        tickTime(this.registry, 5);
+        // Патч 66.73: схватка с волком — охота/бой (голод ×2)
+        tickTime(this.registry, 5, 'hunt');
         this.scene.start('Combat', { enemyKeys: ['wolf'], fromScene: 'Forest' });
     }
 
     leaveForest() {
         ActionLog.add(this.registry, t('Вернулся из Тёмного леса к околице.'));
-        tickTime(this.registry, 15);
+        // Патч 66.73: дорога назад — перемещение (голод ×1.5)
+        tickTime(this.registry, 15, 'walk');
         this.scene.start('Fork');
     }
 
@@ -1186,6 +1215,8 @@ export class ForestScene extends Phaser.Scene {
         if (timeState) statusLine += `  📅${formatDateTime(timeState)}`;
         // Раунд 66.70 (приказы 1–2): норма еды — 2 трапезы в сутки
         statusLine += `  ${hungerStatusLine(this.registry)}`;
+        // Патч 66.73 (приказ 14): усталость в HUD (ОУ = СИЛ+ТЕЛ, BRP SRD)
+        statusLine += `  ${fatigueStatusLine(this.registry)}`;
         statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
         this.statusText.setText(statusLine);
 

@@ -22,6 +22,9 @@ import { getTime, getDayNightOverlay, tickTime, getSeason } from '../systems/Tim
 // Раунд 66.17 (п.7): рыба больше НЕ съедается на месте — улов идёт в узел;
 // сырую рыбу нельзя есть (только готовить или продавать)
 import { addItem, countOf, fishingCatchCount, shotChance, getLootDef, removeItem, survivalButcher, cookAtFire } from '../systems/loot.js';
+// Патч 66.73 (приказы 3,4,14): голод по активности + усталость (BRP SRD)
+import { spendFatigue, restFatigueFull, exhaustedGuardPopup, fatigueStatusLine } from '../systems/fatigue.js';
+import { hungerStatusLine } from '../systems/hunger.js';
 // Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
 import { getQuiver, spendArrow } from '../systems/ammo.js';
 // Раунд 66.17 (п.9): дичь на Лесной поляне — зайцы и глухари
@@ -347,7 +350,9 @@ export class LocationScene extends Phaser.Scene {
             const hasSearch = hasSearchBtn;
             const deeperY = hasSearch ? height - 152 : height - 100;
             createButton(this, width / 2, deeperY, tf(t('🌿 Глубже в лес: {0} →'), t(deeperLoc.name)), () => {
-                tickTime(this.registry, MAP_TRAVEL_MINUTES);   // переход = 1 игровой час
+                // Патч 66.73: переход по карте — перемещение (голод ×1.5, −1 ОУ форс-марша)
+                tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk');   // переход = 1 игровой час
+                spendFatigue(this.registry, 1);
                 ActionLog.add(this.registry, tf(t('Игрок углубился в лес: «{0}».'), t(deeperLoc.name)));
                 onLocationVisited(this.registry, deeperId);
                 this.scene.restart({ locationId: deeperId, from: this.from });
@@ -375,7 +380,9 @@ export class LocationScene extends Phaser.Scene {
         // с опушки и из обычных локаций — на околицу/разилку -----
         createButton(this, width / 2, height - 50, exitLabel, () => {
             // Раунд 32 (п.5): любое перемещение по карте — РОВНО 1 игровой час
-            tickTime(this.registry, MAP_TRAVEL_MINUTES);
+            // Патч 66.73: переход по карте — перемещение (голод ×1.5, −1 ОУ форс-марша)
+            tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk');
+            spendFatigue(this.registry, 1);
             if (inForest && shallowerLoc) {
                 ActionLog.add(this.registry, tf(t('Игрок вышел из леса на «{0}».'), t(shallowerLoc.name)));
                 this.scene.restart({ locationId: shallowerId, from: this.from });
@@ -447,6 +454,8 @@ export class LocationScene extends Phaser.Scene {
     goFishing() {
         const player = this.registry.get('player');
         if (!player) return;
+        // Патч 66.73 (приказ 14): изнеможённый герой не в силах рыбачить
+        if (exhaustedGuardPopup(this, this.registry)) return;
         const q = this.registry.get('quest') || {};
         const timeState = getTime(this.registry);
         const today = dayKeyOf(timeState);
@@ -482,7 +491,9 @@ export class LocationScene extends Phaser.Scene {
         playWaterSplash(this, winter ? 0.5 : 0.7);
 
         if (!caught) {
-            tickTime(this.registry, 60);
+            // Патч 66.73: рыбалка — труд (голод ×1.75, −1 ОУ)
+            tickTime(this.registry, 60, 'work');
+            spendFatigue(this.registry, 1);
             markActionDone(q, 'fish_daily', today);
             this.registry.set('quest', q);
             // РАУНД 66.17 (п.7): улов — СЫРАЯ РЫБА В УЗЕЛ (не съедается на месте):
@@ -516,7 +527,9 @@ export class LocationScene extends Phaser.Scene {
                 + (season.id === 'autumn_feed' ? `\n${t('(Осенний жор: рыба берёт жадно — улов щедрее.)')}` : ''),
                 [{ text: t('Взять улов'), callback: () => {} }]);
         } else {
-            tickTime(this.registry, 15);
+            // Патч 66.73: плохой клёв — тоже труд на берегу (−1 ОУ)
+            tickTime(this.registry, 15, 'work');
+            spendFatigue(this.registry, 1);
             ActionLog.add(this.registry, t('Порыбачил на реке — клёв плохой.'));
             createDialog(this, title,
                 t('Клюёт плохо: рыба сыта или уже видела твою наживку. Попробуй завтра.'),
@@ -880,6 +893,8 @@ export class LocationScene extends Phaser.Scene {
     huntGladeAnimal(spr, cfg) {
         const player = this.registry.get('player');
         if (!player) return;
+        // Патч 66.73 (приказ 14): изнеможённый герой не в силах охотиться
+        if (exhaustedGuardPopup(this, this.registry)) return;
         this.busyDialog = true;
         const close = () => { this.busyDialog = false; };
 
@@ -904,7 +919,9 @@ export class LocationScene extends Phaser.Scene {
             [
                 { text: tf(t('Стрелять из лука ({0})'), t(cfg.name)), callback: () => {
                     close();
-                    tickTime(this.registry, 5);
+                    // Патч 66.73: выстрел на поляне — охота (голод ×2, −1 ОУ)
+                    tickTime(this.registry, 5, 'hunt');
+                    spendFatigue(this.registry, 1);
                     // Раунд 66.28 (п.7): стрела уходит из колчана при каждом выстреле
                     spendArrow(player);
                     this.registry.set('player', player);
@@ -915,10 +932,18 @@ export class LocationScene extends Phaser.Scene {
                     if (hit) {
                         // Раунд 66.70 (приказ 8): обдир туши на поляне — проверка
                         // ВЫЖИВАНИЯ (мясо + шкура у зверей; неудача — неловкий обдир).
-                        const res = survivalButcher(this.registry, player, cfg.meat, cfg.id !== 'bird');
+                        const res = survivalButcher(this.registry, player, cfg.meat, cfg.id !== 'bird',
+                            // Патч 66.73 (приказ 13): крит разделки даёт ценный трофей
+                            cfg.trophy ? { trophy: cfg.trophy } : {});
+                        // Патч 66.73: обдир туши на поляне — охота (голод ×2, −1 ОУ)
+                        tickTime(this.registry, 10, 'hunt');
+                        spendFatigue(this.registry, 1);
+                        const trophyLine = res.trophy > 0
+                            ? '\n' + tf(t('🏆 Критическая удача: при разделке добыт ценный трофей — {0} (продай на постоялом дворе или мяснику).'), t(getLootDef(cfg.trophy).name))
+                            : '';
                         const lootLine = res.skin > 0
-                            ? tf(t('Стрела дошла — {0} повержен. Освежевал тушу (Выживание {1}%: бросок {2}): +{3} сырое мясо и шкура в узел.\nСырым не едят: приготовь на костре или продай.'), t(cfg.name), res.skill, res.roll, res.meat)
-                            : tf(t('Стрела дошла — {0} повержен. Обобрал тушу (Выживание {1}%: бросок {2}): +{3} сырое мясо в узел.\nСырым не едят: приготовь на костре или продай.'), t(cfg.name), res.skill, res.roll, res.meat);
+                            ? tf(t('Стрела дошла — {0} повержен. Освежевал тушу (Выживание {1}%: бросок {2}): +{3} сырое мясо и шкура в узел.\nСырым не едят: приготовь на костре или продай.{4}'), t(cfg.name), res.skill, res.roll, res.meat, trophyLine)
+                            : tf(t('Стрела дошла — {0} повержен. Обобрал тушу (Выживание {1}%: бросок {2}): +{3} сырое мясо в узел.\nСырым не едят: приготовь на костре или продай.{4}'), t(cfg.name), res.skill, res.roll, res.meat, trophyLine);
                         ActionLog.add(this.registry, tf(t('Подстрелил {0} на поляне из лука и ободрал тушу: +{1} сырое мясо{2} (приготовить или продать).'), t(cfg.name), res.meat, res.skin > 0 ? ' и шкура' : ''));
                         createDialog(this, t('🎯 Есть!'),
                             lootLine,
@@ -964,7 +989,9 @@ export class LocationScene extends Phaser.Scene {
                     close();
                     this.cameras.main.fadeOut(600, 0, 0, 0);
                     this.time.delayedCall(650, () => {
-                        tickTime(this.registry, 60);
+                        // Патч 66.73: час у пастушьего костра — отдых (голод ×0.6, ОУ восстанавливаются)
+                        tickTime(this.registry, 60, 'rest');
+                        restFatigueFull(this.registry);
                         ActionLog.add(this.registry, t('Пересидел час у костра на выпасе — время шло мимо.'));
                         this.cameras.main.fadeIn(600, 0, 0, 0);
                     });

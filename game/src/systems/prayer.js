@@ -42,18 +42,26 @@ export function canPray(registry) {
 /**
  * Зарегистрировать молитву: точка отката 8 часов + благословение
  * (+5 к одной проверке навыка) в quest.prayerBless.
+ * Патч 66.73 (приказ 9): благословение ЖИВЁТ ТОЛЬКО 8 ЧАСОВ — если
+ * за это время проверки навыка не случилось, бонус сгорает.
  */
 export function registerPrayer(registry) {
     if (!registry) return;
     const q = questOf(registry);
     q.prayerAbsMin = worldAbsMinutes(registry);
     q.prayerBless = true;
+    q.prayerBlessAt = q.prayerAbsMin; // патч 66.73: точка истечения бонуса
     registry.set('quest', q);
 }
+
+/** Срок жизни благословения молитвы — 8 игровых часов (приказ 9). */
+export const PRAYER_BLESS_DURATION_MIN = 480;
 
 /**
  * Списать благословение первой проверкой навыка.
  * Возвращает PRAYER_SKILL_BONUS (5), если blessing активен, иначе 0.
+ * Патч 66.73 (приказ 9): бонус работает ВСЕГО 8 ЧАСОВ — просроченное
+ * благословение молча сгорает (никаких «+5» из прошлого дня).
  * Вызывается ВСЕГДА внутри мировых проверок (сбор/готовка/травы/слух)
  * ПОСЛЕ решения, что проверка состоялась.
  */
@@ -61,11 +69,32 @@ export function consumePrayerBless(registry) {
     if (!registry) return 0;
     const q = questOf(registry);
     if (q.prayerBless) {
+        // Патч 66.73: истёкшие 8 часов — бонус сгорает без списания
+        const at = Number(q.prayerBlessAt) || 0;
+        if (at > 0 && (worldAbsMinutes(registry) - at) > PRAYER_BLESS_DURATION_MIN) {
+            delete q.prayerBless;
+            delete q.prayerBlessAt;
+            registry.set('quest', q);
+            return 0;
+        }
         delete q.prayerBless;
+        delete q.prayerBlessAt;
         registry.set('quest', q);
         return PRAYER_SKILL_BONUS;
     }
     return 0;
+}
+
+/**
+ * Патч 66.73: действует ли ещё благословение молитвы (не съеденное
+ * и не просроченное) — для подсказок в интерфейсе.
+ */
+export function isPrayerBlessActive(registry) {
+    if (!registry) return false;
+    const q = questOf(registry);
+    if (!q.prayerBless) return false;
+    const at = Number(q.prayerBlessAt) || 0;
+    return at <= 0 || (worldAbsMinutes(registry) - at) <= PRAYER_BLESS_DURATION_MIN;
 }
 
 /** Осталось минут до конца отката (для подсказки в диалоге). */

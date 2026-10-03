@@ -55,6 +55,8 @@ import { ActionLog } from './actionLog.js';
 import { applyBeggingPenalty, changeVillageRep } from './reputation.js';
 import { getLocationById } from './mapLocations.js';
 import { tickTime } from '../systems/TimeSystem.js';
+// Патч 66.73 (приказ 16): обаяние беседы — ±5/±10 к разговорным проверкам
+import { chaAdjustedTalkSkill } from '../systems/charisma.js';
 // Раунд 66.23: ночная проверка следов — ПО СОЛНЦУ (как дверные запоры):
 // зимой в ~15:10 уже темно, летом в 21:00 ещё светло.
 import { isNightHour as solarIsNightHour } from '../systems/AccessHours.js';
@@ -1347,7 +1349,9 @@ export function askMoneyForHelp(registry, npcId, npcName) {
     // Раунд 48 (п.4 заявки): проверка «НАВЫК ПРОТИВ НАВЫКА» — Убеждение игрока
     // против Убеждения жителя (без навыка — Обаяние против Обаяния) +
     // сложность 10 (просить денег труднее, чем просто говорить).
-    const persuadeSkill = getBlessedSkill(registry, (player.skills && player.skills.persuade) || 20);
+    // Патч 66.73 (приказ 16): обаяние беседы (Харизма vs Харизма) даёт ±5/±10
+    const persuadeSkill = chaAdjustedTalkSkill(registry,
+        getBlessedSkill(registry, (player.skills && player.skills.persuade) || 20));
     const opp = getNpcOpposition(findNpc(registry, npcId), 'persuade');
     const res = opposedSkillCheck(persuadeSkill, opp.value, 10);
     const checkLine = formatOpposedCheck(res, 'Убеждение', `${opp.ruNameGen} жителя`);
@@ -1518,7 +1522,9 @@ export function persuadeThief(registry) {
     // Раунд 47 (п.4 заявки): ВСТРЕЧНАЯ проверка — Убеждение игрока против
     // ТАКОГО ЖЕ параметра вора (болтливый наёмник: 50) + сложность 10
     // (на равных с вором; раунд 48: «навык против навыка», без сопротивлений).
-    const persuadeSkill = getBlessedSkill(registry, Math.max((player.skills && player.skills.persuade) || 20, MIN_PERSUADE));
+    // Патч 66.73 (приказ 16): обаяние беседы даёт ±5/±10 к разговорной проверке
+    const persuadeSkill = chaAdjustedTalkSkill(registry,
+        getBlessedSkill(registry, Math.max((player.skills && player.skills.persuade) || 20, MIN_PERSUADE)));
     const res = opposedSkillCheck(persuadeSkill, 50, 10);
     const checkLine = formatOpposedCheck(res, 'Убеждение', 'Болтовни вора');
 
