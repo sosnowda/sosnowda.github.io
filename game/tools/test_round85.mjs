@@ -96,7 +96,10 @@ ok(combatSrc.includes('spendArrow(this.player)') && combatSrc.includes("t('Ко�
     'стрельба тратит стрелу; пустой колчан — поп-ап (пп.7,8)');
 ok(combatSrc.includes('playBowShot') && combatSrc.includes('resolvePlayerAttack'),
     'стрельба из лука — полёт стрелы (без выпада)');
-ok(/Between\(5,\s*9\)/.test(combatSrc), 'волк (крупный зверь) даёт 5–9 мяса (п.13)');
+// РАУНД 66.70 (приказ 8): обдир волка — проверка Выживания; лестница размера
+// сохранена: [5, 9] при успехе (п.13), ×2 при крите, половина при провале.
+ok(combatSrc.includes('survivalButcher(this.registry, this.player, [5, 9], true)'),
+    'волк (крупный зверь) — Выживание, лестница 5–9 сохранена (п.13 + 66.70)');
 
 // ----- [4] Охота учитывает колчан (пп.7,8) -----
 console.log('\n[4] Охота: выстрел требует стрелу в колчане');

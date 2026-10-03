@@ -147,15 +147,22 @@ console.log('— приказы 1–3 во всех точках еды —');
     ok(dlg.includes("'Купил копчёной рыбы у Ерёмы: −2 д., +1 HP, час времени.'"), 'рыба: +1 HP, час в журнале');
 
     const forest = read('game/src/data/forest.js');
-    ok(forest.includes('hp: 1, label: t(\'Грибы\')'), 'лес: грибы = 1 HP');
-    ok(forest.includes('Собрал и съел грибов в лесу (час времени).'), 'лес: журнал грибы — час времени');
+    // РАУНД 66.70: «съедено на месте» отменено — сбор идёт в УЗЕЛ по проверке
+    // Выживания (приказы 3, 8, 10); еда — только из узла (meal.js), грибы —
+    // только жареные через костёр.
+    ok(forest.includes("prompt: t('Собрать грибы (Выживание)')"), 'лес: грибы собираются по проверке Выживания (66.70)');
+    ok(forest.includes("prompt: t('Собрать ягоды (Выживание)')") && forest.includes("prompt: t('Срезать зверобой (Выживание)')"),
+        'лес: ягоды и зверобой — тоже проверки Выживания (66.70)');
     ok(!forest.includes('Сорвать грибы (+2 ❤)'), 'лес: старый prompt «+2 ❤» убран');
+    ok(!forest.includes('съел грибов в лесу (час времени)'), 'лес: «съедено на месте» убрано из журналов');
 
     const fsScene = read('game/src/scenes/ForestScene.js');
-    ok(fsScene.includes("const isFood = entry.kind === 'mushroom' || entry.kind === 'berry';"), 'лес: грибы/ягоды = еда');
-    ok(fsScene.includes('if (isFood && !canEat(this.registry).ok)'), 'лес: сытый герой не ест');
-    ok(fsScene.includes('if (isFood) registerMeal(this.registry);'), 'лес: кулдаун еды после сбора');
-    ok(fsScene.includes('tickTime(this.registry, isFood ? MEAL_DURATION_MIN : 8);'), 'лес: еда = 60 мин, трава = 8 мин');
+    ok(fsScene.includes('survivalGather(this.registry, this.player, entry.kind)'), 'лес: сбор — проверка Выживания (66.70, приказ 8)');
+    ok(!fsScene.includes('const isFood =') && !fsScene.includes('registerMeal(this.registry); // приказ 3'),
+        'лес: сбор БОЛЬШЕ не есть (еда — из узла «Съесть», meal.js)');
+    ok(fsScene.includes("entry.kind === 'herb' ? 8 : 30"), 'лес: зверобой = 8 мин, ягоды/грибы = 30 мин (66.70)');
+    ok(fsScene.includes("res.gathered <= 0") && fsScene.includes("gathered[entry.id] = today"),
+        'лес: при провале точка не истощается, при успехе — до конца дня (66.70)');
     ok(fsScene.includes("entry.kind === 'herb'") || read('game/src/data/forest.js').includes("kind: 'herb'"),
         'лес: зверобой — не еда (без кулдауна)');
 

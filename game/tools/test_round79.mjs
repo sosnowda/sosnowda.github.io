@@ -240,12 +240,15 @@ console.log('— п.11: мясо с туши дичи/волка —');
     ok(LOOT_DEFS.meat_raw.edible === false && LOOT_DEFS.meat_cooked.edible === true, 'мясо сырое не едят, жаркое — едят');
     const forest = read('game/src/scenes/ForestScene.js');
     ok(forest.includes('lootAnimalCorpse'), 'лес: обдир туши lootAnimalCorpse()');
-    ok(forest.includes("addItem(player, 'meat_raw', n)"), 'мясо сыром падает в узел');
-    ok(forest.includes('Phaser.Math.Between(minM, maxM)'), 'количество мяса случайно (meat: [мин,макс])');
+    // РАУНД 66.70 (приказ 8): обдир — ПРОВЕРКА ВЫЖИВАНИЯ (мясо зависит от броска,
+    // шкура у зверей; при провале — половина мяса без шкуры, при крите — ×2)
+    ok(forest.includes('survivalButcher(this.registry, player, animal.cfg.meat, hasSkin)'),
+        '66.70: обдир туши — проверка Выживания (мясо/шкура по броску)');
+    ok(forest.includes("animal.cfg.id !== 'bird'"), '66.70: у глухаря шкуры нет');
     const combat = read('game/src/scenes/CombatScene.js');
     ok(combat.includes("this.enemyKeys.includes('wolf')"), 'волк: мясо начисляется после победы');
-    ok(combat.includes("addItem(this.player, 'meat_raw', meatN)"), 'волк: сырое мясо в узел');
-    ok(combat.includes('Phaser.Math.Between(5, 9)'), 'волк — самый крупный зверь: 5–9 шт. (66.28 п.13: заяц 1–2 < глухарь 2–3 < косуля 4–6 < волк 5–9)');
+    ok(combat.includes('survivalButcher(this.registry, this.player, [5, 9], true)'),
+        'волк: обдир по Выживанию, лестница размера сохранена 5–9 (66.28 п.13 + 66.70 приказ 8)');
 }
 
 // ============================================================

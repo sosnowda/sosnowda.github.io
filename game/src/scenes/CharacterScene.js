@@ -15,8 +15,11 @@ import {
 } from '../systems/Character.js';
 // Раунд 66.16 (приказы 1–4): единые правила еды и сна
 // Раунд 66.71 (приказ 5): целебная трава — карточка с кулдауном 12 ч, +1 HP
-import { getLootDef, tryEatFood } from '../systems/loot.js';
+// Раунд 66.72 (приказы 7, 13): применение травы — ПРОВЕРКА ЗНАХАРСТВА (applyHerb);
+// точная формулировка при полном Здоровье — приказ 7
+import { getLootDef, tryEatFood, applyHerb } from '../systems/loot.js';
 import { canUseHerb, registerHerb, showHerbBlockedPopup, HERB_HEAL_HP } from '../systems/meal.js';
+import { ActionLog } from '../data/actionLog.js';
 // Раунд 66.28 (пп.5–12): колчан — отдельный слот меню персонажа, вместимость 10,
 // наложение/высыпание стрел между узлом и колчаном
 import { getQuiver, countInventoryArrows, loadQuiver, unloadQuiver, quiverWord, QUIVER_CAP } from '../systems/ammo.js';
@@ -388,7 +391,9 @@ export class CharacterScene extends Phaser.Scene {
                 // с кнопкой «Съесть» (печёная рыба +2, жаркое +3, рацион +1);
                 // сырое мясо/сырая рыба — карточка-подсказка (готовить/продавать).
                 const foodDef = getLootDef(item.id);
-                if (foodDef && !item.equipped) {
+                // Раунд 66.72: лекарственная трава имеет СВОЮ карточку (isHerb ниже) —
+                // «Съесть»-биндинг для неё не вешаем (иначе карточка открывается дважды)
+                if (foodDef && !foodDef.medicinal && !item.equipped) {
                     this.add.text(ix + 20, iy - 20, '🍽', { fontSize: '12px' })
                         .setOrigin(0.5).setDepth(51);
                     hitArea.on('pointerup', () => this.showFoodCard(item, foodDef));
@@ -471,11 +476,60 @@ export class CharacterScene extends Phaser.Scene {
      * Раунд 66.17 (п.4): карточка съестного предмета узла.
      * Съедобное — кнопка «Съесть» (правила meal.js: 1 час, кулдаун 4 ч,
      * поп-ап «герой сытый»); сырое — подсказка «готовить на костре/продать».
+     * Раунд 66.70 (приказы 7, 9, 13):
+     *  • бонусное блюдо (крит Готовки) — сытнее на +1 (item.bonus);
+     *  • лекарственная трава — карточка ПРИМЕНЕНИЯ с проверкой Знахарства
+     *    (не еда!); при полном Здоровье — «Вы полностью здоровы.
+     *    Трава осталась в узле».
      */
     showFoodCard(item, def) {
         const p = this.registry.get('player');
         const count = (item && item.count) || 0;
         if (count <= 0) return;
+        // ЛЕКАРСТВЕННАЯ ТРАВА — не еда: применение через Знахарство (приказ 13)
+        if (def.medicinal) {
+            this.showHerbCard(item, def);
+            return;
+        }
+        if (def.edible) {
+            // Раунд 66.70: крит Готовки даёт отдельное блюдо «удалось на славу»
+            // (собственный def с heal+1/sell+1) — карточка честно показывает его.
+            createDialog(this, `${def.emoji} ${t(def.name)}`,
+                tf(t('{0} ×{1} в узле. Съесть порцию: +{2} здоровья, час времени, кулдаун следующего приёма еды — 4 часа.'), t(def.name), count, def.heal),
+                [
+                    { text: t('🍽 Съесть'), callback: () => {
+                        const res = tryEatFood(this, p, item.id);
+                        if (res.ok) {
+                            this.scene.restart({ from: this.from, tab: 'inventory' });
+                        }
+                    } },
+                    { text: t('Отмена'), callback: () => {} },
+                ], { singleton: false });
+        } else {
+            createDialog(this, `${def.emoji} ${t(def.name)}`,
+                t('Сырым это не едят: приготовь на костре (лесное кострище или костёр пастухов — 30 мин; Готовка: при неудаче продукты пропадают) или продай трактирщику/мяснику.'),
+                [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+        }
+    }
+
+    /**
+    /**
+     * Раунд 66.17 (п.4): карточка съестного предмета узла.
+     * Съедобное — кнопка «Съесть» (правила meal.js: 1 час, кулдаун 4 ч,
+     * поп-ап «герой сытый»); сырое — подсказка «готовить на костре/продать».
+     * Раунд 66.72 (приказ 9): крит Готовки даёт отдельное блюдо «удалось
+     * на славу» (свой def *_tasty с heal+1) — карточка честно показывает его.
+     * Лекарственная трава — своя карточка применения (showHerbCard).
+     */
+    showFoodCard(item, def) {
+        const p = this.registry.get('player');
+        const count = (item && item.count) || 0;
+        if (count <= 0) return;
+        // ЛЕКАРСТВЕННАЯ ТРАВА — не еда: применение через Знахарство (приказ 13)
+        if (def.medicinal) {
+            this.showHerbCard(item, def);
+            return;
+        }
         if (def.edible) {
             createDialog(this, `${def.emoji} ${t(def.name)}`,
                 tf(t('{0} ×{1} в узле. Съесть порцию: +{2} здоровья, час времени, кулдаун следующего приёма еды — 4 часа.'), t(def.name), count, def.heal),
@@ -490,55 +544,66 @@ export class CharacterScene extends Phaser.Scene {
                 ], { singleton: false });
         } else {
             createDialog(this, `${def.emoji} ${t(def.name)}`,
-                t('Сырым это не едят: приготовь на костре (лесное кострище или костёр пастухов — 30 мин) или продай трактирщику/мяснику.'),
+                t('Сырым это не едят: приготовь на костре (лесное кострище или костёр пастухов — 30 мин; Готовка: при неудаче продукты пропадают) или продай трактирщику/мяснику.'),
                 [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
         }
     }
 
     /**
-     * Раунд 66.71 (приказ 5): карточка ЦЕЛЕБНОЙ ТРАВЫ.
-     * «Восстанавливают Здоровье, при использовании, только на 1 единицу.
-     * Можно использовать не чаше чем раз в 12 часов» — кулдаун в meal.js,
-     * время НЕ тратится (это зелье, а не еда).
+     * Раунд 66.72 (приказы 7, 13; канон 66.71 сохранён): карточка травы.
+     *  • при полном Здоровье трава не тратится — формулировка приказа 7:
+     *    «Вы полностью здоровы. Трава осталась в узле»;
+     *  • кулдаун трав 12 ч сохранён (66.71: canUseHerb/ registerHerb, время не тратится);
+     *  • применение — ПРОВЕРКА «ЗНАХАРСТВА» (приказ 13): успех — +1 HP,
+     *    особый успех — ×2 (+2), провал — снадобье испорчено впустую;
+     *  • бонус молитвы (+5 на одну проверку) списывается внутри applyHerb.
      */
-    showHerbCard(item) {
+    showHerbCard(item, def) {
         const p = this.registry.get('player');
         const count = (item && item.count) || 0;
         if (count <= 0) return;
+        const d = def || getLootDef('herb');
+        const fullHp = (p.HP || 0) >= (p.HPmax || 10);
+        if (fullHp) {
+            // Приказ 7: точная формулировка владельца
+            createDialog(this, `🌿 ${t('Целебная трава')}`,
+                t('Вы полностью здоровы. Трава осталась в узле.'),
+                [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+            return;
+        }
         const herbCheck = canUseHerb(this.registry);
         if (!herbCheck.ok) {
             showHerbBlockedPopup(this, herbCheck.minutesLeft);
             return;
         }
+        const med = (p.skills && p.skills.medicine) || 5;
         createDialog(this, `🌿 ${t('Целебная трава')}`,
-            tf(t('Целебная трава ×{0} в узле. Выпить отвар: +{1} здоровью. Травы можно принимать не чаще раза в 12 часов.'), count, HERB_HEAL_HP),
+            tf(t('Целебная трава ×{0} в узле. Приложить отвар к ранам: проверка Знахарства ({1}%). Успех — +{2} здоровью (особый успех — вдвое); провал — снадобье испорчено. Травы можно принимать не чаще раза в 12 часов.'), count, med, d.heal || HERB_HEAL_HP),
             [
                 { text: t('🌿 Выпить отвар'), callback: () => {
+                    // Полное HP может наступить к моменту нажатия — перепроверка (приказ 7)
+                    if ((p.HP || 0) >= (p.HPmax || 10)) {
+                        createDialog(this, `🌿 ${t('Целебная трава')}`,
+                            t('Вы полностью здоровы. Трава осталась в узле.'),
+                            [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+                        return;
+                    }
                     const check = canUseHerb(this.registry);
                     if (!check.ok) {
                         showHerbBlockedPopup(this, check.minutesLeft);
                         return;
                     }
-                    if ((p.HP || 0) >= (p.HPmax || 10)) {
-                        createDialog(this, `🌿 ${t('Целебная трава')}`,
-                            t('Здоровье и так полное — отвар не нужен. Трава осталась в узле.'),
-                            [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
-                        return;
+                    const res = applyHerb(this.registry, p, 'herb', { skill: med });
+                    if (res.reason === 'healed') {
+                        ActionLog.add(this.registry, tf(t('Приложил зверобой к ранам (Знахарство {0}%: бросок {1}) — {2} здоровья{3}.'), res.skill, res.roll, res.heal, res.crit ? ' (особый успех ×2)' : ''));
+                        this.registry.set('player', p);
+                        this.scene.restart({ from: this.from, tab: 'inventory' });
+                    } else if (res.reason === 'failed') {
+                        ActionLog.add(this.registry, tf(t('Снадобье из зверобоя не помогло (Знахарство {0}%: бросок {1}) — трава испорчена впустую.'), res.skill, res.roll));
+                        this.registry.set('player', p);
+                        this.scene.restart({ from: this.from, tab: 'inventory' });
                     }
-                    const heal = Math.min(HERB_HEAL_HP, (p.HPmax || 10) - (p.HP || 0));
-                    p.HP = (p.HP || 0) + heal;
-                    // Убрать ОДНУ траву из узла (кучкуется по id)
-                    const it = (p.inventory || []).find(i => i && i.id === 'herb');
-                    if (it) {
-                        it.count = (it.count || 1) - 1;
-                        if (it.count <= 0) p.inventory = p.inventory.filter(i => i !== it);
-                    }
-                    registerHerb(this.registry);
-                    this.registry.set('player', p);
-                    this.scene.restart({ from: this.from, tab: 'inventory' });
-                    createDialog(this, `🌿 ${t('Целебная трава')}`,
-                        tf(t('Ты принял траву и восстановил {0} здоровья.'), heal),
-                        [{ text: t('Понятно'), callback: () => {} }], { singleton: false });
+                    // 'no_item'/'not_medicinal' из карточки не случаются
                 } },
                 { text: t('Отмена'), callback: () => {} },
             ], { singleton: false });

@@ -94,7 +94,7 @@ function dupesOf(src, name) {
 console.log('--- 1. P3-1: ноль дубликатов ключей i18n (статический no-dupe-keys) ---');
 const en = dupesOf(i18n, 'EN');
 const enk = dupesOf(i18n, 'EN_KEYS');
-ok(en.dupes === 0 && en.total === 1648, `EN: 0 дубликатов, 1648 уникальных ключа (факт: ${en.dupes} дублей, ${en.total}) — 66.71: +19 механик, −мёртвые`);
+ok(en.dupes === 0 && en.total === 1711, `EN: 0 дубликатов, 1711 уникальных ключа (факт: ${en.dupes} дублей, ${en.total}) — 66.71: +19 механик; 66.72: +голод/сбор/готовка/знахарство/молитва/слух`);
 ok(enk.dupes === 0 && enk.total === 275, `EN_KEYS: 0 дубликатов, 275 ключей (факт: ${enk.dupes} дублей, ${enk.total})`);
 ok(i18n.includes('66.68 (§9.2 аудита 66.66, P3)'), 'i18n.js: док-комментарий 66.68 о дедупликации на месте');
 for (const snippet of [

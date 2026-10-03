@@ -30,7 +30,8 @@ import { getActiveQuests, checkQuestCompletion, getBlessedSkill } from '../data/
 import { getTime, getDayNightOverlay, tickTime } from '../systems/TimeSystem.js';
 import { applyWeatherVisuals } from '../systems/Weather.js';
 // Раунд 66.17 (п.11): с убитого волка — мясо (сырое; готовить на костре или продать)
-import { addItem } from '../systems/loot.js';
+// Раунд 66.70 (приказ 8): обдир волчьей туши — проверка ВЫЖИВАНИЯ
+import { addItem, survivalButcher } from '../systems/loot.js';
 // Раунд 32 (пп.14,15): F1 — «Информация по игре» и в бою
 import { timeRatioInfoLine } from '../systems/WorldClock.js';
 import { t, tf } from '../systems/i18n.js';
@@ -1095,14 +1096,16 @@ export class CombatScene extends Phaser.Scene {
             q.currentObjective = murderVictimId
                 ? t('Кровная вина на тебе. Староста может помирить за виру.')
                 : t('Враг повержен');
-            // РАУНД 66.17 (п.11): с убитого волка случайно снимают мясо —
-            // объём ПО РАЗМЕРУ ЗВЕРЯ (раунд 66.28, п.13: чем крупнее дичь — тем
-            // больше мяса; лестница: заяц 1–2 < глухарь 2–3 < косуля 4–6 <
-            // < ВОЛК 5–9 — самый крупный зверь в боях); сырое: готовить или продавать
+            // РАУНД 66.17 (п.11): с убитого волка снимают мясо — объём ПО РАЗМЕРУ
+            // ЗВЕРЯ (раунд 66.28, п.13: ВОЛК 5–9 — самый крупный зверь в боях).
+            // РАУНД 66.70 (приказ 8): обдир — проверка ВЫЖИВАНИЯ: успех — мясо +
+            // шкура; неудача — неловкий обдир (половина мяса, без шкуры); крит —
+            // мясо ×2 и шкура. Сырое: готовить или продавать.
             if (this.enemyKeys && this.enemyKeys.includes('wolf')) {
-                const meatN = Phaser.Math.Between(5, 9);
-                addItem(this.player, 'meat_raw', meatN);
-                ActionLog.add(this.registry, tf(t('Обобрал тушу убитого волка: +{0} сырое мясо (приготовить на костре или продать).'), meatN));
+                const res = survivalButcher(this.registry, this.player, [5, 9], true);
+                ActionLog.add(this.registry, res.skin > 0
+                    ? tf(t('Освежевал тушу убитого волка (Выживание {0}%: бросок {1}): +{2} сырое мясо и шкура (приготовить на костре или продать).'), res.skill, res.roll, res.meat)
+                    : tf(t('Обобрал тушу убитого волка (Выживание {0}%: бросок {1}): лишь +{2} сырое мясо — шкура порвана.'), res.skill, res.roll, res.meat));
             }
         } else {
             q.currentObjective = t('Икона у тебя! Верни её старосте или священнику.');

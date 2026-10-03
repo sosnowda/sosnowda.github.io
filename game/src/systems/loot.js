@@ -22,6 +22,14 @@ import { t } from './i18n.js';
 import { canEat, registerMeal, showMealBlockedPopup, MEAL_DURATION_MIN } from './meal.js';
 import { tickTime } from './TimeSystem.js';
 import { createDialog } from '../utils/ui.js';
+// Раунд 66.70 (приказы 9,12): готовка на костре — ПРОВЕРКА НАВЫКА «Готовка»
+// (провал — продукты пропали; крит. успех — блюдо сытнее на +1);
+// бонус молитвы (+5 на одну проверку) применяется снаружи (prayer.js).
+import { skillCheck } from './BRPEngine.js';
+import { consumePrayerBless } from './prayer.js';
+// Раунд 66.72: лекарственная трава — кулдаун 12 ч сохранён из 66.71 (canUseHerb);
+// применение — проверка Знахарства (приказ 13), время НЕ тратится (канон 66.71).
+import { canUseHerb, registerHerb } from './meal.js';
 
 /**
  * Определения добычи/припасов узла.
@@ -34,20 +42,63 @@ export const LOOT_DEFS = {
     fish_raw: {
         id: 'fish_raw', name: 'Рыба (сырая)', emoji: '🐟',
         edible: false, heal: 0, sell: 2,
-        cookTo: 'fish_cooked', cookMinutes: 30,
+        cookTo: 'fish_cooked', cookToTasty: 'fish_cooked_tasty', cookMinutes: 30,
     },
     fish_cooked: {
         id: 'fish_cooked', name: 'Рыба печёная', emoji: '🍢',
         edible: true, heal: 2, sell: 4,
     },
+    // Раунд 66.70: крит Готовки — блюдо «удалось на славу»: +1 к лечению и цене.
+    fish_cooked_tasty: {
+        id: 'fish_cooked_tasty', name: 'Рыба печёная (удалась на славу)', emoji: '🍢',
+        edible: true, heal: 3, sell: 5,
+    },
     meat_raw: {
         id: 'meat_raw', name: 'Мясо дичи (сырое)', emoji: '🥩',
         edible: false, heal: 0, sell: 3,
-        cookTo: 'meat_cooked', cookMinutes: 30,
+        cookTo: 'meat_cooked', cookToTasty: 'meat_cooked_tasty', cookMinutes: 30,
     },
     meat_cooked: {
         id: 'meat_cooked', name: 'Жаркое из дичи', emoji: '🍖',
         edible: true, heal: 3, sell: 5,
+    },
+    meat_cooked_tasty: {
+        id: 'meat_cooked_tasty', name: 'Жаркое (удалось на славу)', emoji: '🍖',
+        edible: true, heal: 4, sell: 6,
+    },
+    // Раунд 66.70 (приказы 3,4): ягоды и грибы — отдельные ПРЕДМЕТЫ узла.
+    // Ягоды едят сразу как еду (+1 HP, правила meal.js); сырые грибы есть
+    // НЕЛЬЗЯ — только готовить на костре (жареные грибы) или продать.
+    // Оба товара принимают на постоялом дворе (приказ 4).
+    berry: {
+        id: 'berry', name: 'Ягоды лесные', emoji: '🫐',
+        edible: true, heal: 1, sell: 1,
+    },
+    mushroom_raw: {
+        id: 'mushroom_raw', name: 'Грибы (сырые)', emoji: '🍄',
+        edible: false, heal: 0, sell: 1,
+        cookTo: 'mushroom_fried', cookToTasty: 'mushroom_fried_tasty', cookMinutes: 30,
+    },
+    mushroom_fried: {
+        id: 'mushroom_fried', name: 'Грибы жареные', emoji: '🍲',
+        edible: true, heal: 2, sell: 2,
+    },
+    mushroom_fried_tasty: {
+        id: 'mushroom_fried_tasty', name: 'Грибы жареные (удались на славу)', emoji: '🍲',
+        edible: true, heal: 3, sell: 3,
+    },
+    // Раунд 66.70 (приказы 7,8,13): зверобой — ЛЕКАРСТВЕННАЯ трава (не еда):
+    // в узел, применение — проверка «Знахарства» (+3 HP; провал — трава
+    // впустую; при полном HP трава ОСТАЁТСЯ в узле).
+    herb: {
+        id: 'herb', name: 'Зверобой (целебная трава)', emoji: '🌿',
+        edible: false, medicinal: true, heal: 1, sell: 5,
+    },
+    // Раунд 66.70 (приказ 8): снятие шкур — проверка «Выживания».
+    // Шкура — товар (постоялый двор/мясник), не еда.
+    skin: {
+        id: 'skin', name: 'Шкура (зверя)', emoji: '🟫',
+        edible: false, heal: 0, sell: 4,
     },
 };
 
@@ -71,7 +122,9 @@ export function countOf(player, itemId) {
     return it ? (it.count || 1) : 0;
 }
 
-/** Добавить добычу в узел (кучкуется по id). Возвращает новый счётчик. */
+/**
+ * Добавить добычу в узел (кучкуется по id). Возвращает новый счётчик.
+ */
 export function addItem(player, itemId, count = 1) {
     if (!player) return 0;
     if (!Array.isArray(player.inventory)) player.inventory = [];
@@ -169,4 +222,191 @@ export function tryEatFood(scene, player, itemId) {
     tickTime(scene.registry, MEAL_DURATION_MIN); // п.1: еда — ровно 1 час
     scene.registry.set('player', player);
     return { ok: true, reason: 'eaten', heal };
+}
+
+// ============================================================
+// РАУНД 66.70 (приказы владельца 3, 9): ГОТОВКА НА КОСТРЕ — ПРОВЕРКА
+// НАВЫКА «ГОТОВКА» (новый навык в Character.js).
+//  • успех — сырьё (1 шт.) превращается в готовое блюдо (30 мин);
+//  • НЕУДАЧА (и fumble) — ПРОДУКТЫ ПРОПАЛИ: сырьё испорчено на огне,
+//    блюда нет (время и сырьё потрачены);
+//  • КРИТИЧЕСКАЯ УДАЧА — качество готовки выше: блюдо сытнее на +1
+//    (запись с bonus:1 в узле, «Съесть» даст +heal+1 HP);
+//  • бонус молитвы (+5 к одной проверке, prayer.js) передаётся аргументом.
+// ============================================================
+
+/**
+ * Готовка 1 сырой штуки на костре (лесное кострище / костёр пастухов).
+ * @param {object} registry — игровой registry.
+ * @param {object} player — игрок (player.inventory).
+ * @param {string} rawId — id сырья (fish_raw / meat_raw / mushroom_raw).
+ * @param {object} [opts] — { skill: значение навыка Готовка, bonus: бонус молитвы }.
+ * @returns {{ ok:boolean, lost:boolean, crit:boolean, bonusHeal:number,
+ *            reason:'no_item'|'not_cookable'|'lost'|'cooked' }}
+ */
+export function cookAtFire(registry, player, rawId, opts = {}) {
+    const def = getLootDef(rawId);
+    if (!player || !def || !def.cookTo) return { ok: false, lost: false, crit: false, bonusHeal: 0, reason: 'not_cookable' };
+    if (countOf(player, rawId) <= 0) return { ok: false, lost: false, crit: false, bonusHeal: 0, reason: 'no_item' };
+
+    // Сырьё забирается ДО броска: на провале оно пропадает (приказ 9).
+    removeItem(player, rawId, 1);
+    // Бонус молитвы: явный opts.bonus (тесты) ИЛИ списание активного благословения.
+    const bless = opts.bonus != null ? (Number(opts.bonus) || 0) : consumePrayerBless(registry);
+    const skillValue = Math.max(1, Math.min(99, (Number(opts.skill) || 1) + bless));
+    const res = skillCheck(skillValue);
+
+    if (res.result === 'fail' || res.result === 'fumble') {
+        // НЕУДАЧА: продукты пропали (сгорели/подгорели насухо).
+        if (registry) registry.set('player', player);
+        tickTime(registry, def.cookMinutes || 30); // время у костра потрачено
+        return { ok: false, lost: true, crit: false, bonusHeal: 0, reason: 'lost', roll: res.roll, skill: skillValue };
+    }
+
+    const crit = res.result === 'critical';
+    if (crit) {
+        // КРИТ: качество готовки +1 — блюдо «удалось на славу» (лечит на +1 больше,
+        // продаётся дороже — собственные определения *_tasty).
+        addItem(player, def.cookToTasty || def.cookTo, 1);
+    } else {
+        addItem(player, def.cookTo, 1);
+    }
+    if (registry) registry.set('player', player);
+    tickTime(registry, def.cookMinutes || 30);
+    const producedId = crit ? (def.cookToTasty || def.cookTo) : def.cookTo;
+    return { ok: true, lost: false, crit, bonusHeal: crit ? 1 : 0, producedId, reason: 'cooked', roll: res.roll, skill: skillValue };
+}
+
+// ============================================================
+// РАУНД 66.70 (приказы владельца 7, 13): ПРИМЕНЕНИЕ ЛЕКАРСТВЕННЫХ ТРАВ —
+// ПРОВЕРКА «ЗНАХАРСТВА» (кроме еды: еда — meal.js, без навыков).
+//  • при полном Здоровье трава НЕ тратится: «Вы полностью здоровы.
+//    Трава осталась в узле» (приказ 7);
+//  • успех — лечение def.heal (зверобой +3 HP), 15 мин;
+//  • особый/критический успех (BRP) — лечение ×2 (+6);
+//  • НЕУДАЧА — лечение не удалось, трава потрачена впустую.
+// ============================================================
+
+/**
+ * @param {object} registry, @param {object} player
+ * @param {string} herbId — id лекарственной травы ('herb').
+ * @param {object} [opts] — { skill: значение Знахарства, bonus: бонус молитвы }.
+ * @returns {{ ok:boolean, reason:'no_item'|'not_medicinal'|'full_hp'|'failed'|'healed',
+ *            heal:number, crit:boolean }}
+ */
+export function applyHerb(registry, player, herbId, opts = {}) {
+    const def = getLootDef(herbId);
+    if (!player || !def || !def.medicinal) return { ok: false, reason: 'not_medicinal', heal: 0, crit: false };
+    if (countOf(player, herbId) <= 0) return { ok: false, reason: 'no_item', heal: 0, crit: false };
+
+    // Приказ 7: при полном Здоровье трава ОСТАЁТСЯ В УЗЛЕ.
+    if ((player.HP || 0) >= (player.HPmax || 10)) {
+        return { ok: false, reason: 'full_hp', heal: 0, crit: false };
+    }
+
+    // Кулдаун трав 12 ч (канон 66.71) — сцена показывает поп-ап заранее;
+    // здесь страхует прямые вызовы.
+    const herbCd = canUseHerb(registry);
+    if (!herbCd.ok) {
+        return { ok: false, reason: 'herb_cooldown', minutesLeft: herbCd.minutesLeft, heal: 0, crit: false };
+    }
+
+    // Бонус молитвы: явный opts.bonus (тесты) ИЛИ списание благословения.
+    const bless = opts.bonus != null ? (Number(opts.bonus) || 0) : consumePrayerBless(registry);
+    const skillValue = Math.max(1, Math.min(99, (Number(opts.skill) || 1) + bless));
+    const res = skillCheck(skillValue);
+
+    // Трава тратится при любой броске (кроме full_hp): даже при провале
+    // снадобье испорчено (размял, пролил — приказ 13 в толковании «применения»).
+    removeItem(player, herbId, 1);
+    registerHerb(registry); // точка 12-часового отката (66.71)
+
+    if (res.result === 'fail' || res.result === 'fumble') {
+        if (registry) registry.set('player', player);
+        return { ok: false, reason: 'failed', heal: 0, crit: false, roll: res.roll, skill: skillValue };
+    }
+
+    // BRP: особый успех — эффект ×2 (трава +1 → +2).
+    const crit = res.special || res.result === 'critical';
+    const want = (def.heal || 0) * (crit ? 2 : 1);
+    const heal = Math.max(0, Math.min(want, (player.HPmax || 10) - (player.HP || 0)));
+    player.HP = (player.HP || 0) + heal;
+    if (registry) registry.set('player', player);
+    // Время НЕ тратится (канон 66.71: отвар — не еда).
+    return { ok: true, reason: 'healed', heal, crit, roll: res.roll, skill: skillValue };
+}
+
+// ============================================================
+// РАУНД 66.70 (приказы владельца 8, 10): ВЫЖИВАНИЕ — ПРОВЕРЯЕМЫЙ НАВЫК.
+//  • п.8: Выживание используется при сборе ТРАВ, ГРИБОВ и ЯГОД, при
+//    снятии ШКУР и добыче МЯСА с дичи;
+//  • п.10: сбор ягод — успех = ГОРСТЬ ягод (2 шт.); неудача = НИЧЕГО
+//    не собрал; крит. удача = количество ×2 (4 шт.). Грибы/зверобой —
+//    та же лестница (гриб 2/0/4, зверобой 1/0/2);
+//  • обдир туши: успех = мясо по лестнице размера + шкура (у зверя);
+//    неудача = неловкий обдир (половина мяса, без шкуры); крит = мясо ×2
+//    и шкура. Бонус молитвы списывается первой проверкой (prayer.js).
+// ============================================================
+
+/** Сколько единиц сырья даёт УСПЕШНЫЙ сбор (крит — вдвое, провал — 0). */
+export const GATHER_SUCCESS_AMOUNT = { berry: 2, mushroom: 2, herb: 1 };
+
+/** id предмета узла для вида точки сбора. */
+export function gatherItemId(kind) {
+    if (kind === 'berry') return 'berry';
+    if (kind === 'mushroom') return 'mushroom_raw';
+    if (kind === 'herb') return 'herb';
+    return null;
+}
+
+/**
+ * Проверка Выживания при сборе (ягоды/грибы/травы). Добыча кладётся в узел.
+ * @returns {{ ok:boolean, gathered:number, itemId:string|null,
+ *             crit:boolean, roll:number, skill:number }}
+ */
+export function survivalGather(registry, player, kind, opts = {}) {
+    const itemId = gatherItemId(kind);
+    if (!itemId) return { ok: false, gathered: 0, itemId: null, crit: false, roll: 0, skill: 0 };
+    const bless = opts.bonus != null ? (Number(opts.bonus) || 0) : consumePrayerBless(registry);
+    const skill = Math.max(1, Math.min(99, (Number(opts.skill) || (player && player.skills && player.skills.survival) || 1) + bless));
+    const res = skillCheck(skill);
+    const failed = res.result === 'fail' || res.result === 'fumble';
+    const crit = res.result === 'critical';
+    const base = GATHER_SUCCESS_AMOUNT[kind] || 1;
+    const gathered = failed ? 0 : (crit ? base * 2 : base);
+    if (gathered > 0 && player) addItem(player, itemId, gathered);
+    if (registry) registry.set('player', player);
+    return { ok: !failed && gathered > 0, gathered, itemId, crit, roll: res.roll, skill };
+}
+
+/**
+ * Проверка Выживания при обдире туши (мясо + шкура).
+ * @param {Array<number>} meatRange — [мин, макс] по лестнице размера.
+ * @param {boolean} hasSkin — есть ли шкура у зверя (заяц/косуля/волк — да; глухарь — нет).
+ * @param {Function} [rng] — подмена в тестах (по умолчанию Math.random).
+ * @returns {{ ok:boolean, meat:number, skin:number, crit:boolean, roll:number, skill:number }}
+ */
+export function survivalButcher(registry, player, meatRange, hasSkin, opts = {}, rng = Math.random) {
+    const bless = opts.bonus != null ? (Number(opts.bonus) || 0) : consumePrayerBless(registry);
+    const skill = Math.max(1, Math.min(99, (Number(opts.skill) || (player && player.skills && player.skills.survival) || 1) + bless));
+    const res = skillCheck(skill);
+    const [min, max] = Array.isArray(meatRange) ? meatRange : [1, 1];
+    const roll = () => min + Math.floor(rng() * (max - min + 1));
+    let meat;
+    let skin = 0;
+    if (res.result === 'fail' || res.result === 'fumble') {
+        meat = Math.max(1, Math.floor(roll() / 2)); // неловкий обдир — половина, без шкуры
+    } else if (res.result === 'critical') {
+        meat = roll() * 2;                          // крит: мясо ×2
+        skin = hasSkin ? 1 : 0;
+    } else {
+        meat = roll();                              // обычный успех
+        skin = hasSkin ? 1 : 0;
+    }
+    if (player) {
+        if (meat > 0) addItem(player, 'meat_raw', meat);
+        if (skin > 0) addItem(player, 'skin', skin);
+    }
+    if (registry) registry.set('player', player);
+    return { ok: meat > 0, meat, skin, crit: res.result === 'critical', roll: res.roll, skill };
 }

@@ -2068,6 +2068,117 @@ const EN = {
     // п.12: удочка
     'Удочка': 'Fishing rod',
     'для рыбалки': 'for fishing',
+    // ============================================================
+    // Раунд 66.70: ГОЛОД, СБОР (ВЫЖИВАНИЕ), ГОТОВКА, ЗНАХАРСТВО, МОЛИТВА, СЛУХ
+    // ============================================================
+    // — предметы узла —
+    'Ягоды лесные': 'Forest berries',
+    'Грибы (сырые)': 'Mushrooms (raw)',
+    'Грибы жареные': 'Fried mushrooms',
+    'Зверобой (целебная трава)': 'St. John\'s wort (healing herb)',
+    'Шкура (зверя)': 'Beast hide',
+    // — точки сбора —
+    'Собрать грибы (Выживание)': 'Gather mushrooms (Survival)',
+    'Собрать ягоды (Выживание)': 'Pick berries (Survival)',
+    'Срезать зверобой (Выживание)': 'Cut St. John\'s wort (Survival)',
+    'Ничего не собрал': 'Gathered nothing',
+    'Щедрая находка! (×2)': 'A generous find! (×2)',
+    'Обыскал {0} (Выживание {1}%: бросок {2}) — ничего не нашёл.':
+        'Searched the {0} (Survival {1}%: roll {2}) — found nothing.',
+    'Собрал {0}: +{1} в узел (Выживание {2}%: бросок {3}).':
+        'Gathered {0}: +{1} to the sack (Survival {2}%: roll {3}).',
+    // — готовка —
+    '🔥 Жарить грибы ({0} мин)': '🔥 Fry mushrooms ({0} min)',
+    'Продукты пропали!': 'The food is ruined!',
+    'Прогоревал у костра: {0} сгорели (Готовка {1}%: бросок {2}).':
+        'The campfire meal went wrong: the {0} burnt (Cooking {1}%: roll {2}).',
+    'Приготовил на костре: {0} → {1} (Готовка {2}%: бросок {3}).':
+        'Cooked over the fire: {0} → {1} (Cooking {2}%: roll {3}).',
+    'Пир у костра! {0} → {1} сытнее на +1 (Готовка {2}%: бросок {3} — крит).':
+        'A feast by the fire! {0} → {1}, +1 heartier (Cooking {2}%: roll {3} — critical).',
+    'Рыба печёная (удалась на славу)': 'Baked fish (cooked to perfection)',
+    'Жаркое (удалось на славу)': 'Game roast (cooked to perfection)',
+    'Грибы жареные (удались на славу)': 'Fried mushrooms (cooked to perfection)',
+    'Сырым это не едят: приготовь на костре (лесное кострище или костёр пастухов — 30 мин; Готовка: при неудаче продукты пропадают) или продай трактирщику/мяснику.':
+        "This is not eaten raw: cook it over a campfire (forest campfire or shepherds' fire — 30 min; Cooking: on a failure the food is lost) or sell it to the innkeeper/the butcher.",
+    'Тёплый огонь разгоняет лесную мглу. У костра можно пересидеть час — раны он не лечит, только время идёт мимо. На огне можно приготовить сырую рыбу, мясо дичи или грибы (Готовка; при неудаче продукты пропадают).\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)':
+        'The warm fire chases away the forest gloom. You may sit out an hour — it heals no wounds, only time goes by. Raw fish, game meat or mushrooms can be cooked here (Cooking; on a failure the food is lost).\n\nSit by the fire for an hour? (1 hour of time, no healing.)',
+    'Пастухи сложили костёр у стада. У огня можно только пересидеть час — раны он не лечит, только время идёт мимо. На огне можно приготовить сырую рыбу, мясо дичи или грибы (Готовка; при неудаче продукты пропадают).\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)':
+        'The shepherds built a fire by the herd. You may sit out an hour — it heals no wounds, only time goes by. Raw fish, game meat or mushrooms can be cooked here (Cooking; on a failure the food is lost).\n\nSit by the fire for an hour? (1 hour of time, no healing.)',
+    '🔥 Прогорел': '🔥 The meal burnt',
+    'Эх…': 'Alas…',
+    'Что-то пошло не так: {0} подгорели насухо — продукты пропали (Готовка {1}%: бросок {2}).':
+        'Something went wrong: the {0} burnt dry — the food is lost (Cooking {1}%: roll {2}).',
+    ' Пир удался: блюдо сытнее на +1 (крит Готовки: бросок {0}).':
+        ' A feast indeed: the dish is +1 heartier (critical Cooking: roll {0}).',
+    'На углях поспело: {0}. Теперь в узле — можно съесть (Персонаж → Инвентарь → «Съесть») или продать.{1}':
+        'Ready from the coals: {0}. Now in the sack — eat it (Character → Inventory → "Eat") or sell it.{1}',
+    '\n\n(Слух {0}%: бросок {1} — успех.)': '\n\n(Listen {0}%: roll {1} — success.)',
+    // — обдир туши —
+    'Освежевал {0}: +{1} сырое мясо и шкура (Выживание {2}%: бросок {3}).':
+        'Skinned the {0}: +{1} raw meat and a hide (Survival {2}%: roll {3}).',
+    'Неловко ободрал тушу {0} (Выживание {1}%: бросок {2}) — лишь +{3} мясо, шкура порвана.':
+        'Butchered the {0} carcass clumsily (Survival {1}%: roll {2}) — only +{3} meat, the hide is torn.',
+    'Освежевал тушу убитого волка (Выживание {0}%: бросок {1}): +{2} сырое мясо и шкура (приготовить на костре или продать).':
+        'Skinned the slain wolf (Survival {0}%: roll {1}): +{2} raw meat and a hide (cook over a fire or sell).',
+    'Обобрал тушу убитого волка (Выживание {0}%: бросок {1}): лишь +{2} сырое мясо — шкура порвана.':
+        'Butchered the slain wolf (Survival {0}%: roll {1}): only +{2} raw meat — the hide is torn.',
+    'Стрела дошла — {0} повержен. Освежевал тушу (Выживание {1}%: бросок {2}): +{3} сырое мясо и шкура в узел.\nСырым не едят: приготовь на костре или продай.':
+        'The arrow flew true — the {0} is down. Skinned the carcass (Survival {1}%: roll {2}): +{3} raw meat and a hide to the sack.\nNot eaten raw: cook it or sell it.',
+    'Стрела дошла — {0} повержен. Обобрал тушу (Выживание {1}%: бросок {2}): +{3} сырое мясо в узел.\nСырым не едят: приготовь на костре или продай.':
+        'The arrow flew true — the {0} is down. Butchered the carcass (Survival {1}%: roll {2}): +{3} raw meat to the sack.\nNot eaten raw: cook it or sell it.',
+    'Подстрелил {0} на поляне из лука и ободрал тушу: +{1} сырое мясо{2} (приготовить или продать).':
+        'Shot the {0} in the glade with the bow and butchered the carcass: +{1} raw meat{2} (cook or sell).',
+    ' и шкура': ' and a hide',
+    // — знахарство —
+    'Вы полностью здоровы. Трава осталась в узле.':
+        'You are fully healthy. The herb remains in the sack.',
+    '🌿 Применить (Знахарство)': '🌿 Apply (Herbalism)',
+    '{0} ×{1} в узле. Приложить к ранам: проверка Знахарства ({2}%). Успех — +{3} здоровья (особый успех — вдвое); провал — снадобье испорчено впустую. Это ЛЕКАРСТВО, а не еда: на сытость не влияет.':
+        '{0} ×{1} in the sack. Apply to wounds: a Herbalism check ({2}%). Success: +{3} health (special success — double); failure: the remedy is wasted. This is MEDICINE, not food: it does not fill the belly.',
+    'Приложил зверобой к ранам (Знахарство {0}%: бросок {1}) — {2} здоровья{3}.':
+        'Applied St. John\'s wort to the wounds (Herbalism {0}%: roll {1}) — {2} health{3}.',
+    ' (особый успех ×2)': ' (special success ×2)',
+    'Снадобье из зверобоя не помогло (Знахарство {0}%: бросок {1}) — трава испорчена впустую.':
+        'The St. John\'s wort remedy did not help (Herbalism {0}%: roll {1}) — the herb is wasted.',
+    // — голод —
+    'Голодал прошедшие сутки (менее двух трапез) — силы тают.':
+        'Went hungry yesterday (fewer than two meals) — strength is waning.',
+    // — молитва (приказ 11) —
+    'Помолился в церкви — благословение: следующий навык крепче на +5.':
+        'Prayed in the church — blessing: your next single skill check gains +5.',
+    'Ты опускаешься на колени перед киотом. В полумраке церкви, под мерцание лампад, приходит покой.\n\nБлагословение: ЛЮБОЙ твой навык пройдёт ближайшую проверку на +5 крепче (сбор в лесу, готовка на костре, знахарское снадобье, слух за столами…).':
+        'You kneel before the icon case. In the dim church, under the flickering lamps, peace comes.\n\nBlessing: ANY one of your skills checks at +5 on its next roll (gathering in the forest, cooking at the fire, herbal remedies, listening at the tables…).',
+    'Целебная трава ×{0} в узле. Приложить отвар к ранам: проверка Знахарства ({1}%). Успех — +{2} здоровью (особый успех — вдвое); провал — снадобье испорчено. Травы можно принимать не чаще раза в 12 часов.':
+        'Healing herb ×{0} in the sack. Apply the brew to wounds: a Herbalism check ({1}%). Success: +{2} health (special success — double); failure: the remedy is wasted. Herbs can be taken no more than once every 12 hours.',
+
+    'Молитва не услышана! (откат Молитвы ещё не истёк)':
+        'The prayer went unheard! (the prayer cooldown has not yet passed)',
+    'Молитва не услышана! Сердце ещё не отошло от прошлой молитвы — небо молчит. Вернись позже (откат: ещё около {0} ч).':
+        'The prayer went unheard! Your heart has not yet rested from the last prayer — the heavens are silent. Come back later (cooldown: about {0} h left).',
+    'Поклониться и уйти.': 'Bow and leave.',
+    // — слух (приказ 14) —
+    '👂 Подслушать (Слух)': '👂 Listen in (Listen)',
+    '👂 За столами': '👂 By the tables',
+    '👂 Подслушал молву': '👂 Overheard talk',
+    'Отойти': 'Step away',
+    'Запомнить': 'Remember',
+    'Гул голосов, смех, спор подгулявших ямщиков… Слух {0}%: бросок {1} — за шумом ничего путного не разобрать.':
+        'A hum of voices, laughter, tipsy coachmen arguing… Listen {0}%: roll {1} — nothing sensible through the noise.',
+    'Прислушивался к разговорам за столами (Слух {0}%: бросок {1}) — ничего не разобрал.':
+        'Listened in on the tables (Listen {0}%: roll {1}) — made out nothing.',
+    'За столами нынче тихо — говорили не о чем: молва на сегодня иссякла.':
+        'The tables are quiet today — nothing was being said: the talk has run dry.',
+    'Подслушал молву за столами постоялого двора (Слух {0}%: бросок {1} — успех).':
+        'Overheard talk by the inn tables (Listen {0}%: roll {1} — success).',
+    '(Слух {0}%: бросок {1} — успех.)': '(Listen {0}%: roll {1} — success.)',
+    // — помощь леса —
+    '🍄 Сбор — проверка Выживания: провал — пусто, успех — горсть в узел, крит — вдвое. Ягоды едят сразу («Съесть» в Персонаже), сырые грибы ТОЛЬКО на костре — жареные; зверобой — трава: лечит через Знахарство.\n':
+        '🍄 Gathering is a Survival check: fail — nothing, success — a handful to the sack, critical — double. Berries are eaten right away ("Eat" in Character), raw mushrooms ONLY on a fire — fried; St. John\'s wort is a herb: it heals through Herbalism.\n',
+    '🏹 Дичь (зайцы, глухари, в чаще — косули): с экипированным луком подходи на выстрел и жми E; тушу обдирают Выживанием — мясо и шкура.\n':
+        '🏹 Game (hares, capercaillies, roe deer in the thickets): with a bow equipped, come close and press E; carcasses are butchered with Survival — meat and hide.\n',
+    '🔥 У старого кострища (северо-запад) можно пересидеть час и готовить сырую рыбу/мясо/грибы (проверка Готовки; провал — продукты пропали).\n':
+        '🔥 At the old campfire (north-west) you may sit out an hour and cook raw fish/meat/mushrooms (a Cooking check; on a failure the food is lost).\n',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----

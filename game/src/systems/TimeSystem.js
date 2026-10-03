@@ -10,6 +10,9 @@ import { tickQuestTime } from '../data/questGenerator.js';
 // Раунд 66.23: небо по солнцу — оверлей дня/ночи и тьма окон считаются
 // от сезонных рассвета/заката (AccessHours.sunTimes по дате).
 import { sunTimes } from './AccessHours.js';
+// Раунд 66.70 (приказы 1–2): ролловер суток проверяет НОРМУ ЕДЫ (2 трапезы);
+// недоел — голодный штраф (−1 HP за пропуск, HP не ниже 1).
+import { hungerRolloverCheck } from './hunger.js';
 
 // Месяцы церковного календаря Руси XV века (сентябрьский стиль)
 export const MONTHS = [
@@ -230,6 +233,10 @@ export function tickTime(registry, minutes = 15) {
     if (novoletie) {
         registry.set('novoletie', novoletie);
     }
+    // Раунд 66.70 (приказы 1–2): смена суток — проверка НОРМЫ ЕДЫ (2 трапезы).
+    // Недоедено → голодный штраф (−1 HP за пропуск, максимум −2, HP ≥ 1),
+    // летопись и флаг 'hungerPenaltyPending' для поп-апа сцены.
+    hungerRolloverCheck(registry);
     // Мировой тик погони (вор двигается на каждый полный тик)
     const chaseHook = registry.get && registry.get('chaseTickHook');
     if (typeof chaseHook === 'function') {

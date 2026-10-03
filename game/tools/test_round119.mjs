@@ -35,6 +35,7 @@ const meal = read('game/src/systems/meal.js');
 const interiors = read('game/src/data/interiors.js');
 const i18n = read('game/src/systems/i18n.js');
 const charScene = read('game/src/scenes/CharacterScene.js');
+const loot = read('game/src/systems/loot.js');
 const selScene = read('game/src/scenes/CharacterSelectionScene.js');
 const interiorScene = read('game/src/scenes/InteriorScene.js');
 const villageScene = read('game/src/scenes/VillageScene.js');
@@ -129,8 +130,11 @@ ok(/export function canUseHerb/.test(meal) && /export function registerHerb/.tes
    /export function showHerbBlockedPopup/.test(meal), 'meal.js: canUseHerb/registerHerb/поп-ап');
 ok(/showHerbCard\(item\)/.test(charScene) && /canUseHerb\(this\.registry\)/.test(charScene),
     'CharacterScene: карточка травы с кулдауном');
-ok(/Math\.min\(HERB_HEAL_HP, \(p\.HPmax \|\| 10\) - \(p\.HP \|\| 0\)\)/.test(charScene),
-    'CharacterScene: лечение РОВНО +1 (клэмп по нехватке)');
+// 66.72 (приказ 13): применение травы — через Знахарство (applyHerb в loot.js);
+// лечение РОВНО +1 сохранено (LOOT_DEFS.herb.heal = 1, клэмп внутри applyHerb)
+ok(/applyHerb\(this\.registry, p, 'herb', \{ skill: med \}\)/.test(charScene) &&
+   /medicinal: true, heal: 1,/.test(loot),
+    'CharacterScene+loot: трава — Знахарство, лечение РОВНО +1 (66.72, канон приказа 5)');
 ok(/Ты принял траву и восстановил \{0\} здоровья\./.test(i18n), 'i18n: сообщение о приёме травы');
 
 console.log('--- 6. Отказ от задания — приказ 6: точно −1..−3 ---');

@@ -53,6 +53,8 @@ import { HOUSES_FX } from '../data/housesFX.js';
 // часы церкви и стук в запертую дверь
 import { isNightHour, isChurchOpen, churchClosedReason } from '../systems/AccessHours.js';
 import { knockAtDoor as knockAtDoorLogic, doorResponder, responderName } from '../systems/NightKnock.js';
+// Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
+import { hungerStatusLine } from '../systems/hunger.js';
 // Раунд 66.21 (приказ 2): выбор «📜 Есть ли дело?» в улице — единая точка выдачи
 import { makeQuestOffer, acceptQuest, canOfferQuestToday, hasActiveQuestFrom } from '../data/questGenerator.js';
 
@@ -1572,6 +1574,8 @@ export class VillageScene extends Phaser.Scene {
         }
         // Раунд 46 (п.9 заявки): репутация игрока в деревне — в статус-баре
         // деревни, с явной подписью (раньше была только безымянная звезда ⭐).
+        // Раунд 66.70 (приказы 1–2): счётчик трапез за сутки (норма 2, полдень и вечер).
+        statusLine += `  ${hungerStatusLine(this.registry)}`;
         statusLine += `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}`;
 
         // ФИКС аудита UI (этот раунд): длинная строка статуса наезжала на кнопки

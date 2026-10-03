@@ -25,6 +25,9 @@
 
 import { t } from './i18n.js';
 import { createDialog } from '../utils/ui.js';
+// Раунд 66.70 (приказы 1–2): еда считается в СИСТЕМЕ ГОЛОДА
+// (норма — не менее 2 трапез за сутки, полдень и вечер).
+import { noteHungerMeal } from './hunger.js';
 
 /** Сколько лечит ПРОСТАЯ еда (очков Здоровья) — яблоко, мёд, грибы, рацион. */
 export const MEAL_HEAL_HP = 1;
@@ -80,10 +83,14 @@ export function canEat(registry) {
     return { ok: minutesLeft <= 0, minutesLeft };
 }
 
-/** Отметить приём еды (ставит точку отсчёта кулдауна 4 часа). */
+/**
+ * Отметить приём еды (ставит точку отсчёта кулдауна 4 часа).
+ * Раунд 66.70: тот же вызов кормит и систему голода (норма 2/сутки).
+ */
 export function registerMeal(registry) {
     if (!registry) return;
     registry.set('mealState', { lastAbsMin: worldAbsMinutes(registry) });
+    noteHungerMeal(registry); // раунд 66.70: счётчик сытости +1 за день
 }
 
 /**

@@ -21,8 +21,11 @@ import { ActionLog } from '../data/actionLog.js';
 import { dayKeyOf } from '../data/daily.js'; // раунд 66.10: daily вместо удалённого chests.js
 // Раунд 66.16 (приказы 1–3): лесные грибы/ягоды — еда (+1 HP, час, кулдаун 4 ч)
 // Раунд 66.17 (приказы 8,10,11): готовка на костре, стрельба по дичи, мясо с туши
-import { MEAL_DURATION_MIN, canEat, registerMeal, showMealBlockedPopup } from '../systems/meal.js';
-import { addItem, removeItem, countOf, shotChance, getLootDef } from '../systems/loot.js';
+// Раунд 66.70: еда по правилам meal.js теперь только в инвентаре («Съесть»);
+// сбор/готовка/обдир — проверяемые навыки (Выживание/Готовка) — см. loot.js
+import { survivalGather, survivalButcher, cookAtFire, getLootDef, countOf, shotChance, addItem, removeItem } from '../systems/loot.js';
+// Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
+import { hungerStatusLine } from '../systems/hunger.js';
 // Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
 import { getQuiver, spendArrow } from '../systems/ammo.js';
 import { createDialog } from '../utils/ui.js';
@@ -154,9 +157,9 @@ export class ForestScene extends Phaser.Scene {
             tk('forest.help.body',
                 'Управление: WASD/стрелки — движение, E/пробел — действие, ESC — меню.\n\n' +
                 '🐺 Волки рыщут у логовищ: заметят — погонят. В бою можно драться или сбежать.\n' +
-                '🍄 Грибы, ягоды и зверобой восстанавливают здоровье (раз в игровой день).\n' +
-                '🏹 Дичь (зайцы, глухари, в чаще — косули): с экипированным луком подходи на выстрел и жми E; тушу можно обобрать.\n' +
-                '🔥 У старого кострища (северо-запад) можно пересидеть час и приготовить сырую рыбу/мясо.\n' +
+                '🍄 Сбор — проверка Выживания: провал — пусто, успех — горсть в узел, крит — вдвое. Ягоды едят сразу («Съесть» в Персонаже), сырые грибы ТОЛЬКО на костре — жареные; зверобой — трава: лечит через Знахарство.\n' +
+                '🏹 Дичь (зайцы, глухари, в чаще — косули): с экипированным луком подходи на выстрел и жми E; тушу обдирают Выживанием — мясо и шкура.\n' +
+                '🔥 У старого кострища (северо-запад) можно пересидеть час и готовить сырую рыбу/мясо/грибы (проверка Готовки; провал — продукты пропали).\n' +
                 '◀ Выход к околице — на юге у кромки леса.'),
             [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
             { singletonKey: 'forest-help' });
@@ -589,26 +592,34 @@ export class ForestScene extends Phaser.Scene {
     }
 
     /**
-     * РАУНД 66.17 (п.11): ОБОБРАТЬ ТУШУ — случайно количество мяса
-     * по размеру зверя (meat: [мин, макс]), мясо сырое: есть нельзя,
-     * только приготовить на костре или продать (п.7).
+     * РАУНД 66.17 (п.11): ОБОБРАТЬ ТУШУ — мясо по размеру зверя.
+     * РАУНД 66.70 (приказ 8): обдир — ПРОВЕРКА «ВЫЖИВАНИЯ»:
+     * успех — мясо + шкура (у зверей; глухарь — без шкуры);
+     * неудача — неловкий обдир (половина мяса, шкура испорчена);
+     * крит — мясо ×2 и шкура. Мясо сырое: готовить на костре или продать.
      */
     lootAnimalCorpse(animal) {
         if (this.busyDialog || !animal || !animal.dead) return;
         const player = this.player;
         if (!player) return;
-        const [minM, maxM] = animal.cfg.meat;
-        const n = Phaser.Math.Between(minM, maxM);
-        addItem(player, 'meat_raw', n);
-        this.registry.set('player', player);
+        const hasSkin = animal.cfg.id !== 'bird'; // у глухаря шкуры нет
+        const res = survivalButcher(this.registry, player, animal.cfg.meat, hasSkin);
         tickTime(this.registry, 10);
         const spr = animal.sprite;
         this.animals = this.animals.filter(x => x !== animal);
         this.corpses = this.corpses.filter(x => x !== animal);
         if (spr) spr.destroy();
         if (this.audioManager) this.audioManager.playHeal();
-        this.showFloatingText(this.playerObj.x, this.playerObj.y - 30, `+${n} 🥩`, '#e8b08a');
-        ActionLog.add(this.registry, tf(t('Обобрал тушу {0}: +{1} сырое мясо (приготовить на костре или продать).'), t(animal.cfg.name), n));
+        let msg = tf(t('Обобрал тушу {0}: +{1} сырое мясо (приготовить на костре или продать).'), t(animal.cfg.name), res.meat);
+        let float = `+${res.meat} 🥩`;
+        if (res.skin > 0) {
+            msg = tf(t('Освежевал {0}: +{1} сырое мясо и шкура (Выживание {2}%: бросок {3}).'), t(animal.cfg.name), res.meat, res.skill, res.roll);
+            float += ' +1 🟫';
+        } else if (res.meat > 0 && animal.cfg.id !== 'bird') {
+            msg = tf(t('Неловко ободрал тушу {0} (Выживание {1}%: бросок {2}) — лишь +{3} мясо, шкура порвана.'), t(animal.cfg.name), res.skill, res.roll, res.meat);
+        }
+        this.showFloatingText(this.playerObj.x, this.playerObj.y - 30, float, '#e8b08a');
+        ActionLog.add(this.registry, msg);
         this.updateHUD();
     }
 
@@ -1018,6 +1029,8 @@ export class ForestScene extends Phaser.Scene {
         // печёная рыба +2 HP, жаркое +3 HP (есть из инвентаря — «Съесть»).
         const fishRaw = countOf(player, 'fish_raw');
         const meatRaw = countOf(player, 'meat_raw');
+        // Раунд 66.70 (приказ 3): сырые грибы тоже ГОТОВЯТ на костре (жареные)
+        const mushRaw = countOf(player, 'mushroom_raw');
         const cookOpts = [];
         if (fishRaw > 0) {
             cookOpts.push({ text: tf(t('🔥 Приготовить рыбу ({0} мин)'), 30), callback: () => { close(); this.cookAtCampfire('fish_raw'); } });
@@ -1025,8 +1038,11 @@ export class ForestScene extends Phaser.Scene {
         if (meatRaw > 0) {
             cookOpts.push({ text: tf(t('🔥 Жарить мясо дичи ({0} мин)'), 30), callback: () => { close(); this.cookAtCampfire('meat_raw'); } });
         }
+        if (mushRaw > 0) {
+            cookOpts.push({ text: tf(t('🔥 Жарить грибы ({0} мин)'), 30), callback: () => { close(); this.cookAtCampfire('mushroom_raw'); } });
+        }
         createDialog(this, t('🔥 Костёр в лесу'),
-            t('Тёплый огонь разгоняет лесную мглу. У костра можно пересидеть час — раны он не лечит, только время идёт мимо. На огне можно приготовить сырую рыбу или мясо дичи.\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)'),
+            t('Тёплый огонь разгоняет лесную мглу. У костра можно пересидеть час — раны он не лечит, только время идёт мимо. На огне можно приготовить сырую рыбу, мясо дичи или грибы (Готовка; при неудаче продукты пропадают).\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)'),
             [
                 { text: t('Присесть у огня (1 час)'), callback: () => {
                     close();
@@ -1047,27 +1063,44 @@ export class ForestScene extends Phaser.Scene {
     }
 
     /**
-     * РАУНД 66.17 (п.8): готовка на костре — 1 сырая штука → 1 приготовленная
-     * за 30 минут (печёная рыба +2 HP, жаркое +3 HP — есть из инвентаря).
+     * РАУНД 66.70 (приказ 9): готовка на костре — ПРОВЕРКА «ГОТОВКИ»:
+     * провал — ПРОДУКТЫ ПРОПАЛИ; крит — блюдо сытнее на +1.
+     * Правила еды (meal.js) — при «Съесть» из узла.
      */
     cookAtCampfire(rawId) {
         const player = this.player || this.registry.get('player');
         if (!player || countOf(player, rawId) <= 0) return;
         const def = getLootDef(rawId);
         if (!def || !def.cookTo) return;
-        removeItem(player, rawId, 1);
-        addItem(player, def.cookTo, 1);
-        this.registry.set('player', player);
-        tickTime(this.registry, def.cookMinutes || 30);
-        const cooked = getLootDef(def.cookTo);
+        const res = cookAtFire(this.registry, player, rawId, { skill: player.skills.cooking });
+        const cooked = getLootDef(res.producedId || def.cookTo);
+        if (res.lost) {
+            this.showFloatingText(this.playerObj.x, this.playerObj.y - 40, t('Продукты пропали!'), '#e88a8a');
+            ActionLog.add(this.registry, tf(t('Прогоревал у костра: {0} сгорели (Готовка {1}%: бросок {2}).'), t(def.name).toLowerCase(), res.skill, res.roll));
+            this.updateHUD();
+            return;
+        }
         if (this.audioManager) this.audioManager.playHeal();
-        this.showFloatingText(this.playerObj.x, this.playerObj.y - 40, `${cooked.emoji} ${t(cooked.name)}`, '#ffd9a0');
-        ActionLog.add(this.registry, tf(t('Приготовил на костре: {0} → {1} (30 мин).'), t(def.name), t(cooked.name)));
+        const suffix = res.crit ? ' (+1)' : '';
+        this.showFloatingText(this.playerObj.x, this.playerObj.y - 40, `${cooked.emoji} ${t(cooked.name)}${suffix}`, '#ffd9a0');
+        ActionLog.add(this.registry, res.crit
+            ? tf(t('Пир у костра! {0} → {1} сытнее на +1 (Готовка {2}%: бросок {3} — крит).'), t(def.name), t(cooked.name), res.skill, res.roll)
+            : tf(t('Приготовил на костре: {0} → {1} (Готовка {2}%: бросок {3}).'), t(def.name), t(cooked.name), res.skill, res.roll));
         this.updateHUD();
     }
 
     // ================= МЕХАНИКИ =================
 
+    /**
+     * РАУНД 66.70 (приказы 3, 8, 10): СБОР В ЛЕСУ — ПРОВЕРКА «ВЫЖИВАНИЯ».
+     *  • добыча НЕ съедается на месте: ягоды/сырые грибы/зверобой идут В УЗЕЛ;
+     *  • ягоды затем едят из узла («Съесть» — простая еда +1 HP, meal.js);
+     *  • сырые грибы есть НЕЛЬЗЯ — только костёр (жареные грибы) или продажа;
+     *  • лестница приказа 10: провал — НИЧЕГО; успех — горсть (2); крит — ×2;
+     *  • при провале точка НЕ истощается (куст/грибница на месте — можно
+     *    поискать получше, каждая попытка — время);
+     *  • при успехе точка истощается до конца игрового дня (как раньше).
+     */
     gatherResource(entry) {
         const q = this.registry.get('quest') || {};
         const timeState = getTime(this.registry);
@@ -1079,38 +1112,36 @@ export class ForestScene extends Phaser.Scene {
             return;
         }
 
-        // Раунд 66.16 (приказы 1–3): грибы и ягоды — ЕДА («съедено на месте»):
-        // ровно +1 HP, час времени и общий кулдаун еды 4 часа. Сытый герой
-        // не ест — поп-ап предупреждение, сбор не происходит (вернуться позже).
-        // Зверобой — лекарственная трава, не еда (без кулдауна).
-        const isFood = entry.kind === 'mushroom' || entry.kind === 'berry';
-        if (isFood && !canEat(this.registry).ok) {
-            showMealBlockedPopup(this);
+        // ПРОВЕРКА ВЫЖИВАНИЯ (приказы 8, 10; бонус молитвы списывается внутри)
+        const res = survivalGather(this.registry, this.player, entry.kind);
+
+        if (res.gathered <= 0) {
+            // НЕУДАЧА — ничего не собрал: точка не истощена, время потрачено.
+            tickTime(this.registry, 15);
+            this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, t('Ничего не собрал'), '#b8a88a');
+            ActionLog.add(this.registry, tf(t('Обыскал {0} (Выживание {1}%: бросок {2}) — ничего не нашёл.'), t(entry.label).toLowerCase(), res.skill, res.roll));
+            this.updateHUD();
             return;
         }
 
+        // Успех/крит: точка истощается до конца дня.
         gathered[entry.id] = today;
         q.forestGathered = gathered;
         this.registry.set('quest', q);
 
-        // Съедено на месте: лечение (для еды — ровно +1 HP, приказ 2)
-        const p = this.player;
-        const heal = Math.min(entry.hp, p.HPmax - p.HP);
-        p.HP += heal;
-        if (isFood) registerMeal(this.registry); // приказ 3: кулдаун 4 часа
-        this.registry.set('player', p);
+        const def = getLootDef(res.itemId);
+        const minutes = entry.kind === 'herb' ? 8 : 30;
+        tickTime(this.registry, minutes);
 
         if (entry.img) entry.img.setVisible(false);
         if (entry.marker) { entry.marker.destroy(); entry.marker = null; }
 
         if (this.audioManager) this.audioManager.playHeal();
-        this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, entry.floatText, '#8adf8a');
-        if (heal > 0) {
-            this.showFloatingText(this.playerObj.x, this.playerObj.y - 26, `+${heal} ❤`, '#8adf8a');
+        this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, `+${res.gathered} ${def.emoji}`, '#8adf8a');
+        if (res.crit) {
+            this.showFloatingText(this.playerObj.x, this.playerObj.y - 26, t('Щедрая находка! (×2)'), '#ffd9a0');
         }
-        ActionLog.add(this.registry, entry.actionLog);
-        // Приказ 1: перекус в лесу занимает 1 час; сбор трав — по-прежнему 8 минут
-        tickTime(this.registry, isFood ? MEAL_DURATION_MIN : 8);
+        ActionLog.add(this.registry, tf(t('Собрал {0}: +{1} в узел (Выживание {2}%: бросок {3}).'), t(def.name).toLowerCase(), res.gathered, res.skill, res.roll));
         this.updateHUD();
     }
 
@@ -1153,6 +1184,8 @@ export class ForestScene extends Phaser.Scene {
 
         let statusLine = `❤${p.HP}/${p.HPmax}  💰${moneyStr}`;  // 66.71: МР удалён (приказ 7)
         if (timeState) statusLine += `  📅${formatDateTime(timeState)}`;
+        // Раунд 66.70 (приказы 1–2): норма еды — 2 трапезы в сутки
+        statusLine += `  ${hungerStatusLine(this.registry)}`;
         statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
         this.statusText.setText(statusLine);
 

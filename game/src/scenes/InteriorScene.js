@@ -54,6 +54,14 @@ import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal, canSleep, registerSleep, showMealBlockedPopup, showSleepBlockedPopup, restHealPct, SLEEP_MIN_MIN, canUseHerb, registerHerb, showHerbBlockedPopup, HERB_HEAL_HP } from '../systems/meal.js';
 // Раунд 66.17 (п.5): ПРОДАЖА ДОБЫЧИ — трактирщик берёт рыбу/дичь на кухню
 import { sellableLoot, removeItem } from '../systems/loot.js';
+// Раунд 66.70 (приказ 11): МОЛИТВА — откат 8 часов, «Молитва не услышана!»,
+// благословение +5 к одной проверке навыка (списывается первой проверкой)
+import { canPray, registerPrayer, consumePrayerBless } from '../systems/prayer.js';
+// Раунд 66.70 (приказ 14): «Подслушать молву» — проверка «Слуха» за столами
+import { skillCheck } from '../systems/BRPEngine.js';
+import { overheardRumorLine } from '../data/rumors.js';
+// Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
+import { hungerStatusLine } from '../systems/hunger.js';
 // Раунд 66.17 (п.6): ставка подёнки — +1 к славе за отработанный день
 import { dayKeyOf } from '../data/daily.js';
 
@@ -497,7 +505,9 @@ export class InteriorScene extends Phaser.Scene {
 
         // Дата и время сверху (п.13) — плотная подложка: читается и на живописном фоне
         if (timeState) {
-            this.add.text(width / 2, 55, `📅 ${formatDateTime(timeState)}`, {
+            // Раунд 66.70 (приказы 1–2): рядом с датой — норма трапез (2/сутки);
+            // ссылка сохраняется — счётчик обновляется в updateHUD
+            this.dateHungerLine = this.add.text(width / 2, 55, `📅 ${formatDateTime(timeState)}  ·  ${hungerStatusLine(this.registry)}`, {
                 fontSize: '11px', color: '#8ab4f8',
                 fontFamily: 'Georgia, serif',
                 stroke: '#000', strokeThickness: 2,
@@ -548,8 +558,10 @@ export class InteriorScene extends Phaser.Scene {
                 buttons.push({ label: t('\u{1F6D2} Купить еды'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showTavernShop() });
                 // Раунд 66.17 (п.5): ПРОДАЖА ДОБЫЧИ — Фёдор берёт рыбу и дичь на кухню
                 buttons.push({ label: t('\u{1F4B0} Продать добычу'), bg: 0x5a4a2a, hover: 0x6a5a3a, cb: () => this.showSellLootMenu(interior) });
-                // Раунд 22 (п.10/12): отдых в таверне — 1 час (частичное лечение)
-                // или 8 часов (полное восстановление)
+                // Раунд 66.70 (приказ 14): «Слух» получил игровое применение —
+                // подслушать молву за столами постоялого двора (исторично: двор —
+                // средоточие вестей на Руси XV века)
+                buttons.push({ label: t('\u{1F442} Подслушать (Слух)'), bg: 0x4a4a2a, hover: 0x5a5a3a, cb: () => this.eavesdropTavern(interior) });
                 buttons.push({ label: t('\u{1F6CF} Отдых'), bg: 0x4a3a5a, hover: 0x5a4a6a, cb: () => this.showTavernRestMenu(interior) });
                 // Раунд 40 (заявка): «⏳ Провести время» — перемотка 1–24 ч /
                 // до утра / до полудня / до вечера, чтобы не мотаться
@@ -2236,9 +2248,60 @@ export class InteriorScene extends Phaser.Scene {
     }
 
     /**
-     * Молитва в церкви — раунд 66.71 (приказ 7): МР (Воля) удалён из игры,
-     * молитва даёт душевный покой (без изменения параметров), один раз в игровой день.
-     * Забирает 15 минут времени.
+     * Раунд 66.72 (приказ 14): ПОДСЛУШАТЬ МОЛВУ за столами постоялого двора —
+     * игровое применение навыка «Слух» (исторично для Руси XV века: двор —
+     * средоточие вестей, у стол переселись обозные/ямщики/торговцы).
+     * Проверка «Слуха» (+5 при благословении молитвы, списывается):
+     *  • успех — молва из ленты слухов (не расходует лимит слуха дня Фёдора,
+     *    но та же весть не повторится и у корчмаря);
+     *  • провал — за гулом голосов ничего не разобрать;
+     *  • попытка — 15 минут времени.
+     */
+    eavesdropTavern() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        this.busyDialog = true;
+        const close = () => { this.busyDialog = false; };
+        tickTime(this.registry, 15);
+
+        const listen = (player.skills && player.skills.listen) || 10;
+        const bless = consumePrayerBless(this.registry);
+        const eff = Math.min(99, listen + bless);
+        const res = skillCheck(eff);
+
+        if (res.result === 'fail' || res.result === 'fumble') {
+            ActionLog.add(this.registry, tf(t('Прислушивался к разговорам за столами (Слух {0}%: бросок {1}) — ничего не разобрал.'), eff, res.roll));
+            createDialog(this, t('👂 За столами'),
+                tf(t('Гул голосов, смех, спор подгулявших ямщиков… Слух {0}%: бросок {1} — за шумом ничего путного не разобрать.'), eff, res.roll),
+                [{ text: t('Отойти'), callback: close }], { singleton: false });
+            this.updateHUD();
+            return;
+        }
+
+        const line = overheardRumorLine(this.registry);
+        if (!line) {
+            createDialog(this, t('👂 За столами'),
+                t('За столами нынче тихо — говорили не о чем: молва на сегодня иссякла.'),
+                [{ text: t('Отойти'), callback: close }], { singleton: false });
+            this.updateHUD();
+            return;
+        }
+        ActionLog.add(this.registry, tf(t('Подслушал молву за столами постоялого двора (Слух {0}%: бросок {1} — успех).'), eff, res.roll));
+        createDialog(this, t('👂 Подслушал молву'),
+            line + tf(t('\n\n(Слух {0}%: бросок {1} — успех.)'), eff, res.roll),
+            [{ text: t('Запомнить'), callback: close }], { singleton: false });
+        this.updateHUD();
+    }
+
+    /**
+     * Молитва в церкви — БЛАГОСЛОВЕНИЕ (+5 к одной проверке навыка).
+     * Раунд 66.72 (приказ 11): откат Молитвы — 8 ИГРОВЫХ ЧАСОВ (было — раз в
+     * игровой день); при НЕИСТЕКШЕМ откате — поп-ап «Молитва не услышана!»;
+     * благословение усиливает ЛЮБОЙ один навык при следующей проверке
+     * (сбор Выживанием, готовка, Знахарство, Слух…) и списывается первой же
+     * проверкой. Раунд 66.71: МР (Воля) удалён из игры — молитва не трогает
+     * параметры. Забирает 15 минут времени.
      */
     prayInChurch() {
         if (this.busyDialog) return;
@@ -2246,23 +2309,22 @@ export class InteriorScene extends Phaser.Scene {
         if (!player) return;
         tickTime(this.registry, 15);
 
-        const q = this.registry.get('quest') || {};
-        const today = this.dayKey();
-        if (q.prayerDay === today) {
-            ActionLog.add(this.registry, t('Помолился в церкви (уже молился сегодня).'));
-            createDialog(this, t('Молитва'), t('Ты снова стоишь перед киотом. Сердце уже нашло покой сегодня — больше не нужно.'), [
-                { text: t('Аминь.'), callback: () => {} },
-            ]);
+        // Приказ 11: откат 8 часов. Ещё не истёк — «Молитва не услышана!»
+        const cd = canPray(this.registry);
+        if (!cd.ok) {
+            ActionLog.add(this.registry, t('Молитва не услышана! (откат Молитвы ещё не истёк)'));
+            createDialog(this, t('Молитва'),
+                tf(t('Молитва не услышана! Сердце ещё не отошло от прошлой молитвы — небо молчит. Вернись позже (откат: ещё около {0} ч).'), Math.max(1, Math.round(cd.minutesLeft / 60))),
+                [{ text: t('Поклониться и уйти.'), callback: () => {} }]);
             return;
         }
-        q.prayerDay = today;
-        this.registry.set('quest', q);
 
         this.audioManager.playPrayerChant(); // раунд 24: тихая молитва
-        ActionLog.add(this.registry, t('Помолился в церкви — на душе стало спокойно.'));
+        registerPrayer(this.registry); // точка отката 8 ч + благословение
+        ActionLog.add(this.registry, t('Помолился в церкви — благословение: следующий навык крепче на +5.'));
 
         createDialog(this, t('Молитва'),
-            t('Ты опускаешься на колени перед киотом. В полумраке церкви, под мерцание лампад, приходит покой.\n\nДуша успокоена.'),
+            t('Ты опускаешься на колени перед киотом. В полумраке церкви, под мерцание лампад, приходит покой.\n\nБлагословение: ЛЮБОЙ твой навык пройдёт ближайшую проверку на +5 крепче (сбор в лесу, готовка на костре, знахарское снадобье, слух за столами…).'),
             [{ text: t('Встать с колен.'), callback: () => {} }]);
     }
 
@@ -3171,6 +3233,11 @@ export class InteriorScene extends Phaser.Scene {
         const p = this.player;
         // Раунд 46 (п.8 заявки): из статус-бара удалён «✦ Воля» (MP)
         this.hud.setText(`❤ ${p.HP}/${p.HPmax}  💰 ${formatMoney(p.dengas || 0)}`);
+        // Раунд 66.70: счётчик трапез при дате — живой (обновляется с HUD)
+        if (this.dateHungerLine) {
+            const timeState = getTime(this.registry);
+            if (timeState) this.dateHungerLine.setText(`📅 ${formatDateTime(timeState)}  ·  ${hungerStatusLine(this.registry)}`);
+        }
         // Патч 66.46 (приказ 2): тёплый свет зари/заката живой
         if (this.sunLight) this.sunLight.update(getTime(this.registry));
     }

@@ -21,7 +21,7 @@ import { getTime, getDayNightOverlay, tickTime, getSeason } from '../systems/Tim
 // Раунд 66.16 (приказы 1–3): правила еды доступны на локациях
 // Раунд 66.17 (п.7): рыба больше НЕ съедается на месте — улов идёт в узел;
 // сырую рыбу нельзя есть (только готовить или продавать)
-import { addItem, countOf, fishingCatchCount, shotChance, getLootDef, removeItem } from '../systems/loot.js';
+import { addItem, countOf, fishingCatchCount, shotChance, getLootDef, removeItem, survivalButcher, cookAtFire } from '../systems/loot.js';
 // Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
 import { getQuiver, spendArrow } from '../systems/ammo.js';
 // Раунд 66.17 (п.9): дичь на Лесной поляне — зайцы и глухари
@@ -913,13 +913,15 @@ export class LocationScene extends Phaser.Scene {
                     const chance = shotChance(cfg.base, getBlessedSkill(this.registry, (player.skills && player.skills.bow) || 15));
                     const hit = Math.random() * 100 < chance;
                     if (hit) {
-                        const [minM, maxM] = cfg.meat;
-                        const n = Phaser.Math.Between(minM, maxM);
-                        addItem(player, 'meat_raw', n);
-                        this.registry.set('player', player);
-                        ActionLog.add(this.registry, tf(t('Подстрелил {0} на поляне из лука и обобрал тушу: +{1} сырое мясо (приготовить или продать).'), t(cfg.name), n));
+                        // Раунд 66.70 (приказ 8): обдир туши на поляне — проверка
+                        // ВЫЖИВАНИЯ (мясо + шкура у зверей; неудача — неловкий обдир).
+                        const res = survivalButcher(this.registry, player, cfg.meat, cfg.id !== 'bird');
+                        const lootLine = res.skin > 0
+                            ? tf(t('Стрела дошла — {0} повержен. Освежевал тушу (Выживание {1}%: бросок {2}): +{3} сырое мясо и шкура в узел.\nСырым не едят: приготовь на костре или продай.'), t(cfg.name), res.skill, res.roll, res.meat)
+                            : tf(t('Стрела дошла — {0} повержен. Обобрал тушу (Выживание {1}%: бросок {2}): +{3} сырое мясо в узел.\nСырым не едят: приготовь на костре или продай.'), t(cfg.name), res.skill, res.roll, res.meat);
+                        ActionLog.add(this.registry, tf(t('Подстрелил {0} на поляне из лука и ободрал тушу: +{1} сырое мясо{2} (приготовить или продать).'), t(cfg.name), res.meat, res.skin > 0 ? ' и шкура' : ''));
                         createDialog(this, t('🎯 Есть!'),
-                            tf(t('Стрела дошла — {0} повержен. Ты обобрал тушу: +{1} сырое мясо в узел.\nСырым не едят: приготовь на костре или продай.'), t(cfg.name), n),
+                            lootLine,
                             [{ text: t('Хорошо'), callback: close }], { singleton: false });
                         spr.destroy();
                     } else {
@@ -952,8 +954,11 @@ export class LocationScene extends Phaser.Scene {
         if (player && countOf(player, 'meat_raw') > 0) {
             cookOpts.push({ text: tf(t('🔥 Жарить мясо дичи ({0} мин)'), 30), callback: () => { close(); this.cookAtCampfire('meat_raw'); } });
         }
+        if (player && countOf(player, 'mushroom_raw') > 0) {
+            cookOpts.push({ text: tf(t('🔥 Жарить грибы ({0} мин)'), 30), callback: () => { close(); this.cookAtCampfire('mushroom_raw'); } });
+        }
         createDialog(this, t('🔥 Костёр пастухов'),
-            t('Пастухи сложили костёр у стада. У огня можно только пересидеть час — раны он не лечит, только время идёт мимо. На огне можно приготовить сырую рыбу или мясо дичи.\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)'),
+            t('Пастухи сложили костёр у стада. У огня можно только пересидеть час — раны он не лечит, только время идёт мимо. На огне можно приготовить сырую рыбу, мясо дичи или грибы (Готовка; при неудаче продукты пропадают).\n\nПересидеть час у костра? (1 час — время +1 час, без лечения.)'),
             [
                 { text: t('Присесть у огня (1 час)'), callback: () => {
                     close();
@@ -969,20 +974,29 @@ export class LocationScene extends Phaser.Scene {
             ]);
     }
 
-    /** Раунд 66.17 (п.8): готовка на пастушьем костре (30 минут, 1 штука). */
+    /** Раунд 66.70 (приказ 9): готовка на пастушьем костре — проверка «Готовки»:
+     *  провал — продукты пропали; крит — блюдо сытнее на +1. */
     cookAtCampfire(rawId) {
         const player = this.registry.get('player');
         if (!player || countOf(player, rawId) <= 0) return;
         const def = getLootDef(rawId);
         if (!def || !def.cookTo) return;
-        removeItem(player, rawId, 1);
-        addItem(player, def.cookTo, 1);
-        this.registry.set('player', player);
-        tickTime(this.registry, def.cookMinutes || 30);
-        const cooked = getLootDef(def.cookTo);
-        ActionLog.add(this.registry, tf(t('Приготовил на костре: {0} → {1} (30 мин).'), t(def.name), t(cooked.name)));
+        const res = cookAtFire(this.registry, player, rawId, { skill: player.skills.cooking });
+        const cooked = getLootDef(res.producedId || def.cookTo);
+        if (res.lost) {
+            ActionLog.add(this.registry, tf(t('Прогоревал у костра: {0} сгорели (Готовка {1}%: бросок {2}).'), t(def.name).toLowerCase(), res.skill, res.roll));
+            createDialog(this, t('🔥 Прогорел'),
+                tf(t('Что-то пошло не так: {0} подгорели насухо — продукты пропали (Готовка {1}%: бросок {2}).'), t(def.name).toLowerCase(), res.skill, res.roll),
+                [{ text: t('Эх…'), callback: () => { this.busyDialog = false; } }], { singleton: false });
+            this.updateHUD();
+            return;
+        }
+        const critLine = res.crit
+            ? tf(t(' Пир удался: блюдо сытнее на +1 (крит Готовки: бросок {0}).'), res.roll)
+            : '';
+        ActionLog.add(this.registry, tf(t('Приготовил на костре: {0} → {1} (Готовка {2}%: бросок {3}).'), t(def.name), t(cooked.name), res.skill, res.roll));
         createDialog(this, t('🔥 Готово'),
-            tf(t('На углях поспело: {0}. Теперь в узле — можно съесть (Персонаж → Инвентарь → «Съесть») или продать.'), t(cooked.name)),
+            tf(t('На углях поспело: {0}. Теперь в узле — можно съесть (Персонаж → Инвентарь → «Съесть») или продать.{1}'), t(cooked.name), critLine),
             [{ text: t('Хорошо'), callback: () => { this.busyDialog = false; } }], { singleton: false });
         this.updateHUD();
     }

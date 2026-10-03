@@ -185,3 +185,39 @@ export function tavernRumorLine(registry) {
         : '';
     return `${line}${omenNote}${suffix}`;
 }
+
+// ============================================================
+// Раунд 66.70 (приказ владельца 14): ПОДСЛУШАННАЯ МОЛВА (навык «Слух»).
+// Исторично для Руси XV века: постоялый двор — средоточие молвы, где
+// за столами переговариваются ямщики, обозные и заезжие торговцы;
+// «слушать у постоялых дворов, что молвят проезжие» — естественный
+// способ дознаться вестей. Слух выдаётся по ПРОВЕРКЕ «Слуха» (сцена),
+// берётся из ТОЙ ЖЕ ленты молвы (used-список общий: одна и та же весть
+// не повторится и у Фёдора), но НЕ расходует лимит слуха дня корчмаря.
+// Возвращает строку реплики или null (молва на сегодня иссякла).
+// ============================================================
+export function overheardRumorLine(registry) {
+    const time = getTime(registry);
+    const dayKey = time ? `${time.yearFromChrist}-${time.month}-${time.day}` : 'unknown';
+    const state = registry.get('rumorsDay') || null;
+    const used = state && state.day === dayKey ? state.used : [];
+
+    const fresh = collectRumors(registry).filter((r) => !used.includes(r.ru));
+    if (fresh.length === 0) return null;
+
+    const rumor = fresh[0];
+    used.push(rumor.ru);
+    registry.set('rumorsDay', { day: dayKey, used });
+
+    // Примета о погоде, услышанная из чужого разговора, тоже учитывается
+    let omenNote = '';
+    if (rumor.__weatherOmen) {
+        const res = recordWeatherRumor(registry);
+        if (res && res.fulfilled) {
+            omenNote = isEn()
+                ? '\n\n' + OMEN_FULFILLED_NOTE.en
+                : `\n\n${t(OMEN_FULFILLED_NOTE.ru)}`;
+        }
+    }
+    return (isEn() ? rumor.en : rumor.ru) + omenNote;
+}
