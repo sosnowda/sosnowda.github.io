@@ -93,6 +93,9 @@ export class CombatScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor(0x140d0a);
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
+        // ПАТЧ 66.76 (приказ 2): тетива самострала заведена к началу боя
+        // (сброс в create(): экземпляр сцены живёт всю игру — урок АГЕНТ.md)
+        this.__crossbowReload = false;
 
         // Боевая музыка
         this.audioManager.playSceneMusic('combat');
@@ -375,19 +378,38 @@ export class CombatScene extends Phaser.Scene {
         const equippedKey = equipped.id || 'fists';
         const isBow = equippedKey === 'bow';
         const isFists = equippedKey === 'fists';
-        const mainLabel = isBow
-            ? `🏹 ${t('Стрельба из лука')}`
-            : (isFists ? `🤜 ${t('Удар кулаком')}` : `⚔ ${t('Удар оружием')}`);
+        // ПАТЧ 66.76 (приказ 2): САМОСТРЕЛ — перезарядка через ход.
+        // После выстрела следующий ход уходит на «завести тетиву»;
+        // в этот ход УКЛОН недоступен (руки заняты воротом).
+        const isCrossbow = equippedKey === 'crossbow';
+        const reloadDue = isCrossbow && !!this.__crossbowReload;
+        const mainLabel = reloadDue
+            ? `⚙ ${t('Завести тетиву (ход)')}`
+            : (isCrossbow
+                ? `🎯 ${t('Самострел')}`
+                : (isBow
+                    ? `🏹 ${t('Стрельба из лука')}`
+                    : (isFists ? `🤜 ${t('Удар кулаком')}` : `⚔ ${t('Удар оружием')}`)));
+        // ПАТЧ 66.76: панель строится ОДИН раз (create) — главная кнопка
+        // сама решает по флагу в момент клика (перезарядка → crank),
+        // а подпись обновляет refreshMainActionLabel().
         const acts = [
-            { label: mainLabel, cb: () => this.playerAttack(equippedKey),
-              bg: RUS.accent, hover: RUS.accentLight },
+            { label: mainLabel, cb: () => {
+                const eqNow = (this.player.weapon || WEAPONS.fists).id || 'fists';
+                if (eqNow === 'crossbow' && this.__crossbowReload) this.crossbowCrank();
+                else this.playerAttack(eqNow);
+            }, bg: RUS.accent, hover: RUS.accentLight },
         ];
         if (!isFists) {
             acts.push({ label: `🤜 ${t('Удар кулаком')}`, cb: () => this.playerAttack('fists'),
               bg: 0x6a5a40, hover: 0x7a6a50 });
         }
+        // Уклон остаётся на панели всегда; в ход перезарядки его гейтит
+        // dodge() (руки заняты воротом — приказ 2 «уклонение недоступно»).
         acts.push(
             { label: t('Уклон'), cb: () => this.dodge(), bg: 0x4a6a4a, hover: 0x5a7a5a },
+        );
+        acts.push(
             // 66.44 (приказ 12): кнопки «Трава» и «Исследование» сняты с панели —
             // осталось: атака, уклон, смена оружия, побег.
             // Раунд 66.28 (п.4): смена оружия за ход — инвентарь прямо в бою
@@ -404,7 +426,8 @@ export class CombatScene extends Phaser.Scene {
             const rowCount = Math.min(perRow, acts.length - row * perRow);
             const x = width / 2 - (gap * (rowCount - 1)) / 2 + inRow * gap;
             const y = height - 50 - row * 52;
-            mk(x, y, a.label, a.cb, a.bg, a.hover);
+            const btn = mk(x, y, a.label, a.cb, a.bg, a.hover);
+            if (i === 0) this.__mainActionBtn = btn;   // 66.76: главная кнопка
         });
     }
 
@@ -748,7 +771,7 @@ export class CombatScene extends Phaser.Scene {
 
         // Раунд 66.28 (пп.7,8): СТРЕЛЬБА ИЗ ЛУКА требует стрелы В КОЛЧАНЕ.
         // Пустой колчан — поп-ап предупреждение, ход НЕ тратится (выстрела не было).
-        if (weaponKey === 'bow') {
+        if (weaponKey === 'bow' || weaponKey === 'crossbow') {
             if (!spendArrow(this.player)) {
                 this.registry.set('player', this.player);
                 this.pushLog(t('В колчане нет стрел — стрелять нечем!'));
@@ -777,13 +800,19 @@ export class CombatScene extends Phaser.Scene {
         spendFatigue(this.registry, 1);
         noteHungerActivity(this.registry, 3, 'combat');
 
-        if (weaponKey === 'bow') {
+        if (weaponKey === 'bow' || weaponKey === 'crossbow') {
             // Раунд 66.28 (п.2): стрельба — стрела летит от героя к врагу,
             // без выпада (дистанционная атака). Стрела потрачена выше.
+            // ПАТЧ 66.76 (приказ 2): после выстрела из САМОСТРЕЛА следующий
+            // ход уходит на «завести тетиву» (перезарядка через ход).
             if (this.audioManager) this.audioManager.playShoot();
             // 66.32: анимация стрельбы боевым обликом (у paul полосы нет —
             // выстрел без анимации тела, как у рыцаря раньше)
             this.playPlayerShoot();
+            if (weaponKey === 'crossbow') {
+                this.__crossbowReload = true;
+                this.refreshMainActionLabel();
+            }
             this.playBowShot(this.playerSprite, targetSprite,
                 () => this.resolvePlayerAttack(w, res, target, targetSprite));
             return;
@@ -957,7 +986,54 @@ export class CombatScene extends Phaser.Scene {
         }
     }
 
+    /**
+     * ПАТЧ 66.76 (приказ 2): ЗАВЕСТИ ТЕТИВУ — ход перезарядки самострела.
+     * Тратит ход (враг отвечает); уклон в этот ход недоступен, потому что
+     * руки заняты воротом. Флаг снимается — следующий ход можно стрелять.
+     */
+    /**
+     * ПАТЧ 66.76: подпись главной боевой кнопки по оружию/флагу перезарядки
+     * (панель строится один раз — подпись живёт и меняется на месте).
+     */
+    refreshMainActionLabel() {
+        const btn = this.__mainActionBtn;
+        if (!btn || !btn.list) return;
+        const txt = btn.list.find(c => c && c.setText && c.text);
+        if (!txt) return;
+        const eq = this.player.weapon || WEAPONS.fists;
+        const key = eq.id || 'fists';
+        let label;
+        if (key === 'crossbow' && this.__crossbowReload) label = `⚙ ${t('Завести тетиву (ход)')}`;
+        else if (key === 'crossbow') label = `🎯 ${t('Самострел')}`;
+        else if (key === 'bow') label = `🏹 ${t('Стрельба из лука')}`;
+        else if (key === 'fists') label = `🤜 ${t('Удар кулаком')}`;
+        else label = `⚔ ${t('Удар оружием')}`;
+        txt.setText(label);
+        this.updateGearStatus();
+    }
+
+    crossbowCrank() {
+        if (this.busy) return;
+        this.busy = true;
+        this.__crossbowReload = false;
+        this.pushLog(t('Ты с усилием завёл тетиву самострела. Потрачен ход!'));
+        ActionLog.add(this.registry, t('Завёл тетиву самострела (ход перезарядки).'));
+        this.refreshMainActionLabel();
+        this.time.delayedCall(500, () => this.enemyTurn());
+    }
+
     dodge() {
+        // ПАТЧ 66.76 (приказ 2): в ход перезарядки самострела уклонение
+        // НЕДОСТУПНО — руки заняты воротом. Ход не тратится (герой просто
+        // не может уклоняться, пока тетива не заведена).
+        {
+            const eqNow = (this.player.weapon || WEAPONS.fists).id || 'fists';
+            if (eqNow === 'crossbow' && this.__crossbowReload) {
+                this.pushLog(t('Руки заняты тетивой самострела — уклоняться некогда! Заведи тетиву.'));
+                return;
+            }
+        }
+
         this.playerDodging = true;
         this.pushLog(t('Ты занимаешь оборонительную стойку, готовясь уклониться.'));
         this.busy = true;

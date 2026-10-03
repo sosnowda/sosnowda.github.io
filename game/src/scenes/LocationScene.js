@@ -27,6 +27,10 @@ import { spendFatigue, restFatigueFull, exhaustedGuardPopup, fatigueStatusLine }
 import { hungerStatusLine } from '../systems/hunger.js';
 // Патч 66.74 (приказ 2): молитва +5 списывается проверкой Рыболовства
 import { consumePrayerBless } from '../systems/prayer.js';
+// Патч 66.76 (приказ 1): Мельничное дело — работа у мельника за деньги
+import { millDaywork } from '../systems/jobs.js';
+// Патч 66.76: слава подёнки (+1 деревенской репутации, раз/сутки)
+import { changeVillageRep } from '../data/reputation.js';
 // Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
 import { getQuiver, spendArrow } from '../systems/ammo.js';
 // Раунд 66.17 (п.9): дичь на Лесной поляне — зайцы и глухари
@@ -375,6 +379,20 @@ export class LocationScene extends Phaser.Scene {
                 this.goFishing();
             }, {
                 backgroundColor: 0x2a4a5a, hoverColor: 0x3a5a6a, textColor: RUS.text,
+                fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
+                cornerRadius: 8,
+            }).setScrollFactor(0).setDepth(50);
+        }
+
+        // ----- ПАТЧ 66.76 (приказ 1): МЕЛЬНИЦА — РАБОТА У МЕЛЬНИКА.
+        // Мельничное дело: 1 час, оплата ТОЛЬКО деньгами (зерно из наград
+        // исключено приказом владельца). Кнопка — как рыбалка на Реке. -----
+        if (this.locationId === 'mill') {
+            const millY = (chaseActive && !alreadySearched && !hasFootprints) ? height - 150 : height - 100;
+            createButton(this, width / 2, millY, t('⚙ Работать у мельника (1 час)'), () => {
+                this.workAtMill();
+            }, {
+                backgroundColor: 0x5a4a2a, hoverColor: 0x6a5a3a, textColor: RUS.text,
                 fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
                 cornerRadius: 8,
             }).setScrollFactor(0).setDepth(50);
@@ -3284,6 +3302,57 @@ export class LocationScene extends Phaser.Scene {
      * Выполнить поиск следов вора (раунд 21: следы/направление; бой теперь
      * начинается только при встрече с вором лично).
      */
+    /**
+     * ПАТЧ 66.76 (приказ 1): МЕЛЬНИЧНОЕ ДЕЛО — работа у ветряной мельницы.
+     * Проверка навыка «Мельничное дело» (благословение/голод/усталость внутри).
+     * ПРИКАЗ ВЛАДЕЛЬЦА: зерно из наград УДАЛЕНО — оплата ТОЛЬКО деньгами:
+     *  • провал — черновая работа (меха, мешки): 2–3 д.;
+     *  • успех — 4–7 д.;
+     *  • крит — «отхода меньше всех»: 8–12 д.
+     * 1 час, −3 здоровья, −2 ОУ; слава подёнки — общий раз/сутки.
+     */
+    workAtMill() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        if ((player.HP || 0) <= 5) {
+            createDialog(this, t('Силы кончились'), t('У жернова работа не для ослабевших: мешки тяжёлые, крылья крутят без устали. Поешь и отдохни.'), [
+                { text: t('Справедливо...'), callback: () => {} },
+            ]);
+            return;
+        }
+        this.busyDialog = true;
+        tickTime(this.registry, 60, 'work');
+        spendFatigue(this.registry, 2);
+        player.HP = Math.max(1, (player.HP || 1) - 3);
+        const jobRes = millDaywork(this.registry, (player.skills && player.skills.milling) || 10);
+        player.dengas = (player.dengas || 0) + jobRes.wage;
+        this.registry.set('player', player);
+        this.updateHUD();
+        const checkNote = jobRes.crit
+            ? tf(t('(Мельничное дело {0}%: бросок {1} — КРИТ!)'), jobRes.skill, jobRes.roll)
+            : tf(t('(Мельничное дело {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.ok ? t('успех') : t('черновая работа'));
+        ActionLog.add(this.registry, tf(t('Отработал час у мельника: +{0} д., усталость −3 HP.'), jobRes.wage));
+        let repMsgM = '';
+        const todayM = dayKeyOf(getTime(this.registry));
+        const qM = this.registry.get('quest') || {};
+        if (qM.dayworkRepDay !== todayM) {
+            qM.dayworkRepDay = todayM;
+            this.registry.set('quest', qM);
+            changeVillageRep(this.registry, 1, 'подённая работа');
+            repMsgM = '\n' + t('Слава о работнике идёт по деревне: +1 к доброй славе (ставка подёнки — раз в сутки).');
+        }
+        createDialog(this, jobRes.crit ? t('⚙ Жернова поют!') : t('Работа у мельника'),
+            (jobRes.crit
+                ? t('Мешки сыпались в жернова ровно, крылья ловили каждый ветер — и муки вышло больше всех. Мельник щурится: «Завтра приходи, такой работник мне надобен!»\n\n')
+                : jobRes.ok
+                    ? t('Час на мельнице: таскал мешки, чистил жернова, следил за крыльями. Мельник доволен, мука белая.\n\n')
+                    : t('Час на мельнице — а ты то мешок уронишь, то желоб перекосишь. Мельник машет рукой: «Ну и мучился ты, а не мука». Черновая работа — и плата черновая.\n\n'))
+            + tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), jobRes.wage)
+            + '\n' + checkNote + repMsgM,
+            [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }]);
+    }
+
     doSearch() {
         const result = searchLocation(this.registry, this.locationId);
         // Раунд 66.12 (приказ владельца №6): отсчёт до побега вора скрыт из UI

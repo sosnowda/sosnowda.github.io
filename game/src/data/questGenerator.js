@@ -678,6 +678,16 @@ function generateRewards(npcId, questType, scale, registry) {
         rewards.push({ type: 'item', id: 'sword', name: sword.name, count: 1, weapon: true, uniqueFromElder: true });
     }
 
+    // ПАТЧ 66.76 (приказ 2): САМОСТРЕЛ — редкое оружие-награда старосты
+    // (шанс ниже меча — 20%, повторный возможен, уникальным НЕ является).
+    // Кузнец самострелы не куёт и не продаёт (АГЕНТ-правило раунда 62).
+    if (npcId === 'elder' && difficulty === 'hard' && Math.random() < 0.2) {
+        const cb = WEAPONS.crossbow;
+        if (cb) {
+            rewards.push({ type: 'item', id: 'crossbow', name: cb.name, count: 1, weapon: true });
+        }
+    }
+
     return rewards;
 }
 

@@ -91,3 +91,54 @@ export function tavernPerformance(registry, skillValue, rng = Math.random) {
         coins, churchAngry: rng() < 0.2, roll: res.roll, skill,
     };
 }
+
+// ------------------------------------------------------------
+// ПАТЧ 66.76 (приказ 4): ПЛОТНИЦКОЕ ДЕЛО — подёнка у сруба
+// (дом плотника). Приказ: ставка 3–6 д.
+//  • провал — «запорол доску»: 2 д.;
+//  • успех — честная ставка: 3–6 д.;
+//  • крит — «зарубка ровна, шов плотён»: 7–10 д.
+// ------------------------------------------------------------
+export function carpenterDaywork(registry, skillValue, rng = Math.random) {
+    const { res, skill } = jobCheck(registry, skillValue);
+    const failed = res.result === 'fail' || res.result === 'fumble';
+    const crit = res.result === 'critical';
+    const wage = failed ? 2 : (crit ? die(7, 10, rng) : die(3, 6, rng));
+    return { ok: !failed, crit, wage, roll: res.roll, skill };
+}
+
+// ------------------------------------------------------------
+// ПАТЧ 66.76 (приказ 1): МЕЛЬНИЧНОЕ ДЕЛО — работа у ветряной мельницы.
+// ПРИКАЗ ВЛАДЕЛЬЦА: «удалить зерно из наград» — оплата ТОЛЬКО ДЕНЬГАМИ.
+//  • провал — «пересушил зерно, жернов искрил»: черновая работа 2–3 д.;
+//  • успех — намолол чинно: 4–7 д.;
+//  • крит — «отхода меньше всех»: 8–12 д.
+// ------------------------------------------------------------
+export function millDaywork(registry, skillValue, rng = Math.random) {
+    const { res, skill } = jobCheck(registry, skillValue);
+    const failed = res.result === 'fail' || res.result === 'fumble';
+    const crit = res.result === 'critical';
+    const wage = failed ? die(2, 3, rng) : (crit ? die(8, 12, rng) : die(4, 7, rng));
+    return { ok: !failed, crit, wage, grain: 0, roll: res.roll, skill };
+}
+
+// ------------------------------------------------------------
+// ПАТЧ 66.76 (приказ 3): ТКАЧЕСТВО — подёнка за станком (дом ткачихи).
+// Оплата НАТУРОЙ — полотном/сукном (товары Руси; полотно 8 д., сукно 12 д.
+// в скупке Фёдора/Потапа): «подёнка за полотно/сукно» — прямая формулировка
+// приказа. Мелочь сверху — на нити и лампаду.
+//  • провал — «порвал нить»: 2 д., без полотна;
+//  • успех — 1 отрез ПОЛОТНА в узел + 2 д. мелочью;
+//  • крит — «узор стянула ровно»: 1 отрез СУКНА в узел + 3 д.
+// ------------------------------------------------------------
+export function weaveDaywork(registry, skillValue, rng = Math.random) {
+    const { res, skill } = jobCheck(registry, skillValue);
+    const failed = res.result === 'fail' || res.result === 'fumble';
+    const crit = res.result === 'critical';
+    return {
+        ok: !failed, crit,
+        wage: failed ? 2 : (crit ? 3 : 2),
+        cloth: crit ? 'sukon' : (!failed ? 'polotno' : null),
+        roll: res.roll, skill,
+    };
+}

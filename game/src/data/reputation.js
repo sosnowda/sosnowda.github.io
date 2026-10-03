@@ -932,7 +932,7 @@ export function payViraToElder(registry, npcId) {
 //     доспех) — кузнец продаёт ТОЛЬКО совершеннолетним (18+) с доброй
 //     славой: деревенская репутация не ниже 0. Молодняку и людям дурной
 //     славы воинская снаряга не продаётся.
-export const MILITARY_GEAR_IDS = new Set(['sabre', 'steel_sword', 'chain', 'plate']);
+export const MILITARY_GEAR_IDS = new Set(['sabre', 'steel_sword', 'chain', 'plate', 'crossbow']);
 
 export function canBuyMilitaryGear(registry, player) {
     const age = player && player.age;

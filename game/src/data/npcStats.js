@@ -364,6 +364,9 @@ const SKILL_RU = {
     stealth: 'Скрадывание', fishing: 'Рыболовство', beekeeping: 'Бортничество',
     literacy: 'Грамота', track: 'Следопытство', commerce: 'Сметка',
     performance: 'Скоморошество', craft: 'Ремесло', smithing: 'Кузнечное дело', lockpicking: 'Взлом',
+    // Патч 66.76: самострел, мельница, ткачество, плотницкое
+    crossbow: 'Стрельба из самострела', milling: 'Мельничное дело',
+    weaving: 'Ткачество', carpentry: 'Плотницкое дело',
 };
 const RU_STAT_FULL = {
     STR: 'Сила', CON: 'Телосложение', POW: 'Мощь', DEX: 'Ловкость', CHA: 'Харизма',

@@ -70,7 +70,10 @@ import { restFatigueFull, fatigueStatusLine, spendFatigue } from '../systems/fat
 // Патч 66.73 (приказ 5): ТОРГ — продажа через меню торговли с торгом за цену
 import { attemptHaggle, haggleMultFor, canHaggleToday, haggleHintLine } from '../systems/trade.js';
 // Патч 66.74 (приказы 4, 5, 7, 12): РЕМЕСЛО/КУЗНЕЧНОЕ ДЕЛО/ГРАМОТА/СКОМОРОШЕСТВО
-import { craftDaywork, smithyDaywork, acolyteServe, tavernPerformance } from '../systems/jobs.js';
+import { craftDaywork, smithyDaywork, acolyteServe, tavernPerformance, carpenterDaywork, millDaywork, weaveDaywork } from '../systems/jobs.js';
+// Патч 66.76 (приказы 8–9): заказные товары кузнеца (сабля/кольчуга) —
+// цены и порог личной славы у кузнеца
+import { SABRE_SMITH_PRICE, CHAIN_SMITH_PRICE, SMITH_TRUST_REP, canBuySmithSpecial } from '../systems/shopRules.js';
 // Патч 66.74 (приказы 13–18): ВЗЛОМ И СУНДУКИ (жилые дома)
 import { hasChest, canPickChest, attemptChestPick, CHEST_HOUSES } from '../systems/burglary.js';
 // Патч 66.74 (приказ 5): служка — окно богослужения (SERVICES)
@@ -644,6 +647,19 @@ export class InteriorScene extends Phaser.Scene {
             // Раунд 39 (п.13): кнопка «Мой узел» УДАЛЕНА вместе со всеми тюками
             // Патч 66.74 (приказ 14): сундук гончара — только если дом ПУСТ
             if (this.houseEmpty) this.pushChestButton(interior, buttons);
+        } else if (interior.id === 'weaver_house') {
+            // Патч 66.76 (приказ 3): ТКАЧЕСТВО — подёнка за станком,
+            // оплата полотном/сукном (товары Руси, скупка Фёдора/Потапа)
+            buttons.push({ label: t('\u{1F9F6} Помочь за станком (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInWeaver() });
+            // Патч 66.76: сундук ткачихи — как у плотника (подёнка + сундук)
+            if (this.houseEmpty && hasChest(interior.id)) this.pushChestButton(interior, buttons);
+        } else if (interior.id === 'carpenter_house') {
+            // Патч 66.76 (приказ 4): ПЛОТНИЦКОЕ ДЕЛО — подёнка у сруба, 3–6 д.
+            buttons.push({ label: t('\u{1FA93} Помочь плотнику (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInCarpenter() });
+            // Патч 66.76: сундук плотника — общий путь для пустых жилых домов
+            // (else-ветка ниже по hasChest; в домах мастеров кнопка подёнки
+            // и сундук показываются вместе)
+            if (this.houseEmpty && hasChest(interior.id)) this.pushChestButton(interior, buttons);
         } else if (this.houseEmpty && hasChest(interior.id)) {
             // Патч 66.74 (приказы 13–16): в ПУСТОМ доме доступен сундук
             // (взлом замка двери — на улице, через поп-ап «Дом закрыт»)
@@ -2203,9 +2219,10 @@ export class InteriorScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setDepth(202);
 
-        // Переключатель вкладок. РАУНД 62 (п.7): вкладка «Доспехи» УДАЛЕНА —
-        // доспехи кузнец НЕ продаёт, а ВЫДАЁТ только за самые тяжёлые
-        // поручения (см. questGenerator.generateRewards).
+        // Переключатель вкладок. РАУНД 62 (п.7): вкладка «Доспехи» была
+        // удалена. ПАТЧ 66.76 (приказ 8) ВОЗВРАЩАЕТ её с ОДНИМ заказным
+        // товаром — КОЛЬЧУГОЙ (задорого и при высокой славе у кузнеца);
+        // кожаная броня и тегиляй продаются у Аверьяна (приказ 7).
         const mkTab = (x, label, key) => createButton(this, x, height / 2 - panelH / 2 + 100, t(label), () => {
             closeMenu();
             this.showBlacksmithShop(key);
@@ -2215,8 +2232,9 @@ export class InteriorScene extends Phaser.Scene {
             textColor: RUS.text, fontSize: 14,
             padding: { left: 14, right: 14, top: 6, bottom: 6 },
         }).setDepth(202);
-        mkTab(width / 2 - 75, 'Оружие', 'weapon');
-        mkTab(width / 2 + 75, 'Продать', 'sell');  // метки через t(label) в mkTab
+        mkTab(width / 2 - 150, 'Оружие', 'weapon');
+        mkTab(width / 2, 'Доспехи', 'armor');
+        mkTab(width / 2 + 150, 'Продать', 'sell');  // метки через t(label) в mkTab
 
         // Список товаров
         const startY = height / 2 - panelH / 2 + 150;
@@ -2267,22 +2285,26 @@ export class InteriorScene extends Phaser.Scene {
             });
         } else {
             // РАУНД 62 (п.7 приказа владельца) — ЧТО КУЗНЕЦ ПРОДАЁТ:
-            // только простое оружие своей работы (нож/дубина/копьё/топор/лук).
+            // простое оружие своей работы (нож/дубина/копьё/топор/лук).
             // Раунд 66.71 (приказ 14): дробящее пополнено — ПАЛИЦА, БУЛАВА,
             // КИСТЕНЬ (навык «Ударное оружие»); дубина теперь тоже дробящая.
-            // МЕЧ (а также сабля и стальной меч) НЕ ПРОДАЁТСЯ — меч есть
-            // УНИКАЛЬНАЯ НАГРАДА ОТ СТАРОСТЫ за самое тяжёлое дело.
-            // ДОСПЕХИ не продаются вовсе — выдаются за тяжёлые поручения.
-            // Старые сейвы, пришедшие с вкладкой 'armor', попадают в «Оружие».
-            if (tab === 'armor') tab = 'weapon';
+            // МЕЧ НЕ ПРОДАЁТСЯ — УНИКАЛЬНАЯ НАГРАДА ОТ СТАРОСТЫ.
+            // ПАТЧ 66.76 (приказы 8–9): в оружии — ЗАКАЗНАЯ САБЛЯ (100 д.),
+            // в «Доспехах» — ЗАКАЗНАЯ КОЛЬЧУГА (150 д.); обе только при
+            // высокой личной славе у кузнеца (+25) и рамках Судебника.
             const SMITH_SALE_WEAPONS = ['club', 'palitsa', 'mace', 'flail', 'knife', 'spear', 'axe', 'bow'];
             const items = tab === 'weapon'
                 ? Object.values(WEAPONS).filter(w => SMITH_SALE_WEAPONS.includes(w.id))
                 : [];
 
             if (tab === 'weapon') {
-                this.add.text(width / 2, height / 2 + panelH / 2 - 58,
-                    t('Мечи не продаются: меч — награда старосты. Доспех кузнец выдаёт только за самые тяжёлые поручения. Стрелы — пачками по 10.'), {
+                this.add.text(width / 2, height / 2 + panelH / 2 - 44,
+                    t('Меч — награда старосты. Сабля и кольчуга — заказные: задорого и только своим людям кузнецу. Стрелы — пачками по 10.'), {
+                    fontSize: '11px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
+                }).setOrigin(0.5).setDepth(202);
+            } else if (tab === 'armor') {
+                this.add.text(width / 2, height / 2 + panelH / 2 - 44,
+                    t('Тегиляй и кожаную броню шьёт ремесленник Аверьян. Кольчуга — кузнец куёт на заказ: 150 д. и только при высокой славе у кузнеца.'), {
                     fontSize: '11px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
                 }).setOrigin(0.5).setDepth(202);
             }
@@ -2386,6 +2408,77 @@ export class InteriorScene extends Phaser.Scene {
                     backgroundColor: canAffordPack ? 0x3a5a3a : 0x3a3a3a,
                     hoverColor: canAffordPack ? 0x4a6a4a : 0x4a4a4a,
                     textColor: canAffordPack ? RUS.text : '#888',
+                    fontSize: 13, padding: { left: 14, right: 14, top: 7, bottom: 7 },
+                }).setDepth(202);
+            }
+
+            // ===== ПАТЧ 66.76 (приказы 8–9): ЗАКАЗНЫЕ ТОВАРЫ КУЗНЕЦА =====
+            // Сабля (в «Оружии») и кольчуга (в «Доспехах»): ЗАДОРОГО
+            // (твёрдая заказная цена БЕЗ скидок славы) и ТОЛЬКО при высокой
+            // личной славе у кузнеца (npcRep ≥ +25) + рамках Судебника.
+            if (tab === 'weapon' || tab === 'armor') {
+                const specialId = tab === 'weapon' ? 'sabre' : 'chain';
+                const specialDef = tab === 'weapon' ? WEAPONS.sabre : ARMORS.chain;
+                const specialPrice = tab === 'weapon' ? SABRE_SMITH_PRICE : CHAIN_SMITH_PRICE;
+                const repNow = getNpcRep(this.registry, smithId);
+                const gearCheckSp = canBuyMilitaryGear(this.registry, player);
+                const gateSp = canBuySmithSpecial(repNow, gearCheckSp);
+                const canAffordSp = (player.dengas || 0) >= specialPrice;
+                const statSp = tab === 'weapon'
+                    ? `(${t('урон')} ${specialDef.dice.min}-${specialDef.dice.max}+${specialDef.bonus || 0})`
+                    : `(${t('защита')} ${specialDef.def})`;
+                const spDesc = tf(t('🔒 {0} — {1} {2} {3}   ·   слава у кузнеца: {4}/{5}'),
+                    t(specialDef.name), specialPrice, t('д.'), statSp, Math.round(repNow), SMITH_TRUST_REP);
+                createButton(this, width / 2, startY + items.length * 36 + (tab === 'weapon' ? 72 : 0), spDesc, () => {
+                    if (!gateSp.ok) {
+                        createDialog(this, t('Кузница'), gateSp.reason, [
+                            { text: t('Понятно'), callback: () => {} },
+                        ], { singleton: false, portraitKey: smithPortrait });
+                        return;
+                    }
+                    if (!canAffordSp) {
+                        createDialog(this, t('Кузница'), t('Не хватает денег!'), [
+                            { text: t('Понятно'), callback: () => {} },
+                        ], { singleton: false, portraitKey: smithPortrait });
+                        return;
+                    }
+                    if (player.weaponId === specialId || player.armorId === specialId
+                        || (player.inventory || []).some(it => it.id === specialId)) {
+                        createDialog(this, t('Кузница'), t('Такая вещь у тебя уже есть — не по-торговому дважды платить за одну.'), [
+                            { text: t('Понятно'), callback: () => {} },
+                        ], { singleton: false, portraitKey: smithPortrait });
+                        return;
+                    }
+                    player.dengas -= specialPrice;
+                    this.audioManager.playGoldSpend();
+                    if (tab === 'weapon') {
+                        const oldWeaponId = player.weaponId;
+                        equipWeapon(player, specialId);
+                        if (!player.inventory) player.inventory = [];
+                        if (oldWeaponId && oldWeaponId !== specialId
+                            && WEAPONS[oldWeaponId]
+                            && !player.inventory.find(it => it.id === oldWeaponId)) {
+                            player.inventory.push({ id: oldWeaponId, name: WEAPONS[oldWeaponId].name, count: 1, type: 'weapon' });
+                        }
+                        if (!player.inventory.find(it => it.id === specialId)) {
+                            player.inventory.push({ id: specialId, name: specialDef.name, count: 1, type: 'weapon' });
+                        }
+                    } else {
+                        equipArmor(player, specialId);
+                        if (!player.inventory) player.inventory = [];
+                        if (!player.inventory.find(it => it.id === specialId)) {
+                            player.inventory.push({ id: specialId, name: specialDef.name, count: 1, type: 'armor' });
+                        }
+                    }
+                    this.registry.set('player', player);
+                    ActionLog.add(this.registry, tf(t('Заказал «{0}» у кузнеца за {1} д. (заказная цена, слава у кузнеца {2}).'), t(specialDef.name), specialPrice, Math.round(repNow)));
+                    this.updateHUD();
+                    closeMenu();
+                    this.showBlacksmithShop(tab);
+                }, {
+                    backgroundColor: (gateSp.ok && canAffordSp) ? 0x5a4a20 : 0x3a3a3a,
+                    hoverColor: (gateSp.ok && canAffordSp) ? 0x6a5a2e : 0x4a4a4a,
+                    textColor: (gateSp.ok && canAffordSp) ? RUS.text : '#888',
                     fontSize: 13, padding: { left: 14, right: 14, top: 7, bottom: 7 },
                 }).setDepth(202);
             }
@@ -2735,6 +2828,101 @@ export class InteriorScene extends Phaser.Scene {
             ]);
     }
 
+    /**
+     * ПАТЧ 66.76 (приказ 3): ТКАЧЕСТВО — подёнка за станком в доме ткачихи.
+     * Оплата НАТУРОЙ: успех — отрез полотна в узел (+2 д. мелочью),
+     * крит — отрез сукна (+3 д.), провал — «порвал нить», 2 д.
+     * 1 час, −3 здоровья, −2 ОУ; ставка славы подёнки — раз в сутки
+     * (общий ключ dayworkRepDay с гончаром/кузницей).
+     */
+    workInWeaver() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        if ((player.HP || 0) <= 5) {
+            createDialog(this, t('Силы кончились'), t('Станок требует ровных рук и ясных глаз: ослабевшему ткачихи не доверит. Поешь и отдохни.'), [
+                { text: t('Справедливо...'), callback: () => {} },
+            ]);
+            return;
+        }
+        tickTime(this.registry, 60, 'work');
+        spendFatigue(this.registry, 2);
+        player.HP = Math.max(1, (player.HP || 1) - 3);
+        const jobRes = weaveDaywork(this.registry, (player.skills && player.skills.weaving) || 15);
+        player.dengas = (player.dengas || 0) + jobRes.wage;
+        if (jobRes.cloth) addItem(player, jobRes.cloth, 1);
+        this.registry.set('player', player);
+        this.updateHUD();
+        const checkNote = jobRes.crit
+            ? tf(t('(Ткачество {0}%: бросок {1} — КРИТ!)'), jobRes.skill, jobRes.roll)
+            : tf(t('(Ткачество {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.ok ? t('успех') : t('нить порвалась'));
+        ActionLog.add(this.registry, tf(t('Отработал час за станком ткачихи: +{0} д.{1} усталость −3 HP.'), jobRes.wage, jobRes.cloth ? (jobRes.crit ? t(' сукно в узел,') : t(' полотно в узел,')) : ''));
+        let repMsgW = '';
+        const todayW = dayKeyOf(getTime(this.registry));
+        const qW = this.registry.get('quest') || {};
+        if (qW.dayworkRepDay !== todayW) {
+            qW.dayworkRepDay = todayW;
+            this.registry.set('quest', qW);
+            changeVillageRep(this.registry, 1, 'подённая работа');
+            repMsgW = '\n' + t('Слава о работнике идёт по деревне: +1 к доброй славе (ставка подёнки — раз в сутки).');
+        }
+        createDialog(this, jobRes.crit ? t('🧶 Узор вышел ровен!') : t('Помощь за станком'),
+            (jobRes.crit
+                ? t('Час за станком — и нити легли ровно, узор стянулся без единой петли. Ткачиха гладит отрез: «Такое и на торгу не стыдно показать!»\n\n')
+                : jobRes.ok
+                    ? t('Час за станком: продевала нити, била уток, подкидывала челнок. Отрез сошёл ладный — ткачиха кивает: «Бери за работу полотном — годится!»\n\n')
+                    : t('Час за станком — а нить то и дело рвётся. Ткачиха вздыхает: «Не станок виноват, руки не приноровились».\n\n'))
+            + tf(t('Заработано: +{0} д.{1} Усталость: −3 здоровья.'), jobRes.wage, jobRes.cloth ? (jobRes.crit ? t(' +1 Сукно (отрез) в узел.') : t(' +1 Полотно холщовое в узел.')) : '')
+            + '\n' + checkNote + repMsgW,
+            [{ text: t('Спасибо'), callback: () => {} }]);
+    }
+
+    /**
+     * ПАТЧ 66.76 (приказ 4): ПЛОТНИЦКОЕ ДЕЛО — подёнка у сруба (дом плотника).
+     * Ставка приказа: успех 3–6 д.; провал — «запорол доску», 2 д.;
+     * крит — «зарубка ровна», 7–10 д. 1 час, −3 здоровья, −2 ОУ.
+     */
+    workInCarpenter() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        if ((player.HP || 0) <= 5) {
+            createDialog(this, t('Силы кончились'), t('Топор тяжёл, бревно упрямо: ослабевшему плотник топора не доверит. Поешь и отдохни.'), [
+                { text: t('Справедливо...'), callback: () => {} },
+            ]);
+            return;
+        }
+        tickTime(this.registry, 60, 'work');
+        spendFatigue(this.registry, 2);
+        player.HP = Math.max(1, (player.HP || 1) - 3);
+        const jobRes = carpenterDaywork(this.registry, (player.skills && player.skills.carpentry) || 10);
+        player.dengas = (player.dengas || 0) + jobRes.wage;
+        this.registry.set('player', player);
+        this.updateHUD();
+        const checkNote = jobRes.crit
+            ? tf(t('(Плотницкое дело {0}%: бросок {1} — КРИТ!)'), jobRes.skill, jobRes.roll)
+            : tf(t('(Плотницкое дело {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.ok ? t('успех') : t('доска запорота'));
+        ActionLog.add(this.registry, tf(t('Отработал час у плотника на срубе: +{0} д., усталость −3 HP.'), jobRes.wage));
+        let repMsgC = '';
+        const todayC = dayKeyOf(getTime(this.registry));
+        const qC = this.registry.get('quest') || {};
+        if (qC.dayworkRepDay !== todayC) {
+            qC.dayworkRepDay = todayC;
+            this.registry.set('quest', qC);
+            changeVillageRep(this.registry, 1, 'подённая работа');
+            repMsgC = '\n' + t('Слава о работнике идёт по деревне: +1 к доброй славе (ставка подёнки — раз в сутки).');
+        }
+        createDialog(this, jobRes.crit ? t('🪓 Ладная зарубка!') : t('Помощь плотнику'),
+            (jobRes.crit
+                ? t('Топор в руках ходил сам: зарубка легла ровно, шов плотён, топорище не скрипит. Плотник хлопает по плечу: «Рубить тебе, не путешествовать!»\n\n')
+                : jobRes.ok
+                    ? t('Час у сруба: тесал доски, вколачивал нагели, подавал брёвна. Работа спорится — плотник доволен.\n\n')
+                    : t('Час у сруба — а доска то криво, то щепа в глаз. Плотник качает головой: «Доску запорол, платить буду по малой части».\n\n'))
+            + tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), jobRes.wage)
+            + '\n' + checkNote,
+            [{ text: t('Спасибо'), callback: () => {} }]);
+    }
+
     workInBarn() {
         // Раунд 37: амбар удалён (п.18) — работа переехала в мастерскую гончара
         // (workInPotter). Метод оставлен для старых сейвов/ссылок.
@@ -2778,7 +2966,7 @@ export class InteriorScene extends Phaser.Scene {
                     ? tf(t('Час у горна: держал клещи, качал меха, бил по наковальне, куда мастер укажет. Работа ладится.\n\n'))
                     : tf(t('К молоту тебя не подпустили — носил дрова, качал меха да таскал воду. Работа черновая, и плата черновая.\n\n')))
             + tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), jobRes.wage)
-            + '\n' + checkNote,
+            + '\n' + checkNote + repMsgC,
             [{ text: t('Спасибо'), callback: () => {} }]);
     }
 

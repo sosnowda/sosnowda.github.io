@@ -77,6 +77,9 @@ export const SKILLS = [
     // Раунд 66.71 (п.14): «Ударное оружие» — булавы, кистени, дубины, палицы
     // (дробящее оружие SRD; база по специализации — берём 20, от ЛОВ)
     { key: 'blunt', name: 'Ударное оружие', base: 20, attr: 'DEX', factor: 1.5, category: 'combat' },
+    // Патч 66.76 (приказ 2): самострел — отдельный боевой навык (не лук):
+    // бьёт сильнее лука (1–8+1), но каждый второй ход — «заводит тетиву».
+    { key: 'crossbow', name: 'Стрельба из самострела', base: 10, attr: 'DEX', factor: 1, category: 'combat' },
     { key: 'dodge', name: 'Уклонение', base: 0, attr: 'DEX', factor: 0.5, derived: true, category: 'combat' },
     // Общение
     // Раунд 66.71 (п.10): «Красноречие» удалено — социальный навык похвалы
@@ -113,6 +116,13 @@ export const SKILLS = [
     { key: 'craft', name: 'Ремесло', base: 15, attr: 'DEX', factor: 1, category: 'manipulation' },
     { key: 'smithing', name: 'Кузнечное дело', base: 10, attr: 'STR', factor: 1.5, category: 'manipulation' },
     { key: 'lockpicking', name: 'Взлом', base: 5, attr: 'DEX', factor: 1.5, category: 'manipulation' },
+    // Патч 66.76 (приказы 1, 3, 4): Мельничное дело (мельница, ДЕНЬГИ — зерно
+    // из наград исключено приказом), Ткачество (дом ткачихи, оплата полотном/
+    // сукном), Плотницкое дело (дом плотника, ставка 3–6 д.).
+    // Плавание и Погодные приметы НЕ добавляются (отменены владельцем).
+    { key: 'milling', name: 'Мельничное дело', base: 10, attr: 'DEX', factor: 1, category: 'manipulation' },
+    { key: 'weaving', name: 'Ткачество', base: 15, attr: 'DEX', factor: 1, category: 'manipulation' },
+    { key: 'carpentry', name: 'Плотницкое дело', base: 10, attr: 'DEX', factor: 1, category: 'manipulation' },
 ];
 
 // === ДОСПЕХИ И ОРУЖИЕ (Chronicles of Ruthenia) ===
@@ -137,6 +147,10 @@ export const WEAPONS = {
     sword:   { id: 'sword',   name: 'Меч',             skill: 'sword', dice: { min: 1, max: 8 }, bonus: 1, price: 30 },
     axe:     { id: 'axe',     name: 'Боевой топор',    skill: 'brawl', dice: { min: 1, max: 8 }, bonus: 1, price: 25 },
     bow:     { id: 'bow',     name: 'Лук',             skill: 'bow',   dice: { min: 1, max: 6 }, bonus: 1, price: 20 },
+    // Патч 66.76 (приказ 2): САМОСТРЕЛ — редкое оружие-награда от старосты
+    // (шанс ниже меча), кузнецом НЕ продаётся. Перезарядка через ход в бою.
+    // Цена 120 — справочная для скупки кузнецом за полцены (60 д.).
+    crossbow: { id: 'crossbow', name: 'Самострел', skill: 'crossbow', dice: { min: 1, max: 8 }, bonus: 1, price: 120 },
     sabre:   { id: 'sabre',   name: 'Сабля',           skill: 'sword', dice: { min: 1, max: 8 }, bonus: 2, price: 60 },
     steel_sword: { id: 'steel_sword', name: 'Стальной меч', skill: 'sword', dice: { min: 1, max: 10 }, bonus: 3, price: 100 },
 };
@@ -216,6 +230,8 @@ export const PRESET_HEROES = [
             track: 75, stealth: 68, fishing: 62, beekeeping: 55,
             craft: 38, literacy: 20, commerce: 28, performance: 20,
             smithing: 25, lockpicking: 30,
+            // 66.76: мельница/ткачество/плотницкое + самострел (см. дальше)
+            carpentry: 30, milling: 18, weaving: 15, crossbow: 14,
         },
         startWeapon: 'bow',
         startArmor: 'leather',
@@ -239,6 +255,8 @@ export const PRESET_HEROES = [
             track: 78, stealth: 70, fishing: 64, beekeeping: 57,
             craft: 40, literacy: 22, commerce: 30, performance: 22,
             smithing: 26, lockpicking: 32,
+            // 66.76: новые ремёсла и самострел
+            carpentry: 32, milling: 20, weaving: 16, crossbow: 16,
         },
         startWeapon: 'bow',
         startArmor: 'leather',
@@ -264,6 +282,8 @@ export const PRESET_HEROES = [
             smithing: 55, craft: 42, stealth: 35, track: 40,
             fishing: 35, beekeeping: 25, literacy: 12, commerce: 22,
             performance: 20, lockpicking: 18,
+            // 66.76: самострел — ратный навык; плотницкое — лагерные работы
+            carpentry: 35, milling: 20, weaving: 12, crossbow: 40,
         },
         startWeapon: 'sword',
         startArmor: 'chain',
@@ -287,6 +307,8 @@ export const PRESET_HEROES = [
             smithing: 52, craft: 40, stealth: 38, track: 42,
             fishing: 36, beekeeping: 26, literacy: 14, commerce: 24,
             performance: 22, lockpicking: 20,
+            // 66.76: новые ремёсла и самострел
+            carpentry: 33, milling: 22, weaving: 14, crossbow: 38,
         },
         startWeapon: 'sword',
         startArmor: 'chain',
@@ -316,6 +338,8 @@ export const PRESET_HEROES = [
             literacy: 65, commerce: 62, lockpicking: 60, track: 55,
             performance: 45, stealth: 48, craft: 32,
             fishing: 30, beekeeping: 20, smithing: 20,
+            // 66.76: городские ремёсла по меру; самострел видел на постах
+            carpentry: 22, milling: 18, weaving: 20, crossbow: 12,
         },
         startWeapon: 'knife',
         startArmor: 'padded',
@@ -339,6 +363,8 @@ export const PRESET_HEROES = [
             literacy: 68, commerce: 64, lockpicking: 62, track: 58,
             performance: 48, stealth: 50, craft: 34,
             fishing: 32, beekeeping: 22, smithing: 22,
+            // 66.76: новые ремёсла и самострел
+            carpentry: 24, milling: 18, weaving: 24, crossbow: 14,
         },
         startWeapon: 'knife',
         startArmor: 'padded',
@@ -363,6 +389,8 @@ export const PRESET_HEROES = [
             track: 52, stealth: 50, fishing: 48, beekeeping: 45,
             craft: 46, literacy: 35, commerce: 48, performance: 45,
             smithing: 42, lockpicking: 46,
+            // 66.76: универсал — и у станка, и у жернова, и с самострелом
+            carpentry: 28, milling: 24, weaving: 20, crossbow: 18,
         },
         startWeapon: 'sword',
         startArmor: 'leather',
@@ -386,6 +414,8 @@ export const PRESET_HEROES = [
             track: 54, stealth: 52, fishing: 50, beekeeping: 46,
             craft: 48, literacy: 36, commerce: 50, performance: 46,
             smithing: 44, lockpicking: 48,
+            // 66.76: универсал — и у станка, и у жернова, и с самострелом
+            carpentry: 30, milling: 24, weaving: 22, crossbow: 18,
         },
         startWeapon: 'sword',
         startArmor: 'leather',
