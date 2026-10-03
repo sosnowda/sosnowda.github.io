@@ -3,6 +3,8 @@ import { RUS } from '../config/RusTheme.js';
 import AudioManager from '../systems/AudioManager.js';
 import { t, tf, tk, getLang, setLang, isEn } from '../systems/i18n.js';
 import { bindRestartOnResize } from '../utils/ui.js';
+// Патч 66.75 (приказы 5–6): единая панель «⚙ Настройки» (титул + все игровые сцены)
+import { openSettingsPanel } from '../systems/SettingsPanel.js';
 // Раунд 32 (пп.14,15): строка о времени 1:30 в «Информации по игре» (F1)
 import { timeRatioInfoLine } from '../systems/WorldClock.js';
 
@@ -342,126 +344,18 @@ export class TitleScene extends Phaser.Scene {
         this.input.keyboard.once('keydown-F1', closeHelp);
     }
 
-    // П.15: Настройки (раунд 15: рабочие тумблеры — пишут settings.audio.*,
-    // которые реально читает AudioManager во всех сценах, + персист в localStorage;
-    // ранее панель писала 'gameSettings', которые никто не читал — звук не отключался)
+    // Патч 66.75 (приказы 5–6): панель настроек ВЫНЕСЕНА в общий модуль
+    // systems/SettingsPanel.js — та же панель открывается и В ИГРЕ (кнопка «⚙»
+    // в статус-баре деревни/леса/пасеки/локаций/развилки/интерьеров). Здесь —
+    // тумблеры звука + язык; колбэк гасит/запускает меню-музыку сразу.
     showSettings() {
-        const { width, height } = this.scale;
-        this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
-
-        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
-            .setOrigin(0).setInteractive().setDepth(200);
-        const panelW = 500, panelH = 430;
-        this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
-            .setStrokeStyle(3, 0xC9A961).setDepth(201);
-
-        this.add.text(width / 2, height / 2 - panelH / 2 + 25, t('⚙ Настройки'), {
-            fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
-            fontFamily: 'Georgia, serif',
-            stroke: '#000', strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(202);
-
-        // Читаем текущие аудио-настройки (персист в localStorage 'gameSettings.audio')
-        const settings = this.readAudioSettings();
-        const persist = () => this.writeAudioSettings(settings);
-        const redraw = () => this.showSettings();
-
-        const onOff = (v) => t(v ? 'ВКЛ' : 'ВЫКЛ');
-        let y = height / 2 - 90;
-
-        // 1. Все звуки
-        this.makeToggleButton(width / 2, y, tf('🔊 Все звуки: {0}', onOff(!settings.musicMuted || !settings.sfxMuted)), () => {
-            const muteAll = !settings.musicMuted || !settings.sfxMuted;
-            settings.musicMuted = muteAll;
-            settings.sfxMuted = muteAll;
-            persist(); redraw();
+        openSettingsPanel(this, {
+            showLanguage: true,
+            onMusicToggle: (muted) => {
+                if (muted && this.audioManager) this.audioManager.stopMusic('menu');
+                if (!muted && this.audioManager) this.audioManager.playSceneMusic('menu');
+            },
         });
-        y += 50;
-
-        // 2. Музыка (AudioManager всех сцен слушает registry-ключ)
-        this.makeToggleButton(width / 2, y, tf('🎵 Музыка: {0}', onOff(!settings.musicMuted)), () => {
-            settings.musicMuted = !settings.musicMuted;
-            persist();
-            if (settings.musicMuted && this.audioManager) this.audioManager.stopMusic('menu');
-            if (!settings.musicMuted && this.audioManager) this.audioManager.playSceneMusic('menu');
-            redraw();
-        });
-        y += 50;
-
-        // 3. Звуковые эффекты (клики/шаги/урон — всё через playSound)
-        this.makeToggleButton(width / 2, y, tf('🔊 Эффекты (SFX): {0}', onOff(!settings.sfxMuted)), () => {
-            settings.sfxMuted = !settings.sfxMuted;
-            persist(); redraw();
-        });
-        y += 50;
-
-        // 4. Язык интерфейса (раунд 15) — переключение перезагружает страницу.
-        // lang= из URL вычищаем, иначе после перезагрузки URL-параметр перебил бы ручной выбор.
-        const other = getLang() === 'en' ? 'Русский' : 'English';
-        const langLabel = tf('🌐 Язык: {0} → {1}', getLang() === 'en' ? 'English' : 'Русский', other);
-        this.makeToggleButton(width / 2, y, langLabel, () => {
-            setLang(getLang() === 'en' ? 'ru' : 'en');
-            try {
-                const url = new URL(window.location.href);
-                if (url.searchParams.has('lang')) {
-                    url.searchParams.delete('lang');
-                    window.history.replaceState({}, '', url.pathname + url.search + url.hash);
-                }
-            } catch (e) { /* noop */ }
-            window.location.reload();
-        });
-
-        // Кнопка закрытия
-        const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 30, 140, 35, 0x8B2C1A, 1)
-            .setStrokeStyle(2, 0xC9A961)
-            .setInteractive({ useHandCursor: true }).setDepth(202);
-        this.add.text(width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), {
-            fontFamily: 'Georgia, serif', fontSize: '16px', color: '#E8DCC4',
-        }).setOrigin(0.5).setDepth(203);
-
-        const closeSettings = () => {
-            this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
-        };
-        btnBg.on('pointerup', closeSettings);
-        overlay.on('pointerup', closeSettings);
     }
 
-    /** Аудио-настройки: localStorage 'gameSettings.audio' (совместимо с SettingsManager на TestPage). */
-    readAudioSettings() {
-        const defaults = { musicMuted: false, sfxMuted: false, musicVolume: 0.7, sfxVolume: 0.8 };
-        try {
-            const raw = JSON.parse(localStorage.getItem('gameSettings') || '{}');
-            if (raw && raw.audio) return { ...defaults, ...raw.audio };
-        } catch (e) { /* noop */ }
-        return defaults;
-    }
-
-    /** Записать аудио-настройки: registry-ключи (для AudioManager) + localStorage. */
-    writeAudioSettings(s) {
-        this.registry.set('settings.audio.musicMuted', !!s.musicMuted);
-        this.registry.set('settings.audio.sfxMuted', !!s.sfxMuted);
-        this.registry.set('settings.audio.musicVolume', typeof s.musicVolume === 'number' ? s.musicVolume : 0.7);
-        this.registry.set('settings.audio.sfxVolume', typeof s.sfxVolume === 'number' ? s.sfxVolume : 0.8);
-        try {
-            const raw = JSON.parse(localStorage.getItem('gameSettings') || '{}');
-            raw.audio = { ...(raw.audio || {}), ...s };
-            localStorage.setItem('gameSettings', JSON.stringify(raw));
-        } catch (e) { /* noop */ }
-    }
-
-    makeToggleButton(x, y, label, callback) {
-        const bg = this.add.rectangle(x, y, 300, 36, 0x4a3520, 0.95)
-            .setStrokeStyle(1, 0xC9A961)
-            .setInteractive({ useHandCursor: true })
-            .setDepth(202);
-        this.add.text(x, y, label, {
-            fontSize: '14px', color: '#E8DCC4',
-            fontFamily: 'Georgia, serif',
-        }).setOrigin(0.5).setDepth(203);
-        bg.on('pointerup', () => {
-            callback();
-        });
-        bg.on('pointerover', () => bg.setFillStyle(0x5a4530, 1));
-        bg.on('pointerout', () => bg.setFillStyle(0x4a3520, 0.95));
-    }
 }

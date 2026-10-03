@@ -433,6 +433,17 @@ export default class AudioManager {
         this._setSetting('audio.sfxMuted', !this.sfxMuted);
     }
 
+    /**
+     * Патч 66.75 (приказы 5–6): НЕМЕДЛЕННАЯ синхронизация из settings.audio.*.
+     * Панель настроек вызывает её для КАЖДОЙ живой сцены — в этой сборке Phaser
+     * события registry 'changedata' до слушателей этого реестра не доходят
+     * (проверено пробами 66.75), поэтому канал событий не единственный путь.
+     */
+    syncFromRegistry() {
+        this._pullFromRegistry();
+        this._applyAll();
+    }
+
     syncEffectsVolume() {
         if (this.audioEffects) {
             const effectiveVolume = this.sfxMuted ? 0 : this.sfxVolume;

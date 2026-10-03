@@ -8,6 +8,8 @@ import {
 import { BUILDINGS, VILLAGE_GATE, INTERIORS } from '../data/interiors.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import AudioManager from '../systems/AudioManager.js';
+// Патч 66.75 (приказы 5–6): кнопка «⚙ Настройки» — панель звука прямо в игре
+import { addSettingsGearButton } from '../systems/SettingsPanel.js';
 import SaveManager from '../systems/SaveManager.js';
 import { Tutorial } from '../systems/Tutorial.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
@@ -960,6 +962,10 @@ export class VillageScene extends Phaser.Scene {
         });
         invBtn.on('pointerover', () => invBtn.setFillStyle(0x5a4530, 1));
         invBtn.on('pointerout', () => invBtn.setFillStyle(0x4a3520, 0.95));
+
+        // Патч 66.75 (приказы 5–6 владельца): «⚙ Настройки» — тумблеры
+        // «Все звуки/Музыка/SFX» доступны прямо во время игры
+        addSettingsGearButton(this, width - 160, btnY);
 
         // Раунд 21: возвращение в деревню может закрыть поручение «Помирить соседей» и т.п.
         onLocationVisited(this.registry, 'village');

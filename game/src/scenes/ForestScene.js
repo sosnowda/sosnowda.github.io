@@ -33,6 +33,8 @@ import { hungerStatusLine, hungerHours } from '../systems/hunger.js';
 import { spendFatigue, restFatigueFull, exhaustedGuardPopup, fatigueStatusLine } from '../systems/fatigue.js';
 // Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
 import { getQuiver, spendArrow } from '../systems/ammo.js';
+// Патч 66.75 (приказы 5–6): кнопка «⚙ Настройки» в статус-баре леса
+import { addSettingsGearButton } from '../systems/SettingsPanel.js';
 import { createDialog } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 // 66.37: калибровка масштаба мировых листов персонажей 128px (были 64)
@@ -806,6 +808,9 @@ export class ForestScene extends Phaser.Scene {
             this.scene.pause();
             this.scene.launch('Character', { from: 'Forest', tab: 'inventory' });
         });
+
+        // Патч 66.75 (приказы 5–6 владельца): «⚙ Настройки» — панель звука в игре
+        addSettingsGearButton(this, width - 160, btnY);
 
         // Подсказка взаимодействия внизу по центру
         this.prompt = this.add.text(width / 2, height - 22, '', {

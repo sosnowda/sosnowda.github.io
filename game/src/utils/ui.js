@@ -29,6 +29,9 @@ import {
 } from '../config/StyleConfig.js';
 // Раунд 31 (пп.11,12): пауза реального времени в диалогах + час за разговор
 import { pauseWorldClock, resumeWorldClock, chargeTalkTime } from '../systems/WorldClock.js';
+// Патч 66.75 (приказы 5–6): кнопка «⚙» в статус-баре всех сцен — панель
+// настроек звука доступна прямо в игре, а не только на титульном экране
+import { addSettingsGearButton } from '../systems/SettingsPanel.js';
 // Раунд 40: локализация подписей кнопок меню (addSceneMenuButtons)
 import { t } from '../systems/i18n.js';
 
@@ -1697,8 +1700,10 @@ export function addSceneMenuButtons(scene, fromKey, opts = {}) {
 
     if (width < 640) {
         make(width - 46, '📜', 'stats');
+        addSettingsGearButton(scene, width - 124, btnY);
     } else {
         make(width - 220, t('📜 Персонаж'), 'stats');
         make(width - 100, t('🎒 Инвентарь'), 'inventory');
+        addSettingsGearButton(scene, width - 160, btnY);
     }
 }

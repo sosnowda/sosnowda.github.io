@@ -12,7 +12,7 @@
 // исходники game/src/** (10 новых навыков, burglary.js/jobs.js, сундуки,
 // борть, пасека-мёд) и game/index.html не трогали ассеты и vendor —
 // game-assets-v43 без изменений.
-const CACHE_NAME = 'chronicles-ruthenia-v115';
+const CACHE_NAME = 'chronicles-ruthenia-v116';
 const GAME_ASSETS_CACHE = 'game-assets-v43';
 
 self.addEventListener('install', function (event) {

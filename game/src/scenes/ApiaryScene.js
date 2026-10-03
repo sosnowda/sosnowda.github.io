@@ -19,6 +19,8 @@ import { ActionLog } from '../data/actionLog.js';
 import { bortnikGather, getLootDef } from '../systems/loot.js';
 import { dayKeyOf } from '../data/daily.js';
 import { createDialog, createButton } from '../utils/ui.js';
+// Патч 66.75 (приказы 5–6): кнопка «⚙ Настройки» в статус-баре пасеки
+import { addSettingsGearButton } from '../systems/SettingsPanel.js';
 import AudioManager from '../systems/AudioManager.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
 import { formatMoney } from '../systems/Character.js';
@@ -719,6 +721,9 @@ export class ApiaryScene extends Phaser.Scene {
             this.scene.pause();
             this.scene.launch('Character', { from: 'Apiary', tab: 'inventory' });
         });
+
+        // Патч 66.75 (приказы 5–6 владельца): «⚙ Настройки» — панель звука в игре
+        addSettingsGearButton(this, width - 160, btnY);
 
         // Подсказка взаимодействия внизу по центру
         this.prompt = this.add.text(width / 2, height - 22, '', {
