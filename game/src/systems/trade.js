@@ -21,10 +21,38 @@ import { ActionLog } from '../data/actionLog.js';
 import { opposedSkillCheck, formatOpposedCheck } from './BRPEngine.js';
 import { getNpcOpposition } from '../data/npcStats.js';
 import { getChaEdgeMod, clearChaEdge } from './charisma.js';
+// Патч 66.78 (приказ 9): торговля списывает фиксированные 30 минут
+import { tickTime } from './TimeSystem.js';
 
 export const HAGGLE_SUCCESS_MULT = 1.25;
 export const HAGGLE_CRITICAL_MULT = 1.5;
 export const HAGGLE_FUMBLE_MULT = 0.9;
+
+// ============================================================
+// ПАТЧ 66.78 (приказ 9 владельца): ЛЮБАЯ ТОРГОВЛЯ = 30 МИНУТ.
+// «При любой торговле: покупки и продажи, счётчик реального времени
+//  останавливается и затрачивается фиксированное время: 30 минут».
+//  • сцена на время торговой панели СТАВИТ мировые часы на паузу
+//    (pauseWorldClock/resumeWorldClock из WorldClock.js);
+//  • каждая завершённая сделка (покупка ИЛИ продажа) списывает
+//    ровно TRADE_MINUTES игровых минут (chargeTradeTime);
+//  • еда постоялого двора — исключение: она съедается сразу, её
+//    РОВНО 1 час считает meal.js (MEAL_DURATION_MIN, патч 66.77).
+// ============================================================
+
+/** Фиксированная длительность любой сделки (игровых минут) — приказ 9. */
+export const TRADE_MINUTES = 30;
+
+/**
+ * Списать время одной сделки (п.9). units — число сделок за раз (1).
+ * @returns {number} списанные игровые минуты
+ */
+export function chargeTradeTime(registry, units = 1) {
+    const minutes = Math.max(0, Math.round(TRADE_MINUTES * (Number(units) || 1)));
+    if (!registry || minutes <= 0) return 0;
+    tickTime(registry, minutes, 'idle');
+    return minutes;
+}
 
 // Патч 66.74 (приказ 6): подсказка в меню продажи упоминает ОБА пути торга
 export const HAGGLE_HINT_COMMERCE = t('Сметка знает цену — торговаться можно и ею.');

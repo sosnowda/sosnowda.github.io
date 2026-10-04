@@ -22,18 +22,24 @@
 //  • сундуки стоят в ЖИЛЫХ домах (постоялый двор и церковь — общественные,
 //    всегда на глазах — там сундука нет);
 //  • попытка (дверь ИЛИ сундук) = СНАЧАЛА Скрадывание (приказ 18): провал —
-//    молва: −2 к репутации деревни, попытка сорвана;
+//    молва крепчает ГЕОМЕТРИЧЕСКИ: −2/−4/−8/−16/−32 к репутации деревни
+//    (патч 66.78 п.1, systems/crime.js), попытка сорвана;
+//  • ВО ВРЕМЯ воровства хозяева МОГУТ ВЕРНУТЬСЯ: застукали — репутация у
+//    хозяев −30, в деревне −20; могут и НАПАСТЬ (мужчины — 40%, женщины
+//    — 10%) — патч 66.78 пп.2–3 (rollOwnersReturn из crime.js);
 //  • затем Взлом: дверь — успех открывает пустой дом; сундук — успех даёт
 //    ЛУТ 1–5 штук по таблице дома (крит — все 5, «вытряс до донышка»);
 //  • сундук обчищается ОДИН РАЗ В ИГРОВОЙ МЕСЯЦЬ (приказ 16);
-//  • попытка — 30 минут времени (тратит сцена), усталость — тоже сцена.
+//  • попытка — ФИКСИРОВАННО 10 минут времени (патч 66.78 п.8; тратит
+//    сцена), усталость — тоже сцена.
 // ============================================================
 
 import { t, tf } from './i18n.js';
 import { ActionLog } from '../data/actionLog.js';
 import { skillCheck } from './BRPEngine.js';
 import { getBlessedSkill } from '../data/questGenerator.js';
-import { changeVillageRep } from '../data/reputation.js';
+// Патч 66.78 (пп.1–3): геометрическая молва + хозяева вернулись/напали
+import { noteStealthFail, rollOwnersReturn } from './crime.js';
 
 /**
  * Сундуки жилых домов. loot — взвешенная таблица добра:
@@ -141,35 +147,35 @@ export function markChestPicked(registry, interiorId, timeState) {
 
 /**
  * Проверка Скрадывания перед ЛЮБЫМ взломом (приказ 18).
- * Провал — «заметили»: −2 к деревенской репутации (через changeVillageRep,
- * падение идёт легче подъёма — честно для лихого дела).
- * @returns {{ ok:boolean, roll:number, skill:number }}
+ * Провал — «заметили»: репутация деревни падает ГЕОМЕТРИЧЕСКИ от числа
+ * провалов (патч 66.78 п.1): −2, −4, −8, −16, −32 (потолок −32).
+ * @returns {{ ok:boolean, roll:number, skill:number, penalty:number }}
  */
 export function stealthForBurglary(registry, stealthSkill) {
     const skill = getBlessedSkill(registry, Math.max(1, Number(stealthSkill) || 1));
     const res = skillCheck(skill);
+    let penalty = 0;
     if (res.result === 'fail' || res.result === 'fumble') {
-        changeVillageRep(registry, -2, 'заметили за взломом');
-        ActionLog.add(registry, t('Скрадывание не удалось: тебя приметили у чужого дому — по деревне пошла дурная молва (−2 к репутации).'));
+        penalty = noteStealthFail(registry).penalty; // геометрическая молва (66.78 п.1)
     }
-    return { ok: res.result === 'critical' || res.result === 'success', roll: res.roll, skill };
+    return { ok: res.result === 'critical' || res.result === 'success', roll: res.roll, skill, penalty };
 }
 
 /**
  * Попытка ВЗЛОМА ДВЕРИ закрытого дома (приказы 13, 17 — «рядом нет НПЦ»
  * проверяет сцена ДО вызова). Скрадывание → Взлом.
  * @returns {{ stealthFailed:boolean, lockFailed:boolean, done:boolean,
- *             stealthRoll:number, lockRoll:number, stealthSkill:number, lockSkill:number }}
+ *             stealthRoll:number, lockRoll:number, stealthSkill:number, lockSkill:number, stealthPenalty:number }}
  */
 export function attemptBreakIn(registry, player, { stealth: stealthSkill, lock: lockSkill } = {}) {
     const st = stealthForBurglary(registry, stealthSkill);
     if (!st.ok) {
-        return { stealthFailed: true, lockFailed: false, done: false, stealthRoll: st.roll, stealthSkill: st.skill, lockRoll: 0, lockSkill: 0 };
+        return { stealthFailed: true, lockFailed: false, done: false, stealthRoll: st.roll, stealthSkill: st.skill, stealthPenalty: st.penalty, lockRoll: 0, lockSkill: 0 };
     }
     const lock = getBlessedSkill(registry, Math.max(1, Number(lockSkill) || 1));
     const res = skillCheck(lock);
     const done = res.result === 'critical' || res.result === 'success';
-    return { stealthFailed: false, lockFailed: !done, done, stealthRoll: st.roll, stealthSkill: st.skill, lockRoll: res.roll, lockSkill: lock };
+    return { stealthFailed: false, lockFailed: !done, done, stealthRoll: st.roll, stealthSkill: st.skill, stealthPenalty: st.penalty, lockRoll: res.roll, lockSkill: lock };
 }
 
 /** Взвешенный бросок по таблице дома. Внутренняя функция. */
@@ -184,28 +190,45 @@ function rollOne(table, rng) {
 }
 
 /**
- * Попытка ВЗЛОМА СУНДУКА (приказы 14–16). Скрадывание → Взлом → лут.
+ * Попытка ВЗЛОМА СУНДУКА (приказы 14–16). Скрадывание → ХОЗЯЕВА (66.78
+ * пп.2–3: могут вернуться и застукать; могут напасть) → Взлом → лут.
  * Сундук помечается обчищенным ТОЛЬКО при удаче; провал замка можно
  * повторить (пока дом пуст) — каждая попытка это время и риск Скрадывания.
+ * @param {Object} opts — { stealth, lock, rng, hostNpcId } (hostNpcId —
+ *   личная репутация хозяев падает при застукивании, приказ 2).
  * @returns {{ blocked:'month'|null, stealthFailed:boolean, lockFailed:boolean,
  *             done:boolean, items:Array<{id:string,count:number}>, dengas:number,
- *             crit:boolean, roll:number, skill:number, stealthRoll:number, stealthSkill:number }}
+ *             crit:boolean, roll:number, skill:number, stealthRoll:number,
+ *             stealthSkill:number, stealthPenalty:number,
+ *             ownersCame:boolean, hostAttacks:boolean }}
  */
-export function attemptChestPick(registry, player, interiorId, timeState, { stealth: stealthSkill, lock: lockSkill, rng = Math.random } = {}) {
+export function attemptChestPick(registry, player, interiorId, timeState, { stealth: stealthSkill, lock: lockSkill, rng = Math.random, hostNpcId = null } = {}) {
     const cfg = CHEST_HOUSES[interiorId];
-    if (!cfg) return { blocked: 'no_chest', stealthFailed: false, lockFailed: false, done: false, items: [], dengas: 0, crit: false, roll: 0, skill: 0, stealthRoll: 0, stealthSkill: 0 };
+    if (!cfg) return { blocked: 'no_chest', stealthFailed: false, lockFailed: false, done: false, items: [], dengas: 0, crit: false, roll: 0, skill: 0, stealthRoll: 0, stealthSkill: 0, stealthPenalty: 0, ownersCame: false, hostAttacks: false };
     if (!canPickChest(registry, interiorId, timeState)) {
-        return { blocked: 'month', stealthFailed: false, lockFailed: false, done: false, items: [], dengas: 0, crit: false, roll: 0, skill: 0, stealthRoll: 0, stealthSkill: 0 };
+        return { blocked: 'month', stealthFailed: false, lockFailed: false, done: false, items: [], dengas: 0, crit: false, roll: 0, skill: 0, stealthRoll: 0, stealthSkill: 0, stealthPenalty: 0, ownersCame: false, hostAttacks: false };
     }
     const st = stealthForBurglary(registry, stealthSkill);
     if (!st.ok) {
-        return { blocked: null, stealthFailed: true, lockFailed: false, done: false, items: [], dengas: 0, crit: false, roll: 0, skill: 0, stealthRoll: st.roll, stealthSkill: st.skill };
+        return { blocked: null, stealthFailed: true, lockFailed: false, done: false, items: [], dengas: 0, crit: false, roll: 0, skill: 0, stealthRoll: st.roll, stealthSkill: st.skill, stealthPenalty: st.penalty, ownersCame: false, hostAttacks: false };
+    }
+    // ПАТЧ 66.78 (пп.2–3): во время воровства хозяева могут вернуться домой.
+    // Застукали — репутация у хозяев −30, деревенская −20 (внутри rollOwnersReturn);
+    // попытка сорвана, сундук НЕ помечается — добро при хозяевах.
+    const owners = rollOwnersReturn(registry, {
+        hostNpcId,
+        interiorId,
+        hour: timeState ? timeState.hour : 12,
+        rng,
+    });
+    if (owners.came) {
+        return { blocked: null, stealthFailed: false, lockFailed: false, done: false, items: [], dengas: 0, crit: false, roll: 0, skill: 0, stealthRoll: st.roll, stealthSkill: st.skill, stealthPenalty: st.penalty, ownersCame: true, hostAttacks: owners.attack };
     }
     const lock = getBlessedSkill(registry, Math.max(1, Number(lockSkill) || 1));
     const res = skillCheck(lock);
     const failed = res.result === 'fail' || res.result === 'fumble';
     if (failed) {
-        return { blocked: null, stealthFailed: false, lockFailed: true, done: false, items: [], dengas: 0, crit: false, roll: res.roll, skill: lock, stealthRoll: st.roll, stealthSkill: st.skill };
+        return { blocked: null, stealthFailed: false, lockFailed: true, done: false, items: [], dengas: 0, crit: false, roll: res.roll, skill: lock, stealthRoll: st.roll, stealthSkill: st.skill, stealthPenalty: st.penalty, ownersCame: false, hostAttacks: false };
     }
     // ЛУТ: приказ 15 — случайный 1–5 штук; крит — все 5 («вытряс до донышка»).
     const crit = res.result === 'critical';
@@ -224,5 +247,5 @@ export function attemptChestPick(registry, player, interiorId, timeState, { stea
     }
     Object.keys(byId).forEach(id => items.push({ id, count: byId[id] }));
     markChestPicked(registry, interiorId, timeState);
-    return { blocked: null, stealthFailed: false, lockFailed: false, done: true, items, dengas, crit, roll: res.roll, skill: lock, stealthRoll: st.roll, stealthSkill: st.skill };
+    return { blocked: null, stealthFailed: false, lockFailed: false, done: true, items, dengas, crit, roll: res.roll, skill: lock, stealthRoll: st.roll, stealthSkill: st.skill, stealthPenalty: st.penalty, ownersCame: false, hostAttacks: false };
 }

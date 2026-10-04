@@ -2509,7 +2509,6 @@ const EN_KEYS = {
     'Час на мельнице: таскал мешки, чистил жернова, следил за крыльями. Мельник доволен, мука белая.\n\n': 'An hour at the mill: hauling sacks, cleaning the stones, minding the sails. The miller is pleased, the flour is white.\n\n',
     'Час на мельнице — а ты то мешок уронишь, то желоб перекосишь. Мельник машет рукой: «Ну и мучился ты, а не мука». Черновая работа — и плата черновая.\n\n': 'An hour at the mill — you dropped a sack and skewed the chute. The miller waves his hand: "You suffered more than the flour." Rough work — rough pay.\n\n',
     'Меч — награда старосты. Сабля и кольчуга — заказные: задорого и только своим людям кузнецу. Стрелы — пачками по 10.': 'The sword is the elder\'s reward. Sabre and mail are to-order goods: costly, and only for the smith\'s own trusted folk. Arrows come in packs of 10.',
-    'Тегиляй и кожаную броню шьёт ремесленник Аверьян. Кольчуга — кузнец куёт на заказ: 150 д. и только при высокой славе у кузнеца.': 'The craftsman Averyan sews padded jacks and leather armour. Mail is forged to order by the smith: 150 d. and only with high trust from the smith.',
     '🔒 {0} — {1} {2} {3}   ·   слава у кузнеца: {4}/{5}': '🔒 {0} — {1} {2} {3}   ·   smith\'s trust: {4}/{5}',
     'Кузнец прищурился: «Заказную вещь не всякому свяжу. Приди, когда будешь мне другом (слава у кузнеца +{0}, сейчас {1}).»': 'The smith squints: "I forge to-order wares not for every passerby. Come back when you are my friend (smith\'s trust +{0}, now {1})."',
     'Заказал «{0}» у кузнеца за {1} д. (заказная цена, слава у кузнеца {2}).': 'Ordered "{0}" from the smith for {1} d. (to-order price, smith\'s trust {2}).',
@@ -2529,6 +2528,78 @@ const EN_KEYS = {
     // литеральный t() без перевода ловил аудит r67)
     'Руки заняты тетивой самострела — уклоняться некогда! Заведи тетиву.': 'Your hands are busy with the crossbow string — no dodging now! Crank it first.',
 
+    // ===== Патч 66.78 (приказы владельца 1–9): ПРЕСТУПНОСТЬ — молва,
+    // хозяева, Скупщик, предупреждения, торговое время, «слава»→«репутация» =====
+    'Скрадывание не удалось: тебя приметили у чужого дому — дурная молва крепчает (−{0} к репутации, провалов: {1}).':
+        'Stealth failed: you were spotted near another man\'s house — the ill word keeps growing (−{0} reputation, failures: {1}).',
+    'Хозяева вернулись и застукали тебя за воровством! Репутация у хозяев {0}.':
+        'The owners came home and caught you red-handed! Their opinion of you: {0}.',
+    'Воровство раскрыто: по деревне пошла злая молва (репутация в деревне {0}).':
+        'The theft is exposed: bitter gossip sweeps the village (village reputation {0}).',
+    'Сбыл Скупщику краденое «{0}» за {1} д. — противозаконное дело: молва в деревне хуже на 1 (репутация падает с каждой продажи).':
+        'Fenced stolen "{0}" for {1} d. — an unlawful deed: village gossip worsens by 1 (reputation drops with every sale).',
+    'Вы хотите совершить противозаконное действие и за это может быть наказание и падение репутации.':
+        'You are about to commit an unlawful deed; it may bring punishment and a loss of reputation.',
+    '⚠ ПРОТИВОЗАКОНИЕ!': '⚠ UNLAWFUL DEED!',
+    'Решиться': 'Go through with it',
+    'Одуматься': 'Think better of it',
+    '🕯 Скупщик': '🕯 Fence',
+    '🌛 Скупщик (краденое)': '🌙 Fence (stolen goods)',
+    '🗡 На тебя нападают!': '🗡 You are attacked!',
+    'Дверь распахивается — на пороге хозяева! Узнав вора, они с криком бросаются на тебя!\n\n(Репутация у хозяев −30, в деревне −20.)':
+        'The door swings open — the owners are on the doorstep! Recognising the thief, they rush at you with a cry!\n\n(Owners\' opinion −30, village −20.)',
+    'Драться!': 'Fight!',
+    '👣 Хозяева вернулись!': '👣 The owners have returned!',
+    'Ты только потянулся к сундуку, как в сенях загремели голоса — хозяева вернулись домой! Пришлось ускользнуть задворками пустыми руками, но тебя запомнили.\n\n(Репутация у хозяев −30, в деревне −20.)':
+        'You had barely reached for the chest when voices thundered in the passage — the owners have come home! You slipped out through the back empty-handed, but they remember your face.\n\n(Owners\' opinion −30, village −20.)',
+    'Ускользнуть': 'Slip away',
+    'Хозяева вернулись во время воровства и бросились на тебя в «{0}»!':
+        'The owners returned during the break-in and hurled themselves at you in the "{0}"!',
+    'Тёмный угол постоялого двора — Скупщик': 'Dark corner of the inn — the Fence',
+    'Краденое уходит без торга · каждая продажа — молва хуже (репутация −1)':
+        'Stolen goods go without haggling · every sale worsens the gossip (reputation −1)',
+    '«Пусто, что ли принёс? Мне честное не надо — только краденое.»':
+        '"Brought nothing, did you? I don\'t deal in honest goods — stolen only."',
+    ' — краденое': ' — stolen',
+    'Ты сбываешь краденое! Это противозаконное действие: за него может быть наказание, а молва в деревне с каждой продажи становится хуже (репутация −1).':
+        'You are fencing stolen goods! This is an unlawful deed: it may bring punishment, and village gossip worsens with every sale (reputation −1).',
+    'Всё равно продать': 'Sell anyway',
+    'Отказаться': 'Refuse',
+    'Краденое честным скупщикам не сбыть — только Скупщику по ночам':
+        'Honest buyers won\'t touch stolen goods — the Fence at night only',
+    'Любая торговля занимает полчаса': 'Any trade takes half an hour',
+    '(Краденое добро честным скупщикам не сбыть: только Скупщику по ночам на постоялом дворе.)':
+        '(Stolen goods cannot be sold to honest buyers: the Fence at the inn, at night, is your only market.)',
+    'Ты ковырял замок, как вдруг в сенях хрустнула половица — кто-то идёт к дому! Ты скрылся задворками, но приметили тебя: по деревне пойдёт дурная молва.\n\n(Скрадывание {0}%: бросок {1} — провал; −{2} к репутации в деревне.)':
+        'You were picking the lock when a floorboard creaked in the passage — someone is coming to the house! You slipped away through the back, but you were noticed: ill word will spread through the village.\n\n(Stealth {0}%: roll {1} — fail; −{2} village reputation.)',
+    'Замок дубовый, окованный — отмычка скребёт да соскальзывает. Сундук цел, добро за хозяином.\n\n(Взлом {0}%: бросок {1} — провал. Пока дом пуст, можно пробовать снова — десять минут и риск на тебе.)':
+        'An oak, iron-bound lock — your pick scratches and slips. The chest holds; the goods stay with the owner.\n\n(Lockpicking {0}%: roll {1} — fail. While the house is empty you may try again — ten minutes and the risk are yours.)',
+    'Пытался взломать дверь «{0}» — Скрадывание провалено ({1}%: бросок {2}): приметили, −{3} к репутации.':
+        'Tried to pick the door of the "{0}" — Stealth failed ({1}%: roll {2}): spotted, −{3} reputation.',
+    'Ты возился у замка, когда со стороны колодца раздался голос — на тебя взглянули. Ты отошёл за угол, но дело сделано: тебя запомнили.\n\n(Скрадывание {0}%: бросок {1} — провал; −{2} к репутации в деревне.)':
+        'You were fiddling with the lock when a voice rang out by the well — eyes turned your way. You slipped around the corner, but the deed was done: they remember you.\n\n(Stealth {0}%: roll {1} — fail; −{2} village reputation.)',
+    'Скребёшь отмычкой в колоде ключа — а он держит. Дом пуст, но замок живуч: можно пробовать снова (десять минут за попытку, и Скрадывание рискует всякий раз).\n\n(Взлом {0}%: бросок {1} — провал.)':
+        'Your pick scrabbles in the keyhole — the lock holds. The house is empty, but the lock is stubborn: you may try again (ten minutes per attempt, and Stealth is risked every time).\n\n(Lockpicking {0}%: roll {1} — fail.)',
+    'Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).':
+        'Good word of the worker spreads through the village: +1 reputation (daily-wage bonus — once a day).',
+    'Ставка подёнки: +1 к репутации в деревне за отработанный день.':
+        'Daily wage: +1 village reputation for a worked day.',
+    '🔒 {0} — {1} {2} {3}   ·   репутация у кузнеца: {4}/{5}':
+        '🔒 {0} — {1} {2} {3}   ·   smith\'s trust: {4}/{5}',
+    'Заказал «{0}» у кузнеца за {1} д. (заказная цена, репутация у кузнеца {2}).':
+        'Commissioned "{0}" from the smith for {1} d. (commission price, smith\'s trust {2}).',
+    'Кузнец прищурился: «Заказную вещь не всякому свяжу. Приди, когда будешь мне другом (репутация у кузнеца +{0}, сейчас {1}).»':
+        'The smith squints: "I don\'t forge commissioned work for just anyone. Come back when you are a friend of mine (smith\'s trust +{0}, now {1})."',
+
+    'Переполох заметили все: −2 к репутации в деревне.':
+        'The whole hall saw the ruckus: −2 village reputation.',
+    '⛪ А поутру молва о потешнике дошла и до батюшки: Церковь скоморохов не жалует (−2 к репутации у священника).':
+        '⛪ And by morning word of the juggler reached the priest: the Church frowns on skomorokhs (−2 to your standing with him).',
+    'Молва о скоморошестве дошла до батюшки: −2 к личной репутации у священника.':
+        'Word of the skomorokh performance reached the priest: −2 to your personal standing with him.',
+
+    'Тегиляй и кожаную броню шьёт ремесленник Аверьян. Кольчуга — кузнец куёт на заказ: 150 д. и только при высокой репутации у кузнеца.':
+        'Padded and leather armour are sewn by the craftsman Averyan. The chain mail is commissioned from the smith: 150 d. and only at high trust of the smith.',
     // Раунд 32 (пп.14,15): обязательная строка «Информации по игре» (F1)
     'help.timeRatio':
         '⏱ TIME: 1 minute of real time = 20 minutes of game time (1:20 ratio),\n' +

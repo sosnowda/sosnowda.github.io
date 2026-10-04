@@ -90,14 +90,17 @@ ok(countOf(p4, 'grain') === 1 && p4.inventory.length === 1, 'removeFromEntry с�
 removeFromEntry(p4, p4.inventory[0], 1);
 ok(p4.inventory.length === 0, 'пустая кучка удаляется из узла');
 
-console.log('--- 5. UI/source-проверки: пометка «(краденое)» и проводка взлома ---');
+console.log('--- 5. UI/source-проверки: краденое только Скупщику (66.78) и проводка взлома ---');
 const isrc = read('game/src/scenes/InteriorScene.js');
 ok(isrc.includes("res.items.forEach(it => addStolenItem(player, it.id, it.count));"), 'Взлом сундука: лут кладётся через addStolenItem (краденое)');
-ok(isrc.includes("const stolenMark = row.stolen ? ` — ${t('краденое')}` : '';"), 'Скупка: строка краденого помечена «(краденое)»');
-ok(isrc.includes("t('Краденое — на 80% дешевле скупки')"), 'Скупка: подсказка «Краденое — на 80% дешевле скупки»');
-ok(isrc.includes("Сбыл скупщику краденое"), 'Журнал: отдельная строка «Сбыл скупщику краденое…»');
+// ПАТЧ 66.78 (пп.4–5): краденое продать ТОЛЬКО Скупщику по ночам —
+// честная скупка краденые строки больше НЕ показывает (66.77-канон отменён).
+ok(isrc.includes("sellableLoot(player).filter(r => !r.stolen)"), 'Скупка (честная): краденые строки убраны (66.78 п.5)');
+ok(isrc.includes("sellableLoot(player).filter(r => r.stolen)"), 'Меню Скупщика: ТОЛЬКО краденые строки (66.78 п.4)');
+ok(isrc.includes("t('Краденое честным скупщикам не сбыть — только Скупщику по ночам')"), 'Скупка: подсказка «краденое — только Скупщику по ночам»');
+ok(isrc.includes("noteFenceSale(this.registry, row.def.name, total)"), 'Журнал/репутация: продажа через noteFenceSale (−1 за каждую, 66.78 п.6)');
 ok(isrc.includes("removeFromEntry(player, row.entry, 1)") && isrc.includes("removeFromEntry(player, row.entry, n)"), 'Продажа идёт из конкретной кучки (removeFromEntry, «1» и «всё»)');
-ok(isrc.includes("(Краденое добро: скупщики платят за него на 80% меньше стандартной цены.)"), 'Диалог сундука: подсказка о цене краденого');
+ok(isrc.includes("(Краденое добро честным скупщикам не сбыть: только Скупщику по ночам на постоялом дворе.)"), 'Диалог сундука: подсказка «краденое — только Скупщику по ночам»');
 ok(!/\bremoveItem\(player,\s*def\.id/.test(isrc), 'В скупке НЕТ слепого removeItem по id (только removeFromEntry по кучке)');
 
 console.log('--- 6. ТКАЧЕСТВО — только для женского персонажа (приказ 5) ---');

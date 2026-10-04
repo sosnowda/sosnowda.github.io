@@ -73,15 +73,24 @@ import { attemptHaggle, haggleMultFor, canHaggleToday, haggleHintLine } from '..
 // Патч 66.74 (приказы 4, 5, 7, 12): РЕМЕСЛО/КУЗНЕЧНОЕ ДЕЛО/ГРАМОТА/СКОМОРОШЕСТВО
 import { craftDaywork, smithyDaywork, acolyteServe, tavernPerformance, carpenterDaywork, millDaywork, weaveDaywork } from '../systems/jobs.js';
 // Патч 66.76 (приказы 8–9): заказные товары кузнеца (сабля/кольчуга) —
-// цены и порог личной славы у кузнеца
+// цены и порог личной репутации у кузнеца
 import { SABRE_SMITH_PRICE, CHAIN_SMITH_PRICE, SMITH_TRUST_REP, canBuySmithSpecial } from '../systems/shopRules.js';
 // Патч 66.74 (приказы 13–18): ВЗЛОМ И СУНДУКИ (жилые дома)
 import { hasChest, canPickChest, attemptChestPick, CHEST_HOUSES } from '../systems/burglary.js';
+// Патч 66.78 (приказы 1–9): ПРЕСТУПНОСТЬ — молва/хозяева/Скупщик/предупреждения
+import {
+    isFenceInTown, isNightHour, noteFenceSale,
+    crimeWarnedOnce, markCrimeWarned, fenceWarnedOnce, markFenceWarned, CRIME_WARNING_TEXT,
+} from '../systems/crime.js';
+// Патч 66.78 (приказ 9): торговля = фиксированные 30 минут, часы реального
+// времени на время панели СТОЯТ (пауза/снятие паузы мировых часов)
+import { pauseWorldClock, resumeWorldClock } from '../systems/WorldClock.js';
+import { TRADE_MINUTES, chargeTradeTime } from '../systems/trade.js';
 // Патч 66.74 (приказ 5): служка — окно богослужения (SERVICES)
 import { SERVICES } from '../systems/ChurchBells.js';
 // Патч 66.73 (приказ 16): обаяние беседы — ±5/±10 к разговорным проверкам
 import { chaAdjustedTalkSkill } from '../systems/charisma.js';
-// Раунд 66.17 (п.6): ставка подёнки — +1 к славе за отработанный день
+// Раунд 66.17 (п.6): ставка подёнки — +1 к репутации за отработанный день
 import { dayKeyOf } from '../data/daily.js';
 
 export class InteriorScene extends Phaser.Scene {
@@ -565,6 +574,20 @@ export class InteriorScene extends Phaser.Scene {
         }
 
         // ============================================================
+        // ПАТЧ 66.78 (приказы 4–5): СКУПЩИК — ночной гость постоялого двора.
+        // Рисуется в тёмном углу ТОЛЬКО ночью и только в свои ночи недели;
+        // покупает ТОЛЬКО краденое (кнопка рядом с остальными действиями).
+        // ============================================================
+        this.fenceHere = false;
+        if (interior.id === 'tavern') {
+            const tsNow = getTime(this.registry);
+            this.fenceHere = !!isFenceInTown(this.registry, tsNow);
+            if (this.fenceHere) {
+                this.drawFenceInterior(width, height);
+            }
+        }
+
+        // ============================================================
         // П.8: ВСЕ КНОПКИ ДЕЙСТВИЙ — В ОДНУ СТРОКУ, БЕЗ ПЕРЕКРЫТИЙ
         // ============================================================
         const btnY = height - 50;
@@ -616,6 +639,11 @@ export class InteriorScene extends Phaser.Scene {
                 // (сбор со стола за успех; риск гнева Церкви)
                 buttons.push({ label: t('\u{1FA95} Скоморошить (Скоморошество)'), bg: 0x5a3a1a, hover: 0x6a4a2a, cb: () => this.performAtTavern(interior) });
                 buttons.push({ label: t('\u{1F6CF} Отдых'), bg: 0x4a3a5a, hover: 0x5a4a6a, cb: () => this.showTavernRestMenu(interior) });
+                // ПАТЧ 66.78 (приказы 4–5): СКУПЩИК — скупка ТОЛЬКО краденого,
+                // только по ночам и только в его ночи (3–5 ночей недели)
+                if (this.fenceHere) {
+                    buttons.push({ label: t('\u{1F31B} Скупщик (краденое)'), bg: 0x242436, hover: 0x343446, cb: () => this.showFenceMenu(interior) });
+                }
                 // Раунд 40 (заявка): «⏳ Провести время» — перемотка 1–24 ч /
                 // до утра / до полудня / до вечера, чтобы не мотаться
                 // деревня↔околица (по 2 ч за цикл) ради часов.
@@ -1318,6 +1346,8 @@ export class InteriorScene extends Phaser.Scene {
         // РАУНД 66.20: анти-стакинг — как «Скупка» (66.19): кастомная панель
         // не должна открываться поверх живого диалога («Отдых», беседа НПЦ)
         closeAllSingletonDialogs(this);
+        // Патч 66.78 (приказ 9): открыта торговля — счётчик реального времени стоит
+        pauseWorldClock(this.registry);
         const player = this.registry.get('player');
         const market = interior.market;
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
@@ -1347,6 +1377,8 @@ export class InteriorScene extends Phaser.Scene {
             overlay.destroy();
             panel.destroy();
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+            // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
+            resumeWorldClock(this.registry);
         };
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 30, market.title || interior.name, {
@@ -1423,6 +1455,8 @@ export class InteriorScene extends Phaser.Scene {
                 }
                 this.registry.set('player', player);
                 ActionLog.add(this.registry, tf(t('Купил «{0}» в «{1}» за {2} д.{3}'), t(item.name), interior.name, price, logNote ? ` (${logNote})` : ''));
+                // Патч 66.78 (приказ 9): любая покупка — 30 минут
+                chargeTradeTime(this.registry);
                 this.updateHUD();
                 // Пересобрать панель с обновлённым балансом
                 closeMenu();
@@ -1446,6 +1480,9 @@ export class InteriorScene extends Phaser.Scene {
     showTavernShop() {
         // РАУНД 66.20: анти-стакинг — закрыть открытые диалоги перед панелью
         closeAllSingletonDialogs(this);
+        // Патч 66.78 (приказ 9): открыта торговля — счётчик реального времени стоит
+        // (еда при покупке съедается сразу — её час считается по meal.js, приказ 66.77)
+        pauseWorldClock(this.registry);
         const player = this.registry.get('player');
         // Раунд 66.12 (п.7): единые правила торговли — при дурной славе
         // содержатель постоялого двора тоже отказывает (как кузнец и лавка).
@@ -1542,6 +1579,8 @@ export class InteriorScene extends Phaser.Scene {
             overlay.destroy();
             panel.destroy();
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+            // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
+            resumeWorldClock(this.registry);
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
             fontSize: 17, padding: { left: 20, right: 20, top: 10, bottom: 10 },
@@ -1556,6 +1595,10 @@ export class InteriorScene extends Phaser.Scene {
      * Патч 66.73 (приказ 5): ТОРГ за цену — встречная проверка Убеждения,
      * множитель цен до конца дня (+25%/+50% при крите/−10% при fumble);
      * панель растёт по числу товаров — всё влезает без скролла (п.2).
+     * ПАТЧ 66.78 (пп.4–5): краденое честным скупщикам НЕ СДАЮТ —
+     * только Скупщику по ночам (краденые строки отсюда убраны).
+     * ПАТЧ 66.78 (приказ 9): любая продажа = 30 минут, часы реального
+     * времени на время панели СТОЯТ.
      */
     showSellLootMenu(interior) {
         const player = this.registry.get('player');
@@ -1566,6 +1609,8 @@ export class InteriorScene extends Phaser.Scene {
         closeAllSingletonDialogs(this);
         this.busyDialog = false;
         this.__sellLootOpen = true;
+        // Патч 66.78 (приказ 9): открыта торговля — счётчик реального времени стоит
+        pauseWorldClock(this.registry);
         const { width, height } = this.scale;
         const isButcher = interior.id === 'butcher_house';
         const buyerName = isButcher
@@ -1587,7 +1632,10 @@ export class InteriorScene extends Phaser.Scene {
         const haggleMult = haggleMultFor(this.registry, buyerNpcId);
         const priceOf = (base) => Math.max(1, Math.round(base * haggleMult));
 
-        const rows = sellableLoot(player);
+        // ПАТЧ 66.78 (пп.4–5): краденое честным скупщикам НЕ СДАЮТ —
+        // строки краденого отсюда убраны (только Скупщик по ночам).
+        const rows = sellableLoot(player).filter(r => !r.stolen);
+        const hasStolen = sellableLoot(player).some(r => r.stolen);
         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
             .setOrigin(0).setInteractive().setDepth(200);
         // Патч 66.73 (п.2, аудит размеров): высота панели РАСТЁТ по числу
@@ -1601,6 +1649,8 @@ export class InteriorScene extends Phaser.Scene {
             overlay.destroy(); panel.destroy();
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
             this.__sellLootOpen = false;
+            // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
+            resumeWorldClock(this.registry);
         };
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 30,
@@ -1615,10 +1665,12 @@ export class InteriorScene extends Phaser.Scene {
         // РАУНД 66.20: подсказка о ценах вынесена в общую строку (раньше
         // дублировалась в каждой строке списка и вынуждала держать мелкий кегль)
         // Патч 66.73 (приказ 5): рядом — строка состояния торга
-        // Патч 66.77 (приказ 2): подсказка о цене краденого (−80%)
+        // Патч 66.78 (пп.4–5): краденое здесь НЕ СДАЮТ — только Скупщику по ночам
         this.add.text(width / 2, height / 2 - panelH / 2 + 88,
             t('Печёное и жаркое дороже сырого') + '  ·  ' + haggleHintLine(this.registry, buyerNpcId)
-            + '  ·  ' + t('Краденое — на 80% дешевле скупки'), {
+            + '  ·  ' + (hasStolen
+                ? t('Краденое честным скупщикам не сбыть — только Скупщику по ночам')
+                : t('Любая торговля занимает полчаса')), {
                 fontSize: '13px', color: RUS.textDim, fontStyle: 'italic',
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5).setDepth(202);
@@ -1635,11 +1687,9 @@ export class InteriorScene extends Phaser.Scene {
         rows.forEach((row, i) => {
             const y = startY + i * 52;
             const def = row.def;
-            const unitPrice = priceOf(row.price); // патч 66.73: цена с учётом торга; 66.77: краденое уже −80% в row.price
-            // Патч 66.77 (приказ 2): краденая кучка помечается в строке скупки
-            const stolenMark = row.stolen ? ` — ${t('краденое')}` : '';
+            const unitPrice = priceOf(row.price); // патч 66.73: цена с учётом торга (краденое отсюда убрано — 66.78)
             this.add.text(width / 2 - panelW / 2 + 30, y - 22,
-                `${def.emoji} ${t(def.name)} ×${row.count} — ${unitPrice} ${t('д.')}${stolenMark}`, {
+                `${def.emoji} ${t(def.name)} ×${row.count} — ${unitPrice} ${t('д.')}`, {
                     fontSize: '15px', color: RUS.text, stroke: '#000', strokeThickness: 1,
                 }).setOrigin(0, 0.5).setDepth(202);
             createButton(this, width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), unitPrice), () => {
@@ -1647,16 +1697,14 @@ export class InteriorScene extends Phaser.Scene {
                 player.dengas = (player.dengas || 0) + unitPrice;
                 this.registry.set('player', player);
                 if (this.audioManager) this.audioManager.playGoldReceive();
-                if (row.stolen) {
-                    ActionLog.add(this.registry, tf(t('Сбыл скупщику краденое «{0}» за {1} д. (за краденое платят на 80% меньше).'), t(def.name), unitPrice));
-                } else {
-                    ActionLog.add(this.registry, tf(t('Продал «{0}» ({1}) за {2} д.'), t(def.name), buyerName, unitPrice));
-                }
+                ActionLog.add(this.registry, tf(t('Продал «{0}» ({1}) за {2} д.'), t(def.name), buyerName, unitPrice));
+                // Патч 66.78 (приказ 9): любая продажа — 30 минут
+                chargeTradeTime(this.registry);
                 this.updateHUD();
                 closeMenu();
                 this.showSellLootMenu(interior);
             }, {
-                backgroundColor: row.stolen ? 0x5a3a2a : 0x3a5a3a, hoverColor: row.stolen ? 0x6a4a3a : 0x4a6a4a, textColor: RUS.text,
+                backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
                 fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 },
             }).setDepth(202);
             if (row.count > 1) {
@@ -1666,11 +1714,9 @@ export class InteriorScene extends Phaser.Scene {
                     player.dengas = (player.dengas || 0) + unitPrice * n;
                     this.registry.set('player', player);
                     if (this.audioManager) this.audioManager.playGoldReceive();
-                    if (row.stolen) {
-                        ActionLog.add(this.registry, tf(t('Сбыл скупщику краденое «{0}» ×{1} за {2} д. (за краденое платят на 80% меньше).'), t(def.name), n, unitPrice * n));
-                    } else {
-                        ActionLog.add(this.registry, tf(t('Продал всё «{0}» ×{1} ({2}) за {3} д.'), t(def.name), n, buyerName, unitPrice * n));
-                    }
+                    ActionLog.add(this.registry, tf(t('Продал всё «{0}» ×{1} ({2}) за {3} д.'), t(def.name), n, buyerName, unitPrice * n));
+                    // Патч 66.78 (приказ 9): любая продажа — 30 минут
+                    chargeTradeTime(this.registry);
                     this.updateHUD();
                     closeMenu();
                     this.showSellLootMenu(interior);
@@ -1715,6 +1761,133 @@ export class InteriorScene extends Phaser.Scene {
                 fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
             }).setDepth(202);
         }
+    }
+
+    /**
+     * ПАТЧ 66.78 (приказы 4–6): МЕНЮ СКУПЩИКА — ночной сбыт краденого.
+     *  • появляется только ПО НОЧАМ и только в свои ночи (3–5 ночей недели);
+     *  • покупает ТОЛЬКО краденое (честное ему не нужно, строки честного нет);
+     *  • платит 20% стандартной скупки (fencePriceOf — патч 66.77);
+     *  • КАЖДАЯ продажа — репутация в деревне −1 (точно, приказ 6);
+     *  • ПЕРВАЯ продажа — однократный красный поп-ап о противозаконности;
+     *  • продажа = 30 минут (приказ 9), часы реального времени стоят.
+     * Скупщик — человек дурного ремесла: репутационных отказов и торга у него нет.
+     */
+    showFenceMenu(interior) {
+        const player = this.registry.get('player');
+        if (!player) return;
+        closeAllSingletonDialogs(this);
+        this.busyDialog = false;
+        // Патч 66.78 (приказ 9): открыта торговля — счётчик реального времени стоит
+        pauseWorldClock(this.registry);
+        const { width, height } = this.scale;
+        const rows = sellableLoot(player).filter(r => r.stolen);
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
+            .setOrigin(0).setInteractive().setDepth(200);
+        const panelW = 560;
+        const panelH = Math.min(Math.round(height * 0.88), 190 + rows.length * 52 + 78);
+        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x161420, 1)
+            .setStrokeStyle(3, 0x4a3a5a).setDepth(201);
+        const closeMenu = () => {
+            overlay.destroy(); panel.destroy();
+            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+            // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
+            resumeWorldClock(this.registry);
+        };
+
+        this.add.text(width / 2, height / 2 - panelH / 2 + 30,
+            t('Тёмный угол постоялого двора — Скупщик'), {
+                fontSize: '22px', color: '#b09ad0', fontStyle: 'bold',
+                fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(202);
+        this.add.text(width / 2, height / 2 - panelH / 2 + 62,
+            `${t('Денег:')} ${formatMoney(player.dengas || 0)}`, {
+                fontSize: '16px', color: '#c9a14a', stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0.5).setDepth(202);
+        this.add.text(width / 2, height / 2 - panelH / 2 + 88,
+            t('Краденое уходит без торга · каждая продажа — молва хуже (репутация −1)'), {
+                fontSize: '13px', color: RUS.textDim, fontStyle: 'italic',
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0.5).setDepth(202);
+
+        if (rows.length === 0) {
+            this.add.text(width / 2, height / 2,
+                t('«Пусто, что ли принёс? Мне честное не надо — только краденое.»'), {
+                    fontSize: '15px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
+                    align: 'center',
+                }).setOrigin(0.5).setDepth(202);
+        }
+
+        /** Одна продажа Скупщику (после однократного предупреждения — п.6). */
+        const doSell = (row, n, unitPrice) => {
+            const total = unitPrice * n;
+            removeFromEntry(player, row.entry, n);
+            player.dengas = (player.dengas || 0) + total;
+            this.registry.set('player', player);
+            if (this.audioManager) this.audioManager.playGoldReceive();
+            // Патч 66.78 (приказ 6): каждая продажа краденого — репутация −1
+            noteFenceSale(this.registry, row.def.name, total);
+            // Патч 66.78 (приказ 9): любая продажа — 30 минут
+            chargeTradeTime(this.registry);
+            this.updateHUD();
+            closeMenu();
+            this.showFenceMenu(interior);
+        };
+
+        const startY = height / 2 - panelH / 2 + 140;
+        rows.forEach((row, i) => {
+            const y = startY + i * 52;
+            const def = row.def;
+            const unitPrice = row.price; // fencePriceOf уже в row.price (20% скупки)
+            this.add.text(width / 2 - panelW / 2 + 30, y - 22,
+                `${def.emoji} ${t(def.name)} ×${row.count} — ${unitPrice} ${t('д.')}${t(' — краденое')}`, {
+                    fontSize: '15px', color: '#d8c8a8', stroke: '#000', strokeThickness: 1,
+                }).setOrigin(0, 0.5).setDepth(202);
+            createButton(this, width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), unitPrice), () => {
+                // ПАТЧ 66.78 (приказ 6): ПЕРВАЯ продажа — красный поп-ап
+                if (!fenceWarnedOnce(this.registry)) {
+                    markFenceWarned(this.registry);
+                    closeMenu();
+                    createDialog(this, t('⚠ ПРОТИВОЗАКОНИЕ!'),
+                        t('Ты сбываешь краденое! Это противозаконное действие: за него может быть наказание, а молва в деревне с каждой продажи становится хуже (репутация −1).'),
+                        [
+                            { text: t('Всё равно продать'), callback: () => { this.showFenceMenu(interior); doSell(row, 1, unitPrice); } },
+                            { text: t('Отказаться'), callback: () => {} },
+                        ],
+                        { singleton: false, coverColor: 0x5a0f0f, coverAlpha: 0.85 });
+                    return;
+                }
+                doSell(row, 1, unitPrice);
+            }, {
+                backgroundColor: 0x5a3a2a, hoverColor: 0x6a4a3a, textColor: RUS.text,
+                fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 },
+            }).setDepth(202);
+            if (row.count > 1) {
+                createButton(this, width / 2 + 205, y + 4, tf(t('Всё ({0} д.)'), unitPrice * row.count), () => {
+                    if (!fenceWarnedOnce(this.registry)) {
+                        markFenceWarned(this.registry);
+                        closeMenu();
+                        createDialog(this, t('⚠ ПРОТИВОЗАКОНИЕ!'),
+                            t('Ты сбываешь краденое! Это противозаконное действие: за него может быть наказание, а молва в деревне с каждой продажи становится хуже (репутация −1).'),
+                            [
+                                { text: t('Всё равно продать'), callback: () => { this.showFenceMenu(interior); doSell(row, row.count, unitPrice); } },
+                                { text: t('Отказаться'), callback: () => {} },
+                            ],
+                            { singleton: false, coverColor: 0x5a0f0f, coverAlpha: 0.85 });
+                        return;
+                    }
+                    doSell(row, row.count, unitPrice);
+                }, {
+                    backgroundColor: 0x2a4a5a, hoverColor: 0x3a5a6a, textColor: RUS.text,
+                    fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 },
+                }).setDepth(202);
+            }
+        });
+
+        createButton(this, width / 2, height / 2 + panelH / 2 - 34, t('Закрыть'), closeMenu, {
+            backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
+            fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
+        }).setDepth(202);
     }
 
     /**
@@ -2189,6 +2362,8 @@ export class InteriorScene extends Phaser.Scene {
     showBlacksmithShop(tab = 'weapon') {
         // РАУНД 66.20: анти-стакинг — закрыть открытые диалоги перед панелью
         closeAllSingletonDialogs(this);
+        // Патч 66.78 (приказ 9): открыта торговля — счётчик реального времени стоит
+        pauseWorldClock(this.registry);
         const player = this.registry.get('player');
         const { width, height } = this.scale;
 
@@ -2221,6 +2396,8 @@ export class InteriorScene extends Phaser.Scene {
             overlay.destroy();
             panel.destroy();
             this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+            // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
+            resumeWorldClock(this.registry);
         };
 
         this.add.text(width / 2, height / 2 - panelH / 2 + 30,
@@ -2238,7 +2415,7 @@ export class InteriorScene extends Phaser.Scene {
 
         // Переключатель вкладок. РАУНД 62 (п.7): вкладка «Доспехи» была
         // удалена. ПАТЧ 66.76 (приказ 8) ВОЗВРАЩАЕТ её с ОДНИМ заказным
-        // товаром — КОЛЬЧУГОЙ (задорого и при высокой славе у кузнеца);
+        // товаром — КОЛЬЧУГОЙ (задорого и при высокой репутации у кузнеца);
         // кожаная броня и тегиляй продаются у Аверьяна (приказ 7).
         const mkTab = (x, label, key) => createButton(this, x, height / 2 - panelH / 2 + 100, t(label), () => {
             closeMenu();
@@ -2291,6 +2468,8 @@ export class InteriorScene extends Phaser.Scene {
                     this.registry.set('player', player);
                     if (this.audioManager) this.audioManager.playGoldReceive();
                     ActionLog.add(this.registry, tf(t('Продал «{0}» кузнецу за {1} д. (полцены, урок Судебника о честной торговле).'), t(item.name), sellPrice));
+                    // Патч 66.78 (приказ 9): любая продажа — 30 минут
+                    chargeTradeTime(this.registry);
                     this.updateHUD();
                     closeMenu();
                     this.showBlacksmithShop('sell');
@@ -2308,7 +2487,7 @@ export class InteriorScene extends Phaser.Scene {
             // МЕЧ НЕ ПРОДАЁТСЯ — УНИКАЛЬНАЯ НАГРАДА ОТ СТАРОСТЫ.
             // ПАТЧ 66.76 (приказы 8–9): в оружии — ЗАКАЗНАЯ САБЛЯ (100 д.),
             // в «Доспехах» — ЗАКАЗНАЯ КОЛЬЧУГА (150 д.); обе только при
-            // высокой личной славе у кузнеца (+25) и рамках Судебника.
+            // высокой личной репутации у кузнеца (+25) и рамках Судебника.
             const SMITH_SALE_WEAPONS = ['club', 'palitsa', 'mace', 'flail', 'knife', 'spear', 'axe', 'bow'];
             const items = tab === 'weapon'
                 ? Object.values(WEAPONS).filter(w => SMITH_SALE_WEAPONS.includes(w.id))
@@ -2321,7 +2500,7 @@ export class InteriorScene extends Phaser.Scene {
                 }).setOrigin(0.5).setDepth(202);
             } else if (tab === 'armor') {
                 this.add.text(width / 2, height / 2 + panelH / 2 - 44,
-                    t('Тегиляй и кожаную броню шьёт ремесленник Аверьян. Кольчуга — кузнец куёт на заказ: 150 д. и только при высокой славе у кузнеца.'), {
+                    t('Тегиляй и кожаную броню шьёт ремесленник Аверьян. Кольчуга — кузнец куёт на заказ: 150 д. и только при высокой репутации у кузнеца.'), {
                     fontSize: '11px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
                 }).setOrigin(0.5).setDepth(202);
             }
@@ -2385,6 +2564,8 @@ export class InteriorScene extends Phaser.Scene {
                     }
                     this.registry.set('player', player);
                     ActionLog.add(this.registry, tf(t('Купил «{0}» у кузнеца за {1} д.{2}'), t(item.name), price, isMilitary ? t(' (воинское снаряжение, по уложению Судебника)') : ''));
+                    // Патч 66.78 (приказ 9): любая покупка — 30 минут
+                    chargeTradeTime(this.registry);
                     this.updateHUD();
                     closeMenu();
                     this.showBlacksmithShop(tab);
@@ -2418,6 +2599,8 @@ export class InteriorScene extends Phaser.Scene {
                     addArrowsToInventory(player, ARROW_PACK_SIZE);
                     this.registry.set('player', player);
                     ActionLog.add(this.registry, tf(t('Купил пачку стрел ({0} шт.) у кузнеца за {1} д. — стрелы легли в узел (в колчан наложишь на экране персонажа).'), ARROW_PACK_SIZE, packPrice));
+                    // Патч 66.78 (приказ 9): любая покупка — 30 минут
+                    chargeTradeTime(this.registry);
                     this.updateHUD();
                     closeMenu();
                     this.showBlacksmithShop('weapon');
@@ -2432,7 +2615,7 @@ export class InteriorScene extends Phaser.Scene {
             // ===== ПАТЧ 66.76 (приказы 8–9): ЗАКАЗНЫЕ ТОВАРЫ КУЗНЕЦА =====
             // Сабля (в «Оружии») и кольчуга (в «Доспехах»): ЗАДОРОГО
             // (твёрдая заказная цена БЕЗ скидок славы) и ТОЛЬКО при высокой
-            // личной славе у кузнеца (npcRep ≥ +25) + рамках Судебника.
+            // личной репутации у кузнеца (npcRep ≥ +25) + рамках Судебника.
             if (tab === 'weapon' || tab === 'armor') {
                 const specialId = tab === 'weapon' ? 'sabre' : 'chain';
                 const specialDef = tab === 'weapon' ? WEAPONS.sabre : ARMORS.chain;
@@ -2444,7 +2627,7 @@ export class InteriorScene extends Phaser.Scene {
                 const statSp = tab === 'weapon'
                     ? `(${t('урон')} ${specialDef.dice.min}-${specialDef.dice.max}+${specialDef.bonus || 0})`
                     : `(${t('защита')} ${specialDef.def})`;
-                const spDesc = tf(t('🔒 {0} — {1} {2} {3}   ·   слава у кузнеца: {4}/{5}'),
+                const spDesc = tf(t('🔒 {0} — {1} {2} {3}   ·   репутация у кузнеца: {4}/{5}'),
                     t(specialDef.name), specialPrice, t('д.'), statSp, Math.round(repNow), SMITH_TRUST_REP);
                 createButton(this, width / 2, startY + items.length * 36 + (tab === 'weapon' ? 72 : 0), spDesc, () => {
                     if (!gateSp.ok) {
@@ -2488,7 +2671,9 @@ export class InteriorScene extends Phaser.Scene {
                         }
                     }
                     this.registry.set('player', player);
-                    ActionLog.add(this.registry, tf(t('Заказал «{0}» у кузнеца за {1} д. (заказная цена, слава у кузнеца {2}).'), t(specialDef.name), specialPrice, Math.round(repNow)));
+                    ActionLog.add(this.registry, tf(t('Заказал «{0}» у кузнеца за {1} д. (заказная цена, репутация у кузнеца {2}).'), t(specialDef.name), specialPrice, Math.round(repNow)));
+                    // Патч 66.78 (приказ 9): любая покупка — 30 минут
+                    chargeTradeTime(this.registry);
                     this.updateHUD();
                     closeMenu();
                     this.showBlacksmithShop(tab);
@@ -2662,7 +2847,7 @@ export class InteriorScene extends Phaser.Scene {
     // ================================================================
 
     /**
-     * ПАТЧ 66.74 (приказы 14–16): СУНДУК В ЖИЛОМ ДОМЕ — рисунок + кнопка.
+     * ПАТЧ 66.78 (приказы 14–18): СУНДУК В ЖИЛОМ ДОМЕ — рисунок + кнопка.
      * Сундук рисуется у левой стены (3 прямоугольника — дубовый окованный
      * ларь с замком); кнопка в ряду — только в ПУСТОМ доме (приказ 16).
      */
@@ -2674,6 +2859,32 @@ export class InteriorScene extends Phaser.Scene {
         this.add.rectangle(cx, cy - 14, 66, 14, 0x7d5a30).setStrokeStyle(2, 0x3a2814).setDepth(depth);
         this.add.rectangle(cx, cy, 10, 12, 0xc9a14a).setStrokeStyle(1, 0x3a2814).setDepth(depth + 1); // замок
         this.add.text(cx, cy + 30, t('🧰 Сундук'), {
+            fontSize: '10px', color: '#c9a14a', backgroundColor: '#00000088',
+            padding: { x: 4, y: 2 }, stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5).setDepth(depth + 1);
+    }
+
+    /**
+     * ПАТЧ 66.78 (приказы 4–5): СКУПЩИК НА ПЕРВОМ ЭТАЖЕ ПОСТОЯЛОГО ДВОРА.
+     * Тёмная фигура в капюшоне у дальней стены — приходит только ПО НОЧАМ
+     * и только в свои ночи (3–5 ночей недели, выбор случаен). Покупает
+     * ТОЛЬКО краденое.
+     */
+    drawFenceInterior(width, height) {
+        const cx = width * 0.87;
+        const cy = height * 0.62;
+        const depth = 6;
+        // тень-пятно под ногами
+        this.add.ellipse(cx, cy + 34, 56, 12, 0x000000, 0.35).setDepth(depth);
+        // плащ (тёмный, до земли)
+        this.add.rectangle(cx, cy, 34, 62, 0x1d1d2a).setStrokeStyle(2, 0x0d0d16).setDepth(depth);
+        // капюшон
+        this.add.circle(cx, cy - 38, 13, 0x1d1d2a).setStrokeStyle(2, 0x0d0d16).setDepth(depth);
+        // тень лица под капюшоном
+        this.add.circle(cx, cy - 37, 7, 0x000000, 0.85).setDepth(depth + 1);
+        // узел с товаром у ног
+        this.add.circle(cx + 26, cy + 28, 8, 0x6a4a26).setStrokeStyle(1, 0x3a2814).setDepth(depth);
+        this.add.text(cx, cy + 52, t('🕯 Скупщик'), {
             fontSize: '10px', color: '#c9a14a', backgroundColor: '#00000088',
             padding: { x: 4, y: 2 }, stroke: '#000', strokeThickness: 1,
         }).setOrigin(0.5).setDepth(depth + 1);
@@ -2693,12 +2904,33 @@ export class InteriorScene extends Phaser.Scene {
      * ПАТЧ 66.74 (приказы 14–18): ВЗЛОМ СУНДУКА.
      *  • раз в месяц на дом (canPickChest); только в пустом доме —
      *    кнопка и так появляется лишь тогда;
-     *  • попытка: СКРАДЫВАНИЕ (провал — −2 репутации, приказ 18),
-     *    затем ВЗЛОМ: успех — лут 1–5 штук по таблице дома, крит — все 5;
-     *    провал — можно повторить (каждая попытка — время и риск);
-     *  • попытка — 30 минут, усталость −1.
+     *  • попытка: СКРАДЫВАНИЕ (провал — геометрическая молва, 66.78 п.1),
+     *    затем ХОЗЯЕВА (66.78 пп.2–3: могут вернуться — репутация у хозяев
+     *    −30, в деревне −20; могут и напасть — бой), затем ВЗЛОМ: успех —
+     *    лут 1–5 штук по таблице дома, крит — все 5;
+     *  • попытка — ФИКСИРОВАННО 10 минут (66.78 п.8), усталость −1;
+     *  • ПЕРВАЯ попытка кражи/взлома — однократное КРАСНОЕ предупреждение
+     *    (66.78 п.7).
      */
     openChest(interior) {
+        if (this.busyDialog) return;
+        // ПАТЧ 66.78 (приказ 7): первая попытка Кражи/Взлома — красный поп-ап
+        if (!crimeWarnedOnce(this.registry)) {
+            markCrimeWarned(this.registry);
+            this.busyDialog = true;
+            createDialog(this, t('⚠ ПРОТИВОЗАКОНИЕ!'),
+                CRIME_WARNING_TEXT(),
+                [
+                    { text: t('Решиться'), callback: () => { this.busyDialog = false; this.doOpenChest(interior); } },
+                    { text: t('Одуматься'), callback: () => { this.busyDialog = false; } },
+                ],
+                { singleton: false, coverColor: 0x5a0f0f, coverAlpha: 0.85 });
+            return;
+        }
+        this.doOpenChest(interior);
+    }
+
+    doOpenChest(interior) {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
         if (!player) return;
@@ -2714,18 +2946,41 @@ export class InteriorScene extends Phaser.Scene {
         }
         this.busyDialog = true;
         const close = () => { this.busyDialog = false; };
-        tickTime(this.registry, 30, 'walk');   // ковырять замок — полчаса
+        tickTime(this.registry, 10, 'walk');   // ковырять замок — ровно 10 минут (66.78 п.8)
         spendFatigue(this.registry, 1);
         const res = attemptChestPick(this.registry, player, interior.id, timeState, {
             stealth: (player.skills && player.skills.stealth) || 10,
             lock: (player.skills && player.skills.lockpicking) || 10,
+            hostNpcId: interior.npcId, // застукали — репутация у хозяев −30 (66.78 п.2)
         });
-        // 1) Скрадывание провалено (приказ 18): −2 репутации уже списаны
+        // 1) Скрадывание провалено (приказ 18): геометрическая молва уже списана
         if (res.stealthFailed) {
             createDialog(this, t('👣 Шорох за стеной'),
-                tf(t('Ты ковырял замок, как вдруг в сенях хрустнула половица — кто-то идёт к дому! Ты скрылся задворками, но приметили тебя: по деревне пойдёт дурная молва.\n\n(Скрадывание {0}%: бросок {1} — провал; −2 к славе в деревне.)'), res.stealthSkill, res.stealthRoll),
+                tf(t('Ты ковырял замок, как вдруг в сенях хрустнула половица — кто-то идёт к дому! Ты скрылся задворками, но приметили тебя: по деревне пойдёт дурная молва.\n\n(Скрадывание {0}%: бросок {1} — провал; −{2} к репутации в деревне.)'), res.stealthSkill, res.stealthRoll, res.stealthPenalty),
                 [{ text: t('Уйти пока цел'), callback: close }], { singleton: false });
             this.registry.set('player', player);
+            this.updateHUD();
+            return;
+        }
+        // 1а) ПАТЧ 66.78 (пп.2–3): ХОЗЯЕВА ВЕРНУЛИСЬ и застукали вора
+        if (res.ownersCame) {
+            this.registry.set('player', player);
+            if (res.hostAttacks) {
+                // Нападение хозяев (п.3): бой, как с враждебным жителем
+                ActionLog.add(this.registry, tf(t('Хозяева вернулись во время воровства и бросились на тебя в «{0}»!'), interior.name));
+                createDialog(this, t('🗡 На тебя нападают!'),
+                    t('Дверь распахивается — на пороге хозяева! Узнав вора, они с криком бросаются на тебя!\n\n(Репутация у хозяев −30, в деревне −20.)'),
+                    [{ text: t('Драться!'), callback: () => {
+                        // Бой — на следующий кадр (раунд 40, вне стека клика)
+                        this.time.delayedCall(0, () => {
+                            this.scene.start('Combat', { enemyKeys: ['villager'], npcId: interior.npcId + '_hostile' });
+                        });
+                    } }], { singleton: false });
+            } else {
+                createDialog(this, t('👣 Хозяева вернулись!'),
+                    t('Ты только потянулся к сундуку, как в сенях загремели голоса — хозяева вернулись домой! Пришлось ускользнуть задворками пустыми руками, но тебя запомнили.\n\n(Репутация у хозяев −30, в деревне −20.)'),
+                    [{ text: t('Ускользнуть'), callback: close }], { singleton: false });
+            }
             this.updateHUD();
             return;
         }
@@ -2733,15 +2988,15 @@ export class InteriorScene extends Phaser.Scene {
         if (res.lockFailed) {
             ActionLog.add(this.registry, tf(t('Ковырял замок сундука в «{0}» (Взлом {1}%: бросок {2}) — замок крепок, сундук не открылся.'), interior.name, res.skill, res.roll));
             createDialog(this, t('🧰 Крепкий замок'),
-                tf(t('Замок дубовый, окованный — отмычка скребёт да соскальзывает. Сундук цел, добро за хозяином.\n\n(Взлом {0}%: бросок {1} — провал. Пока дом пуст, можно пробовать снова — время и риск на тебе.)'), res.skill, res.roll),
+                tf(t('Замок дубовый, окованный — отмычка скребёт да соскальзывает. Сундук цел, добро за хозяином.\n\n(Взлом {0}%: бросок {1} — провал. Пока дом пуст, можно пробовать снова — десять минут и риск на тебе.)'), res.skill, res.roll),
                 [{ text: t('Отступить от сундука'), callback: close }], { singleton: false });
             this.registry.set('player', player);
             this.updateHUD();
             return;
         }
         // 3) УДАЧА: лут 1–5 штук по таблице дома (крит — все 5).
-        // Патч 66.77 (приказ 2): лут кладётся КАК КРАДЕНЕЕ (отдельная кучка
-        // узла) — скупщик платит за него на 80% меньше стандартной скупки.
+        // Патч 66.77 (приказ 2) + 66.78 (пп.4–5): лут кладётся КАК КРАДЕНЕЕ
+        // (отдельная кучка узла) — сбыть можно ТОЛЬКО Скупщику по ночам.
         res.items.forEach(it => addStolenItem(player, it.id, it.count));
         if (res.dengas > 0) player.dengas = (player.dengas || 0) + res.dengas;
         this.registry.set('player', player);
@@ -2756,7 +3011,7 @@ export class InteriorScene extends Phaser.Scene {
         createDialog(this, res.crit ? t('🧰 До донышка!') : t('🧰 Замок поддался!'),
             tf(t('Отмычка нашла щёлк — крышка откинулась. В сундуке:{0}\n\n(Взлом {1}%: бросок {2}{3}. В этот месяц здесь больше нечего взять.)'),
                 '\n· ' + lootLines.join('\n· '), res.skill, res.roll, res.crit ? t(' — КРИТ: вытянул всё до донышка!') : '')
-            + '\n\n' + t('(Краденое добро: скупщики платят за него на 80% меньше стандартной цены.)'),
+            + '\n\n' + t('(Краденое добро честным скупщикам не сбыть: только Скупщику по ночам на постоялом дворе.)'),
             [{ text: t('Взять добро'), callback: close }], { singleton: false });
         this.updateHUD();
     }
@@ -2821,7 +3076,7 @@ export class InteriorScene extends Phaser.Scene {
 
         // РАУНД 66.17 (п.6): СТАВКА ПОДЁНКИ — за отработанный день герою
         // начисляется МИНИМУМ 1 очко репутации в деревне (раз в сутки;
-        // хоть десять часов в день — приработка и так честная, а слава +1/день).
+        // хоть десять часов в день — приработка и так честная, а репутация +1/день).
         let repMsg = '';
         const today66 = dayKeyOf(getTime(this.registry));
         const q66 = this.registry.get('quest') || {};
@@ -2829,8 +3084,8 @@ export class InteriorScene extends Phaser.Scene {
             q66.dayworkRepDay = today66;
             this.registry.set('quest', q66);
             changeVillageRep(this.registry, 1, 'подённая работа');
-            repMsg = '\n' + t('Слава о работнике идёт по деревне: +1 к доброй славе (ставка подёнки — раз в сутки).');
-            ActionLog.add(this.registry, t('Ставка подёнки: +1 к славе в деревне за отработанный день.'));
+            repMsg = '\n' + t('Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).');
+            ActionLog.add(this.registry, t('Ставка подёнки: +1 к репутации в деревне за отработанный день.'));
         }
 
         createDialog(this, jobRes.crit ? t('🏺 Шедевр на круге!') : t('Помощь в мастерской'),
@@ -2852,7 +3107,7 @@ export class InteriorScene extends Phaser.Scene {
      * ПАТЧ 66.76 (приказ 3): ТКАЧЕСТВО — подёнка за станком в доме ткачихи.
      * Оплата НАТУРОЙ: успех — отрез полотна в узел (+2 д. мелочью),
      * крит — отрез сукна (+3 д.), провал — «порвал нить», 2 д.
-     * 1 час, −3 здоровья, −2 ОУ; ставка славы подёнки — раз в сутки
+     * 1 час, −3 здоровья, −2 ОУ; ставка репутации подёнки — раз в сутки
      * (общий ключ dayworkRepDay с гончаром/кузницей).
      */
     workInWeaver() {
@@ -2884,7 +3139,7 @@ export class InteriorScene extends Phaser.Scene {
             qW.dayworkRepDay = todayW;
             this.registry.set('quest', qW);
             changeVillageRep(this.registry, 1, 'подённая работа');
-            repMsgW = '\n' + t('Слава о работнике идёт по деревне: +1 к доброй славе (ставка подёнки — раз в сутки).');
+            repMsgW = '\n' + t('Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).');
         }
         createDialog(this, jobRes.crit ? t('🧶 Узор вышел ровен!') : t('Помощь за станком'),
             (jobRes.crit
@@ -2930,7 +3185,7 @@ export class InteriorScene extends Phaser.Scene {
             qC.dayworkRepDay = todayC;
             this.registry.set('quest', qC);
             changeVillageRep(this.registry, 1, 'подённая работа');
-            repMsgC = '\n' + t('Слава о работнике идёт по деревне: +1 к доброй славе (ставка подёнки — раз в сутки).');
+            repMsgC = '\n' + t('Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).');
         }
         createDialog(this, jobRes.crit ? t('🪓 Ладная зарубка!') : t('Помощь плотнику'),
             (jobRes.crit
@@ -3055,7 +3310,7 @@ export class InteriorScene extends Phaser.Scene {
      * двора. Раз в сутки. 1 час, −1 ОУ:
      *  • успех — сбор со стола 3–8 д.; крит — 9–16 д. («стар и млад плясал»);
      *  • провал — струны вразлад, стол молчит;
-     *  • fumble — переполох: скамья опрокинута (−2 к славе деревни);
+     *  • fumble — переполох: скамья опрокинута (−2 к репутации деревни);
      *  • РИСК ГНЕВА ЦЕРКВИ (20% при любом исходе): молва о потешнике
      *    доходит до батюшки — −2 к личной славе у священника.
      */
@@ -3079,12 +3334,12 @@ export class InteriorScene extends Phaser.Scene {
         let repNote = '';
         if (jobRes.fumble) {
             changeVillageRep(this.registry, -2, 'скомороший переполох');
-            repNote = '\n' + t('Переполох заметили все: −2 к славе в деревне.');
+            repNote = '\n' + t('Переполох заметили все: −2 к репутации в деревне.');
         }
         if (jobRes.churchAngry) {
             changeNpcRepExact(this.registry, 'priest', -2, 'скоморошество');
-            ActionLog.add(this.registry, t('Молва о скоморошестве дошла до батюшки: −2 к личной славе у священника.'));
-            repNote += '\n' + t('⛪ А поутру молва о потешнике дошла и до батюшки: Церковь скоморохов не жалует (−2 к славе у священника).');
+            ActionLog.add(this.registry, t('Молва о скоморошестве дошла до батюшки: −2 к личной репутации у священника.'));
+            repNote += '\n' + t('⛪ А поутру молва о потешнике дошла и до батюшки: Церковь скоморохов не жалует (−2 к репутации у священника).');
         }
         if (jobRes.ok) {
             player.dengas = (player.dengas || 0) + jobRes.coins;

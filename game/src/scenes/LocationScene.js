@@ -3340,7 +3340,7 @@ export class LocationScene extends Phaser.Scene {
             qM.dayworkRepDay = todayM;
             this.registry.set('quest', qM);
             changeVillageRep(this.registry, 1, 'подённая работа');
-            repMsgM = '\n' + t('Слава о работнике идёт по деревне: +1 к доброй славе (ставка подёнки — раз в сутки).');
+            repMsgM = '\n' + t('Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).');
         }
         createDialog(this, jobRes.crit ? t('⚙ Жернова поют!') : t('Работа у мельника'),
             (jobRes.crit

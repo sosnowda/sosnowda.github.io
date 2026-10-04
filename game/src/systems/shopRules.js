@@ -9,7 +9,7 @@
 // Правила (модуль ЧИСТЫЙ — тестируется в Node без сцены):
 //  • задорого: сабля 100 д. (справочная цена 60), кольчуга 150 д.
 //    (справочная 80) — кузнец куёт на заказ, не перекупщик;
-//  • высокая репутация У КУЗНЕЦА: личная славa npcRep('blacksmith')
+//  • высокая репутация У КУЗНЕЦА: личная репутация npcRep('blacksmith')
 //    не ниже SMITH_TRUST_REP (+25) — «свой человек у горна»;
 //  • плюс СОСЛОВНЫЕ рамки Судебника (canBuyMilitaryGear: 18+ и
 //    деревенская репутация ≥ 0) — sabre/chain уже в MILITARY_GEAR_IDS;
@@ -23,12 +23,12 @@ import { t, tf } from './i18n.js';
 export const SABRE_SMITH_PRICE = 100;
 /** Цена кольчуги в лавке кузнеца (задорого; справочная ARMORS.chain = 80). */
 export const CHAIN_SMITH_PRICE = 150;
-/** Минимальная ЛИЧНАЯ слава у кузнеца для заказных товаров. */
+/** Минимальная ЛИЧНАЯ репутация у кузнеца для заказных товаров. */
 export const SMITH_TRUST_REP = 25;
 
 /**
  * Можно ли купить заказной товар (сабля/кольчуга) у кузнеца.
- * @param {number} npcRepValue — личная слава у кузнеца (getNpcRep(registry,'blacksmith'))
+ * @param {number} npcRepValue — личная репутация у кузнеца (getNpcRep(registry,'blacksmith'))
  * @param {{ok:boolean, reason?:string}} gearCheck — результат canBuyMilitaryGear
  * @returns {{ok:boolean, reason?:string}}
  */
@@ -37,7 +37,7 @@ export function canBuySmithSpecial(npcRepValue, gearCheck) {
     if (rep < SMITH_TRUST_REP) {
         return {
             ok: false,
-            reason: tf(t('Кузнец прищурился: «Заказную вещь не всякому свяжу. Приди, когда будешь мне другом (слава у кузнеца +{0}, сейчас {1}).»'), SMITH_TRUST_REP, rep),
+            reason: tf(t('Кузнец прищурился: «Заказную вещь не всякому свяжу. Приди, когда будешь мне другом (репутация у кузнеца +{0}, сейчас {1}).»'), SMITH_TRUST_REP, rep),
         };
     }
     if (gearCheck && !gearCheck.ok) {

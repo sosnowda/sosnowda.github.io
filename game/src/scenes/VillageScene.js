@@ -57,6 +57,8 @@ import { isNightHour, isChurchOpen, churchClosedReason } from '../systems/Access
 import { knockAtDoor as knockAtDoorLogic, doorResponder, responderName } from '../systems/NightKnock.js';
 // Патч 66.74 (приказы 13–18): ВЗЛОМ закрытого дома (дверь) + сундуки
 import { hasChest, attemptBreakIn } from '../systems/burglary.js';
+// Патч 66.78 (приказ 7): однократное красное предупреждение о преступлении
+import { crimeWarnedOnce, markCrimeWarned, CRIME_WARNING_TEXT } from '../systems/crime.js';
 // Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
 import { hungerStatusLine } from '../systems/hunger.js';
 // Патч 66.73 (приказ 14): усталость в HUD деревни (ОУ = СИЛ+ТЕЛ, BRP SRD)
@@ -1868,13 +1870,33 @@ export class VillageScene extends Phaser.Scene {
      * ПАТЧ 66.74 (приказы 13, 17, 18): ВЗЛОМ ДВЕРИ закрытого дома.
      * Вызывается из поп-апа «Дом закрыт» (только днём, когда хозяина нет,
      * и только если рядом нет НПЦ — приказ 17).
-     *  • попытка — 30 минут времени, усталость −1;
-     *  • сначала СКРАДЫВАНИЕ (приказ 18): провал — «приметили» −2 репутации,
-     *    попытка сорвана;
+     *  • попытка — ФИКСИРОВАННО 10 минут времени (66.78 п.8), усталость −1;
+     *  • ПЕРВАЯ попытка кражи/взлома — однократное КРАСНОЕ предупреждение
+     *    (66.78 п.7);
+     *  • сначала СКРАДЫВАНИЕ (приказ 18): провал — «приметили», репутация
+     *    падает ГЕОМЕТРИЧЕСКИ (66.78 п.1), попытка сорвана;
      *  • затем ВЗЛОМ: успех — дверь приоткрыта (интерьер в режиме взлома,
      *    в пустом доме доступен сундук); провал — замок держит (можно снова).
      */
     breakIntoHouse(interiorId) {
+        if (this.busyDialog) return;
+        // ПАТЧ 66.78 (приказ 7): первая попытка Кражи/Взлома — красный поп-ап
+        if (!crimeWarnedOnce(this.registry)) {
+            markCrimeWarned(this.registry);
+            this.busyDialog = true;
+            createDialog(this, t('⚠ ПРОТИВОЗАКОНИЕ!'),
+                CRIME_WARNING_TEXT(),
+                [
+                    { text: t('Решиться'), callback: () => { this.busyDialog = false; this.runBreakIn(interiorId); } },
+                    { text: t('Одуматься'), callback: () => { this.busyDialog = false; } },
+                ],
+                { singleton: false, coverColor: 0x5a0f0f, coverAlpha: 0.85 });
+            return;
+        }
+        this.runBreakIn(interiorId);
+    }
+
+    runBreakIn(interiorId) {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
         if (!player) return;
@@ -1891,15 +1913,15 @@ export class VillageScene extends Phaser.Scene {
         const name = interior ? interior.name : interiorId;
         this.busyDialog = true;
         const close = () => { this.busyDialog = false; };
-        tickTime(this.registry, 30, 'walk');
+        tickTime(this.registry, 10, 'walk');   // ковырять замок — ровно 10 минут (66.78 п.8)
         const res = attemptBreakIn(this.registry, player, {
             stealth: (player.skills && player.skills.stealth) || 10,
             lock: (player.skills && player.skills.lockpicking) || 10,
         });
         if (res.stealthFailed) {
-            ActionLog.add(this.registry, tf(t('Пытался взломать дверь «{0}» — Скрадывание провалено ({1}%: бросок {2}): приметили, −2 к репутации.'), name, res.stealthSkill, res.stealthRoll));
+            ActionLog.add(this.registry, tf(t('Пытался взломать дверь «{0}» — Скрадывание провалено ({1}%: бросок {2}): приметили, −{3} к репутации.'), name, res.stealthSkill, res.stealthRoll, res.stealthPenalty));
             createDialog(this, t('👣 Приметили!'),
-                tf(t('Ты возился у замка, когда со стороны колодца раздался голос — на тебя взглянули. Ты отошёл за угол, но дело сделано: тебя запомнили.\n\n(Скрадывание {0}%: бросок {1} — провал; −2 к славе в деревне.)'), res.stealthSkill, res.stealthRoll),
+                tf(t('Ты возился у замка, когда со стороны колодца раздался голос — на тебя взглянули. Ты отошёл за угол, но дело сделано: тебя запомнили.\n\n(Скрадывание {0}%: бросок {1} — провал; −{2} к репутации в деревне.)'), res.stealthSkill, res.stealthRoll, res.stealthPenalty),
                 [{ text: t('Смешаться с улицей'), callback: close }], { singleton: false });
             this.updateHUD();
             return;
@@ -1914,7 +1936,7 @@ export class VillageScene extends Phaser.Scene {
         }
         ActionLog.add(this.registry, tf(t('Пытался вскрыть замок «{0}» (Взлом {1}%: бросок {2}) — замок крепок.'), name, res.lockSkill, res.lockRoll));
         createDialog(this, t('🔒 Крепкий замок'),
-            tf(t('Скребёшь отмычкой в колоде ключа — а он держит. Дом пуст, но замок живуч: можно пробовать снова (полчаса за попытку, и Скрадывание рискует всякий раз).\n\n(Взлом {0}%: бросок {1} — провал.)'), res.lockSkill, res.lockRoll),
+            tf(t('Скребёшь отмычкой в колоде ключа — а он держит. Дом пуст, но замок живуч: можно пробовать снова (десять минут за попытку, и Скрадывание рискует всякий раз).\n\n(Взлом {0}%: бросок {1} — провал.)'), res.lockSkill, res.lockRoll),
             [{ text: t('Отойти от двери'), callback: close }], { singleton: false });
         this.updateHUD();
     }
