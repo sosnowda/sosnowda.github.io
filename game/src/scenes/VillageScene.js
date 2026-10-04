@@ -60,7 +60,9 @@ import { hasChest, attemptBreakIn } from '../systems/burglary.js';
 // Патч 66.78 (приказ 7): однократное красное предупреждение о преступлении
 import { crimeWarnedOnce, markCrimeWarned, CRIME_WARNING_TEXT } from '../systems/crime.js';
 // Патч 66.79 (пп.5,7,8): СТРАЖНИК У ВОРОТ — осмотр узла, вира по Судебнику, изгнание
-import { hasGuardBusiness, guardBill, guardInspection } from '../systems/justice.js';
+import { hasGuardBusiness, guardBill, guardInspection, guardLightSearchNeeded, guardLightSearch } from '../systems/justice.js';
+// Патч 66.80 (пп.11-а/в): недельное «забывание» мелких обид + статус в HUD
+import { tickWeeklyRepForget, villageRepStatusSuffix } from '../systems/repBalance.js';
 // Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
 import { hungerStatusLine } from '../systems/hunger.js';
 // Патч 66.73 (приказ 14): усталость в HUD деревни (ОУ = СИЛ+ТЕЛ, BRP SRD)
@@ -98,6 +100,9 @@ export class VillageScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.dialogue = new DialogueRunner(this);
+        // Патч 66.80 (п.11-а): ленивый недельный тик «забывания» мелких обид
+        // (раз в игровую неделю: деревенская репутация −20…−1 подрастает на +1 к нулю)
+        tickWeeklyRepForget(this.registry, getTime(this.registry));
         // Раунд 31 (п.12): мировые часы тикают РЕАЛЬНЫМ временем — по соотношению
         // 1:30 (раунд 32, п.14: 1 реальная минута = 30 игровых минут),
         // а пока открыт разговор — стоят
@@ -1607,6 +1612,8 @@ export class VillageScene extends Phaser.Scene {
         // Патч 66.73 (приказ 14): усталость в HUD (ОУ = СИЛ+ТЕЛ, BRP SRD)
         statusLine += `  ${fatigueStatusLine(this.registry)}`;
         statusLine += `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}`;
+        // Патч 66.80 (п.11-в): лестница статусов — «(подозрительный)» / «(свой)»
+        statusLine += villageRepStatusSuffix(this.registry);
 
         // ФИКС аудита UI (этот раунд): длинная строка статуса наезжала на кнопки
         // меню «Обзор/Задания/Персонаж/Инвентарь» (правая зона ~430px) — хвост
@@ -1618,7 +1625,7 @@ export class VillageScene extends Phaser.Scene {
         let statusTooLong = this.statusText.width > maxStatusW;
         if (statusTooLong && timeState) {
             const icon = this.weather ? ` ${this.weather.icon}` : '';
-            const rep = `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}`;
+            const rep = `  ⭐${t('Деревня')}: ${villageRep > 0 ? '+' : ''}${villageRep}` + villageRepStatusSuffix(this.registry);
             const candidates = [
                 // 1) без народного ориентира (« · заутреня отошла»)
                 `❤${p.HP}/${p.HPmax}  💰${moneyStr}  📅${formatDateRus(timeState)}${icon}` +
@@ -1969,9 +1976,35 @@ export class VillageScene extends Phaser.Scene {
             this.showGuardInspection();
             return;
         }
+        // Патч 66.80 (п.11-в): «подозрительный» (репутация ≤ −20) с краденым
+        // в узле — стражник останавливает на ЛЁГКИЙ ОСМОТР: изымается только
+        // краденое, без виры, без поимки и без списания репутации.
+        if (guardLightSearchNeeded(this.registry)) {
+            this.showSuspiciousSearch();
+            return;
+        }
         tickTime(this.registry, 60);
         ActionLog.add(this.registry, t('Игрок вышел за околицу.'));
         this.scene.start('Fork');
+    }
+
+    /** Поп-ап лёгкого осмотра «подозрительного» (п.11-в). */
+    showSuspiciousSearch() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const res = guardLightSearch(this.registry);
+        this.busyDialog = true;
+        this.updateHUD();
+        const itemLines = res.items.length > 0
+            ? t('В узле опознаётся чужое:') + '\n' + res.items.map(i => `  ${i.emoji} ${t(i.name)} ×${i.count}`).join('\n')
+            : t('Краденого в узле не нашлось.');
+        createDialog(this, t('🛡 Осмотр у ворот'),
+            t('«Стой! О тебе худая молва: люди добро теряли, а ты у ворот крутится. Судебник велит узел показать — предъявляй!»')
+            + '\n\n' + itemLines
+            + '\n\n' + t('Краденое отобрано и вернётся по домам. Денег с тебя не взяли и поимкой не сочли — но стражник запомнил.'),
+            [{ text: t('Отойти от ворот'), callback: () => { this.busyDialog = false; } }],
+            { singleton: false, coverColor: 0x2a2438, coverAlpha: 0.72 });
     }
 
     /** Поп-ап осмотра стражником: счёт и изъятие (пп.5,7,8). */

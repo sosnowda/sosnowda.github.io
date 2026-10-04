@@ -38,9 +38,11 @@ import { t, tf } from './i18n.js';
 import { ActionLog } from '../data/actionLog.js';
 import { skillCheck } from './BRPEngine.js';
 import { getBlessedSkill } from '../data/questGenerator.js';
-import { getNpcRep, changeNpcRepExact, changeVillageRepExact } from '../data/reputation.js';
+import { getNpcRep, getVillageRep, changeNpcRepExact, changeVillageRepExact } from '../data/reputation.js';
 import { getNpcDisplayName } from '../data/npcNames.js';
 import { getLootDef } from './loot.js';
+// Патч 66.80 (п.11-д): повторная однотипная обида бьёт ×1.5 (−10 → −15 → −22…)
+import { escalatedNpcOffense, offenseCountOf, REP_STATUS_SUSPICIOUS } from './repBalance.js';
 
 // ---------------- КОНСТАНТЫ БАЛАНСА (точные значения приказов) ----------------
 
@@ -144,7 +146,9 @@ export function suspectCheckSkill(registry, npcId, player) {
 /**
  * Пп.1–4: попытка отвести подозрение в краже (разговорный навык).
  * Успех — подозрение снято ДО следующей кражи (п.2). Провал —
- * репутация у НПЦ −10 и в деревне −5 (точно, п.4).
+ * репутация у НПЦ −10 и в деревне −5 (п.4).
+ * Патч 66.80 (п.11-д): повторные провалы проверки у ТОГО ЖЕ НПЦ бьют
+ * сильнее — ×1.5 за каждый прежний провал: −10 → −15 → −22 → −30 (потолок).
  * @returns {{ ok:boolean, roll:number, skill:number, effective:number, thefts:number, penalty:number }}
  */
 export function attemptInnocence(registry, npcId, player, { rng = Math.random } = {}) {
@@ -160,14 +164,16 @@ export function attemptInnocence(registry, npcId, player, { rng = Math.random } 
         ActionLog.add(registry, tf(t('Слово вышло гладко: {0} больше не косится на тебя (проверка {1}%: бросок {2}).'),
             npcName, blessed, res.roll));
     } else {
-        // п.4: точные −10 у НПЦ и −5 в деревне
-        changeNpcRepExact(registry, npcId, SUSPECT_FAIL_NPC_REP);
+        // п.4: −5 в деревне точно; у НПЦ — с эскалацией повторных обид
+        // (патч 66.80, п.11-д: −10 → −15 → −22 → −30, потолок −30)
+        const npcLoss = escalatedNpcOffense(registry, npcId, 'suspect_fail', Math.abs(SUSPECT_FAIL_NPC_REP));
+        changeNpcRepExact(registry, npcId, npcLoss);
         changeVillageRepExact(registry, SUSPECT_FAIL_VILLAGE_REP);
         const npcRep = getNpcRep(registry, npcId);
         ActionLog.add(registry, tf(t('Не сумел отвести подозрения: {0} смотрит волком (репутация у него {1}), по деревне шепчутся (репутация в деревне −{2}).'),
             npcName, npcRep, Math.abs(SUSPECT_FAIL_VILLAGE_REP)));
     }
-    return { ok, roll: res.roll, skill: chk.skill, effective: blessed, thefts: chk.thefts, penalty: chk.penalty };
+    return { ok, roll: res.roll, skill: chk.skill, effective: blessed, thefts: chk.thefts, penalty: chk.penalty, offenseTimes: offenseCountOf(registry, npcId, 'suspect_fail') };
 }
 
 
@@ -293,6 +299,40 @@ export function guardInspection(registry) {
         ActionLog.add(registry, t('ПОРАЖЕНИЕ: пойман за кражей в третий раз! По Судебнику — поток и разграбление: всё имущество отобрано, герой изгнан из деревни.'));
     }
     return { ...bill, lostDengas, paidShort, caughtCount: st.caughtCount, expelled };
+}
+
+// ---------------- П.11-в: ЛЁГКИЙ ОСМОТР «ПОДОЗРИТЕЛЬНОГО» У ВОРОТ ----------------
+
+/**
+ * Патч 66.80 (п.11-в): нужен ли «лёгкий» осмотр у ворот — игрок
+ * «подозрительный» (репутация деревни ≤ −20) и несёт краденое.
+ * Это НЕ поимка: изымается только краденое, БЕЗ виры, БЕЗ падения
+ * репутации и БЕЗ счётчика caughtCount (тот — за застукивание, п.5).
+ */
+export function guardLightSearchNeeded(registry) {
+    if (!registry) return false;
+    const player = registry.get('player');
+    const hasStolen = Array.isArray(player && player.inventory) &&
+        player.inventory.some(e => e && e.stolen);
+    return hasStolen && getVillageRep(registry) <= REP_STATUS_SUSPICIOUS;
+}
+
+/**
+ * Патч 66.80 (п.11-в): ЛЁГКИЙ ОСМОТР узла у ворот для «подозрительного».
+ * Краденое изымается и возвращается хозяевам; денег не берут, репутацию
+ * не списывают, поимкой не считают — но краденое при тебе больше не идёт.
+ * @returns {{ items:Array, confiscatedValue:number }}
+ */
+export function guardLightSearch(registry) {
+    const player = registry.get('player');
+    const bill = guardBill(registry, player);
+    if (Array.isArray(player.inventory)) {
+        player.inventory = player.inventory.filter(e => !(e && e.stolen));
+    }
+    registry.set('player', player);
+    ActionLog.add(registry, tf(t('Стражник у ворот отобрал краденое ({0} шт.) и вернул по домам. «Подозрительный ты человек — не нравишься деревне. Ступай, пока по-хорошему».'),
+        bill.items.reduce((s, i) => s + i.count, 0)));
+    return { items: bill.items, confiscatedValue: bill.confiscatedValue };
 }
 
 // ---------------- ПРИМИРЕНИЕ С ОБКРАДЕННЫМ НПЦ (п.6) ----------------

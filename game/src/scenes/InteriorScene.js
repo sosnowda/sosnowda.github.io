@@ -93,6 +93,10 @@ import {
 } from '../systems/justice.js';
 // Патч 66.79 (пп.9–10): застукали — списания после провала побега
 import { applyOwnersCaught } from '../systems/crime.js';
+// Патч 66.80 (пп.11-а/г): недельное «забывание» обид + епитимья в церкви
+import { tickWeeklyRepForget, performChurchAbsolution, absolutionUsedThisMonth, ABSOLUTION_COST, ABSOLUTION_REP } from '../systems/repBalance.js';
+// Патч 66.80 (п.12-в): «О слове» — торг о ставке подёнки (раз в сутки)
+import { attemptWageDeal, canWageDealToday, wageDealMultFor } from '../systems/repBalance.js';
 // Патч 66.74 (приказ 5): служка — окно богослужения (SERVICES)
 import { SERVICES } from '../systems/ChurchBells.js';
 // Патч 66.73 (приказ 16): обаяние беседы — ±5/±10 к разговорным проверкам
@@ -116,6 +120,8 @@ export class InteriorScene extends Phaser.Scene {
     create() {
         bindRestartOnResize(this); // раунд 20: любой размер/ориентация окна
         const { width, height } = this.scale;
+        // Патч 66.80 (п.11-а): ленивый недельный тик «забывания» мелких обид
+        tickWeeklyRepForget(this.registry, getTime(this.registry));
         // Раунд 66.26 (приказ 3): в ЦЕРКВИ фон — перспективная горница (стена
         // уходит до ~0.58H), и персонажи на 0.55H «висели в воздухе» на стене.
         // Спавн — на видимом полу (0.64H); в остальных интерьерах вид сверху —
@@ -665,6 +671,10 @@ export class InteriorScene extends Phaser.Scene {
                 buttons.push({ label: t('\u{1F6D2} Купить оружие'), bg: 0x3a5a3a, hover: 0x4a6a4a, cb: () => this.showBlacksmithShop('weapon') });
                 // Патч 66.74 (приказ 12): КУЗНЕЧНОЕ ДЕЛО — работа у горна за деньги
                 buttons.push({ label: t('\u{1F528} Помочь кузнецу (1 час)'), bg: 0x6a3a1a, hover: 0x7a4a2a, cb: () => this.helpBlacksmith(interior) });
+                // Патч 66.80 (п.12-в): торг о ставке с кузнецом
+                if (canWageDealToday(this.registry)) {
+                    buttons.push({ label: t('\u{1F91D} О слове (Убеждение)'), bg: 0x2a4a5a, hover: 0x3a5a6a, cb: () => this.wageDealDialog('blacksmith', t('кузнеца')) });
+                }
                 // Раунд 40: кнопка «Персонаж» теперь ПОСТОЯННАЯ вверху справа
                 // ВО ВСЕХ помещениях (addSceneMenuButtons) — дубликат у кузнеца снят
             } else if (interior.id === 'butcher_house') {
@@ -677,6 +687,11 @@ export class InteriorScene extends Phaser.Scene {
                 // Раунд 66.21 (приказы 13-14): пожертвование ЛЮБОГО размера
                 // (меню 5/10/25/50 д.), личная репутация священника + деревенская
                 buttons.push({ label: t('\u{1F56F} Пожертвование'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.donateInChurch() });
+                // Патч 66.80 (п.11-г): ЕПИТИМЬЯ — «замолить грехи» 50 д. раз в месяц
+                // (снимает до −5 деревенской молвы; видна только при плохой молве)
+                if (getVillageRep(this.registry) < 0 && !absolutionUsedThisMonth(this.registry, getTime(this.registry))) {
+                    buttons.push({ label: t('\u{26EA} Замолить грехи (50 д.)'), bg: 0x5a2a4a, hover: 0x6a3a5a, cb: () => this.absolutionInChurch() });
+                }
                 buttons.push({ label: t('\u{1F50D} Осмотреть киот'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectChurchKiot() });
                 // Патч 66.74 (приказ 5): ГРАМОТА — служка при богослужении
                 buttons.push({ label: t('\u{1F4D6} Служить при службе (Грамота)'), bg: 0x2a5a4a, hover: 0x3a6a5a, cb: () => this.serveAtChurch(interior) });
@@ -685,6 +700,10 @@ export class InteriorScene extends Phaser.Scene {
             // Раунд 37 (вариант Б): мастерская гончара — подённая работа
             // переехала сюда из удалённого амбара (п.18 заявки)
             buttons.push({ label: t('\u{1FAB5} Помочь в мастерской (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInPotter() });
+            // Патч 66.80 (п.12-в): «О слове» — торг о ставке (раз в сутки)
+            if (canWageDealToday(this.registry)) {
+                buttons.push({ label: t('\u{1F91D} О слове (Убеждение)'), bg: 0x2a4a5a, hover: 0x3a5a6a, cb: () => this.wageDealDialog('potter1', t('гончара')) });
+            }
             // Раунд 39 (п.13): кнопка «Мой узел» УДАЛЕНА вместе со всеми тюками
             // Патч 66.74 (приказ 14): сундук гончара — только если дом ПУСТ
             if (this.houseEmpty) this.pushChestButton(interior, buttons);
@@ -695,12 +714,20 @@ export class InteriorScene extends Phaser.Scene {
             // персонажа (мужская кнопка не показывается вовсе).
             if (player && player.gender === 'female') {
                 buttons.push({ label: t('\u{1F9F6} Помочь за станком (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInWeaver() });
+                // Патч 66.80 (п.12-в): торг о ставке и с ткачихой
+                if (canWageDealToday(this.registry)) {
+                    buttons.push({ label: t('\u{1F91D} О слове (Убеждение)'), bg: 0x2a4a5a, hover: 0x3a5a6a, cb: () => this.wageDealDialog('weaver1', t('ткачихи')) });
+                }
             }
             // Патч 66.76: сундук ткачихи — как у плотника (подёнка + сундук)
             if (this.houseEmpty && hasChest(interior.id)) this.pushChestButton(interior, buttons);
         } else if (interior.id === 'carpenter_house') {
             // Патч 66.76 (приказ 4): ПЛОТНИЦКОЕ ДЕЛО — подёнка у сруба, 3–6 д.
             buttons.push({ label: t('\u{1FA93} Помочь плотнику (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInCarpenter() });
+            // Патч 66.80 (п.12-в): торг о ставке с плотником
+            if (canWageDealToday(this.registry)) {
+                buttons.push({ label: t('\u{1F91D} О слове (Убеждение)'), bg: 0x2a4a5a, hover: 0x3a5a6a, cb: () => this.wageDealDialog('carpenter1', t('плотника')) });
+            }
             // Патч 66.76: сундук плотника — общий путь для пустых жилых домов
             // (else-ветка ниже по hasChest; в домах мастеров кнопка подёнки
             // и сундук показываются вместе)
@@ -3454,6 +3481,17 @@ export class InteriorScene extends Phaser.Scene {
         this.registry.set('player', player);
         this.updateHUD();
         const smithName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : t('кузнец');
+        // ФИКС 66.80 (был ReferenceError repMsgC — копипаст из плотника):
+        // в кузнице ставка репутации подёнки теперь работает как у остальных
+        let repMsgS = '';
+        const todayS = dayKeyOf(getTime(this.registry));
+        const qS = this.registry.get('quest') || {};
+        if (qS.dayworkRepDay !== todayS) {
+            qS.dayworkRepDay = todayS;
+            this.registry.set('quest', qS);
+            changeVillageRep(this.registry, 1, 'подённая работа');
+            repMsgS = '\n' + t('Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).');
+        }
         const checkNote = jobRes.crit
             ? tf(t('(Кузнечное дело {0}%: бросок {1} — КРИТ!)'), jobRes.skill, jobRes.roll)
             : tf(t('(Кузнечное дело {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.ok ? t('успех') : t('черновая работа'));
@@ -3465,8 +3503,73 @@ export class InteriorScene extends Phaser.Scene {
                     ? tf(t('Час у горна: держал клещи, качал меха, бил по наковальне, куда мастер укажет. Работа ладится.\n\n'))
                     : tf(t('К молоту тебя не подпустили — носил дрова, качал меха да таскал воду. Работа черновая, и плата черновая.\n\n')))
             + tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), jobRes.wage)
-            + '\n' + checkNote + repMsgC,
+            + '\n' + checkNote + repMsgS,
             [{ text: t('Спасибо'), callback: () => {} }]);
+    }
+
+    /**
+     * ПАТЧ 66.80 (п.11-г): ЕПИТИМЬЯ — «замолить грехи» в церкви.
+     * Пожертвование 50 д. РАЗ В КАЛЕНДАРНЫЙ МЕСЯЦ снимает до −5 деревенской
+     * репутации (к нулю, не выше; личные обиды — не церковное дело).
+     * Исторично: епитимья/вклад на помин души (Русь XV века).
+     */
+    absolutionInChurch() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const timeState = getTime(this.registry);
+        if (absolutionUsedThisMonth(this.registry, timeState)) {
+            createDialog(this, t('⛪ Епитимья уже принята'),
+                t('Отец Савватий качает головой: «Ты уже замаливал грехи в этот месяц. Молись тихо и дела добрые делай — молва сама смягчится».'),
+                [{ text: t('Поклониться иконам'), callback: () => {} }], { singleton: false });
+            return;
+        }
+        if ((player.dengas || 0) < ABSOLUTION_COST) {
+            createDialog(this, t('⛪ В мошне пусто'),
+                tf(t('Замолить грехи стоит {0} д. — на свечи, ладан и помин души. Пособи деревне или заработай в мастерской, потом приходи.'), ABSOLUTION_COST),
+                [{ text: t('Приду позже'), callback: () => {} }], { singleton: false });
+            return;
+        }
+        player.dengas -= ABSOLUTION_COST;
+        this.registry.set('player', player);
+        const res = performChurchAbsolution(this.registry, timeState);
+        this.updateHUD();
+        if (res.success) {
+            createDialog(this, t('⛪ Грехи замолены'),
+                t('Ты кладёшь на блюдо 50 денег. Отец Савватий читает над тобой разрешительную молитву: «Госпи, остави согрешения его, и молва людская смягчится».')
+                + '\n\n' + tf(t('Епитимья принята: репутация в деревне {0} → {1}. (Раз в месяц; личные обиды людей — не церковное дело.)'), res.before, res.after),
+                [{ text: t('Низко поклониться'), callback: () => {} }], { singleton: false });
+        } else {
+            createDialog(this, t('⛪ Душа перед людьми чиста'),
+                t('Отец Савватий улыбается: «Худой молвы за тобой не ведут — и замаливать нечего. Иди с миром».'),
+                [{ text: t('Слава Богу'), callback: () => {} }], { singleton: false });
+        }
+    }
+
+    /**
+     * ПАТЧ 66.80 (п.12-в): «О СЛОВЕ» — торг о ставке подёнки ДО работы.
+     * Раз в сутки: Убеждение против Убеждения хозяина — успех +25%,
+     * крит +50%, провал — базовая ставка. Множитель действует на все
+     * подёнки этого дня (jobs.js читает wageDealMultFor при выплате).
+     * @param {string} npcId — хозяин (potter1, carpenter1, blacksmith, weaver1)
+     * @param {string} hostGen — родительный падеж («гончара», «ткачихи»…)
+     */
+    wageDealDialog(npcId, hostGen) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const persuade = (player.skills && player.skills.persuade) || 10;
+        const res = attemptWageDeal(this.registry, npcId, persuade);
+        tickTime(this.registry, 10, 'talk'); // уговоры — те же 10 минут, что беседа
+        this.updateHUD();
+        const multNote = res.mult > 1
+            ? '\n\n' + tf(t('Ставка на сегодня: ×{0} ко всем подёнкам.'), res.mult)
+            : '';
+        createDialog(this, t('🤝 О слове'),
+            tf(t('Ты заводишь речь с {0} о ставке: мол, работа честная, а цена — как посмотришь…'), hostGen)
+            + (res.checkLine ? '\n\n' + res.checkLine : '')
+            + '\n\n' + res.message + multNote,
+            [{ text: t('Договорились'), callback: () => {} }], { singleton: false });
     }
 
     /**

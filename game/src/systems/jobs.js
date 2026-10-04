@@ -13,10 +13,17 @@
 // возвращает исход + деньги; время, усталость, репутацию и поп-апы ведёт
 // сцена. Все лестницы — по образцу Готовки 66.72 (провал — впустую,
 // крит — «удалось на славу»).
+//
+// ПАТЧ 66.80 (пп.12-а/б/в): финальная ставка = база × репутация
+// (×(1+rep/200), клэмп ×0.75…×1.25) × сезон (зима −20% гончар/плотник,
+// мельница после урожая +20%) × торг «О слове» (+25%/+50% на день).
+// При registry=null (юнит-тесты лестниц) множители нейтральные — база.
 // ============================================================
 
 import { skillCheck } from './BRPEngine.js';
 import { getBlessedSkill } from '../data/questGenerator.js';
+// Патч 66.80: ставки × репутация × сезон × торг «О слове»
+import { applyWageBalance } from './repBalance.js';
 
 /** Одна проверка навыка со всеми модификаторами. */
 function jobCheck(registry, skillValue) {
@@ -38,8 +45,10 @@ export function craftDaywork(registry, skillValue, rng = Math.random) {
     const { res, skill } = jobCheck(registry, skillValue);
     const failed = res.result === 'fail' || res.result === 'fumble';
     const crit = res.result === 'critical';
-    const wage = failed ? 2 : (crit ? die(6, 9, rng) : die(4, 7, rng));
-    return { ok: !failed, crit, masterpiece: crit, wage, roll: res.roll, skill };
+    const base = failed ? 2 : (crit ? die(6, 9, rng) : die(4, 7, rng));
+    // 66.80: × репутация × сезон (зима −20%) × торг «О слове»
+    const pay = applyWageBalance(registry, base, 'potter');
+    return { ok: !failed, crit, masterpiece: crit, wage: pay.wage, baseWage: base, roll: res.roll, skill };
 }
 
 // ------------------------------------------------------------
@@ -52,8 +61,9 @@ export function smithyDaywork(registry, skillValue, rng = Math.random) {
     const { res, skill } = jobCheck(registry, skillValue);
     const failed = res.result === 'fail' || res.result === 'fumble';
     const crit = res.result === 'critical';
-    const wage = failed ? die(2, 3, rng) : (crit ? die(8, 12, rng) : die(4, 7, rng));
-    return { ok: !failed, crit, wage, roll: res.roll, skill };
+    const base = failed ? die(2, 3, rng) : (crit ? die(8, 12, rng) : die(4, 7, rng));
+    const pay = applyWageBalance(registry, base, 'smithy'); // сезонной надбавки у горна нет
+    return { ok: !failed, crit, wage: pay.wage, baseWage: base, roll: res.roll, skill };
 }
 
 // ------------------------------------------------------------
@@ -68,8 +78,10 @@ export function acolyteServe(registry, skillValue, rng = Math.random) {
     const { res, skill } = jobCheck(registry, skillValue);
     const failed = res.result === 'fail' || res.result === 'fumble';
     const crit = res.result === 'critical';
-    const wage = failed ? 0 : (crit ? die(7, 10, rng) : die(3, 6, rng));
-    return { ok: !failed, crit, wage, roll: res.roll, skill };
+    const base = failed ? 0 : (crit ? die(7, 10, rng) : die(3, 6, rng));
+    // 66.80: у служки — только репутационный множитель (с батюшкой не торгуются)
+    const pay = applyWageBalance(registry, base, 'acolyte', { noSeason: true, noDeal: true });
+    return { ok: !failed, crit, wage: pay.wage, baseWage: base, roll: res.roll, skill };
 }
 
 // ------------------------------------------------------------
@@ -103,8 +115,10 @@ export function carpenterDaywork(registry, skillValue, rng = Math.random) {
     const { res, skill } = jobCheck(registry, skillValue);
     const failed = res.result === 'fail' || res.result === 'fumble';
     const crit = res.result === 'critical';
-    const wage = failed ? 2 : (crit ? die(7, 10, rng) : die(3, 6, rng));
-    return { ok: !failed, crit, wage, roll: res.roll, skill };
+    const base = failed ? 2 : (crit ? die(7, 10, rng) : die(3, 6, rng));
+    // 66.80: × репутация × сезон (зима −20%) × торг «О слове»
+    const pay = applyWageBalance(registry, base, 'carpenter');
+    return { ok: !failed, crit, wage: pay.wage, baseWage: base, roll: res.roll, skill };
 }
 
 // ------------------------------------------------------------
@@ -118,8 +132,10 @@ export function millDaywork(registry, skillValue, rng = Math.random) {
     const { res, skill } = jobCheck(registry, skillValue);
     const failed = res.result === 'fail' || res.result === 'fumble';
     const crit = res.result === 'critical';
-    const wage = failed ? die(2, 3, rng) : (crit ? die(8, 12, rng) : die(4, 7, rng));
-    return { ok: !failed, crit, wage, grain: 0, roll: res.roll, skill };
+    const base = failed ? die(2, 3, rng) : (crit ? die(8, 12, rng) : die(4, 7, rng));
+    // 66.80: × репутация × надбавка после урожая (Серпень–Грудень +20%) × торг
+    const pay = applyWageBalance(registry, base, 'mill');
+    return { ok: !failed, crit, wage: pay.wage, baseWage: base, grain: 0, roll: res.roll, skill };
 }
 
 // ------------------------------------------------------------
@@ -135,9 +151,12 @@ export function weaveDaywork(registry, skillValue, rng = Math.random) {
     const { res, skill } = jobCheck(registry, skillValue);
     const failed = res.result === 'fail' || res.result === 'fumble';
     const crit = res.result === 'critical';
+    const base = failed ? 2 : (crit ? 3 : 2);
+    // 66.80: мелочь сверху × репутация × торг (сезонной надбавки у станка нет)
+    const pay = applyWageBalance(registry, base, 'weave', { noSeason: true });
     return {
         ok: !failed, crit,
-        wage: failed ? 2 : (crit ? 3 : 2),
+        wage: pay.wage, baseWage: base,
         cloth: crit ? 'sukon' : (!failed ? 'polotno' : null),
         roll: res.roll, skill,
     };

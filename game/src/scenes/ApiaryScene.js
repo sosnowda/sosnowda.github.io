@@ -25,6 +25,8 @@ import AudioManager from '../systems/AudioManager.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
 import { formatMoney } from '../systems/Character.js';
 import { getVillageRep } from '../data/reputation.js';
+// Патч 66.80: статус репутации в HUD (лестница «подозрительный ↔ свой»)
+import { villageRepStatusSuffix } from '../systems/repBalance.js';
 import { t, tf, tk } from '../systems/i18n.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
@@ -936,6 +938,8 @@ export class ApiaryScene extends Phaser.Scene {
         let statusLine = `❤${p.HP}/${p.HPmax}  💰${moneyStr}`;
         if (timeState) statusLine += `  📅${formatDateTime(timeState)}`;
         statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
+        // Патч 66.80 (п.11-в): лестница статусов
+        statusLine += villageRepStatusSuffix(this.registry);
         this.statusText.setText(statusLine);
 
         // ----- Сводка состояния пасеки (безопасно: пчёлы — только антураж) -----

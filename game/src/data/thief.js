@@ -1808,6 +1808,7 @@ export function surrenderStolenItem(registry, npcId) {
     player.inventory = (player.inventory || []).filter(i => i.id !== 'icon');
 
     let rewardText;
+    let bountyNote = '';
     if (npcId === 'priest') {
         const amount = 20 + Math.floor(Math.random() * 11);
         player.dengas = (player.dengas || 0) + amount;
@@ -1819,6 +1820,13 @@ export function surrenderStolenItem(registry, npcId) {
         const amount = 40 + Math.floor(Math.random() * 21);
         player.dengas = (player.dengas || 0) + amount;
         rewardText = formatMoney(amount);
+    }
+    // Патч 66.80 (п.12-д): ПРЕМИЯ СТАРОСТЫ ЗА ПОИМКУ ВОРА — довёл охоту
+    // до конца и сдал лиходея ЖИВЬЁМ (оглушён и взят в плен) — премия 20 д.
+    if (npcId === 'elder' && q.thiefDefeated === 'captured') {
+        player.dengas += 20;
+        bountyNote = ' ' + t('«И за то, что не убил, а привёл живьём на суд — премия от старосты: 20 д.»');
+        ActionLog.add(registry, t('Премия старосты за поимку вора живьём: +20 д.'));
     }
     changeVillageRep(registry, 10, t('Вернул украденную икону'));
 
@@ -1840,7 +1848,7 @@ export function surrenderStolenItem(registry, npcId) {
     registry.set('player', player);
     registry.set('quest', q);
 
-    return { success: true, rewardText };
+    return { success: true, rewardText: rewardText + bountyNote };
 }
 
 // ============================================================

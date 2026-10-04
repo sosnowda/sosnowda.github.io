@@ -29,6 +29,8 @@ import { hungerStatusLine } from '../systems/hunger.js';
 import { consumePrayerBless } from '../systems/prayer.js';
 // Патч 66.76 (приказ 1): Мельничное дело — работа у мельника за деньги
 import { millDaywork } from '../systems/jobs.js';
+// Патч 66.80 (пп.11-а/12-в): недельное «забывание» обид + «О слове» у мельника
+import { tickWeeklyRepForget, attemptWageDeal, canWageDealToday } from '../systems/repBalance.js';
 // Патч 66.76: слава подёнки (+1 деревенской репутации, раз/сутки)
 import { changeVillageRep } from '../data/reputation.js';
 // Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
@@ -130,6 +132,8 @@ export class LocationScene extends Phaser.Scene {
         this.audioManager = new AudioManager(this);
         this.saveManager = new SaveManager(this);
         this.dialogue = new DialogueRunner(this);
+        // Патч 66.80 (п.11-а): ленивый недельный тик «забывания» мелких обид
+        tickWeeklyRepForget(this.registry, getTime(this.registry));
         // Раунд 31 (п.12): мировые часы тикают РЕАЛЬНЫМ временем, а пока
         // открыт разговор (диалог) — стоят
         attachWorldClock(this);
@@ -396,6 +400,16 @@ export class LocationScene extends Phaser.Scene {
                 fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
                 cornerRadius: 8,
             }).setScrollFactor(0).setDepth(50);
+            // Патч 66.80 (п.12-в): торг о ставке с мельником (раз в сутки)
+            if (canWageDealToday(this.registry)) {
+                createButton(this, width / 2, millY - 52, t('🤝 О слове (Убеждение)'), () => {
+                    this.wageDealAtMill();
+                }, {
+                    backgroundColor: 0x2a4a5a, hoverColor: 0x3a5a6a, textColor: RUS.text,
+                    fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
+                    cornerRadius: 8,
+                }).setScrollFactor(0).setDepth(50);
+            }
         }
 
         // ----- Кнопка выхода: из леса — НАЗАД ПО ЦЕПОЧКЕ (п.23);
@@ -3296,6 +3310,28 @@ export class LocationScene extends Phaser.Scene {
                 }
             }
         }
+    }
+
+    /**
+     * Патч 66.80 (п.12-в): «О слове» с мельником Авдеем — торг о ставке
+     * подёнки (раз в сутки, Убеждение; успех +25%, крит +50%).
+     */
+    wageDealAtMill() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const persuade = (player.skills && player.skills.persuade) || 10;
+        const res = attemptWageDeal(this.registry, 'peasant1', persuade);
+        tickTime(this.registry, 10, 'talk');
+        this.updateHUD();
+        const multNote = res.mult > 1
+            ? '\n\n' + tf(t('Ставка на сегодня: ×{0} ко всем подёнкам.'), res.mult)
+            : '';
+        createDialog(this, t('🤝 О слове'),
+            tf(t('Ты заводишь речь с {0} о ставке: мол, работа честная, а цена — как посмотришь…'), t('мельника'))
+            + (res.checkLine ? '\n\n' + res.checkLine : '')
+            + '\n\n' + res.message + multNote,
+            [{ text: t('Договорились'), callback: () => { this.busyDialog = false; } }], { singleton: false });
     }
 
     /**

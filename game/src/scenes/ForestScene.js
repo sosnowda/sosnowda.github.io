@@ -42,6 +42,8 @@ import { WORLD_K, WORLD_BODY_PX } from '../systems/WorldLook.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
 import { formatMoney } from '../systems/Character.js';
 import { getVillageRep } from '../data/reputation.js';
+// Патч 66.80: статус репутации в HUD (лестница «подозрительный ↔ свой»)
+import { villageRepStatusSuffix } from '../systems/repBalance.js';
 import { t, tf, tk } from '../systems/i18n.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
 import { attachChurchBells } from '../systems/ChurchBells.js';
@@ -1360,6 +1362,8 @@ export class ForestScene extends Phaser.Scene {
         // Патч 66.73 (приказ 14): усталость в HUD (ОУ = СИЛ+ТЕЛ, BRP SRD)
         statusLine += `  ${fatigueStatusLine(this.registry)}`;
         statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
+        // Патч 66.80 (п.11-в): лестница статусов — «(подозрительный)» / «(свой)»
+        statusLine += villageRepStatusSuffix(this.registry);
         this.statusText.setText(statusLine);
 
         // День/ночь + светлячки + лучи + кострище

@@ -2777,7 +2777,18 @@ const EN_KEYS = {
         '  Lower it: begging, threats, night-time disturbance.\n' +
         '  ≤ −30: NPC won\'t talk. ≤ −50: won\'t trade. ≤ −80: may attack.\n' +
         '  Killed a villager? Village and all NPCs −50, the kin — down to −100.\n' +
-        '  The elder accepts wergild (vira): silver buys peace (+30 to enmity).',
+        '  The elder accepts wergild (vira): silver buys peace (+30 to enmity).\n' +
+        '  Rumors fade: every week the village forgets small grudges (+1 toward\n' +
+        '  zero while reputation is −20…0). ≤ −20 — "suspicious": the guard will\n' +
+        '  search your bundle at the gate and take stolen goods. ≥ +30 — "one of\n' +
+        '  our own": houses admit you without a watching host.\n' +
+        '  Church absolution: 50 d. once a month heals up to +5 of village rumor.\n' +
+        '\n' +
+        '💰 WAGES:\n' +
+        '  Day rates ×(1 + reputation/200): up to ×1.25 for "one of our own",\n' +
+        '  down to ×0.75 for a stranger. Winter: potter and carpenter −20%;\n' +
+        '  the mill pays +20% after the harvest. "A word of haggle": once a day\n' +
+        '  you may bargain the rate — success +25%, critical +50%.',
     'forest.help.body': '🌲 DARK FOREST — A WALK\n' +
         '\n' +
         '  WASD / arrows — movement\n' +
@@ -3126,6 +3137,49 @@ const EN_KEYS = {
     // 66.44 (приказ 12): справка без «Травы»/«Исследования» (кнопки сняты)
     '⚔ Бой пошаговый (BRP d100): атака, уклон, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\nПосле первого удара противника видно мастерство его оружия.\n🏹 Стрельба из лука тратит стрелу из колчана (вместимость 10);\nпустой колчан — выстрела не будет, стрелы носят пачками по 10.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.':
         '⚔ Combat is turn-based (BRP d100): attack, dodge, flee.\nSkill checks roll d100: success is within the skill,\ncrit — 1/20 of the skill (damage ×1.5), special — 1/5 (damage ×2).\n🛡 Armor absorbs the damage of every hit.\nAfter the enemy\'s first strike the mastery of his weapon is shown.\n🏹 A bow shot spends an arrow from the quiver (capacity 10);\nan empty quiver means no shot — arrows are carried in packs of 10.\n🎒 Changing the weapon in hand costs a turn; loading arrows too.',
+
+    // ===== Патч 66.80 (пп.11–12): БАЛАНС РЕПУТАЦИИ И ОПЛАТЫ (RU→EN)
+    'Хозяин крякнул и почесал затылок: «Складно баешь, спорить нечего. Ладно, накину четверть — только работай так, как баешь!» Ставка +25% на день.': 'The master crouks and scratches his head: "You plead well, no arguing with that. Fine, I will add a quarter — only work as well as you plead!" Rate +25% for the day.',
+    'Приду позже': 'I shall come later.',
+    'Низко поклониться': 'Bow low before the icons.',
+    'Неделя минула — деревня помаленьку забывает мелкие обиды: репутация в деревне +{0} ({1} нед.).': 'A week has passed — the village slowly forgets small grudges: village reputation +{0} ({1} wk.).',
+    'подозрительный': 'suspicious',
+    'свой': 'one of our own',
+    'Хозяин отмахивается: «Уж сегодня договорились — за слово платят один раз!»': 'The master waves you off: "We already settled today — a word is paid for only once!"',
+    '«О слове» (крит Убеждения): ставки подёнки +{0}% на день.': '"A word of haggle" (critical Persuasion): day rates +{0}% for the day.',
+    'Хозяин расхохотался: «Экий уговорщик! Ладно, коли так ладно бает — плачу вполовину больше, и дело с концом!» Ставка +50% на день.': 'The master laughs: "What a talker! Well, since you plead so fairly — I will pay half as much again, and there is an end!" Rate +50% for the day.',
+    '«О слове» удалось (Убеждение): ставки подёнки +{0}% на день.': '"A word of haggle" succeeded (Persuasion): day rates +{0}% for the day.',
+    'Хозяин покачал головой: «Ставка нынче у меня одна, для всех. Работать будешь — так работай, а торговаться неча». Попытка за день потрачена.': 'The master shakes his head: "The rate is one for all today. Work if you will — but there is nothing to haggle." The daily attempt is spent.',
+    '«О слове» не удалось (Убеждение): хозяин твёрд — ставка базовая.': '"A word of haggle" failed (Persuasion): the master stands firm — the base rate holds.',
+    'Замолил грехи перед церковью: епитимья 50 д. принята, молва в деревне смягчилась ({0} → {1}).': 'Made penance before the church: the 50 d. offering was accepted, and the village rumor softened ({0} → {1}).',
+    'Стражник у ворот отобрал краденое ({0} шт.) и вернул по домам. «Подозрительный ты человек — не нравишься деревне. Ступай, пока по-хорошему».': 'The guard at the gate took the stolen goods ({0} pcs.) and returned them home. "You are a suspicious sort — the village does not like you. Move along, while it is still friendly."',
+    '🛡 Осмотр у ворот': '🛡 Search at the gate',
+    '«Стой! О тебе худая молва: люди добро теряли, а ты у ворот крутится. Судебник велит узел показать — предъявляй!»': '"Halt! Ill rumor walks before you: people lost their goods, and you loiter by the gate. The Sudebnik orders your bundle shown — present it!"',
+    'Краденое отобрано и вернётся по домам. Денег с тебя не взяли и поимкой не сочли — но стражник запомнил.': 'The stolen goods were taken and will return to their homes. No silver was taken, and it was not counted as a capture — but the guard remembers.',
+    'Краденого в узле не нашлось.': 'No stolen goods were found in the bundle.',
+    '⛪ Епитимья уже принята': '⛪ Penance already accepted',
+    'Отец Савватий качает головой: «Ты уже замаливал грехи в этот месяц. Молись тихо и дела добрые делай — молва сама смягчится».': 'Father Savvatiy shakes his head: "You have already made penance this month. Pray quietly and do good deeds — the rumor will soften on its own."',
+    'Поклониться иконам': 'Bow before the icons',
+    '⛪ В мошне пусто': '⛪ The purse is empty',
+    'Замолить грехи стоит {0} д. — на свечи, ладан и помин души. Пособи деревне или заработай в мастерской, потом приходи.': 'To make penance costs {0} d. — for candles, incense and the repose of souls. Help the village or earn at a workshop, then come back.',
+    '⛪ Грехи замолены': '⛪ Sins absolved',
+    'Ты кладёшь на блюдо 50 денег. Отец Савватий читает над тобой разрешительную молитву: «Госпи, остави согрешения его, и молва людская смягчится».': 'You place 50 dengas on the dish. Father Savvatiy reads the prayer of absolution over you: "Lord, forgive him his sins, and let the rumor of men soften."',
+    'Епитимья принята: репутация в деревне {0} → {1}. (Раз в месяц; личные обиды людей — не церковное дело.)': 'Penance accepted: village reputation {0} → {1}. (Once a month; personal grudges are not the Church\'s matter.)',
+    '⛪ Душа перед людьми чиста': '⛪ Your soul is clean before the people',
+    'Отец Савватий улыбается: «Худой молвы за тобой не ведут — и замаливать нечего. Иди с миром».': 'Father Savvatiy smiles: "No ill rumor follows you — there is nothing to absolve. Go in peace."',
+    '🤝 О слове': '🤝 A word of haggle',
+    '🤝 О слове (Убеждение)': '🤝 Haggle the rate (Persuasion)',
+    '⛪ Замолить грехи (50 д.)': '⛪ Absolve sins (50 d.)',
+    'Ты заводишь речь с {0} о ставке: мол, работа честная, а цена — как посмотришь…': 'You open talk with {0} about the rate: the work is honest, but the pay — well, that is as it goes…',
+    'Ставка на сегодня: ×{0} ко всем подёнкам.': 'Today\'s rate: ×{0} on all day wages.',
+    'Договорились': 'Agreed',
+    'мельника': 'the miller',
+    'гончара': 'the potter',
+    'ткачихи': 'the weaver',
+    'плотника': 'the carpenter',
+    'кузнеца': 'the smith',
+    '«И за то, что не убил, а привёл живьём на суд — премия от старосты: 20 д.»': '"And because you did not kill him but brought him alive to judgment — a bounty from the elder: 20 d."',
+    'Премия старосты за поимку вора живьём: +20 д.': 'The elder\'s bounty for capturing the thief alive: +20 d.',
 };
 
 // ----- Месяцы / дни недели (сентябрьский стиль индексации) -----
