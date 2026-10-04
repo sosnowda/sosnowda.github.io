@@ -92,7 +92,7 @@ ok(p4.inventory.length === 0, 'пустая кучка удаляется из �
 
 console.log('--- 5. UI/source-проверки: краденое только Скупщику (66.78) и проводка взлома ---');
 const isrc = read('game/src/scenes/InteriorScene.js');
-ok(isrc.includes("res.items.forEach(it => addStolenItem(player, it.id, it.count));"), 'Взлом сундука: лут кладётся через addStolenItem (краденое)');
+ok(isrc.includes("res.items.forEach(it => addStolenItem(player, it.id, it.count, interior.id));"), 'Взлом сундука: лут кладётся через addStolenItem (краденое, 66.79 — с происхождением от дома)');
 // ПАТЧ 66.78 (пп.4–5): краденое продать ТОЛЬКО Скупщику по ночам —
 // честная скупка краденые строки больше НЕ показывает (66.77-канон отменён).
 ok(isrc.includes("sellableLoot(player).filter(r => !r.stolen)"), 'Скупка (честная): краденые строки убраны (66.78 п.5)');
@@ -136,7 +136,7 @@ i18n.setLang('ru');
 
 console.log('--- 10. SW: бамп v117→v118 (§4 — менялись исходники src/**) ---');
 const sw = read('sw.js');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v118';"), 'sw.js: CACHE_NAME v118');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v119';"), 'sw.js: CACHE_NAME v119 (бамп 66.79)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'sw.js: game-assets-v43 цел (ассеты не тронуты)');
 const swlog = read('docs/SW_CHANGELOG.md');
 ok(swlog.includes('- v118 — итерация 66.77'), 'SW_CHANGELOG: запись v118 добавлена');

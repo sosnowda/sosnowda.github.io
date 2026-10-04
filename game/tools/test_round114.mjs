@@ -79,7 +79,7 @@ const canonBlock = styles.slice(styles.indexOf('.fund-bar {') >= 0 ? styles.inde
 ok(canonBlock.includes('line-height:1.2'), 'styles.css: инвариант 66.60 line-height:1.2 в каноническом блоке цел');
 
 console.log('--- 5. SW: vendor в cache-first, v112 + game-assets-v43 ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v118';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v119';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'sw.js: game-assets-v43 (новый бакет под новую ветку маршрута /game/vendor/)');
 ok(sw.includes("url.pathname.startsWith('/game/assets/') || url.pathname.startsWith('/game/vendor/')"), 'sw.js: /game/vendor/ в cache-first ветке ассетов (неизменяемая библиотека — как /game/assets/)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт офлайн-фолбэка цел (66.57 P3-3)');

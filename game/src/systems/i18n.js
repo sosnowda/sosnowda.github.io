@@ -2462,6 +2462,126 @@ const EN = {
     'Оберег янтарный': 'Amber amulet',
     'Зерно (мешечек)': 'Grain (small sack)',
     'Сало солёное': 'Salted lard',
+    // ================================================================
+    // Патч 66.79 (приказы владельца 1–13): ПРАВОСУДИЕ — подозрения НПЦ,
+    // побег от хозяев, стражник у ворот, вира по Судебнику 1497, мир.
+    // Историческая рамка: Судебник 1497 «о татбе» (ст. 10–13, 52, 55) —
+    // «продажа» судье и «урок» потерпевшему; поток и разграбление —
+    // крайняя кара за повторное разбойное дело (Русская Правда, ст. 7).
+    // ================================================================
+    // --- пп.1–4: подозрение в краже и проверка «невиновности» ---
+    '👁 Косые взгляды': '👁 Sideways looks',
+    '{0} сразу смекает, что дела тут нечисти: после пропажи в доме ты первый в подозреваемых. Отведи подозрение разговором — иначе будет хуже.':
+        '{0} instantly guesses something is amiss: after the loss in the house you are the first to be suspected. Talk your way out of the suspicion — or it will get worse.',
+    'Он уже не раз терял добро: разговор придётся вести хитрее (сложность −{0}% за {1} прежние кражи).':
+        'He has lost goods more than once: you will have to talk all the subtler (difficulty −{0}% for {1} previous thefts).',
+    'Отвести подозрение ({0}%)': 'Deflect the suspicion ({0}%)',
+    '🤝 Признаться и помириться': '🤝 Confess and make peace',
+    'Отступить': 'Back off',
+    'Слово вышло гладко: {0} больше не косится на тебя (проверка {1}%: бросок {2}).':
+        'Your words flowed smoothly: {0} no longer glares at you (check {1}%: roll {2}).',
+    'Проверка «невиновности» у {0} пройдена ({1}%: бросок {2}).':
+        'The innocence check with {0} succeeded ({1}%: roll {2}).',
+    '👆 Не уверил!': '👆 You failed to convince!',
+    '{0} отворачивается с сердитым видом: слова твои лживы, и добро пропало не само. По деревне уже шепчутся.\n\n(Репутация у {0} −10, в деревне −5.)':
+        '{0} turns away with a sullen look: your words are false, and the goods did not vanish on their own. The village is already whispering.\n\n(Reputation with {0} −10, in the village −5.)',
+    'Не сумел отвести подозрения: {0} смотрит волком (репутация у него {1}), по деревне шепчутся (репутация в деревне −{2}).':
+        'Failed to deflect the suspicion: {0} glares like a wolf (reputation {1}), and the village whispers (village reputation −{2}).',
+    'Замолчать': 'Fall silent',
+    // --- п.6: примирение с обкраденным хозяином ---
+    'Мириться (кража)': 'Make peace (theft)',
+    '🤝 Мириться (кража)': '🤝 Make peace (theft)',
+    '{0} сидит над пепелищем доверия. Чтобы очистить душу и избежать суда, надобно:':
+        '{0} sits over the ashes of trust. To cleanse your soul and avoid a trial you must:',
+    '• вернуть украденное из его дома:': '• return the goods stolen from his house:',
+    '• украденного в узле не осталось — всё сбыто, придётся платить.':
+        '• no stolen goods remain in your pack — everything was sold, so you must pay.',
+    '• компенсировать сбытое деньгами по полной стоимости: {0} д.':
+        '• compensate the sold goods in money at full value: {0} d.',
+    '• выплатить виру за кражу: {0} д. (Судебник 1497, о татбе).':
+        '• pay the wergild for the theft: {0} d. (Law Code of 1497, on theft).',
+    'Итого: {0} д. (В узле сейчас {1} д.)': 'Total: {0} d. (Your pack now holds {1} d.)',
+    'После мира хозяин простит: подозрение снимется, обида смоется серебром (репутация хозяина станет не ниже 0).':
+        'After the peace the host will forgive: the suspicion lifts, the offence is washed away with silver (the host\'s reputation will be at least 0).',
+    'Свершить мир ({0} д.)': 'Make peace ({0} d.)',
+    'Свершить мир': 'Make peace',
+    'Пока нет': 'Not yet',
+    '🤝 Мир не вышел': '🤝 No peace was struck',
+    'Не хватает серебра: надобно {0} д., а в узле лишь {1} д. Примиришься, когда достанешь денег — или Стражник у ворот рассудит по Судебнику.':
+        'Not enough silver: you need {0} d. while your pack holds only {1} d. Make peace when you can get the money — or the guard at the gate will judge you by the Law Code.',
+    '🤝 Обида смыта': '🤝 The offence is washed away',
+    'Вещи легли на место, серебро перешло в руки хозяина — мир по Судебнику свершен! Репутация хозяина теперь {0}, и у ворот деревни за этот дом тебя не тронут.':
+        'The goods are back in place and the silver is in the host\'s hands — peace is sealed by the Law Code! The host\'s reputation is now {0}, and the guard at the gate will not touch you over this house.',
+    'Мир-дружба': 'Peace and friendship',
+    'Мир с {0} свершён: украденное возвращено ({1} шт.), за сбытое уплачено {2} д., вира {3} д. (Судебник). Обида смыта.':
+        'Peace with {0} is made: the stolen goods returned ({1} pcs.), {2} d. paid for the sold ones, wergild {3} d. (Law Code). The offence is washed away.',
+    'Примирился с обкраденным в «{0}»: возвращено {1} шт., уплачено {2} д. (в т.ч. вира {3} д.).':
+        'Made peace with the robbed host at "{0}": {1} pcs. returned, {2} d. paid (incl. wergild {3} d.).',
+
+    // --- пп.9–10: хозяева идут к дому, побег ---
+    '⚠ К дому идут хозяева!': '⚠ The owners are coming to the house!',
+    'Со двора слышны шаги и голоса — хозяева вот-вот войдут в дом и увидят тебя у открытого сундука! Стрелки солнца ещё ползут по полу — есть мгновение, чтобы скрыться. Как уйти?':
+        'Footsteps and voices come from the yard — the owners are about to enter and see you by the open chest! The sunrays still crawl along the floor — there is an instant to slip away. How will you go?',
+    '(Побег — обязательная проверка Ловкости или Скрадывания. Удача — тебя не заметят; провал — застукают на месте преступления.)':
+        '(Escaping requires a Dexterity or Stealth check. Success — you go unnoticed; failure — you are caught red-handed.)',
+    '🏃 Бежать (Ловкость)': '🏃 Run (Dexterity)',
+    '🫥 Ускользнуть (Скрадывание)': '🫥 Slip away (Stealth)',
+    'Опустить голову и надеяться': 'Bow your head and hope',
+    'Побег через задворки (Ловкость {0}×5): бросок {1}.': 'Escape through the back yards (Dexterity {0}×5): roll {1}.',
+    'Ускользнул задворками (Скрадывание {0}%): бросок {1}.': 'Slipped away through the back yards (Stealth {0}%): roll {1}.',
+    'Успел скрыться из «{0}» до прихода хозяев: тебя не обнаружили, дурной молвы нет ({1}).':
+        'You slipped out of "{0}" before the owners came: you were not spotted, no bad rumours (roll {1}).',
+    'Ловкость, бросок {0}': 'Dexterity, roll {0}',
+    'Скрадывание, бросок {0}': 'Stealth, roll {0}',
+    'Замер у сундука в «{0}» — и хозяева вошли: укрыться было негде.':
+        'You froze by the chest at "{0}" — and the owners walked in: there was nowhere to hide.',
+    'Побег не удался в «{0}» (бросок {1}): хозяева вошли и увидели вора.':
+        'The escape failed at "{0}" (roll {1}): the owners walked in and saw the thief.',
+    '👣 Хозяева застукали!': '👣 Caught by the owners!',
+    'Дверь распахивается — на пороге хозяева! Узнав вора, они с криком бросаются на тебя!\n\n(Репутация у хозяев −30, в деревне −20. У ворот деревни теперь вправе осмотреть твой узел.)':
+        'The door swings open — the owners on the threshold! Recognizing the thief, they rush at you with a shout!\n\n(The owners\' reputation −30, village −20. The guard at the gate may now search your pack.)',
+    'Дверь распахивается — на пороге хозяева! Уйти не вышло: тебя запомнили, и по деревне уже бежит злая молва.\n\n(Репутация у хозяев −30, в деревне −20. У ворот деревни теперь вправе осмотреть твой узел.)':
+        'The door swings open — the owners on the threshold! There was no getting away: they remembered your face, and an angry rumour already runs through the village.\n\n(The owners\' reputation −30, village −20. The guard at the gate may now search your pack.)',
+    'Опустить голову': 'Bow your head',
+    '💨 Ушёл чистым': '💨 Clean getaway',
+    'Ты выскользнул из «{0}» за миг до того, как на пороге показались хозяева. Они вошли, оглядели горницу — и не заметили ничего, кроме тихо прикрываемой двери. Никто тебя не приметил.{1}':
+        'You slipped out of "{0}" a heartbeat before the owners appeared on the threshold. They entered, looked the room over — and noticed nothing but a door quietly closing. Nobody marked you.{1}',
+    'Проверка Ловкости пройдена (бросок {0}).': 'Dexterity check passed (roll {0}).',
+    'Проверка Скрадывания пройдена (бросок {0}).': 'Stealth check passed (roll {0}).',
+    'Отойти за угол': 'Step around the corner',
+    'Герой стоит снаружи у двери «{0}». ': 'The hero stands outside the door of "{0}". ',
+
+    // --- пп.5,7,8: стражник у ворот, вира, изгнание ---
+    '🛡 Стражник у ворот': '🛡 The guard at the gate',
+    '«Стой, путник! Молва бежит впереди тебя: у людей пропало добро, а след ведёт к тебе. Судебник велит осмотреть узел — предъявляй!»':
+        '"Stand, wayfarer! Rumour runs ahead of you: goods have gone missing, and the trail leads to you. The Law Code bids me search your pack — show it!"',
+    'В узле опознаётся чужое:': 'Another\'s goods are recognized in the pack:',
+    'Украденного в узле не осталось — всё сбыто, но хозяева указали на тебя.':
+        'No stolen goods remain in the pack — all was sold, but the owners have pointed at you.',
+    'Ты уже был уличён {0} раз(а): по Судебнику повторная татьба карается втрое строже (множитель ×{1}).':
+        'You have been caught {0} time(s) before: by the Law Code a repeated theft is punished three times as harshly (multiplier ×{1}).',
+    'Вира: продажа за татьбу {0} д. + урок за сбытое {1} д. = {2} д. Изыманное краденое вернётся хозяевам, репутация в деревне {3}.':
+        'Wergild: the fine for theft {0} d. + restitution for the sold goods {1} d. = {2} d. The confiscated stolen goods return to their owners, village reputation {3}.',
+    'Предъявить узел и уплатить': 'Hand over the pack and pay',
+    '🚪 ИЗГНАНИЕ ИЗ ДЕРЕВНИ': '🚪 BANISHED FROM THE VILLAGE',
+    '«Не один, так другой, так третий раз!» — староста гремит Судебником. «Быть по писаному: поток и разграбление! Всё имущество — в казну, самому — за околицу, и чтоб духу твоего здесь не было!»\n\nВсё имущество отобрано. Ты изгнан из деревни. ЭТО ПРОВАЛ И ОКОНЧАНИЕ ИГРЫ.':
+        '"Once, twice — and now a third time!" the village elder thunders from the Law Code. "As it is written: pillory and plunder! All property to the treasury, and you — beyond the stockade, and let me not see your face again!"\n\nAll property is taken. You are banished from the village. THIS IS DEFEAT AND THE END OF THE GAME.',
+    'Уйти за околицу': 'Walk beyond the stockade',
+    '🛡 Судебник свершен': '🛡 The Law Code is satisfied',
+    'Стражник выворачивает узел: чужое добро пойдёт по домам, вира уплачена ({0} д.). «Иди с миром — да больше такого не води!»\n\n(Репутация в деревне {1}. Поимка №{2}: следующая будет строже — ×{3}.)':
+        'The guard turns the pack out: the stolen goods go back to their houses, the wergild is paid ({0} d.). "Go in peace — and do it no more!"\n\n(Village reputation {1}. Capture No.{2}: the next one will be harsher — ×{3}.)',
+    'Денег на всю виру не хватило — стражник выгреб из мошны всё серебро до донца.':
+        'There was not enough money for the full wergild — the guard raked all the silver out of your purse to the very bottom.',
+    'Отойти от ворот': 'Step away from the gate',
+    'Стражник у ворот изъял краденое ({0} шт.) и взял виры {1} д. (Судебник: продажа {2} д. + урок за сбытое {3} д., множитель ×{4}).':
+        'The guard at the gate confiscated the stolen goods ({0} pcs.) and took a wergild of {1} d. (Law Code: fine {2} d. + restitution for the sold {3} d., multiplier ×{4}).',
+    'ПОРАЖЕНИЕ: пойман за кражей в третий раз! По Судебнику — поток и разграбление: всё имущество отобрано, герой изгнан из деревни.':
+        'DEFEAT: caught stealing for the third time! By the Law Code — pillory and plunder: all property is taken, the hero is banished from the village.',
+    'Уличён в краже трижды: имущество отобрано, из деревни изгнан.':
+        'Caught stealing three times: property taken, banished from the village.',
+    'Стражник сводит тебя к старосте: сходка решает изгнать вора. Имущество отобрано до последнего узелка.':
+        'The guard walks you to the elder: the assembly votes to banish the thief. Your property is taken down to the last knapsack.',
+
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----
@@ -3006,7 +3126,6 @@ const EN_KEYS = {
     // 66.44 (приказ 12): справка без «Травы»/«Исследования» (кнопки сняты)
     '⚔ Бой пошаговый (BRP d100): атака, уклон, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\nПосле первого удара противника видно мастерство его оружия.\n🏹 Стрельба из лука тратит стрелу из колчана (вместимость 10);\nпустой колчан — выстрела не будет, стрелы носят пачками по 10.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.':
         '⚔ Combat is turn-based (BRP d100): attack, dodge, flee.\nSkill checks roll d100: success is within the skill,\ncrit — 1/20 of the skill (damage ×1.5), special — 1/5 (damage ×2).\n🛡 Armor absorbs the damage of every hit.\nAfter the enemy\'s first strike the mastery of his weapon is shown.\n🏹 A bow shot spends an arrow from the quiver (capacity 10);\nan empty quiver means no shot — arrows are carried in packs of 10.\n🎒 Changing the weapon in hand costs a turn; loading arrows too.',
-
 };
 
 // ----- Месяцы / дни недели (сентябрьский стиль индексации) -----

@@ -16,7 +16,7 @@
 // узла), ткачество только для женского персонажа; бамп v117→v118 —
 // исходники game/src/** (loot.js/InteriorScene.js/questGenerator.js/i18n.js),
 // ассеты и vendor не тронуты — game-assets-v43 цел.
-const CACHE_NAME = 'chronicles-ruthenia-v118';
+const CACHE_NAME = 'chronicles-ruthenia-v119';
 const GAME_ASSETS_CACHE = 'game-assets-v43';
 
 self.addEventListener('install', function (event) {

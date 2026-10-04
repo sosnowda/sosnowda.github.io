@@ -249,18 +249,21 @@ export function removeItem(player, itemId, count = 1) {
  * та же самая вещь рядом с честной лежит отдельной кучкой со флагом
  * stolen:true. Скупщики платят за краденое НА 80% МЕНЬШЕ стандартной
  * покупной (fencePriceOf) — и строка в скупке помечена «(краденое)».
+ * ПАТЧ 66.79 (пп.5–6): from — происхождение краденого (id интерьера):
+ * нужно Стражнику/примирению — вещь знают в лицо её хозяева.
  * Возвращает новый счётчик краденой кучки.
  */
-export function addStolenItem(player, itemId, count = 1) {
+export function addStolenItem(player, itemId, count = 1, from = null) {
     if (!player) return 0;
     if (!Array.isArray(player.inventory)) player.inventory = [];
     const def = getLootDef(itemId);
     const name = def ? def.name : t(itemId);
-    let it = player.inventory.find(i => i && i.id === itemId && i.stolen);
+    let it = player.inventory.find(i => i && i.id === itemId && i.stolen && (i.from || null) === (from || null));
     if (it) {
         it.count = (it.count || 1) + count;
     } else {
         it = { id: itemId, name, count, type: 'loot', stolen: true };
+        if (from) it.from = from;
         player.inventory.push(it);
     }
     return it.count;

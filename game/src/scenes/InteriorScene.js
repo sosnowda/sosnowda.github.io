@@ -86,6 +86,13 @@ import {
 // времени на время панели СТОЯТ (пауза/снятие паузы мировых часов)
 import { pauseWorldClock, resumeWorldClock } from '../systems/WorldClock.js';
 import { TRADE_MINUTES, chargeTradeTime } from '../systems/trade.js';
+// Патч 66.79 (приказы 1–13): ПРАВОСУДИЕ — подозрения, вира, примирение
+import {
+    isSuspecting, noteTheftDone, attemptInnocence, suspectCheckSkill,
+    isCaughtByHost, noteSoldStolen, reconcileNeeds, reconcileWithHost, THEFT_VIRA_SALE,
+} from '../systems/justice.js';
+// Патч 66.79 (пп.9–10): застукали — списания после провала побега
+import { applyOwnersCaught } from '../systems/crime.js';
 // Патч 66.74 (приказ 5): служка — окно богослужения (SERVICES)
 import { SERVICES } from '../systems/ChurchBells.js';
 // Патч 66.73 (приказ 16): обаяние беседы — ±5/±10 к разговорным проверкам
@@ -603,6 +610,11 @@ export class InteriorScene extends Phaser.Scene {
         // Раунд 45 (п.3): в доме убитого героя кнопок диалога нет вовсе
         if (hasNpc && ownerHere && !ownerKilled) {
             buttons.push({ label: t('\u{1F4AC} Поговорить'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.talkToNpc(interior) });
+            // ПАТЧ 66.79 (пп.1,6): обворованный хозяин ПОДОЗРЕВАЕТ игрока —
+            // кнопка «Мириться» (вернуть краденое/компенсировать + вира)
+            if (isSuspecting(this.registry, interior.npcId) || isCaughtByHost(this.registry, interior.npcId)) {
+                buttons.push({ label: t('\u{1F91D} Мириться (кража)'), bg: 0x5a4a1a, hover: 0x6a5a2a, cb: () => this.showReconcileMenu(interior) });
+            }
             buttons.push({ label: t('\u{1F4B0} Просить денег'), bg: 0x6a5a2a, hover: 0x7a6a3a, cb: () => this.askMoneyFromNpc(interior) });
             // Раунд 51: в ЛАВКАХ вместо «Задания» — кнопка «Торговать»
             // (торговцы не выдают поручений — пул квестов не трогаем)
@@ -808,6 +820,12 @@ export class InteriorScene extends Phaser.Scene {
         // Раунд 21: если у NPC есть ВЫПОЛНЕННОЕ, но не оплаченное поручение —
         // сперва выдаём награду, потом разговор.
         if (this.claimCompletedQuests(interior)) return;
+        // ПАТЧ 66.79 (пп.1–4): обворованный хозяин ВСЕГДА подозревает —
+        // сперва проверка «невиновности» разговорным навыком (или мир, п.6).
+        if (isSuspecting(this.registry, interior.npcId)) {
+            this.showSuspicionDialog(interior);
+            return;
+        }
         // Раунд 66.21 (приказ 10): если игрок внутри ночью — его впустили по
         // срочному делу (стук в дверь); такие визиты ночная проверка не
         // отклоняет и штрафом «разбудил» не карает.
@@ -856,6 +874,116 @@ export class InteriorScene extends Phaser.Scene {
             const end = checkGameEnd(this.registry);
             if (end) this.scene.start('End');
         });
+    }
+
+    // ================================================================
+    // ПАТЧ 66.79 (пп.1–4): ПОДОЗРЕНИЕ В КРАЖЕ — проверка «невиновности».
+    // Обворованный хозяин смотрит косо: разговорный навык (лучший из
+    // Убеждения/Болтовни, −15% за каждую прежнюю кражу у него — п.3).
+    // Успех — подозрение снято до следующей кражи (п.2); провал —
+    // репутация у НПЦ −10 и в деревне −5 (точно, п.4).
+    // ================================================================
+    showSuspicionDialog(interior) {
+        const player = this.registry.get('player');
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        const chk = suspectCheckSkill(this.registry, interior.npcId, player);
+        this.busyDialog = true;
+        const difficultyNote = chk.penalty > 0
+            ? '\n\n' + tf(t('Он уже не раз терял добро: разговор придётся вести хитрее (сложность −{0}% за {1} прежние кражи).'), chk.penalty, chk.thefts - 1)
+            : '';
+        createDialog(this, t('👁 Косые взгляды'),
+            tf(t('{0} сразу смекает, что дела тут нечисти: после пропажи в доме ты первый в подозреваемых. Отведи подозрение разговором — иначе будет хуже.'), npcName)
+            + difficultyNote,
+            [
+                { text: tf(t('Отвести подозрение ({0}%)'), chk.effective), callback: () => { this.busyDialog = false; this.runInnocenceCheck(interior); } },
+                { text: t('🤝 Признаться и помириться'), callback: () => { this.busyDialog = false; this.showReconcileMenu(interior); } },
+                { text: t('Отступить'), callback: () => { this.busyDialog = false; } },
+            ],
+            { singleton: false, portraitKey: this.npcPortraitKey });
+    }
+
+    /** Проверка «невиновности» (пп.1–4) и её исход. */
+    runInnocenceCheck(interior) {
+        const player = this.registry.get('player');
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        const res = attemptInnocence(this.registry, interior.npcId, player);
+        this.registry.set('player', player);
+        this.updateHUD();
+        if (res.ok) {
+            ActionLog.add(this.registry, tf(t('Проверка «невиновности» у {0} пройдена ({1}%: бросок {2}).'), npcName, res.effective, res.roll));
+            // П.2: подозрение снято — разговор идёт своим чередом
+            const npc = this.npcData;
+            if (npc && !npc.met) {
+                meetNpc(this.registry, interior.npcId);
+            }
+            this.busyDialog = true;
+            this.dialogue.run(interior.dialogueId, () => {
+                this.busyDialog = false;
+                const end = checkGameEnd(this.registry);
+                if (end) this.scene.start('End');
+            });
+        } else {
+            createDialog(this, t('👆 Не уверил!'),
+                tf(t('{0} отворачивается с сердитым видом: слова твои лживы, и добро пропало не само. По деревне уже шепчутся.\n\n(Репутация у {0} −10, в деревне −5.)'), npcName),
+                [{ text: t('Замолчать'), callback: () => { this.busyDialog = false; } }],
+                { singleton: false, portraitKey: this.npcPortraitKey });
+        }
+    }
+
+    // ================================================================
+    // ПАТЧ 66.79 (п.6): ПРИМИРЕНИЕ С ОБКРАДЕННЫМ ХОЗЯИНОМ.
+    // Вернуть украденное (вещами) или компенсировать сбытое деньгами
+    // по полной стоимости + вира за кражу (24 д., Судебник 1497).
+    // После мира: подозрение снято, обида смыта, стражник за этот дом
+    // причин задерживать героя больше не имеет.
+    // ================================================================
+    showReconcileMenu(interior) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const needs = reconcileNeeds(this.registry, player, interior.id);
+        const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
+        this.busyDialog = true;
+        const lines = [tf(t('{0} сидит над пепелищем доверия. Чтобы очистить душу и избежать суда, надобно:'), npcName)];
+        if (needs.entries.length > 0) {
+            lines.push(t('• вернуть украденное из его дома:') + '\n' + needs.entries.map(e => `  ${e.emoji} ${t(e.name)} ×${e.count}`).join('\n'));
+        } else {
+            lines.push(t('• украденного в узле не осталось — всё сбыто, придётся платить.'));
+        }
+        if (needs.soldValue > 0) {
+            lines.push(tf(t('• компенсировать сбытое деньгами по полной стоимости: {0} д.'), needs.soldValue));
+        }
+        lines.push(tf(t('• выплатить виру за кражу: {0} д. (Судебник 1497, о татбе).')), tf(t('Итого: {0} д. (В узле сейчас {1} д.)'), needs.total, player.dengas || 0));
+        createDialog(this, t('🤝 Мириться (кража)'),
+            lines.join('\n')
+            + '\n\n' + t('После мира хозяин простит: подозрение снимется, обида смоется серебром (репутация хозяина станет не ниже 0).'),
+            [
+                {
+                    text: needs.total > 0 ? tf(t('Свершить мир ({0} д.)'), needs.total) : t('Свершить мир'),
+                    callback: () => { this.busyDialog = false; this.doReconcile(interior); },
+                },
+                { text: t('Пока нет'), callback: () => { this.busyDialog = false; } },
+            ],
+            { singleton: false, portraitKey: this.npcPortraitKey });
+    }
+
+    /** Примирение (п.6) — списания и исход. */
+    doReconcile(interior) {
+        const res = reconcileWithHost(this.registry, interior.npcId, interior.id);
+        this.updateHUD();
+        if (!res.success) {
+            createDialog(this, t('🤝 Мир не вышел'),
+                tf(t('Не хватает серебра: надобно {0} д., а в узле лишь {1} д. Примиришься, когда достанешь денег — или Стражник у ворот рассудит по Судебнику.'), res.total, (this.registry.get('player') || {}).dengas || 0),
+                [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+                { singleton: false });
+            return;
+        }
+        if (this.audioManager) this.audioManager.playGoldReceive();
+        ActionLog.add(this.registry, tf(t('Примирился с обкраденным в «{0}»: возвращено {1} шт., уплачено {2} д. (в т.ч. вира {3} д.).'), interior.name, res.returnedCount, res.soldPaid + res.vira, res.vira));
+        createDialog(this, t('🤝 Обида смыта'),
+            tf(t('Вещи легли на место, серебро перешло в руки хозяина — мир по Судебнику свершен! Репутация хозяина теперь {0}, и у ворот деревни за этот дом тебя не тронут.'), res.npcRepNow >= 0 ? '+' + res.npcRepNow : res.npcRepNow),
+            [{ text: t('Мир-дружба'), callback: () => { this.busyDialog = false; } }],
+            { singleton: false });
     }
 
 
@@ -1827,6 +1955,11 @@ export class InteriorScene extends Phaser.Scene {
             if (this.audioManager) this.audioManager.playGoldReceive();
             // Патч 66.78 (приказ 6): каждая продажа краденого — репутация −1
             noteFenceSale(this.registry, row.def.name, total);
+            // Патч 66.79 (пп.5–6): сбыт запоминается по дому — за проданное
+            // придётся отвечать УРОКОМ по полной стоимости (стражник/мир)
+            if (row.entry && row.entry.from) {
+                noteSoldStolen(this.registry, row.entry.from, (row.def.sell || 0) * n);
+            }
             // Патч 66.78 (приказ 9): любая продажа — 30 минут
             chargeTradeTime(this.registry);
             this.updateHUD();
@@ -2905,12 +3038,16 @@ export class InteriorScene extends Phaser.Scene {
      *  • раз в месяц на дом (canPickChest); только в пустом доме —
      *    кнопка и так появляется лишь тогда;
      *  • попытка: СКРАДЫВАНИЕ (провал — геометрическая молва, 66.78 п.1),
-     *    затем ХОЗЯЕВА (66.78 пп.2–3: могут вернуться — репутация у хозяев
-     *    −30, в деревне −20; могут и напасть — бой), затем ВЗЛОМ: успех —
-     *    лут 1–5 штук по таблице дома, крит — все 5;
+     *    затем ХОЗЯЕВА (66.78 пп.2–3 + 66.79 пп.9–10: красный поп-ап
+     *    «к дому идут хозяева», шанс сбежать — Ловкость/Скрадывание;
+     *    провал побега — застукали: репутация у хозяев −30, в деревне
+     *    −20, могут и напасть — бой), затем ВЗЛОМ: успех — лут 1–5 штук
+     *    по таблице дома, крит — все 5;
      *  • попытка — ФИКСИРОВАННО 10 минут (66.78 п.8), усталость −1;
      *  • ПЕРВАЯ попытка кражи/взлома — однократное КРАСНОЕ предупреждение
-     *    (66.78 п.7).
+     *    (66.78 п.7);
+     *  • УДАЧА — хозяин ОБВОРОВАН и теперь ВСЕГДА подозревает игрока
+     *    (66.79 п.1); краденое помечено происхождением (п.5–6).
      */
     openChest(interior) {
         if (this.busyDialog) return;
@@ -2952,6 +3089,7 @@ export class InteriorScene extends Phaser.Scene {
             stealth: (player.skills && player.skills.stealth) || 10,
             lock: (player.skills && player.skills.lockpicking) || 10,
             hostNpcId: interior.npcId, // застукали — репутация у хозяев −30 (66.78 п.2)
+            deferOwners: true, // 66.79 пп.9–10: сначала шанс сбежать, карают после провала
         });
         // 1) Скрадывание провалено (приказ 18): геометрическая молва уже списана
         if (res.stealthFailed) {
@@ -2962,26 +3100,11 @@ export class InteriorScene extends Phaser.Scene {
             this.updateHUD();
             return;
         }
-        // 1а) ПАТЧ 66.78 (пп.2–3): ХОЗЯЕВА ВЕРНУЛИСЬ и застукали вора
+        // 1а) ПАТЧ 66.78 (пп.2–3) + 66.79 (пп.9–10): ХОЗЯЕВА ВОЗВРАЩАЮТСЯ —
+        // красный поп-ап с шансом СБЕЖАТЬ до их прихода (Ловкость/Скрадывание).
         if (res.ownersCame) {
             this.registry.set('player', player);
-            if (res.hostAttacks) {
-                // Нападение хозяев (п.3): бой, как с враждебным жителем
-                ActionLog.add(this.registry, tf(t('Хозяева вернулись во время воровства и бросились на тебя в «{0}»!'), interior.name));
-                createDialog(this, t('🗡 На тебя нападают!'),
-                    t('Дверь распахивается — на пороге хозяева! Узнав вора, они с криком бросаются на тебя!\n\n(Репутация у хозяев −30, в деревне −20.)'),
-                    [{ text: t('Драться!'), callback: () => {
-                        // Бой — на следующий кадр (раунд 40, вне стека клика)
-                        this.time.delayedCall(0, () => {
-                            this.scene.start('Combat', { enemyKeys: ['villager'], npcId: interior.npcId + '_hostile' });
-                        });
-                    } }], { singleton: false });
-            } else {
-                createDialog(this, t('👣 Хозяева вернулись!'),
-                    t('Ты только потянулся к сундуку, как в сенях загремели голоса — хозяева вернулись домой! Пришлось ускользнуть задворками пустыми руками, но тебя запомнили.\n\n(Репутация у хозяев −30, в деревне −20.)'),
-                    [{ text: t('Ускользнуть'), callback: close }], { singleton: false });
-            }
-            this.updateHUD();
+            this.showOwnersComing(interior);
             return;
         }
         // 2) Замок не поддался
@@ -2997,9 +3120,13 @@ export class InteriorScene extends Phaser.Scene {
         // 3) УДАЧА: лут 1–5 штук по таблице дома (крит — все 5).
         // Патч 66.77 (приказ 2) + 66.78 (пп.4–5): лут кладётся КАК КРАДЕНЕЕ
         // (отдельная кучка узла) — сбыть можно ТОЛЬКО Скупщику по ночам.
-        res.items.forEach(it => addStolenItem(player, it.id, it.count));
+        // Патч 66.79 (пп.5–6): краденое помечено ПРОИСХОЖДЕНИЕМ (дом) —
+        // хозяева узнают свои вещи при осмотре у стражника и мире.
+        res.items.forEach(it => addStolenItem(player, it.id, it.count, interior.id));
         if (res.dengas > 0) player.dengas = (player.dengas || 0) + res.dengas;
         this.registry.set('player', player);
+        // ПАТЧ 66.79 (п.1): хозяин ОБВОРОВАН — теперь ВСЕГДА подозревает игрока.
+        noteTheftDone(this.registry, interior.npcId);
         const lootLines = [];
         res.items.forEach(it => {
             const def = getLootDef(it.id);
@@ -3014,6 +3141,103 @@ export class InteriorScene extends Phaser.Scene {
             + '\n\n' + t('(Краденое добро честным скупщикам не сбыть: только Скупщику по ночам на постоялом дворе.)'),
             [{ text: t('Взять добро'), callback: close }], { singleton: false });
         this.updateHUD();
+    }
+
+    // ================================================================
+    // ПАТЧ 66.79 (пп.9–10): ХОЗЯЕВА ИДУТ К ДОМУ — КРАСНЫЙ ПОП-АП И ПОБЕГ.
+    //  • перед приходом хозяев — красное предупреждение;
+    //  • есть шанс сбежать с ОБЯЗАТЕЛЬНОЙ проверкой Ловкости (ЛОВ×5)
+    //    или Навыка Скрытности (Скрадывание) — на выбор игрока;
+    //  • удача — игрок НЕ обнаружен, ничьих репутаций не коснулось;
+    //  • провал побега (или «замереть») — застукали: −30 у хозяев,
+    //    −20 в деревне, стражник у ворот получит право на осмотр;
+    //  • удачный побег — герой появляется СНАРУЖИ дома, в деревне.
+    // ================================================================
+
+    /** Красный поп-ап «к дому идут хозяева» + выбор способа побега (п.9). */
+    showOwnersComing(interior) {
+        if (this.busyDialog) return;
+        this.busyDialog = true;
+        createDialog(this, t('⚠ К дому идут хозяева!'),
+            t('Со двора слышны шаги и голоса — хозяева вот-вот войдут в дом и увидят тебя у открытого сундука! Стрелки солнца ещё ползут по полу — есть мгновение, чтобы скрыться. Как уйти?')
+            + '\n\n' + t('(Побег — обязательная проверка Ловкости или Скрадывания. Удача — тебя не заметят; провал — застукают на месте преступления.)'),
+            [
+                { text: t('🏃 Бежать (Ловкость)'), callback: () => { this.busyDialog = false; this.attemptOwnerEscape(interior, 'dex'); } },
+                { text: t('🫥 Ускользнуть (Скрадывание)'), callback: () => { this.busyDialog = false; this.attemptOwnerEscape(interior, 'stealth'); } },
+                { text: t('Опустить голову и надеяться'), callback: () => { this.busyDialog = false; this.caughtByOwners(interior, true); } },
+            ],
+            { singleton: false, coverColor: 0x5a0f0f, coverAlpha: 0.85 });
+    }
+
+    /** Побег от хозяев (п.9): проверка Ловкости (ЛОВ×5) или Скрадывания. */
+    attemptOwnerEscape(interior, mode) {
+        const player = this.registry.get('player');
+        if (!player) return;
+        let res;
+        if (mode === 'dex') {
+            // Ловкость как характеристика — BRP: бросок против ЛОВ×5
+            const dex = Math.max(1, Number(player.DEX) || 10);
+            res = skillCheck(dex * 5);
+            ActionLog.add(this.registry, tf(t('Побег через задворки (Ловкость {0}×5): бросок {1}.'), dex, res.roll));
+        } else {
+            const stealth = Math.max(1, (player.skills && player.skills.stealth) || 10);
+            res = skillCheck(getBlessedSkill(this.registry, stealth));
+            ActionLog.add(this.registry, tf(t('Ускользнул задворками (Скрадывание {0}%): бросок {1}.'), stealth, res.roll));
+        }
+        const ok = res.result === 'critical' || res.result === 'success';
+        if (ok) {
+            this.escapeToVillage(interior, mode, res);
+        } else {
+            this.caughtByOwners(interior, false, res);
+        }
+    }
+
+    /** УДАЧНЫЙ ПОБЕГ (п.10): герой появляется снаружи дома, в деревне. */
+    escapeToVillage(interior, mode, res) {
+        ActionLog.add(this.registry, tf(t('Успел скрыться из «{0}» до прихода хозяев: тебя не обнаружили, дурной молвы нет ({1}).'),
+            interior.name,
+            mode === 'dex' ? tf(t('Ловкость, бросок {0}'), res.roll) : tf(t('Скрадывание, бросок {0}'), res.roll)));
+        // Появиться снаружи дома — в локации деревня (п.10)
+        const village = this.scene.get('Village');
+        this.scene.stop(); // интерьер закрыт — деревня увидит героя у порога
+        if (village) {
+            if (typeof village.placePlayerOutsideHouse === 'function') {
+                village.placePlayerOutsideHouse(interior.id);
+            }
+            // Поп-ап удачи покажет VillageScene после возобновления update()
+            village.__pendingEscapePopup = { name: interior.name, mode, roll: res.roll };
+        }
+        if (this.scene.isPaused('Village')) this.scene.resume('Village');
+    }
+
+    /** Провал побега / «замереть» — хозяева ЗАСТУКАЛИ вора (пп.9→2–3). */
+    caughtByOwners(interior, stayed, failRes) {
+        const player = this.registry.get('player');
+        if (player) this.registry.set('player', player);
+        if (stayed) {
+            ActionLog.add(this.registry, tf(t('Замер у сундука в «{0}» — и хозяева вошли: укрыться было негде.'), interior.name));
+        } else if (failRes) {
+            ActionLog.add(this.registry, tf(t('Побег не удался в «{0}» (бросок {1}): хозяева вошли и увидели вора.'), interior.name, failRes.roll));
+        }
+        // Списания застукивания: −30 у хозяев, −20 в деревне + маркер стражника
+        const owners = applyOwnersCaught(this.registry, { hostNpcId: interior.npcId, interiorId: interior.id });
+        this.updateHUD();
+        if (owners.attack) {
+            // Нападение хозяев (п.3 приказа 66.78): бой, как с враждебным жителем
+            ActionLog.add(this.registry, tf(t('Хозяева вернулись во время воровства и бросились на тебя в «{0}»!'), interior.name));
+            createDialog(this, t('🗡 На тебя нападают!'),
+                t('Дверь распахивается — на пороге хозяева! Узнав вора, они с криком бросаются на тебя!\n\n(Репутация у хозяев −30, в деревне −20. У ворот деревни теперь вправе осмотреть твой узел.)'),
+                [{ text: t('Драться!'), callback: () => {
+                    // Бой — на следующий кадр (раунд 40, вне стека клика)
+                    this.time.delayedCall(0, () => {
+                        this.scene.start('Combat', { enemyKeys: ['villager'], npcId: interior.npcId + '_hostile' });
+                    });
+                } }], { singleton: false });
+        } else {
+            createDialog(this, t('👣 Хозяева застукали!'),
+                t('Дверь распахивается — на пороге хозяева! Уйти не вышло: тебя запомнили, и по деревне уже бежит злая молва.\n\n(Репутация у хозяев −30, в деревне −20. У ворот деревни теперь вправе осмотреть твой узел.)'),
+                [{ text: t('Опустить голову'), callback: () => { this.busyDialog = false; } }], { singleton: false });
+        }
     }
 
     /**

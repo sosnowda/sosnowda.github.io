@@ -59,6 +59,8 @@ import { knockAtDoor as knockAtDoorLogic, doorResponder, responderName } from '.
 import { hasChest, attemptBreakIn } from '../systems/burglary.js';
 // Патч 66.78 (приказ 7): однократное красное предупреждение о преступлении
 import { crimeWarnedOnce, markCrimeWarned, CRIME_WARNING_TEXT } from '../systems/crime.js';
+// Патч 66.79 (пп.5,7,8): СТРАЖНИК У ВОРОТ — осмотр узла, вира по Судебнику, изгнание
+import { hasGuardBusiness, guardBill, guardInspection } from '../systems/justice.js';
 // Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
 import { hungerStatusLine } from '../systems/hunger.js';
 // Патч 66.73 (приказ 14): усталость в HUD деревни (ОУ = СИЛ+ТЕЛ, BRP SRD)
@@ -638,11 +640,11 @@ export class VillageScene extends Phaser.Scene {
 
             // П.4: Клик на ворота — выход из деревни
             // Раунд 32 (п.5): перемещение между локациями — РОВНО 1 игровой час
+            // ПАТЧ 66.79 (п.5): уличённого в воровстве у ворот останавливает СТРАЖНИК
             const gtx = Math.floor(worldX / this.tileSize);
             const gty = Math.floor(worldY / this.tileSize);
             if (isGate(gtx, gty)) {
-                tickTime(this.registry, 60);
-                this.scene.start('Fork');
+                this.exitVillageThroughGate();
                 return;
             }
         });
@@ -976,6 +978,15 @@ export class VillageScene extends Phaser.Scene {
     update() {
         // Пока открыт диалог — не перебиваем его концом игры (раунд 21)
         if (this.busyDialog) return;
+
+        // Патч 66.79 (п.10): поп-ап удачного побега от хозяев — показываем
+        // после возобновления сцены (интерьер поставил флаг перед stop/resume)
+        if (this.__pendingEscapePopup) {
+            const p = this.__pendingEscapePopup;
+            this.__pendingEscapePopup = null;
+            this.showEscapeSuccessPopup(p);
+            return;
+        }
 
         // Патч 66.46 (приказ 2): живые тени героя/НПЦ следуют за спрайтами
         if (this.sunLight) this.sunLight.updateFollowers();
@@ -1697,9 +1708,8 @@ export class VillageScene extends Phaser.Scene {
         } else if (this.nearestInteractable.type === 'gate') {
             // Раунд 32 (п.5): выход за околицу — перемещение между локациями,
             // занимает РОВНО 1 игровой час — вор тоже двигается
-            tickTime(this.registry, 60);
-            ActionLog.add(this.registry, t('Игрок вышел за околицу.'));
-            this.scene.start('Fork');
+            // ПАТЧ 66.79 (п.5): уличённого в воровстве у ворот останавливает СТРАЖНИК
+            this.exitVillageThroughGate();
         }
         // РАУНД 66.10 (приказ владельца): ветка «сундук» удалена — сундуков в деревне нет.
         // РАУНД 65 (пп.5,6): ветки «отдых у костра» и «молитва у креста»
@@ -1939,6 +1949,108 @@ export class VillageScene extends Phaser.Scene {
             tf(t('Скребёшь отмычкой в колоде ключа — а он держит. Дом пуст, но замок живуч: можно пробовать снова (десять минут за попытку, и Скрадывание рискует всякий раз).\n\n(Взлом {0}%: бросок {1} — провал.)'), res.lockSkill, res.lockRoll),
             [{ text: t('Отойти от двери'), callback: close }], { singleton: false });
         this.updateHUD();
+    }
+
+    // ================================================================
+    // ПАТЧ 66.79 (пп.5,7,8): СТРАЖНИК У ВОРОТ — ПРАВОСУДИЕ ПО СУДЕБНИКУ.
+    // Уличённому в воровстве (хозяева застукали) при выходе из деревни
+    // останавливает стражник Илья: осмотр узла (инвентаря), краденое
+    // изымается и возвращается хозяевам, вира по Судебнику 1497:
+    //  • продажа за татьбу — 24 д. (12 гривен по 2 д.);
+    //  • урок за ПРОДАННОЕ краденое пойманных домов — по полной стоимости;
+    //  • повторная поимка — всё ×3 (п.7);
+    //  • ТРЕТЬЯ поимка — всё имущество в казну и ИЗГНАНИЕ: провал игры (п.8).
+    // ================================================================
+
+    /** Единая точка выхода за ворота: стражник может остановить (п.5). */
+    exitVillageThroughGate() {
+        if (this.busyDialog) return;
+        if (hasGuardBusiness(this.registry)) {
+            this.showGuardInspection();
+            return;
+        }
+        tickTime(this.registry, 60);
+        ActionLog.add(this.registry, t('Игрок вышел за околицу.'));
+        this.scene.start('Fork');
+    }
+
+    /** Поп-ап осмотра стражником: счёт и изъятие (пп.5,7,8). */
+    showGuardInspection() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const bill = guardBill(this.registry, player);
+        this.busyDialog = true;
+        const itemLines = bill.items.length > 0
+            ? t('В узле опознаётся чужое:') + '\n' + bill.items.map(i => `  ${i.emoji} ${t(i.name)} ×${i.count}`).join('\n')
+            : t('Украденного в узле не осталось — всё сбыто, но хозяева указали на тебя.');
+        const multNote = bill.mult > 1
+            ? '\n\n' + tf(t('Ты уже был уличён {0} раз(а): по Судебнику повторная татьба карается втрое строже (множитель ×{1}).'), bill.caughtCount, bill.mult)
+            : '';
+        createDialog(this, t('🛡 Стражник у ворот'),
+            t('«Стой, путник! Молва бежит впереди тебя: у людей пропало добро, а след ведёт к тебе. Судебник велит осмотреть узел — предъявляй!»')
+            + '\n\n' + itemLines + multNote
+            + '\n\n' + tf(t('Вира: продажа за татьбу {0} д. + урок за сбытое {1} д. = {2} д. Изыманное краденое вернётся хозяевам, репутация в деревне {3}.'),
+                bill.vira, bill.soldBill, bill.total, bill.villageRep),
+            [{ text: t('Предъявить узел и уплатить'), callback: () => { this.busyDialog = false; this.doGuardInspection(); } }],
+            { singleton: false, coverColor: 0x2a2438, coverAlpha: 0.72 });
+    }
+
+    /** Осмотр (списания) и исход: мир, недоплата или изгнание (п.8). */
+    doGuardInspection() {
+        const res = guardInspection(this.registry);
+        this.updateHUD();
+        if (res.expelled) {
+            // П.8: третья поимка — ПРОВАЛ И ОКОНЧАНИЕ ИГРЫ
+            ActionLog.add(this.registry, t('Стражник сводит тебя к старосте: сходка решает изгнать вора. Имущество отобрано до последнего узелка.'));
+            createDialog(this, t('🚪 ИЗГНАНИЕ ИЗ ДЕРЕВНИ'),
+                t('«Не один, так другой, так третий раз!» — староста гремит Судебником. «Быть по писаному: поток и разграбление! Всё имущество — в казну, самому — за околицу, и чтоб духу твоего здесь не было!»\n\nВсё имущество отобрано. Ты изгнан из деревни. ЭТО ПРОВАЛ И ОКОНЧАНИЕ ИГРЫ.'),
+                [{ text: t('Уйти за околицу'), callback: () => {
+                    this.scene.start('End');
+                } }],
+                { singleton: false, coverColor: 0x5a0f0f, coverAlpha: 0.85 });
+            return;
+        }
+        const shortNote = res.paidShort
+            ? '\n\n' + t('Денег на всю виру не хватило — стражник выгреб из мошны всё серебро до донца.')
+            : '';
+        createDialog(this, t('🛡 Судебник свершен'),
+            tf(t('Стражник выворачивает узел: чужое добро пойдёт по домам, вира уплачена ({0} д.). «Иди с миром — да больше такого не води!»\n\n(Репутация в деревне {1}. Поимка №{2}: следующая будет строже — ×{3}.)'), res.lostDengas, res.villageRep, res.caughtCount, Math.pow(3, res.caughtCount))
+            + shortNote,
+            [{ text: t('Отойти от ворот'), callback: () => { this.busyDialog = false; } }],
+            { singleton: false });
+    }
+
+    // ================================================================
+    // ПАТЧ 66.79 (п.10): УДАЧНЫЙ ПОБЕГ ОТ ХОЗЯЕВ — герой появляется
+    // СНАРУЖИ дома, в локации деревня (позиция у порога).
+    // ================================================================
+
+    /** Поставить героя на улицу перед дверью дома (выход из интерьера). */
+    placePlayerOutsideHouse(interiorId) {
+        if (!this.playerObj) return;
+        const b = BUILDINGS.find(x => x.interiorId === interiorId);
+        if (!b) return;
+        const ts = this.tileSize;
+        const doorCol = b.col + Math.floor(b.w / 2);
+        const doorRow = b.row + b.h - 1;
+        this.playerObj.setVelocity(0, 0);
+        this.playerObj.x = doorCol * ts + ts / 2;
+        this.playerObj.y = (doorRow + 1) * ts + ts / 2; // на тайл ниже двери (снаружи)
+        if (this.playerObj.body) this.playerObj.body.reset(this.playerObj.x, this.playerObj.y);
+        ActionLog.add(this.registry, tf(t('Герой стоит снаружи у двери «{0}». '), INTERIORS[interiorId] ? INTERIORS[interiorId].name : interiorId));
+    }
+
+    /** Поп-ап удачного побега (вызывается из update — после возобновления сцены). */
+    showEscapeSuccessPopup(p) {
+        if (this.busyDialog) { this.__pendingEscapePopup = p; return; } // покажем на следующем кадре
+        const how = p.mode === 'dex'
+            ? tf(t('Проверка Ловкости пройдена (бросок {0}).'), p.roll)
+            : tf(t('Проверка Скрадывания пройдена (бросок {0}).'), p.roll);
+        createDialog(this, t('💨 Ушёл чистым'),
+            tf(t('Ты выскользнул из «{0}» за миг до того, как на пороге показались хозяева. Они вошли, оглядели горницу — и не заметили ничего, кроме тихо прикрываемой двери. Никто тебя не приметил.{1}'), p.name, '\n\n' + how),
+            [{ text: t('Отойти за угол'), callback: () => { this.busyDialog = false; } }],
+            { singleton: false });
     }
 
     /**

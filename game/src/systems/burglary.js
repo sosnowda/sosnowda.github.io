@@ -32,6 +32,12 @@
 //  • сундук обчищается ОДИН РАЗ В ИГРОВОЙ МЕСЯЦЬ (приказ 16);
 //  • попытка — ФИКСИРОВАННО 10 минут времени (патч 66.78 п.8; тратит
 //    сцена), усталость — тоже сцена.
+//
+// Патч 66.79 (пп.9–10): opts.deferOwners — бросок хозяев выполняется,
+// но ПОСЛЕДСТВИЯ (−30/−20, нападение) НЕ применяются: сцена сначала
+// показывает красный поп-ап «к дому идут хозяева» с возможностью
+// сбежать (Ловкость/Скрадывание); застукали только при провале побега
+// (crime.applyOwnersCaught). Без deferOwners — прежнее поведение.
 // ============================================================
 
 import { t, tf } from './i18n.js';
@@ -194,15 +200,16 @@ function rollOne(table, rng) {
  * пп.2–3: могут вернуться и застукать; могут напасть) → Взлом → лут.
  * Сундук помечается обчищенным ТОЛЬКО при удаче; провал замка можно
  * повторить (пока дом пуст) — каждая попытка это время и риск Скрадывания.
- * @param {Object} opts — { stealth, lock, rng, hostNpcId } (hostNpcId —
- *   личная репутация хозяев падает при застукивании, приказ 2).
+ * @param {Object} opts — { stealth, lock, rng, hostNpcId, deferOwners } (hostNpcId —
+ *   личная репутация хозяев падает при застукивании, приказ 2; deferOwners —
+ *   66.79 пп.9–10: застукавшие НЕ карают сразу — сцена даёт шанс побега).
  * @returns {{ blocked:'month'|null, stealthFailed:boolean, lockFailed:boolean,
  *             done:boolean, items:Array<{id:string,count:number}>, dengas:number,
  *             crit:boolean, roll:number, skill:number, stealthRoll:number,
  *             stealthSkill:number, stealthPenalty:number,
  *             ownersCame:boolean, hostAttacks:boolean }}
  */
-export function attemptChestPick(registry, player, interiorId, timeState, { stealth: stealthSkill, lock: lockSkill, rng = Math.random, hostNpcId = null } = {}) {
+export function attemptChestPick(registry, player, interiorId, timeState, { stealth: stealthSkill, lock: lockSkill, rng = Math.random, hostNpcId = null, deferOwners = false } = {}) {
     const cfg = CHEST_HOUSES[interiorId];
     if (!cfg) return { blocked: 'no_chest', stealthFailed: false, lockFailed: false, done: false, items: [], dengas: 0, crit: false, roll: 0, skill: 0, stealthRoll: 0, stealthSkill: 0, stealthPenalty: 0, ownersCame: false, hostAttacks: false };
     if (!canPickChest(registry, interiorId, timeState)) {
@@ -215,14 +222,17 @@ export function attemptChestPick(registry, player, interiorId, timeState, { stea
     // ПАТЧ 66.78 (пп.2–3): во время воровства хозяева могут вернуться домой.
     // Застукали — репутация у хозяев −30, деревенская −20 (внутри rollOwnersReturn);
     // попытка сорвана, сундук НЕ помечается — добро при хозяевах.
+    // ПАТЧ 66.79 (пп.9–10): deferOwners — без списаний: сцена даёт
+    // игроку шанс СБЕЖАТЬ (Ловкость/Скрадывание) до прихода хозяев.
     const owners = rollOwnersReturn(registry, {
         hostNpcId,
         interiorId,
         hour: timeState ? timeState.hour : 12,
         rng,
+        defer: deferOwners,
     });
     if (owners.came) {
-        return { blocked: null, stealthFailed: false, lockFailed: false, done: false, items: [], dengas: 0, crit: false, roll: 0, skill: 0, stealthRoll: st.roll, stealthSkill: st.skill, stealthPenalty: st.penalty, ownersCame: true, hostAttacks: owners.attack };
+        return { blocked: null, stealthFailed: false, lockFailed: false, done: false, items: [], dengas: 0, crit: false, roll: 0, skill: 0, stealthRoll: st.roll, stealthSkill: st.skill, stealthPenalty: st.penalty, ownersCame: true, hostAttacks: owners.attack, ownersDeferred: deferOwners };
     }
     const lock = getBlessedSkill(registry, Math.max(1, Number(lockSkill) || 1));
     const res = skillCheck(lock);

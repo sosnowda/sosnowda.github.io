@@ -22,11 +22,17 @@
 //     предупреждение (текст приказа; показывает сцена, флаг здесь).
 //
 // Модуль registry-only — тестируется в Node (test_round126).
+// Патч 66.79 (пп.9–10): ПОБЕГ ОТ ХОЗЯЕВ — по приказу rollOwnersReturn
+// может вернуть { came, defer:true } БЕЗ списаний (сцена сначала показывает
+// красный поп-ап «к дому идут хозяева» с проверкой Ловкости/Скрадывания;
+// застукали только после провала побега — тогда applyOwnersCaught).
 // ============================================================
 
 import { t, tf } from './i18n.js';
 import { ActionLog } from '../data/actionLog.js';
 import { changeVillageRepExact, changeNpcRepExact } from '../data/reputation.js';
+// Патч 66.79 (п.5): застукали — стражник у ворот вправе осмотреть узел
+import { markCaughtRedhanded } from './justice.js';
 
 // ---------------- п.1: ГЕОМЕТРИЧЕСКАЯ МОЛВА ----------------
 
@@ -111,19 +117,20 @@ export function ownerAttackChance(gender) {
 }
 
 /**
- * Бросок «хозяева вернулись» (п.2) и «напали» (п.3) — на КАЖДУЮ попытку
- * воровства, когда Скрадывание уже пройден. Застукали — репутация у
- * хозяев −30 и в деревне −20 (точные значения) + записи в летопись.
+ * ПАТЧ 66.79 (пп.5,9): застукали — ПОСЛЕДСТВИЯ (списания + маркер правосудия).
+ * Вызывается из rollOwnersReturn (старый путь — сразу) и из сцены
+ * InteriorScene (новый путь — после провала побега, пп.9–10).
+ *  • репутация у хозяев −30 (точно), в деревне −20 (точно);
+ *  • justiceState.caught[host] = true — стражник у ворот вправе
+ *    остановить героя при выходе из деревни (justice.js);
+ *  • бросок НАПАДЕНИЯ: мужчины 40%, женщины 10% (приказ 3).
  * @param {Object} registry
- * @param {{ hostNpcId:string, interiorId:string, hour:number, rng?:Function }} opts
- * @returns {{ came:boolean, attack:boolean, hostGender:string }}
+ * @param {{ hostNpcId?:string, interiorId?:string, rng?:Function }} opts
+ * @returns {{ attack:boolean, hostGender:string }}
  */
-export function rollOwnersReturn(registry, opts = {}) {
+export function applyOwnersCaught(registry, opts = {}) {
     const rng = opts.rng || Math.random;
     const hostGender = hostGenderOf(opts.interiorId);
-    if (rng() >= ownerReturnChance(opts.hour)) {
-        return { came: false, attack: false, hostGender };
-    }
     // ЗАСТУКАЛИ (приказ 2): точные −30 у хозяев и −20 в деревне.
     if (opts.hostNpcId && registry) {
         changeNpcRepExact(registry, opts.hostNpcId, CATCH_HOST_REP);
@@ -133,9 +140,35 @@ export function rollOwnersReturn(registry, opts = {}) {
         changeVillageRepExact(registry, CATCH_VILLAGE_REP);
         ActionLog.add(registry, tf(t('Воровство раскрыто: по деревне пошла злая молва (репутация в деревне {0}).'), CATCH_VILLAGE_REP));
     }
+    // Правосудие 66.79 (п.5): уличили — стражник у ворот осмотрит узел
+    // (за дома, откуда краденое, придётся отвечать уроком по полной цене)
+    markCaughtRedhanded(registry, opts.hostNpcId, opts.interiorId);
     // НАПАДЕНИЕ (приказ 3): мужчины нападают охотно.
     const attack = rng() < ownerAttackChance(hostGender);
-    return { came: true, attack, hostGender };
+    return { attack, hostGender };
+}
+
+/**
+ * Бросок «хозяева вернулись» (п.2) — на КАЖДУЮ попытку воровства, когда
+ * Скрадывание уже пройден. По умолчанию (без opts.defer) ЗАСТУКАЛИ —
+ * репутация у хозяев −30 и в деревне −20 + запись в летопись.
+ * С opts.defer — ТОЛЬКО бросок (списания делает applyOwnersCaught после
+ * провала побега — патч 66.79 пп.9–10).
+ * @param {Object} registry
+ * @param {{ hostNpcId:string, interiorId:string, hour:number, rng?:Function, defer?:boolean }} opts
+ * @returns {{ came:boolean, attack:boolean, hostGender:string, deferred?:boolean }}
+ */
+export function rollOwnersReturn(registry, opts = {}) {
+    const rng = opts.rng || Math.random;
+    const hostGender = hostGenderOf(opts.interiorId);
+    if (rng() >= ownerReturnChance(opts.hour)) {
+        return { came: false, attack: false, hostGender };
+    }
+    if (opts.defer) {
+        return { came: true, attack: false, hostGender, deferred: true };
+    }
+    const res = applyOwnersCaught(registry, opts);
+    return { came: true, hostGender, ...res };
 }
 
 // ---------------- пп.4–5: СКУПЩИК — НОЧИ ПОЯВЛЕНИЯ ----------------
