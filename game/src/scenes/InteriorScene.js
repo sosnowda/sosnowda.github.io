@@ -53,8 +53,9 @@ import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
 // Раунд 66.17: пропорциональный отдых (8 ч = 100%), минимальный сон 2 часа
 import { MEAL_HEAL_HP, MEAL_DURATION_MIN, canEat, registerMeal, canSleep, registerSleep, showMealBlockedPopup, showSleepBlockedPopup, restHealPct, SLEEP_MIN_MIN, canUseHerb, registerHerb, showHerbBlockedPopup, HERB_HEAL_HP } from '../systems/meal.js';
 // Раунд 66.17 (п.5): ПРОДАЖА ДОБЫЧИ — трактирщик берёт рыбу/дичь на кухню
-// Патч 66.74: сундучный лут идёт в узел через addItem
-import { sellableLoot, removeItem, cookAtFire, getLootDef, countOf, addItem } from '../systems/loot.js';
+// Патч 66.77: сундучный лут идёт в узел КАК КРАДЕНЕЕ (addStolenItem),
+// скупка платит за него на 80% меньше (fencePriceOf)
+import { sellableLoot, removeFromEntry, cookAtFire, getLootDef, countOf, addItem, addStolenItem } from '../systems/loot.js';
 // Раунд 66.70 (приказ 11): МОЛИТВА — откат 8 часов, «Молитва не услышана!»,
 // благословение +5 к одной проверке навыка (списывается первой проверкой)
 import { canPray, registerPrayer, consumePrayerBless } from '../systems/prayer.js';
@@ -649,8 +650,12 @@ export class InteriorScene extends Phaser.Scene {
             if (this.houseEmpty) this.pushChestButton(interior, buttons);
         } else if (interior.id === 'weaver_house') {
             // Патч 66.76 (приказ 3): ТКАЧЕСТВО — подёнка за станком,
-            // оплата полотном/сукном (товары Руси, скупка Фёдора/Потапа)
-            buttons.push({ label: t('\u{1F9F6} Помочь за станком (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInWeaver() });
+            // оплата полотном/сукном (товары Руси, скупка Фёдора/Потапа).
+            // Патч 66.77 (приказ 5): станок ткачихи — ТОЛЬКО для ЖЕНСКОГО
+            // персонажа (мужская кнопка не показывается вовсе).
+            if (player && player.gender === 'female') {
+                buttons.push({ label: t('\u{1F9F6} Помочь за станком (1 час)'), bg: RUS.accent, hover: RUS.accentLight, cb: () => this.workInWeaver() });
+            }
             // Патч 66.76: сундук ткачихи — как у плотника (подёнка + сундук)
             if (this.houseEmpty && hasChest(interior.id)) this.pushChestButton(interior, buttons);
         } else if (interior.id === 'carpenter_house') {
@@ -1610,8 +1615,10 @@ export class InteriorScene extends Phaser.Scene {
         // РАУНД 66.20: подсказка о ценах вынесена в общую строку (раньше
         // дублировалась в каждой строке списка и вынуждала держать мелкий кегль)
         // Патч 66.73 (приказ 5): рядом — строка состояния торга
+        // Патч 66.77 (приказ 2): подсказка о цене краденого (−80%)
         this.add.text(width / 2, height / 2 - panelH / 2 + 88,
-            t('Печёное и жаркое дороже сырого') + '  ·  ' + haggleHintLine(this.registry, buyerNpcId), {
+            t('Печёное и жаркое дороже сырого') + '  ·  ' + haggleHintLine(this.registry, buyerNpcId)
+            + '  ·  ' + t('Краденое — на 80% дешевле скупки'), {
                 fontSize: '13px', color: RUS.textDim, fontStyle: 'italic',
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5).setDepth(202);
@@ -1628,32 +1635,42 @@ export class InteriorScene extends Phaser.Scene {
         rows.forEach((row, i) => {
             const y = startY + i * 52;
             const def = row.def;
-            const unitPrice = priceOf(row.price); // патч 66.73: цена с учётом торга
+            const unitPrice = priceOf(row.price); // патч 66.73: цена с учётом торга; 66.77: краденое уже −80% в row.price
+            // Патч 66.77 (приказ 2): краденая кучка помечается в строке скупки
+            const stolenMark = row.stolen ? ` — ${t('краденое')}` : '';
             this.add.text(width / 2 - panelW / 2 + 30, y - 22,
-                `${def.emoji} ${t(def.name)} ×${row.count} — ${unitPrice} ${t('д.')}`, {
+                `${def.emoji} ${t(def.name)} ×${row.count} — ${unitPrice} ${t('д.')}${stolenMark}`, {
                     fontSize: '15px', color: RUS.text, stroke: '#000', strokeThickness: 1,
                 }).setOrigin(0, 0.5).setDepth(202);
             createButton(this, width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), unitPrice), () => {
-                removeItem(player, def.id, 1);
+                removeFromEntry(player, row.entry, 1); // патч 66.77: из конкретной кучки
                 player.dengas = (player.dengas || 0) + unitPrice;
                 this.registry.set('player', player);
                 if (this.audioManager) this.audioManager.playGoldReceive();
-                ActionLog.add(this.registry, tf(t('Продал «{0}» ({1}) за {2} д.'), t(def.name), buyerName, unitPrice));
+                if (row.stolen) {
+                    ActionLog.add(this.registry, tf(t('Сбыл скупщику краденое «{0}» за {1} д. (за краденое платят на 80% меньше).'), t(def.name), unitPrice));
+                } else {
+                    ActionLog.add(this.registry, tf(t('Продал «{0}» ({1}) за {2} д.'), t(def.name), buyerName, unitPrice));
+                }
                 this.updateHUD();
                 closeMenu();
                 this.showSellLootMenu(interior);
             }, {
-                backgroundColor: 0x3a5a3a, hoverColor: 0x4a6a4a, textColor: RUS.text,
+                backgroundColor: row.stolen ? 0x5a3a2a : 0x3a5a3a, hoverColor: row.stolen ? 0x6a4a3a : 0x4a6a4a, textColor: RUS.text,
                 fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 },
             }).setDepth(202);
             if (row.count > 1) {
                 createButton(this, width / 2 + 205, y + 4, tf(t('Всё ({0} д.)'), unitPrice * row.count), () => {
                     const n = row.count;
-                    removeItem(player, def.id, n);
+                    removeFromEntry(player, row.entry, n); // патч 66.77: из конкретной кучки
                     player.dengas = (player.dengas || 0) + unitPrice * n;
                     this.registry.set('player', player);
                     if (this.audioManager) this.audioManager.playGoldReceive();
-                    ActionLog.add(this.registry, tf(t('Продал всё «{0}» ×{1} ({2}) за {3} д.'), t(def.name), n, buyerName, unitPrice * n));
+                    if (row.stolen) {
+                        ActionLog.add(this.registry, tf(t('Сбыл скупщику краденое «{0}» ×{1} за {2} д. (за краденое платят на 80% меньше).'), t(def.name), n, unitPrice * n));
+                    } else {
+                        ActionLog.add(this.registry, tf(t('Продал всё «{0}» ×{1} ({2}) за {3} д.'), t(def.name), n, buyerName, unitPrice * n));
+                    }
                     this.updateHUD();
                     closeMenu();
                     this.showSellLootMenu(interior);
@@ -2722,8 +2739,10 @@ export class InteriorScene extends Phaser.Scene {
             this.updateHUD();
             return;
         }
-        // 3) УДАЧА: лут 1–5 штук по таблице дома (крит — все 5)
-        res.items.forEach(it => addItem(player, it.id, it.count));
+        // 3) УДАЧА: лут 1–5 штук по таблице дома (крит — все 5).
+        // Патч 66.77 (приказ 2): лут кладётся КАК КРАДЕНЕЕ (отдельная кучка
+        // узла) — скупщик платит за него на 80% меньше стандартной скупки.
+        res.items.forEach(it => addStolenItem(player, it.id, it.count));
         if (res.dengas > 0) player.dengas = (player.dengas || 0) + res.dengas;
         this.registry.set('player', player);
         const lootLines = [];
@@ -2736,7 +2755,8 @@ export class InteriorScene extends Phaser.Scene {
             lootLines.join(', '), res.skill, res.roll, res.crit ? t(' — крит') : ''));
         createDialog(this, res.crit ? t('🧰 До донышка!') : t('🧰 Замок поддался!'),
             tf(t('Отмычка нашла щёлк — крышка откинулась. В сундуке:{0}\n\n(Взлом {1}%: бросок {2}{3}. В этот месяц здесь больше нечего взять.)'),
-                '\n· ' + lootLines.join('\n· '), res.skill, res.roll, res.crit ? t(' — КРИТ: вытянул всё до донышка!') : ''),
+                '\n· ' + lootLines.join('\n· '), res.skill, res.roll, res.crit ? t(' — КРИТ: вытянул всё до донышка!') : '')
+            + '\n\n' + t('(Краденое добро: скупщики платят за него на 80% меньше стандартной цены.)'),
             [{ text: t('Взять добро'), callback: close }], { singleton: false });
         this.updateHUD();
     }

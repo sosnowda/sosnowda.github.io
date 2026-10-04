@@ -140,7 +140,7 @@ ok(styles.includes('.pt-reign{transition:none}') || /prefers-reduced-motion[\s\S
     'styles.css: reduced-motion — без анимаций таймлайна');
 
 console.log('--- 9. SW и кеши ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v117';"), 'SW: site-cache v112 (актуализация 66.70)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v118';"), 'SW: site-cache v112 (актуализация 66.70)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'SW: game-assets-v43 (66.33: листы+бусты)');
 ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84 (история версий сохраняется)');
 

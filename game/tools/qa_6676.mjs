@@ -199,10 +199,13 @@ console.log('===== §2. ТКАЧИХА: подёнка за ПОЛОТНО (пр
     page.on('pageerror', e => { jsErrors++; console.log('PAGEERROR:', String(e).slice(0, 160)); });
     const h = makeHelpers(page);
     await h.startGame(10);
-    // Навык 95: провал только на 96–100 (5%) — до 3 попыток в QA
+    // 66.77 (приказ 5): ткачество — ТОЛЬКО для женского персонажа —
+    // харнесс ставит женский пол до входа (иначе кнопки нет)
     await page.evaluate(() => {
         const v = window.game.scene.getScene('Village');
         const p = v.registry.get('player');
+        p.gender = 'female';
+        // Навык 95: провал только на 96–100 (5%) — до 3 попыток в QA
         p.skills.weaving = 98; // провал только на 99–100
         v.registry.set('player', p);
     });

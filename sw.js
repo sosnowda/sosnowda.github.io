@@ -12,7 +12,11 @@
 // исходники game/src/** (10 новых навыков, burglary.js/jobs.js, сундуки,
 // борть, пасека-мёд) и game/index.html не трогали ассеты и vendor —
 // game-assets-v43 без изменений.
-const CACHE_NAME = 'chronicles-ruthenia-v117';
+// 66.77 (приказы владельца 1–6): краденое — скупка −80% (отдельная кучка
+// узла), ткачество только для женского персонажа; бамп v117→v118 —
+// исходники game/src/** (loot.js/InteriorScene.js/questGenerator.js/i18n.js),
+// ассеты и vendor не тронуты — game-assets-v43 цел.
+const CACHE_NAME = 'chronicles-ruthenia-v118';
 const GAME_ASSETS_CACHE = 'game-assets-v43';
 
 self.addEventListener('install', function (event) {

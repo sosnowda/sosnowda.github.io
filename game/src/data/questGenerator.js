@@ -899,7 +899,7 @@ export function grantQuestRewards(registry, quest) {
             grantedRewards.push(`${formatMoney(reward.amount)}`);
         } else if (reward.type === 'item') {
             if (!player.inventory) player.inventory = [];
-            const existing = player.inventory.find(i => i.id === reward.id);
+            const existing = player.inventory.find(i => i.id === reward.id && !i.stolen); // 66.77: награда не валится в краденую кучку
             if (existing) {
                 existing.count += reward.count;
             } else {

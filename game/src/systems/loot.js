@@ -192,22 +192,25 @@ export function getLootDef(itemId) {
     return LOOT_DEFS[itemId] || SIMPLE_FOOD_DEFS[itemId] || null;
 }
 
-/** Сколько штук предмета в узле. */
+/** Сколько штук предмета в узле (по ВСЕМ кучкам — патч 66.77: краденая кучка считается тоже). */
 export function countOf(player, itemId) {
     if (!player || !Array.isArray(player.inventory)) return 0;
-    const it = player.inventory.find(i => i && i.id === itemId);
-    return it ? (it.count || 1) : 0;
+    return player.inventory
+        .filter(i => i && i.id === itemId)
+        .reduce((sum, i) => sum + (i.count || 1), 0);
 }
 
 /**
  * Добавить добычу в узел (кучкуется по id). Возвращает новый счётчик.
+ * Патч 66.77: честное добро НЕ подмешивается в краденую кучку — при
+ * наличии только краденой кучки создаётся отдельная честная запись.
  */
 export function addItem(player, itemId, count = 1) {
     if (!player) return 0;
     if (!Array.isArray(player.inventory)) player.inventory = [];
     const def = getLootDef(itemId);
     const name = def ? def.name : t(itemId);
-    let it = player.inventory.find(i => i && i.id === itemId);
+    let it = player.inventory.find(i => i && i.id === itemId && !i.stolen);
     if (it) {
         it.count = (it.count || 1) + count;
     } else {
@@ -217,10 +220,82 @@ export function addItem(player, itemId, count = 1) {
     return it.count;
 }
 
-/** Убрать count штук из узла. Возвращает сколько реально убрано. */
+/**
+ * Убрать count штук из узла. Возвращает сколько реально убрано.
+ * Патч 66.77: расход идёт сначала из ЧЕСТНЫХ записей (краденое —
+ * отдельной записью — продать можно только скупщику за 20%,
+ * а съесть/израсходовать честное добро естественнее).
+ */
 export function removeItem(player, itemId, count = 1) {
     if (!player || !Array.isArray(player.inventory)) return 0;
-    const it = player.inventory.find(i => i && i.id === itemId);
+    const matches = player.inventory.filter(i => i && i.id === itemId);
+    if (matches.length === 0) return 0;
+    matches.sort((a, b) => (a.stolen ? 1 : 0) - (b.stolen ? 1 : 0)); // честные первыми
+    let taken = 0;
+    for (const it of matches) {
+        if (taken >= count) break;
+        const have = it.count || 1;
+        const take = Math.min(have, count - taken);
+        it.count = have - take;
+        taken += take;
+        if (it.count <= 0) player.inventory = player.inventory.filter(i => i !== it);
+    }
+    return taken;
+}
+
+/**
+ * ПАТЧ 66.77 (приказ владельца 2): КРАДЕНЕЕ — отдельная запись узла.
+ * Лут из сундуков (Взлом, burglary.js) НЕ смешивается с честным добром:
+ * та же самая вещь рядом с честной лежит отдельной кучкой со флагом
+ * stolen:true. Скупщики платят за краденое НА 80% МЕНЬШЕ стандартной
+ * покупной (fencePriceOf) — и строка в скупке помечена «(краденое)».
+ * Возвращает новый счётчик краденой кучки.
+ */
+export function addStolenItem(player, itemId, count = 1) {
+    if (!player) return 0;
+    if (!Array.isArray(player.inventory)) player.inventory = [];
+    const def = getLootDef(itemId);
+    const name = def ? def.name : t(itemId);
+    let it = player.inventory.find(i => i && i.id === itemId && i.stolen);
+    if (it) {
+        it.count = (it.count || 1) + count;
+    } else {
+        it = { id: itemId, name, count, type: 'loot', stolen: true };
+        player.inventory.push(it);
+    }
+    return it.count;
+}
+
+/** Цена КРАДЕНОГО за 1 шт.: на 80% меньше стандартной скупки (приказ 2). */
+export const STOLEN_SELL_DISCOUNT = 0.2; // платят 20% обычной цены скупки
+export function fencePriceOf(baseSell) {
+    return Math.max(1, Math.round((Number(baseSell) || 0) * STOLEN_SELL_DISCOUNT));
+}
+
+/**
+ * Список добычи на продажу: [{ def, count, price, stolen, entry }].
+ * Патч 66.77: строки идут ПО ЗАПИСЯМ узла — краденая кучка (stolen:true)
+ * живёт отдельной строкой с ценой за 20% (fencePriceOf), честная — по
+ * def.sell. Кнопки продажи работают с конкретной записью (entry).
+ */
+export function sellableLoot(player) {
+    if (!player || !Array.isArray(player.inventory)) return [];
+    const rows = [];
+    player.inventory.forEach((entry) => {
+        if (!entry || !entry.id) return;
+        const def = getLootDef(entry.id);
+        if (!def) return; // торговец берёт только добычу/товары из LOOT_DEFS
+        const count = entry.count || 1;
+        const stolen = !!entry.stolen;
+        rows.push({ def, count, price: stolen ? fencePriceOf(def.sell) : def.sell, stolen, entry });
+    });
+    return rows;
+}
+
+/** Убрать штук из КОНКРЕТНОЙ записи узла (продажа краденого/честного). */
+export function removeFromEntry(player, entry, count = 1) {
+    if (!player || !Array.isArray(player.inventory) || !entry) return 0;
+    const it = player.inventory.find(i => i === entry);
     if (!it) return 0;
     const have = it.count || 1;
     const take = Math.min(have, count);
@@ -229,16 +304,7 @@ export function removeItem(player, itemId, count = 1) {
     return take;
 }
 
-/** Список добычи на продажу: [{ def, count, price }] (по цене за 1 шт.). */
-export function sellableLoot(player) {
-    if (!player || !Array.isArray(player.inventory)) return [];
-    const rows = [];
-    Object.values(LOOT_DEFS).forEach((def) => {
-        const count = countOf(player, def.id);
-        if (count > 0) rows.push({ def, count, price: def.sell });
-    });
-    return rows;
-}
+// (sellableLoot перенесён выше, к записям узла — патч 66.77)
 
 /**
  * П.10: шанс попадания из лука по дичи — база по виду дичи + половина

@@ -162,7 +162,7 @@ for (const f of ['qa_battle_thief_6642.mjs', 'qa_chimneys_6642.mjs', 'make_chimn
 console.log('— 7. SW v92 / game-assets-v43 —');
 const sw = read('sw.js');
 const swlog = read('docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v117';"), 'SW: site-cache v112 (актуализация 66.70)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v118';"), 'SW: site-cache v112 (актуализация 66.70)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'SW: game-assets-v43');
 ok(swlog.includes('66.42'), 'SW-журнал: запись 66.42 есть');
 
