@@ -90,6 +90,16 @@ async function startRun() {
     const hero = createPresetHero('warrior_m', 'Добрыня');
     sel.startGameWithHero(hero); // → CharacterAppearance (инициализирует время/погоню/репутацию)
     await sleep(700);
+    // 66.85 (приказ 1): с патча 66.84 игра открывается ИНТРО-ПОСЛЕДОВАТЕЛЬНОСТЬЮ
+    // (поп-ап приветствия старосты, диалог, приход священника). Для кадров
+    // сайта интро пропускаем напрямую: finishIntro() завершает сцену знакомства
+    // и отдаёт управление игроку (как реальный игрок после диалогов).
+    await sleep(300);
+    const vil0 = window.game.scene.getScene('Village');
+    if (vil0 && vil0.introSequence && vil0.introSequence.finishIntro) {
+        vil0.introSequence.finishIntro();
+    }
+    await sleep(600);
     // 66.43 (пересъёмка): обучающие подсказки (Туторial, 4 шага ~20 c)
     // НЕ должны попадать в кадры сайта — помечаем туториал пройденным.
     const q0 = window.game.registry.get('quest');
@@ -206,6 +216,14 @@ const SCENARIOS = {
         window.game.scene.start('Interior', { interiorId: 'blacksmith', from: 'Village' });
         await waitScene('Interior');
         await sleep(600);
+    },
+    // 66.85 (приказы 1–2): НОВЫЙ кадр сайта — Южный тракт с ГРУНТОВОЙ
+    // дорогой (земляное полотно, колеи, дёрн по кромкам, путевой столб).
+    tract: async () => {
+        await startRun();
+        window.game.scene.start('Location', { locationId: 'road_south', from: 'Fork' });
+        await waitScene('Location');
+        await sleep(1500);
     },
 };
 

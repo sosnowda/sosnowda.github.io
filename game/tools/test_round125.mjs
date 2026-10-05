@@ -136,8 +136,8 @@ i18n.setLang('ru');
 
 console.log('--- 10. SW: бамп v117→v118 (§4 — менялись исходники src/**) ---');
 const sw = read('sw.js');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v119';"), 'sw.js: CACHE_NAME v119 (бамп 66.79)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'sw.js: game-assets-v43 цел (ассеты не тронуты)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v120';"), 'sw.js: CACHE_NAME v119 (бамп 66.79)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v44';"), 'sw.js: game-assets-v44 цел (ассеты не тронуты)');
 const swlog = read('docs/SW_CHANGELOG.md');
 ok(swlog.includes('- v118 — итерация 66.77'), 'SW_CHANGELOG: запись v118 добавлена');
 ok(swlog.includes('КРАДЕНЕЕ — СКУПКА −80%') && swlog.includes('ТОЛЬКО ДЛЯ ЖЕНСКОГО ПЕРСОНАЖА'), 'SW_CHANGELOG v118: краденое и жен-только упомянуты');

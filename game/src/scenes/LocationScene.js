@@ -1294,26 +1294,42 @@ export class LocationScene extends Phaser.Scene {
     }
 
     /**
-     * Раунд 66.27 (приказ 2): ВЕРСТОВОЙ КАМЕНЬ у обочины тракта — серый
-     * валун с зарубками вёрст. Деталь, перенесённая с карты местности
-     * (66.25, «верстовые камни вдоль тракта») в саму сцену.
+     * Раунд 66.27 (приказ 2): дорожный знак у обочины тракта; раунд 66.85
+     * (приказ 3): ПЕРЕДЕЛАН в деревянный ПУТЕВОЙ СТОЛБ — исторически верно
+     * для Руси XV века. Каменные верстовые столбы/камни появились на дорогах
+     * Московского государства лишь в XVII веке; в XV веке дороги
+     * размечались деревянными столбами с зарубками (счёт вёрст) и гранями.
      */
     drawMilestone(x, groundY) {
         const g = this.add.graphics().setDepth(1.45);
         g.fillStyle(0x000000, 0.16);
         g.fillEllipse(x + 3, groundY + 4, 40, 8);
-        g.fillStyle(0x8a8a82, 1);            // тело валуна
-        g.fillRoundedRect(x - 14, groundY - 24, 28, 26, 8);
-        g.fillStyle(0x6f6f68, 1);            // тень справа
-        g.fillRoundedRect(x + 2, groundY - 24, 12, 26, 6);
-        g.fillStyle(0xa8a89e, 1);            // блик слева
-        g.fillRoundedRect(x - 12, groundY - 22, 7, 20, 4);
-        g.fillStyle(0x55554e, 1);            // зарубки вёрст
-        g.fillRect(x - 8, groundY - 14, 16, 2);
-        g.fillRect(x - 8, groundY - 9, 12, 2);
-        g.fillStyle(0x6a7a4a, 0.9);          // мох у подножия
-        g.fillCircle(x - 9, groundY - 2, 2.6);
-        g.fillCircle(x + 8, groundY, 2.1);
+        // брус-столб, вкопанный в землю (срез сверху косой)
+        g.fillStyle(0x4a3620, 1);            // тень столба (правая грань)
+        g.fillRect(x - 2, groundY - 34, 8, 34);
+        g.fillStyle(0x5a3f24, 1);            // тело бруса
+        g.fillRect(x - 8, groundY - 34, 10, 34);
+        g.fillStyle(0x74562f, 1);            // светлый блик (левая грань)
+        g.fillRect(x - 8, groundY - 34, 4, 34);
+        // косой срез сверху
+        g.fillTriangle(x - 10, groundY - 34, x + 2, groundY - 34, x - 4, groundY - 41);
+        g.fillStyle(0x8a6a3e, 1);
+        g.fillTriangle(x - 10, groundY - 34, x - 4, groundY - 41, x - 7, groundY - 34);
+        // зарубки счёта вёрст (две ступени) + поперечная затёска
+        g.fillStyle(0x3a2a1a, 1);
+        g.fillRect(x - 8, groundY - 22, 10, 2);
+        g.fillRect(x - 8, groundY - 15, 7, 2);
+        g.fillRect(x - 8, groundY - 28, 10, 1);
+        // волокна дерева
+        g.fillStyle(0x6a4c2a, 0.7);
+        for (let gy = groundY - 30; gy < groundY - 4; gy += 7) {
+            g.fillRect(x - 7, gy, 8, 1);
+        }
+        // дёрн у подножия столба
+        g.fillStyle(0x6a7a4a, 0.9);
+        g.fillCircle(x - 9, groundY - 1, 2.6);
+        g.fillCircle(x + 9, groundY, 2.1);
+        g.fillCircle(x + 2, groundY + 1, 1.8);
     }
 
     /**
@@ -1824,11 +1840,11 @@ export class LocationScene extends Phaser.Scene {
                 }
             }
         } else if (locId === 'road' || locId === 'road_south' || locId === 'road_north') {
-            // П.15: Тракт — трава по бокам, гравийная дорога горизонтально.
+            // П.15: Тракт — трава по бокам, грунтовая дорога горизонтально.
             // Раунд 66.24 (приказ 2): трактов теперь ДВА — Южный (road_south,
             // упирается в Реку, внизу локации — вода и мост) и Северный
-            // (road_north, уходит за горизонт). Оба по виду почти одинаковые:
-            // та же широкая гравийная лента, кусты и негустой лес по сторонам;
+            // (road_north, уходит за горизонт). Раунд 66.85 (приказ 2): оба —
+            // ГРУНТОВЫЕ большие дороги Руси XV века (не гравий/асфальт);
             // у каждого у дороги — УКАЗАТЕЛЬ НАПРАВЛЕНИЯ НА ДЕРЕВНЮ.
             // С коллизиями: дорога рисуется ПЕРВЫМ слоем, деревья и камни — поверх,
             // но их позиции проверяются, чтобы не пересекаться с дорогой.
@@ -1842,58 +1858,97 @@ export class LocationScene extends Phaser.Scene {
                 const y = 100 + Math.random() * (height - 120);
                 gfx.fillRect(x, y, 3, 3);
             }
-            // ----- Раунд 28 (п.7): ГРАВИЙНАЯ ДОРОГА — настоящие тайлы вместо
-            // плоской полосы: гравий двух видов (с колеями) + кромки с травой,
-            // камешки и разметанные следы обоза — тракт больше не «жёлтая полоса»
-            // Раунд 66.19 (приказ владельца №2): тракт — ШИРОКАЯ гравийная
-            // дорога (лента 150px вместо 100px) с кустами по обочинам и
-            // негустым лесом по обеим сторонам вдоль всей дороги.
+            // ----- Раунд 66.85 (приказ 2): ГРУНТОВАЯ ДОРОГА — исторический
+            // облик большой дороги Руси XV века. Прежняя «гравийная лента»
+            // (тайлы gravel_0/1 с круглой галькой) читалась как ровная
+            // асфальтовая/брусчатая мостовая. На Руси XV века большие дороги
+            // были ГРУНТОВЫМИ: полотно из уплотнённой земли, две тёмные колеи
+            // от тележных колёс, задернованная середина между колеями, трава,
+            // наползающая с обочин, камни, копытные следы и лужи после дождя.
+            // Лента — TileSprite road_dirt_band (64x150, бесшовна по X),
+            // поверх — пятна-варианты (камни/трава) и рваная кромка дёрна.
             const roadY = height * 0.5;
             const roadH = 150;
             const roadTop = roadY - roadH / 2;
             const roadBottom = roadY + roadH / 2;
-            const hasGravel = this.textures.exists('tile_gravel_0');
-            if (hasGravel) {
-                // ----- Раунд 66.27 (починка): гравийная лента — TileSprite с
-                // НАТУРАЛЬНЫМ масштабом тайла 64×64. Прежние image с
-                // setDisplaySize(64,156) растягивали тайл по вертикали в 2.4
-                // раза — тракт выглядел каменной кладкой, а не дорогой.
-                this.add.tileSprite(0, roadTop, width, roadH, 'tile_gravel_0')
+            const hasDirtRoad = this.textures.exists('road_dirt_band');
+            if (hasDirtRoad) {
+                // полотно тракта: земля с двумя колеями (натуральный масштаб)
+                this.add.tileSprite(0, roadTop, width, roadH, 'road_dirt_band')
                     .setOrigin(0).setDepth(1.1);
-                // пятна тёмного гравия поверх — рвут монотонность повтора
-                if (this.textures.exists('tile_gravel_1')) {
-                    for (let i = 0; i < Math.ceil(width / 110); i++) {
-                        this.add.image(Math.random() * width,
-                            roadTop + 24 + Math.random() * (roadH - 48), 'tile_gravel_1')
-                            .setAlpha(0.85).setDepth(1.12);
+                // пятна-варианты поверх — камни/копытные следы и острова травы
+                // рвут монотонность повтора и дают дороге «живой» облик
+                const dirtPatches = ['road_dirt_band_stones', 'road_dirt_band_grass'];
+                if (dirtPatches.some(k => this.textures.exists(k))) {
+                    for (let i = 0; i < Math.ceil(width / 90); i++) {
+                        const key = dirtPatches[Math.random() < 0.55 ? 0 : 1];
+                        if (!this.textures.exists(key)) continue;
+                        this.add.image(Math.random() * width, roadTop + roadH / 2, key)
+                            .setOrigin(0.5).setDepth(1.12)
+                            .setAlpha(0.92);
                     }
                 }
-                // Кромки с травой (переход газон → гравий) сверху и снизу
-                if (this.textures.exists('tile_gravel_edge')) {
-                    for (let gx = 0; gx < width + 60; gx += 60) {
-                        this.add.image(gx, roadTop + 3, 'tile_gravel_edge')
-                            .setDisplaySize(64, 22).setDepth(1.15);
-                        this.add.image(gx, roadBottom - 3, 'tile_gravel_edge')
-                            .setDisplaySize(64, 22).setFlipY(true).setDepth(1.15);
+                // рваная кромка «трава -> грунт» сверху и снизу полотна
+                if (this.textures.exists('road_dirt_edge')) {
+                    for (let gx = 0; gx < width + 64; gx += 64) {
+                        this.add.image(gx, roadTop + 4, 'road_dirt_edge')
+                            .setOrigin(0.5, 0.5).setDepth(1.15);
+                        this.add.image(gx, roadBottom - 4, 'road_dirt_edge')
+                            .setFlipY(true).setDepth(1.15);
                     }
                 }
             } else {
-                gfx.fillStyle(0x9a8060, 1);
+                gfx.fillStyle(0x7d6244, 1);
                 gfx.fillRect(0, roadTop, width, roadH);
                 gfx.setDepth(1);
             }
-            // Камешки и колеи ПОВЕРХ гравия — ОТДЕЛЬНЫЙ graphics (не поднимаем
-            // общий фон gfx, иначе он закроет тайлы гравия!)
+            // Детали полотна ПОВЕРХ ленты — ОТДЕЛЬНЫЙ graphics (не поднимаем
+            // общий фон gfx, иначе он закроет тайлы дороги!): лужи в колеях
+            // (грунтовая дорога всегда несёт воду после дождя), копытные
+            // следы и отдельные камни прямо в полотне — на грунтовой дороге
+            // это естественны, в отличие от мостовой.
             const roadGfx = this.add.graphics();
-            roadGfx.fillStyle(0x6a5c4a, 0.5);
-            for (let i = 0; i < 40; i++) {
-                const x = Math.random() * width;
-                const y = roadTop + 10 + Math.random() * (roadH - 20);
-                roadGfx.fillCircle(x, y, 1.6);
-            }
-            roadGfx.fillStyle(0x74654e, 0.4);
-            for (let i = 0; i < 6; i++) {
-                roadGfx.fillRect(0, roadTop + 30 + (i % 3) * 40, width, 4); // колеи по всей ширине ленты
+            if (hasDirtRoad) {
+                // лужи: тёмная земля, размокшая колея, чуть воды с бликом
+                for (let i = 0; i < 4; i++) {
+                    const px = Math.random() * width;
+                    const py = roadTop + 26 + Math.random() * (roadH - 52);
+                    const pw = 14 + Math.random() * 20;
+                    const ph = 4 + Math.random() * 4;
+                    roadGfx.fillStyle(0x4a3a28, 0.85);
+                    roadGfx.fillEllipse(px, py, pw * 1.25, ph * 1.6);
+                    roadGfx.fillStyle(0x55616a, 0.7);
+                    roadGfx.fillEllipse(px, py, pw, ph);
+                    roadGfx.fillStyle(0x7a8894, 0.55);
+                    roadGfx.fillEllipse(px - pw * 0.18, py - ph * 0.18, pw * 0.4, ph * 0.4);
+                }
+                // копытные следы — пары овальных вмятин вдоль колей
+                roadGfx.fillStyle(0x4a3a28, 0.6);
+                for (let i = 0; i < 8; i++) {
+                    const hx = Math.random() * width;
+                    const hy = roadTop + (Math.random() < 0.5 ? 40 : 110) + Math.random() * 14;
+                    roadGfx.fillEllipse(hx, hy, 3, 5);
+                    roadGfx.fillEllipse(hx + 8, hy + 6, 3, 5);
+                }
+                // отдельные камни в полотне (притоптаны) — редкие
+                roadGfx.fillStyle(0x8a8478, 0.9);
+                for (let i = 0; i < 6; i++) {
+                    const sx = Math.random() * width;
+                    const sy = roadTop + 12 + Math.random() * (roadH - 24);
+                    roadGfx.fillCircle(sx, sy, 1.6 + Math.random() * 1.4);
+                }
+            } else {
+                // запасной вид (текстур нет): земля + старые колеи
+                roadGfx.fillStyle(0x6a5c4a, 0.5);
+                for (let i = 0; i < 40; i++) {
+                    const x = Math.random() * width;
+                    const y = roadTop + 10 + Math.random() * (roadH - 20);
+                    roadGfx.fillCircle(x, y, 1.6);
+                }
+                roadGfx.fillStyle(0x74654e, 0.4);
+                for (let i = 0; i < 6; i++) {
+                    roadGfx.fillRect(0, roadTop + 30 + (i % 3) * 40, width, 4); // колеи по всей ширине ленты
+                }
             }
             roadGfx.setDepth(1.2);
             // ----- Раунд 66.19 (приказ №2): КУСТЫ ПО КРАЯМ ДОРОГИ —
@@ -1997,14 +2052,26 @@ export class LocationScene extends Phaser.Scene {
                         waterGfx.fillRect(wx + ((wy * 7) % 30), wy, 26, 3);
                     }
                 }
-                // колея от тракта к реке
+                // колея от тракта к реке (раунд 66.85: грунт, не гравий)
                 const stubX = width * 0.5;
-                if (this.textures.exists('tile_gravel_0')) {
-                    // Раунд 66.27: колея — TileSprite в натуральном масштабе
-                    // (прежде тайлы растягивались до 92×58 и выглядели столбом
-                    // каменной кладки)
-                    this.add.tileSprite(stubX - 46, roadBottom - 4, 92, waterY - roadBottom + 14, 'tile_gravel_0')
+                if (this.textures.exists('road_dirt_band')) {
+                    // грунтовой проезд к мосту: земляное полотно с двумя
+                    // вертикальными колеями (волнистыми, как от колёс)
+                    const stubTop = roadBottom - 4;
+                    const stubH = waterY - roadBottom + 14;
+                    this.add.rectangle(stubX - 46, stubTop, 92, stubH, 0x7d6244)
                         .setOrigin(0).setDepth(3.6);
+                    const stubGfx = this.add.graphics().setDepth(3.62);
+                    for (const rx of [stubX - 14, stubX + 14]) {
+                        for (let sy = stubTop; sy < stubTop + stubH; sy += 6) {
+                            const wob = Math.sin((sy - stubTop) * 0.09) * 3;
+                            stubGfx.fillStyle(0x4a3a28, 0.85);
+                            stubGfx.fillRect(rx - 6 + wob, sy, 12, 6);
+                            stubGfx.fillStyle(0x6a5540, 0.6);
+                            stubGfx.fillRect(rx - 8 + wob, sy, 2, 6);
+                            stubGfx.fillRect(rx + 6 + wob, sy, 2, 6);
+                        }
+                    }
                 } else {
                     waterGfx.fillStyle(0x9a8060, 1);
                     waterGfx.fillRect(stubX - 46, roadBottom - 4, 92, waterY - roadBottom + 14);

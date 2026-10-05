@@ -10,7 +10,7 @@
 //      дворянин): 7 боевых листов (СО стрельбой — полоса в паке есть)
 //      + 8 бустов; листалка Сыщика = 16 вариантов;
 //   3) КАРТА: мельница ПЕРЕНЕСЕНА РЯДОМ С ПАСЕКОЙ (зона/подпись/дорожка);
-//   4) SW v92/game-assets-v43; конвейеры 6640 в репо.
+//   4) SW v92/game-assets-v44; конвейеры 6640 в репо.
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -180,8 +180,8 @@ ok(252 + 30 <= 304 && 252 - 30 >= 218, 'зона мельницы между п�
 console.log('— 8. SW v90 —');
 const sw = read('../sw.js');
 const swlog = read('../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v119';"), 'SW: site-cache v112 (актуализация 66.70)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'SW: game-assets-v43');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v120';"), 'SW: site-cache v112 (актуализация 66.70)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v44';"), 'SW: game-assets-v44');
 ok(swlog.includes('66.40'), 'SW-журнал: запись 66.40 есть');
 
 console.log(`\ntest_round96: ${pass} зелёных, ${fail} красных`);

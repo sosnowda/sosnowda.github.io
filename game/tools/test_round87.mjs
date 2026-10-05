@@ -66,8 +66,8 @@ ok(imgAttrs(landingRU) === imgWithDims(landingRU), `RU: все img с width/heig
 ok(imgAttrs(landingEN) === imgWithDims(landingEN), `EN: все img с width/height (${imgWithDims(landingEN)}/${imgAttrs(landingEN)})`);
 ok(landingRU.includes('class="hero-image" width="1920" height="1097"'), 'RU: hero 1920×1097');
 ok(landingEN.includes('class="hero-image" width="1920" height="1097"'), 'EN: hero 1920×1097');
-ok((landingRU.match(/width="1280" height="720"/g) || []).length === 9, 'RU: 9 скриншотов 1280×720');
-ok((landingEN.match(/width="1280" height="720"/g) || []).length === 9, 'EN: 9 скриншотов 1280×720');
+ok((landingRU.match(/width="1280" height="720"/g) || []).length === 10, 'RU: 10 скриншотов 1280×720 (66.85 — кадр тракта)');
+ok((landingEN.match(/width="1280" height="720"/g) || []).length === 10, 'EN: 10 скриншотов 1280×720 (66.85 — кадр тракта)');
 ok(landingRU.includes('width="1600" height="1186"') && landingRU.includes('width="1600" height="1121"'),
     'RU: обе карты (Вида-Лятского 1600×1186, Герберштейна 1600×1121)');
 
@@ -140,8 +140,8 @@ ok(styles.includes('.pt-reign{transition:none}') || /prefers-reduced-motion[\s\S
     'styles.css: reduced-motion — без анимаций таймлайна');
 
 console.log('--- 9. SW и кеши ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v119';"), 'SW: site-cache v112 (актуализация 66.70)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'SW: game-assets-v43 (66.33: листы+бусты)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v120';"), 'SW: site-cache v112 (актуализация 66.70)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v44';"), 'SW: game-assets-v44 (66.33: листы+бусты)');
 ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84 (история версий сохраняется)');
 
 console.log(`\nИтог: ${pass} OK, ${fail} FAIL`);

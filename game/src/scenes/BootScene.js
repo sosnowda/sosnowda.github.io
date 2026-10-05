@@ -244,10 +244,18 @@ export class BootScene extends Phaser.Scene {
         for (let v = 0; v < 2; v++) this.load.image(`deco_pine_${v}`, `assets/sprites/pine_${v}.png`);
         // Камень
         for (let v = 0; v < 2; v++) this.load.image(`tile_rock_${v}`, `assets/tiles/rock_${v}.png`);
-        // Раунд 28 (п.7): гравийная дорога для тракта (нарисовано PIL-ом)
+        // Раунд 28 (п.7): гравийная дорога (в 66.85 снята с тракта — осталась
+        // для совместимости старых сохранений/прочих мест)
         this.load.image('tile_gravel_0', 'assets/tiles/gravel_0.png');
         this.load.image('tile_gravel_1', 'assets/tiles/gravel_1.png');
         this.load.image('tile_gravel_edge', 'assets/tiles/gravel_edge.png');
+        // ----- Раунд 66.85 (приказ 2): ГРУНТОВАЯ ДОРОГА ТРАКТА — исторический
+        // вид большой дороги Руси XV века: уплотнённая земля, две колеи от
+        // тележных колёс, задернованная середина, рваная травяная кромка.
+        this.load.image('road_dirt_band', 'assets/tiles/road_dirt_band.png');
+        this.load.image('road_dirt_band_stones', 'assets/tiles/road_dirt_band_stones.png');
+        this.load.image('road_dirt_band_grass', 'assets/tiles/road_dirt_band_grass.png');
+        this.load.image('road_dirt_edge', 'assets/tiles/road_dirt_edge.png');
         // Дом (стена + крыша)
         for (let v = 0; v < 3; v++) this.load.image(`tile_house_wall_${v}`, `assets/tiles/house_wall_${v}.png`);
         for (let v = 0; v < 2; v++) this.load.image(`tile_house_roof_${v}`, `assets/tiles/house_roof_${v}.png`);

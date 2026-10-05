@@ -13,7 +13,7 @@
 // бит-в-бит (baseline_66_60_before/after.json, diff пуст).
 // Здесь закреплена СТАТИКА (структура styles.css + SW + документация).
 // актуализация 66.63: SW-ожидание v106→v107; P3-3 порядок заголовков (попап после h1, h4→h3 ×22) + P3-2 canonical/sr-only h1 игры (аудит 66.61 — детали в r113)
-// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v43 без изменений (детали в r115)
+// актуализация 66.67: SW-ожидания v108→v109; P2 аудита §9/66.66 — контраст 5 футерных кнопок поддержки (каскад a.btn-support*, styles.css → бамп), game-assets-v44 без изменений (детали в r115)
 // Запуск из корня репозитория: node game/tools/test_round111.mjs
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -53,8 +53,8 @@ ok(mobBlock.includes('font-size:0.72rem;') && mobBlock.includes('padding:0.45rem
 ok(styles.includes('/* (66.59) .fund-bar переехал'), 'комментарий-указатель 66.59 на месте');
 
 console.log('--- 3. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v119';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v43';"), 'sw.js: game-assets-v43 без изменений (ассеты не тронуты)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v120';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v44';"), 'sw.js: game-assets-v44 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (правка CSS не трогала SW-логику)');
 ok(swlog.includes('- v105 — итерация 66.60'), 'SW_CHANGELOG: запись v105 добавлена');
 

@@ -552,13 +552,14 @@ export function drawTerrainMap(ctx) {
         ctx.lineTo(tx, T.river.y - 4);
         ctx.stroke();
         ctx.setLineDash([]);
-        // ВЕРСТОВЫЕ КАМНИ вдоль тракта (деталь п.8)
+        // ПУТЕВЫЕ СТОЛБЫ вдоль тракта (деталь п.8; 66.85: деревянные столбы —
+        // каменные верстовые столбы на Руси появились лишь в XVII веке)
         [[tx + 11, 90], [tx - 11, 210], [tx + 11, 330], [tx - 11, 398]].forEach(([sx, sy]) => {
-            ctx.fillStyle = '#9a9a8e';
+            ctx.fillStyle = '#6b4e2e';
             ctx.beginPath();
             ctx.arc(sx, sy, 2.2, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = '#6b6b60';
+            ctx.strokeStyle = '#4a3620';
             ctx.lineWidth = 0.7;
             ctx.stroke();
         });
