@@ -248,13 +248,33 @@ export class TitleScene extends Phaser.Scene {
 
     /** Содержимое разделов инструкции (тексты под закладками). */
     helpSections() {
+        // ПАТЧ 66.84 (п.6 приказа): раздел «Начало» — ПОД НОВЫЙ СТАРТ
+        // (поп-ап старосты → диалог со старостой → весть священника →
+        // стартовое задание → сдача иконы старосте/священнику), и он
+        // ЛОКАЛИЗОВАН (RU + EN). Остальные разделы — раунд 66.81/66.83.
         const start = [
             '🎯 ЦЕЛЬ ИГРЫ:',
-            'Ты — беженец в незнакомой деревне Руси XV века. Прижись,',
-            'найди работу, завоюй доверие жителей. Достигни репутации',
-            '+100 или женись — тогда игра будет выиграна.',
+            'Ты — пришлый человек на Руси XV века: пришёл издалека',
+            'в незнакомую деревню и думаешь прижиться и остаться жить.',
+            'Верни украденную святыню, найди работу, завоюй доверие',
+            'жителей. Достигни репутации +100 или женись — тогда игра',
+            'будет выиграна.',
             '',
             timeRatioInfoLine(),
+            '',
+            '📖 КАК НАЧИНАЕТСЯ ИГРА (новый старт):',
+            '  1. Прибыв в деревню, ты получаешь БОЛЬШОЕ ПРИВЕТСТВИЕ',
+            '     от старосты — он встречает тебя как нового гостя.',
+            '  2. Ты появляешься ОКОЛО ДОМА СТАРОСТЫ, староста стоит рядом.',
+            '  3. К старосте ПРИБЕГАЕТ деревенский священник: ночью',
+            '     КТО-ТО УКРАЛ ИКОНУ из деревенского храма!',
+            '  4. В их диалоге ты можешь вклиниться с вопросами,',
+            '     пролистать его или закрыть — после этого тебе',
+            '     АВТОМАТИЧЕСКИ выдаётся СТАРТОВОЕ ЗАДАНИЕ.',
+            '  5. СТАРТОВОЕ ЗАДАНИЕ — найти и поймать вора: расспрашивай',
+            '     селян (каждый — один раз), читай следы, торопись:',
+            '     вор идёт от локации к локации и не ждёт.',
+            '  6. Икону сдают СТАРОСТЕ ИЛИ СВЯЩЕННИКУ — награда и слава.',
             '',
             '🎮 УПРАВЛЕНИЕ:',
             '  WASD / стрелки — движение (все 4 направления)',
@@ -265,15 +285,65 @@ export class TitleScene extends Phaser.Scene {
             '  M — обзор деревни · P — план деревни',
             '  F1 — инструкция · ESC — главное меню',
             '',
-            '⚠ ПРОИГРЫШ:',
+            '⚠ ПРОИГРЫШ (любой пункт — конец игры):',
+            '  • СТАРТОВОЕ ЗАДАНИЕ НЕ ВЫПОЛНЕНО: вор уходит со',
+            '    святыней — ЭТО ВСЕГДА ПРОИГРЫШ!',
             '  • Смерть героя в бою',
             '  • Репутация в деревне −100 → изгнание',
-            '  • Вор украденной иконы сбежал (лимит времени)',
             '  • Долги не выплачены → изгойство (закладка «Долги»)',
             '',
-            '🏆 ВЫИГРЫШ:',
+            '🏆 ВЫИГРЫШ (только ПОСЛЕ выполнения стартового задания):',
             '  • Репутация в деревне +100 → принят как свой',
-            '  • Брак с жителем (репутация +90 у NPC, +50 в деревне, 200 д.)',
+            '  • Брак с жителем (репутация +90 у NPC, +50 в деревне,',
+            '    200 д.) — Церковь не венчает, пока икона не вернулась.',
+        ].join('\n');
+
+        const startEn = [
+            '🎯 GOAL OF THE GAME:',
+            'You are a newcomer in 15th-century Rus\': you have come from',
+            'afar to an unfamiliar village and mean to settle and stay.',
+            'Return the stolen holy icon, find work, earn the villagers\'',
+            'trust. Reach +100 reputation — or get married. Either wins',
+            'the game.',
+            '',
+            timeRatioInfoLine(),
+            '',
+            '📖 HOW THE GAME BEGINS (the new start):',
+            '  1. Upon arriving you receive a BIG WELCOME from the village',
+            '     elder — he greets you as a new guest.',
+            '  2. You appear NEAR THE ELDER\'S HOUSE, with the elder standing',
+            '     beside you.',
+            '  3. The village priest RUNS UP to the elder: in the night',
+            '     SOMEONE STOLE AN ICON from the village church!',
+            '  4. In their dialogue you may interject with questions, flip',
+            '     through it or close it — after that you are AUTOMATICALLY',
+            '     given the STARTER QUEST.',
+            '  5. STARTER QUEST — find and catch the thief: question the',
+            '     villagers (each one once), read the tracks, hurry:',
+            '     the thief moves from place to place and will not wait.',
+            '  6. Hand the icon back to THE ELDER OR THE PRIEST — reward',
+            '     and glory follow.',
+            '',
+            '🎮 CONTROLS:',
+            '  WASD / arrows — movement (all 4 directions)',
+            '  E / space — interact (enter a building, talk)',
+            '  LMB on a building — walk up and enter',
+            '  LMB on an NPC — walk up and start a talk',
+            '  RMB on an NPC — villager\'s reputation and state',
+            '  M — village overview · P — village plan',
+            '  F1 — instructions · ESC — main menu',
+            '',
+            '⚠ DEFEAT (any of the following ends the game):',
+            '  • THE STARTER QUEST NOT COMPLETED: the thief escapes with',
+            '    the holy icon — THIS ALWAYS MEANS DEFEAT!',
+            '  • The hero dies in battle',
+            '  • Village reputation −100 → banishment',
+            '  • Debts unpaid → outlawry (the «Debts» tab)',
+            '',
+            '🏆 VICTORY (only AFTER the starter quest is done):',
+            '  • Village reputation +100 → accepted as one of their own',
+            '  • Marriage to a villager (+90 NPC rep., +50 village, 200 d.)',
+            '    — the Church will not wed you until the icon is returned.',
         ].join('\n');
 
         const rp = [
@@ -433,7 +503,8 @@ export class TitleScene extends Phaser.Scene {
             '  ст. 56–62: закуп работает на купу).',
         ].join('\n');
 
-        return [start, rp, money, cal, rep, debts];
+        // Патч 66.84: раздел «Начало» двуязычный (RU/EN по языку сессии)
+        return [isEn() ? startEn : start, rp, money, cal, rep, debts];
     }
 
     /** Закладки инструкции (надписи сверху). */

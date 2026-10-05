@@ -77,7 +77,7 @@ import {
     weatherRumorCount, getForecast, nextDayOf, dayKeyOfTime,
 } from '../src/systems/WeatherOmens.js';
 import { fishingSeason } from '../src/systems/FishingSeasons.js';
-import { DIALOGUES, KID_DIALOG_IDS, appendWeatherChoice } from '../src/data/dialogue.js';
+import { DIALOGUES, KID_DIALOG_IDS, INTRO_DIALOG_IDS, appendWeatherChoice } from '../src/data/dialogue.js';
 import { t, setLang } from '../src/systems/i18n.js';
 
 let passed = 0, failed = 0;
@@ -268,7 +268,9 @@ console.log('— пп.6,7: ПОДСЧЁТ СЛУХОВ О ПОГОДЕ → ФО�
 console.log('— п.5: ВОПРОС О ПОГОДЕ ВЗРОСЛЫМ НПЦ —');
 {
     ok(KID_DIALOG_IDS.size === 10, `детских диалогов исключено: ${KID_DIALOG_IDS.size} (kid1-9 + пастушок)`);
-    const adults = Object.keys(DIALOGUES).filter(id => !KID_DIALOG_IDS.has(id));
+    // 66.84: интро-диалоги нового старта (elder_intro/priest_intro) — кат-сцена,
+    // в них вопрос о погоде не добавляется (INTRO_DIALOG_IDS)
+    const adults = Object.keys(DIALOGUES).filter(id => !KID_DIALOG_IDS.has(id) && !INTRO_DIALOG_IDS.has(id));
     const missing = adults.filter(id => !DIALOGUES[id].nodes || !DIALOGUES[id].nodes.weather_talk);
     ok(missing.length === 0, `у всех ${adults.length} взрослых НПЦ есть узел weather_talk (${missing.join(',') || '—'})`);
     const kidsHave = [...KID_DIALOG_IDS].filter(id => DIALOGUES[id] && DIALOGUES[id].nodes && DIALOGUES[id].nodes.weather_talk);
@@ -279,6 +281,8 @@ console.log('— п.5: ВОПРОС О ПОГОДЕ ВЗРОСЛЫМ НПЦ —'
     ok(ch.length === 4 && ch[ch.length - 1].end === true && ch[ch.length - 2].__weatherAsk,
         'appendWeatherChoice: вопрос о погоде перед прощанием');
     ok(appendWeatherChoice('kid1', [{ text: 'А' }]).length === 1, 'детям вопрос не добавляется');
+    ok(appendWeatherChoice('elder_intro', [{ text: 'А' }]).length === 1, '66.84: интро-диалогам вопрос о погоде не добавляется');
+    ok(appendWeatherChoice('priest_intro', [{ text: 'А' }]).length === 1, '66.84: priest_intro без вопроса о погоде');
     ok(appendWeatherChoice('tavernkeeper', ch).length === 4, 'повторный вызов не дублирует');
     const dr = read('game/src/systems/DialogueRunner.js');
     ok(dr.includes('appendWeatherChoice') && dr.includes("nodeId === d.start"),

@@ -11,7 +11,9 @@ import {
     ARMORS, WEAPONS,
 } from '../systems/Character.js';
 import { ActionLog } from '../data/actionLog.js';
-import { initThiefHunt } from '../data/thief.js';
+// Патч 66.84 (приказы 1–4): initThiefHunt ПЕРЕНЕСЁН в systems/IntroSequence.js —
+// погоня за вором стартует только ПОСЛЕ знакомства со старостой и вести
+// священника о краже иконы (на экране деревни).
 import { resetVillageName, getVillageName } from '../data/world.js';
 import { initTime, createRandomStartDate } from '../systems/TimeSystem.js';
 import { initNpcNames } from '../data/npcNames.js';
@@ -536,7 +538,13 @@ export class CharacterSelectionScene extends Phaser.Scene {
             banditDefeated: false,
             hasHerb: true,
             tutorialStep: 0,
-            currentObjective: tf(t('Ты беженец в деревне {0}. Найди приют и работу.'), t(villageName)),
+            // Патч 66.84 (п.1 приказа): НОВЫЙ СТАРТ — стартовое задание выдаётся
+            // ПОСЛЕ знакомства (поп-ап старосты → диалог со старостой → весть
+            // священника о краже иконы). Цель до окончания знакомства:
+            currentObjective: tf(t('Ты гость в деревне {0}. Выслушай старосту.'), t(villageName)),
+            // Патч 66.84: стадия начальной сцены знакомства (IntroSequence):
+            // undefined → 'welcome' → 'talk' → 'priest' → 'done'
+            introStage: undefined,
             // chestsOpened — ИСТОРИЧЕСКОЕ имя ключа дневных действий (data/daily.js);
             // имя не менять — совместимость сейвов (раунд 66.10)
             chestsOpened: [],
@@ -563,7 +571,13 @@ export class CharacterSelectionScene extends Phaser.Scene {
         this.registry.remove('sleepState');
         // Патч 66.74: сундучное добро не переживает новую партию
         this.registry.remove('chestState');
-        initThiefHunt(this.registry);
+        // Патч 66.84: новая партия — с чистого листа и по мировым часам:
+        // сброс счётчика пауз (чтобы пауза прерванного ESC-ом диалога
+        // предыдущей партии не остановила часы новой навсегда)
+        this.registry.set('clockPauseCount', 0);
+        // ПАТЧ 66.84: initThiefHunt() здесь БОЛЬШЕ НЕ вызывается —
+        // погоня стартует в IntroSequence.finishIntro() после диалога,
+        // в котором священник рассказывает о краже иконы (п.4 приказа).
         ActionLog.init(this.registry);
         // Инициализируем игровое время
         initTime(this.registry, startDate);

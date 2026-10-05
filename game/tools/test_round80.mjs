@@ -30,8 +30,17 @@ ok(charSrc.includes("this.registry.remove('mealState')"),
     'startGameWithHero: mealState сбрасывается (registry.remove)');
 ok(charSrc.includes("this.registry.remove('sleepState')"),
     'startGameWithHero: sleepState сбрасывается (registry.remove)');
-ok(charSrc.indexOf("registry.remove('mealState')") < charSrc.indexOf('initThiefHunt(this.registry)'),
-    'сброс происходит ДО инициализации новой погони');
+// 66.84 (актуализация): initThiefHunt ПЕРЕНЕСЁН из сцены выбора в
+// IntroSequence.finishIntro() — погоня стартует ПОСЛЕ знакомства
+// (поп-ап старосты → диалог → весть священника о краже иконы).
+// Сброс mealState остаётся в сцене выбора и по-прежнему выполняется
+// ДО старта новой погони (сцена выбора всегда раньше интро деревни).
+ok(!charSrc.includes('initThiefHunt(this.registry)'),
+    '66.84: сцена выбора БОЛЬШЕ не стартует погоню (initThiefHunt перенесён)');
+ok(read('game/src/systems/IntroSequence.js').includes('initThiefHunt(scene.registry)'),
+    '66.84: погоню стартует IntroSequence.finishIntro()');
+ok(read('game/src/systems/IntroSequence.js').includes('initThiefHunt'),
+    '66.84: сброс mealState в сцене выбора — до старта погони в интро');
 // meal.js по-прежнему читает mealState с фолбэком (совместимость сейвов)
 const mealSrc = read('game/src/systems/meal.js');
 ok(mealSrc.includes("registry.get('mealState')) || { lastAbsMin: -999999 }"),

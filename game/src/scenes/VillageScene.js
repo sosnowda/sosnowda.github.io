@@ -12,6 +12,10 @@ import AudioManager from '../systems/AudioManager.js';
 import { addSettingsGearButton } from '../systems/SettingsPanel.js';
 import SaveManager from '../systems/SaveManager.js';
 import { Tutorial } from '../systems/Tutorial.js';
+// Патч 66.84 (приказы 1–4): НОВЫЙ СТАРТ — поп-ап приветствия старосты,
+// игрок спавнится у его дома, староста стоит рядом; весть священника
+// о краже иконы и АВТОМАТИЧЕСКАЯ выдача стартового задания
+import { IntroSequence, isIntroActive, INTRO_ELDER_SPOT } from '../systems/IntroSequence.js';
 import { VirtualControls } from '../systems/VirtualControls.js';
 import { ActionLog } from '../data/actionLog.js';
 // Раунд 58 (п.2): chaseHoursLeft — часы до побега вора (тик = 1 игровой час)
@@ -533,7 +537,11 @@ export class VillageScene extends Phaser.Scene {
         // композитную текстуру 'player_composite' (LPC-слой, 9×4 кадра)
         // С АНИМАЦИЯМИ ходьбы (п.22 заявки) — тем же композитом, что и NPC.
         this.player = this.registry.get('player');
-        const ps = PLAYER_START;
+        // Патч 66.84 (п.2 приказа): пока идёт начальное знакомство (поп-ап
+        // старосты → диалог → весть священника) игрок появляется В ДЕРЕВНЕ
+        // ОКОЛО ДОМА СТАРОСТЫ (средняя улица, напротив его двери); после
+        // знакомства — обычная точка на главной улице.
+        const ps = isIntroActive(this.registry) ? { col: 15, row: 9 } : PLAYER_START;
         const useComposite = this.player && this.player.useComposite && this.textures.exists('player_composite');
         if (useComposite) {
             this.playerTexKey = 'player_composite';
@@ -610,6 +618,7 @@ export class VillageScene extends Phaser.Scene {
                 timeRatioInfoLine() + '\n\n' +
                 tk('village.help.body',
                     'Управление: WASD/стрелки — движение, E/пробел — действие, M — обзор деревни, P — план деревни, ESC — меню.\n\n' +
+                    '📖 СТАРТ: староста встречает тебя у своего дома. Священник приносит весть: вор украл из храма икону. СТАРТОВОЕ ЗАДАНИЕ — найти и поймать вора; икону сдают СТАРОСТЕ или СВЯЩЕННИКУ. Не поймаешь вора — ПРОИГРЫШ!\n\n' +
                     '🏠 Подходи к дверям домов и жми E — внутри люди, работа и слухи.\n' +
                     '🔒 Закрытые избы: хозяин ушёл — подскажут, где искать.\n' +
                     '⛪ Молитва — только в церкви. 🎣 Рыбалка — на Реке (по карте).\n' +
@@ -756,8 +765,18 @@ export class VillageScene extends Phaser.Scene {
         }).setOrigin(0.5).setScrollFactor(0).setDepth(100).setVisible(false);
 
         // ----- Туториал -----
+        // Патч 66.84: пока идёт начальное знакомство (поп-ап старосты → диалог →
+        // весть священника) подсказки управления НЕ показываются — их запустит
+        // IntroSequence.finishIntro() сразу после выдачи стартового задания.
         this.tutorial = new Tutorial(this);
-        this.tutorial.maybeStart();
+        if (!isIntroActive(this.registry)) this.tutorial.maybeStart();
+
+        // ----- Патч 66.84 (приказы 1–4): НАЧАЛЬНАЯ СЦЕНА ЗНАКОМСТВА -----
+        // Большой поп-ап приветствия старосты → начальный диалог со старостой →
+        // прибежавший священник рассказывает о краже иконы → после закрытия
+        // беседы игроку АВТОМАТИЧЕСКИ выдаётся стартовое задание (погоня).
+        this.introSequence = new IntroSequence(this);
+        this.introSequence.maybeStart();
 
         // ----- Мобильное управление -----
         this.virtualControls = new VirtualControls(this);
@@ -769,6 +788,10 @@ export class VillageScene extends Phaser.Scene {
             if (this.tutorial) this.tutorial.destroyAll();
             if (this.virtualControls) this.virtualControls.destroy();
             if (this.miniMap) this.miniMap.destroy();
+            // Патч 66.84: спрайт прибежавшего священника переживать
+            // рестарт сцены не должен (стадия интро сохраняется в quest —
+            // при возврате в деревню сцена продолжится с неё)
+            if (this.introSequence) this.introSequence.destroy();
         });
     }
 
@@ -1240,44 +1263,63 @@ export class VillageScene extends Phaser.Scene {
         });
 
         // --- Староста (п.10): днём ХОДИТ по деревне, а не сидит в доме ---
+        // Патч 66.84 (п.2 приказа): во время начального знакомства староста
+        // ВСЕГДА выходит на улицу встречать нового гостя (даже ночью/в час,
+        // когда по распорядку он дома).
         const epres = getPresence(this.registry, 'elder');
-        if (epres.place === 'village') {
+        if (epres.place === 'village' || isIntroActive(this.registry)) {
             const npcData = findNpc(this.registry, 'elder');
             const displayName = npcData ? getNpcDisplayName(this.registry, 'elder') : 'Староста';
             const spriteKey = getNpcSpriteKey(this, this.registry, 'elder');
-            const y = 5.5 * ts; // ГЛАВНАЯ улица (ряд 5): староста обходит деревню
+            // Патч 66.84 (п.2 приказа): пока идёт НАЧАЛЬНОЕ ЗНАКОМСТВО
+            // (introStage !== 'done') староста СТОИТ РЯДОМ с прибывшим
+            // игроком — перед его домом; после знакомства снова гуляет
+            // по главной улице (ряд 5), как прежде.
+            const introNow = isIntroActive(this.registry);
             const minX = 3 * ts;
             const maxX = 21 * ts;
-            const startX = minX + Math.random() * (maxX - minX);
+            const y = introNow ? INTRO_ELDER_SPOT.y * ts : 5.5 * ts; // ГЛАВНАЯ улица (ряд 5): староста обходит деревню
+            const startX = introNow
+                ? INTRO_ELDER_SPOT.x * ts
+                : minX + Math.random() * (maxX - minX);
             const spr = this.add.sprite(startX, y, this.textures.exists(spriteKey) ? spriteKey : 'npc_elder')
                 .setScale(this.npcScaleByAge(npcData))
                 .setDepth(y / ts + 20.3);   // 66.44 (п.10): поверх домов/деревьев
-            const walkKey = `${spr.texture.key}_walk_right`;
-            if (this.anims.exists(walkKey)) spr.play(walkKey);
-            const targetX = Math.random() < 0.5 ? minX : maxX;
-            // Раунд 55: староста тоже прогуливается В 2 РАЗА МЕДЛЕННЕЕ
-            // Раунд 63 (пп.6,7): и ЕЩЁ медленнее — неспешный обход 42–64 с
-            const walkDur = 42000 + Math.random() * 22000;
-            this.tweens.add({
-                targets: spr,
-                x: { from: startX, to: targetX },
-                duration: walkDur,
-                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-                onYoyo: () => spr.setFlipX(!spr.flipX),
-                onRepeat: () => spr.setFlipX(!spr.flipX),
-            });
+            if (!introNow) {
+                const walkKey = `${spr.texture.key}_walk_right`;
+                if (this.anims.exists(walkKey)) spr.play(walkKey);
+            } else {
+                // Знакомство: стоит лицом к игроку (игрок восточнее — смотрит вправо)
+                const idleKey = `${spr.texture.key}_idle_down`;
+                if (this.anims.exists(idleKey)) spr.play(idleKey);
+                spr.setFlipX(false);
+            }
             const label = this.add.text(startX, y + 36, displayName, {
                 fontSize: '12px', color: '#ffd700',
                 backgroundColor: '#000000cc', padding: { x: 5, y: 2 },
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(y / ts + 20.5);   // 66.44 (п.10)
-            // Подпись ходит вместе со старостой
-            this.tweens.add({
-                targets: label,
-                x: { from: startX, to: targetX },
-                duration: walkDur,
-                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            });
+            if (!introNow) {
+                const targetX = Math.random() < 0.5 ? minX : maxX;
+                // Раунд 55: староста тоже прогуливается В 2 РАЗА МЕДЛЕННЕЕ
+                // Раунд 63 (пп.6,7): и ЕЩЁ медленнее — неспешный обход 42–64 с
+                const walkDur = 42000 + Math.random() * 22000;
+                this.tweens.add({
+                    targets: spr,
+                    x: { from: startX, to: targetX },
+                    duration: walkDur,
+                    yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    onYoyo: () => spr.setFlipX(!spr.flipX),
+                    onRepeat: () => spr.setFlipX(!spr.flipX),
+                });
+                // Подпись ходит вместе со старостой (ТЕ ЖЕ параметры)
+                this.tweens.add({
+                    targets: label,
+                    x: { from: startX, to: targetX },
+                    duration: walkDur,
+                    yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                });
+            }
             const hint = this.add.text(startX, y - 40, t('💬 Поговорить'), {
                 fontSize: '10px', color: '#c9a14a',
                 backgroundColor: '#00000088', padding: { x: 4, y: 2 },

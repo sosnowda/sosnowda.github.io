@@ -9,6 +9,8 @@
 //   постоялый двор — 2 деньги с человека за ночь.
 
 import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, chaseTicksLeft, inheritThiefKnowledge } from './thief.js';
+// Патч 66.84: имя деревни для текстов нового старта (elder_intro/priest_intro)
+import { getVillageName } from './world.js';
 // Раунд 66.6: слухи-наводки на постоялом дворе (приказ владельца)
 import { tavernRumorLine } from './rumors.js';
 import { ActionLog } from './actionLog.js';
@@ -47,7 +49,207 @@ function withAskThief(scene, npcId, others, position = 1) {
     return list;
 }
 
+// ============================================================
+// ПАТЧ 66.84 (приказы владельца 1–4): НОВЫЙ СТАРТ — деревья знакомства.
+//   'elder_intro'  — начальный диалог игрока СО СТАРОСТОЙ (после большого
+//                    поп-апа приветствия; systems/IntroSequence.js);
+//   'priest_intro' — диалог СВЯЩЕННИКА, прибежавшего к старосте: весть о
+//                    краже иконы из церкви. Игрок может ВКЛИНИТЬСЯ
+//                    С ВОПРОСАМИ (узлы-вопросы возвращают к разговору),
+//                    ПРОЛИСТАТЬ все вопросы подряд или ЗАКРЫТЬ беседу;
+//                    после закрытия IntroSequence.finishIntro() выдаёт
+//                    СТАРТОВОЕ ЗАДАНИЕ «Найди и поймай вора!».
+// Деревья сюжетные (кат-сцена): без «☁ погоды», «📜 дела» и «🕯 пожертвований»
+// (INTRO_DIALOG_IDS; guards в appendWeatherChoice/appendQuestChoice/
+// appendDonationChoice) и без проверки Харизмы (DialogueRunner).
+// EN — в node.en; имя деревни подставляется динамически (introNodeText).
+// ============================================================
+export const INTRO_DIALOG_IDS = new Set(['elder_intro', 'priest_intro']);
+
+/** Подставить имя деревни в текст узла (RU — как есть, EN — транслитерация). */
+function introNodeText(node, ru, en) {
+    const villageRu = getVillageName();
+    const villageEn = t(villageRu);
+    node.text = ru.replace(/\{village\}/g, villageRu);
+    node.en = en.replace(/\{village\}/g, villageEn);
+}
+
 export const DIALOGUES = {
+    // ================================================================
+    // === ПАТЧ 66.84 (п.2 приказа): НАЧАЛЬНЫЙ ДИАЛОГ ИГРОКА СО СТАРОСТОЙ ===
+    // Открывается IntroSequence после большого поп-апа приветствия;
+    // староста стоит рядом с домом. После закрытия беседы к старосте
+    // прибегает священник (стадия 'priest').
+    // ================================================================
+    elder_intro: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Староста Мирослав',
+                text: '...',
+                choices: [],
+                action: (scene) => {
+                    const node = DIALOGUES.elder_intro.nodes.a;
+                    introNodeText(node,
+                        'Ну, рассказывай о себе, {village} всякому новому человеку рада — людей у нас мало, а работа в поле и по двору никогда не переводится. Ты, сказывают, издалека пришёл и остаться думаешь? Как зовут тебя и от каких земель?',
+                        'Well then, tell us about yourself. {village} is glad to see any new soul — people are few here, and the work in the field and about the yard never ends. They say you came from far away and mean to stay? What is your name, and from what lands do you come?');
+                    node.choices = [
+                        { text: t('Я пришёл издалека и хочу прижиться в деревне.'), next: 'settle' },
+                        { text: t('Чем живёт ваша деревня?'), next: 'life' },
+                        { text: t('Что за люди здесь живут?'), next: 'people' },
+                        { text: t('Спасибо на добром слове. Пойду осмотрюсь.'), end: true },
+                    ];
+                },
+            },
+            settle: {
+                speaker: 'Староста Мирослав',
+                text: '...',
+                choices: [],
+                action: (scene) => {
+                    const node = DIALOGUES.elder_intro.nodes.settle;
+                    introNodeText(node,
+                        'Остаться — дело нехитрое: приживайся. У нас всякий труд в чести: пашня да скот, ремесло да служба при церкви. Заведи знакомство, покажи себя в работе и держись правды — деревня чужака примечает, а своего человека уважает. Делай добро — и тебя примут как своего.',
+                        'Staying is no great trick: settle in. Every honest labour is honoured here: ploughing and cattle, craft and service at the church. Make acquaintances, show yourself in the work and hold to the truth — a village marks a stranger, and respects its own. Do good, and you will be accepted as one of us.');
+                    node.choices = [
+                        { text: t('◄ Вернуться к разговору'), next: 'a' },
+                        { text: t('Договорили. Пойду осмотрюсь.'), end: true },
+                    ];
+                },
+            },
+            life: {
+                speaker: 'Староста Мирослав',
+                text: '...',
+                choices: [],
+                action: (scene) => {
+                    const node = DIALOGUES.elder_intro.nodes.life;
+                    introNodeText(node,
+                        'Пашня, лес да река кормят. Кузнец куёт, гончар лепит горшки, ткачиха ткёт, плотник строит. На постоялом дворе Фёдор путникам еду и ночлег предлагает, у мельницы Авдея зерно мелют. За подёнку мастеровым платят честно, а за воровство у нас Судебник: штраф да позор.',
+                        'The ploughland, the forest and the river feed us. The smith forges, the potter makes vessels, the weaver weaves, the carpenter builds. At the roadside inn Fyodor offers travellers food and a bed; Avdey\'s mill grinds the grain. Day labour is honestly paid, and for theft we have the Law Code: a fine and shame.');
+                    node.choices = [
+                        { text: t('◄ Вернуться к разговору'), next: 'a' },
+                        { text: t('Договорили. Пойду осмотрюсь.'), end: true },
+                    ];
+                },
+            },
+            people: {
+                speaker: 'Староста Мирослав',
+                text: '...',
+                choices: [],
+                action: (scene) => {
+                    const node = DIALOGUES.elder_intro.nodes.people;
+                    introNodeText(node,
+                        'Люди как люди: трудовые, крести́тся, праздники чтут. Кузнец Данила, гончар, ткачиха, знахарка Февронья… А при церкви — батюшка Савватий, святой человек. Иди, с людьми знакомься: имена здесь всякий запомнит, а чужака запомнят тем более.',
+                        'Good folk: hard-working, baptised, keep the feasts. The smith Danila, the potter, the weaver, the healer Fevronia… And at the church — Father Savvaty, a holy man. Go and make the villagers\' acquaintance: everyone here remembers a name — and a stranger all the more.');
+                    node.choices = [
+                        { text: t('◄ Вернуться к разговору'), next: 'a' },
+                        { text: t('Договорили. Пойду осмотрюсь.'), end: true },
+                    ];
+                },
+            },
+        },
+    },
+
+    // ================================================================
+    // === ПАТЧ 66.84 (пп.3–4 приказа): ДИАЛОГ ПРИБЕЖАВШЕГО СВЯЩЕННИКА ===
+    // Священник прибегает к старосте и рассказывает, что НОЧЬЮ КТО-ТО
+    // УКРАЛ ИКОНУ ИЗ ДЕРЕВЕНСКОГО ХРАМА. Игрок может вклиниться
+    // с вопросами (каждый узел-вопрос возвращает к разговору — так
+    // беседу можно «пролистать»), а может закрыть. После закрытия
+    // (любым путём) игроку автоматически выдаётся СТАРТОВОЕ ЗАДАНИЕ.
+    // ================================================================
+    priest_intro: {
+        start: 'a',
+        nodes: {
+            a: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                choices: [],
+                action: (scene) => {
+                    const node = DIALOGUES.priest_intro.nodes.a;
+                    node.text = 'Староста! Беда великая, беда! (священник подбегает, задыхаясь) Ночью вор прокрался в храм Божий и выкрал из самого киота чудотворную икону Богородицы! Я молился в алтаре, свечи ещё теплились — слыхал только, как скрипнула дверца. А под утро глянул: киот пуст!\n\nСтароста хватается за голову: «Батюшка, как же так?! Кто мог… Святыня украдена — вся деревня без заступницы!»';
+                    node.en = 'Elder! Great woe, great woe! (the priest runs up, breathless) In the night a thief crept into the house of God and carried the wonderworking icon of the Mother of God out of the very kiot! I was praying in the altar, the candles were still warm — all I heard was the little door creak. And at dawn I looked: the kiot was empty!\n\nThe elder clutches his head: "Father, how can it be?! Who could… The holy icon is stolen — the whole village is left without its protectress!"';
+                    node.choices = [
+                        { text: t('❓ Как это случилось, отче?'), next: 'how' },
+                        { text: t('❓ Кто мог это сделать?'), next: 'who' },
+                        { text: t('❓ Что за икона такая?'), next: 'icon' },
+                        { text: t('❓ Куда мог податься вор?'), next: 'where' },
+                        { text: t('⚔ Я найду вора и верну святыню!'), next: 'vow' },
+                        { text: t('✖ Не сейчас. Пойду осмотрюсь.'), end: true },
+                    ];
+                },
+            },
+            how: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                choices: [],
+                action: (scene) => {
+                    const node = DIALOGUES.priest_intro.nodes.how;
+                    node.text = 'Ночью, за полночь. Дверца киота скрипнула — я было принял за сквозняк, тепло ли в алтаре проверил, да обратно пошёл. А под утро — киот пуст, лампада коптит, на полу пыль да следы чьи-то к двери ведут. Замок цел, значит, отмычка у вора была ловкая.';
+                    node.en = 'In the night, past midnight. The little door of the kiot creaked — I took it for a draught, went to see that the altar was warm, and returned to my prayers. And at dawn — the kiot empty, the lamp-lamp smoking, dust on the floor and some footprints leading to the door. The lock is whole, which means the thief had a deft picklock.';
+                    node.choices = [
+                        { text: t('◄ Вернуться к разговору'), next: 'a' },
+                        { text: t('Договорили.'), end: true },
+                    ];
+                },
+            },
+            who: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                choices: [],
+                action: (scene) => {
+                    const node = DIALOGUES.priest_intro.nodes.who;
+                    node.text = 'Лица не разглядел — тень одна мелькнёт и нет. Одно скажу точно: человек был ПРИШЛЫЙ, не из наших селян — одеждой и повадкой странник. У нас всякий на виду, а этого я прежде не видывал. Люди разные в деревню заходят: кто у колодца зорит, кто на выпас глядит — порасспроси селян, может, кто и видал.';
+                    node.en = 'I could not make out the face — a shadow that flashed and was gone. One thing I will say for certain: the man was a COMER, not one of our villagers — a wanderer by his clothes and his bearing. Everyone here is in plain sight, and him I had never seen before. All sorts pass through the village: ask the folk — one by the well, another watching the pasture — someone may have seen something.';
+                    node.choices = [
+                        { text: t('◄ Вернуться к разговору'), next: 'a' },
+                        { text: t('Договорили.'), end: true },
+                    ];
+                },
+            },
+            icon: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                choices: [],
+                action: (scene) => {
+                    const node = DIALOGUES.priest_intro.nodes.icon;
+                    node.text = 'Икона Богородицы Одигитрии, чудотворная. Более ста лет ей — писал её монах-иконописец Печерского монастыря. Прабабы наши её принесли, от мора и пожаров она деревню берегла. Без неё деревня благословения Божьего лишается — потому вор этот лихой человек, а не просто тать.';
+                    node.en = 'The icon of the Mother of God Hodegetria, wonderworking. It is more than a hundred years old — a monk-icon-painter of the Caves Monastery wrote it. Our great-grandmothers brought it here; it guarded the village from pestilence and fire. Without it the village is bereft of God\'s blessing — so this thief is a wicked man, and no mere pilferer.';
+                    node.choices = [
+                        { text: t('◄ Вернуться к разговору'), next: 'a' },
+                        { text: t('Договорили.'), end: true },
+                    ];
+                },
+            },
+            where: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                choices: [],
+                action: (scene) => {
+                    const node = DIALOGUES.priest_intro.nodes.where;
+                    node.text = 'Бог весть. Стражник в ночи никого у ворот не видал, а следы идут прочь от околицы — теряются, сказывают, в лесу да у тракта. Расспроси людей, да за околицей следы ищи. Только не медли: время идёт, и вор далеко уйдёт!';
+                    node.en = 'God only knows. The watchman saw no one at the gates in the night, and the tracks lead away beyond the village edge — they say they are lost near the forest and the high road. Ask the people, and look for tracks beyond the palisade. Only do not tarry: time flows, and the thief will be far away!';
+                    node.choices = [
+                        { text: t('◄ Вернуться к разговору'), next: 'a' },
+                        { text: t('Договорили.'), end: true },
+                    ];
+                },
+            },
+            vow: {
+                speaker: 'Отец Савватий',
+                text: '...',
+                choices: [],
+                action: (scene) => {
+                    const node = DIALOGUES.priest_intro.nodes.vow;
+                    node.text = 'Благослови тебя Господь, чадо! (священник осеняет тебя крестом) Староста подаёт тебе руку: «Найди вора и верни икону — мне или батюшке, всё едино. Деревня в долгу не останется!»';
+                    node.en = 'May the Lord bless you, my child! (the priest makes the sign of the cross over you) The elder gives you his hand: "Find the thief and bring the icon back — to me or to the father, it is all one. The village will not remain in your debt!"';
+                    node.choices = [
+                        { text: t('⚔ За святыню! (принять задание)'), end: true },
+                    ];
+                },
+            },
+        },
+    },
+
     // === СТАРОСТА — выдаёт задание + задаток + ПРИЁМ ИКОНЫ (раунд 21) ===
     elder_quest: {
         start: 'a',
@@ -82,8 +284,16 @@ export const DIALOGUES = {
                     if (getViraCandidates(scene.registry).length > 0) {
                         base.unshift({ text: t('🤝 Просить мира (вира по Судебнику)'), next: 'vira_hub' });
                     }
-                    node.text = 'Здравствуй, {address}. У нас беда! Ночью неизвестный вор забрался в церковь и украл чудотворную икону. Это наша главная святыня!';
-                    node.en = 'Greetings, {address}. We are in trouble! In the night an unknown thief crept into the church and stole the wonderworking icon. It is our chief holy treasure!';
+                    // Патч 66.84 (новый старт): после знакомства (IntroSequence)
+                    // староста НЕ рассказывает кражу заново — вы уже знаете
+                    // о ней из беседы с прибежавшим священником.
+                    if (q.introStage === 'done') {
+                        node.text = 'Ты уже знаешь нашу беду, {address}: вор унёс из храма чудотворную икону. Найди вора — молю! Расспроси людей, ищи следы за околицей. Вернёшь святыню мне или батюшке — деревня в долгу не останется.';
+                        node.en = 'You already know our trouble, {address}: a thief has carried the wonderworking icon out of the church. Find him — I beg you! Ask the folk, look for tracks beyond the palisade. Bring the holy icon back to me or to the father — the village will not remain in your debt.';
+                    } else {
+                        node.text = 'Здравствуй, {address}. У нас беда! Ночью неизвестный вор забрался в церковь и украл чудотворную икону. Это наша главная святыня!';
+                        node.en = 'Greetings, {address}. We are in trouble! In the night an unknown thief crept into the church and stole the wonderworking icon. It is our chief holy treasure!';
+                    }
                     node.choices = (q.stolenItemRecovered && !q.mainQuestDone)
                         ? [{ text: t('🏺 Вернуть икону!'), next: 'return_icon' }, ...base]
                         : base;
@@ -2903,7 +3113,7 @@ function buildWeatherTalk(dialogId, startNode) {
 (function installWeatherTalk() {
     Object.keys(DIALOGUES).forEach((id) => {
         const d = DIALOGUES[id];
-        if (!d || !d.nodes || KID_DIALOG_IDS.has(id)) return;
+        if (!d || !d.nodes || KID_DIALOG_IDS.has(id) || INTRO_DIALOG_IDS.has(id)) return;
         if (d.nodes.weather_talk) return;
         const startNode = d.nodes[d.start];
         if (!startNode) return;
@@ -2920,7 +3130,7 @@ function buildWeatherTalk(dialogId, startNode) {
  * @returns {Array} новый список choices
  */
 export function appendWeatherChoice(dialogId, choices) {
-    if (KID_DIALOG_IDS.has(dialogId)) return choices || [];
+    if (KID_DIALOG_IDS.has(dialogId) || INTRO_DIALOG_IDS.has(dialogId)) return choices || [];
     const list = Array.isArray(choices) ? choices : [];
     if (list.some(c => c && c.__weatherAsk)) return list;
     const out = list.slice();
@@ -3039,7 +3249,7 @@ function buildQuestTalk(dialogId, startNode) {
  * Вызывается из DialogueRunner при рендере стартового узла.
  */
 export function appendQuestChoice(dialogId, choices) {
-    if (KID_DIALOG_IDS.has(dialogId)) return choices || [];
+    if (KID_DIALOG_IDS.has(dialogId) || INTRO_DIALOG_IDS.has(dialogId)) return choices || [];
     const d = DIALOGUES[dialogId];
     if (!d || !d.nodes || !d.nodes.quest_talk) return choices || [];
     const list = Array.isArray(choices) ? choices : [];

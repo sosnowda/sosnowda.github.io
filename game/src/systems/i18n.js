@@ -2613,6 +2613,48 @@ const EN = {
     'Отработал закупом час у {0}: {1} д. платы ушло в счёт долга (осталось {2} д.).': 'Worked an hour as a bonded debtor for {0}: {1} d. of wages went toward the debt ({2} d. remain).',
     'Отработал закупом час у {0}: {1} д. платы закрыли долг ПОЛНОСТЬЮ — закуп кончился!': 'Worked an hour as a bonded debtor for {0}: {1} d. of wages closed the debt IN FULL — the bondage is over!',
 
+    // ===== Патч 66.84 (приказы владельца 1–4, 6–7, 10): НОВЫЙ СТАРТ ИГРЫ (RU→EN) =====
+    // 1) приветствие старосты (IntroSequence, большой поп-ап)
+    '👋 Староста {0}': '👋 The village elder {0}',
+    'Здравствуй, {0}! Я слышал, ты пришёл издалека, из земель, разорённых лихими людьми.':
+        'Greetings, {0}! I hear you have come from afar, from lands ravaged by wicked men.',
+    'Деревня наша мала, но жива: пашня, лес да река кормят. Чужаков мы не гоним — поди, зима всех ровняет. Говоришь, думаешь прижиться и остаться жить? Что ж, у нас всякий трудный работник нужен.\n\nТолько знай: у нас живут правдом по старине. Своих знаем, чужих примечаем. Делай добро — и тебя примут как своего. А сделаешь лихое — вся деревня узнает к вечеру.':
+        'Our village is small, but alive: the ploughland, the forest and the river feed us. We do not drive strangers away — winter levels all men alike, after all. You say you mean to settle and stay? Well, any willing worker is welcome here.\n\nOnly know this: we live by the old truth. Our own we know, a stranger we mark. Do good, and you will be accepted as one of us. Do wickedly — and the whole village will know by evening.',
+    'Деревня {0} рада тебе! Идём, поговорим.': 'The village of {0} welcomes you! Come, let us talk.',
+    '🗣 Выслушать старосту': '🗣 Hear the elder out',
+    'Староста {0} приветствовал пришлого гостя у своего дома.':
+        'The elder {0} welcomed the newcomer at his house.',
+    // 2) стартовое задание (thief.js, IntroSequence)
+    'СТАРТОВОЕ ЗАДАНИЕ: вор украл чудотворную икону и бежал из деревни в неизвестном направлении. Найди и поймай вора!':
+        'STARTER QUEST: the thief stole the miracle-working icon and fled the village in an unknown direction. Find and catch the thief!',
+    'Стартовое задание получено: найди и поймай вора, верни икону старосте или священнику!':
+        'Starter quest received: find and catch the thief, return the icon to the elder or the priest!',
+    // 3) цель до знакомства (CharacterSelectionScene)
+    'Ты гость в деревне {0}. Выслушай старосту.': 'You are a guest in the village of {0}. Hear the elder out.',
+    // 4) диалог elder_intro — выборы
+    'Я пришёл издалека и хочу прижиться в деревне.': 'I have come from afar and mean to settle in the village.',
+    'Чем живёт ваша деревня?': 'What does your village live by?',
+    'Что за люди здесь живут?': 'What kind of people live here?',
+    'Спасибо на добром слове. Пойду осмотрюсь.': 'Thank you for your kind words. I will go and look around.',
+    '◄ Вернуться к разговору': '◄ Back to the talk',
+    'Договорили. Пойду осмотрюсь.': 'We are done. I will go and look around.',
+    'Договорили.': 'We are done.',
+    // 5) диалог priest_intro — выборы (вклиниться с вопросами / пролистать / закрыть)
+    '❓ Как это случилось, отче?': '❓ How did it happen, father?',
+    '❓ Кто мог это сделать?': '❓ Who could have done it?',
+    '❓ Что за икона такая?': '❓ What manner of icon is it?',
+    '❓ Куда мог податься вор?': '❓ Where could the thief have gone?',
+    '⚔ Я найду вора и верну святыню!': '⚔ I will find the thief and bring back the holy icon!',
+    '✖ Не сейчас. Пойду осмотрюсь.': '✖ Not now. I will go and look around.',
+    '⚔ За святыню! (принять задание)': '⚔ For the holy icon! (accept the quest)',
+    // 6) п.7: Церковь не венчает до выполнения стартового задания (reputation.js)
+    'Отец Савватий не венчает, пока не возвращена в храм украденная икона: сперва выполни стартовое задание — найди и поймай вора!':
+        'Father Savvatiy will not wed you until the stolen icon is returned to the church: first complete the starter quest — find and catch the thief!',
+    // 7) п.6: подсказка туториала под новый старт (Tutorial.js)
+    'Стартовое задание': 'Starter quest',
+    'Вор украл икону из церкви! Расспроси селян да ищи следы за околицей.':
+        'The thief stole the icon from the church! Question the villagers and look for tracks beyond the palisade.',
+
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----

@@ -4,7 +4,7 @@
 // при закрытии беседы списывается фиксированный срок (chargeTalkTime;
 // раунд 58 п.1: 10 минут за беседу, было 1 час).
 import { createDialog } from '../utils/ui.js';
-import { DIALOGUES } from '../data/dialogue.js';
+import { DIALOGUES, INTRO_DIALOG_IDS } from '../data/dialogue.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { pauseWorldClock, resumeWorldClock, chargeTalkTime, TALK_MINUTES } from './WorldClock.js';
 import { isEn, t } from './i18n.js';
@@ -69,7 +69,9 @@ export class DialogueRunner {
         // Патч 66.73 (приказ 16): при начале беседы — проверка Харизмы
         // игрока против Харизмы НПЦ; бонус/пенальти применяются ко всем
         // разговорным проверкам этой беседы (systems/charisma.js).
-        if (nodeId === d.start && !this._chaRolled) {
+        // Патч 66.84: сюжетные диалоги нового старта (elder_intro/priest_intro)
+        // — кат-сцена, встречная проверка Харизмы в них не бросается.
+        if (nodeId === d.start && !this._chaRolled && !INTRO_DIALOG_IDS.has(this._dialogId)) {
             this._chaRolled = true;
             if (this.scene && this.scene.activeNpc && this.scene.activeNpc.id) {
                 rollCharismaEdge(this.scene.registry, this.scene.activeNpc.id);
@@ -177,7 +179,8 @@ export class DialogueRunner {
         // Патч 66.73 (приказ 16): итог проверки Харизмы виден в первом узле
         // беседы — короткая строка «✨ Обаяние …: благоприятное впечатление —
         // разговорные проверки +5» (только в стартовом узле, один раз)
-        if (nodeId === d.start) {
+        // Патч 66.84: кроме сюжетных диалогов нового старта (кат-сцена).
+        if (nodeId === d.start && !INTRO_DIALOG_IDS.has(this._dialogId)) {
             const chaLine = getChaEdgeLine(this.scene.registry);
             if (chaLine) displayText += '\n\n' + chaLine;
         }

@@ -21,7 +21,7 @@ import { FOREST_MAP, FOREST_SOLID, validateForestMap, campfirePos } from '../src
 import {
     checkGameEnd, askNPC, isThiefEyewitnessPlace, isThiefAt, getChase,
 } from '../src/data/thief.js';
-import { marry, checkVictory, checkExpulsion, getVillageRep } from '../src/data/reputation.js';
+import { marry, canMarry, checkVictory, checkExpulsion, getVillageRep } from '../src/data/reputation.js';
 import { ActionLog } from '../src/data/actionLog.js';
 import { getLocationById } from '../src/data/mapLocations.js';
 
@@ -120,8 +120,11 @@ reg.get('quest').chase.route = ['field', 'river', 'mill'];
 ok(isThiefEyewitnessPlace(reg, 'fisherman') === false, 'isThiefEyewitnessPlace: будущая локация → не очевидец');
 
 console.log('— П.3: ЖЕНИТЬБА — ВЫИГРЫШ И КОНЕЦ ИГРЫ —');
+// 66.84 (актуализация): Церковь не венчает ДО выполнения стартового
+// задания — в мок добавлен quest.mainQuestDone (икона возвращена).
 reg = mockRegistry({
     reputation: { villageRep: 60, npcRep: { widow: 95 } },
+    quest: { mainQuestDone: true },
     npcs: [{ id: 'widow', name: 'Вдова Марфа', gender: 'female', age: 30, married: false, profession: { name: 'вдова-травница' } }],
     player: { ...basePlayer, dengas: 300 },
 });
@@ -129,6 +132,18 @@ const mr = marry(reg, 'widow', reg.get('player'));
 ok(mr.success === true, 'свадьба состоялась (условия р.44 выполнены)');
 ok(reg.get('quest').marriageVictory === true, 'marry() поставила флаг q.marriageVictory');
 ok(checkGameEnd(reg) === 'victory_marriage', "checkGameEnd → 'victory_marriage' (ВЫИГРЫШ и конец игры)");
+// 66.84: без выполнения стартового задания Церковь НЕ венчает (п.7 приказа)
+{
+    const regNo = mockRegistry({
+        reputation: { villageRep: 60, npcRep: { widow: 95 } },
+        quest: {},
+        npcs: [{ id: 'widow', name: 'Вдова Марфа', gender: 'female', age: 30, married: false, profession: { name: 'вдова-травница' } }],
+        player: { ...basePlayer, dengas: 300 },
+    });
+    const chk = canMarry(regNo, 'widow', regNo.get('player'));
+    ok(chk.canMarry === false && chk.reason.includes('икона'),
+        '66.84: венчание ДО стартового задания закрыто (сперва верни икону)');
+}
 // Проигрыши перебивают свадьбу (как и должно)
 reg.set('quest', { ...reg.get('quest'), thiefEscaped: true });
 ok(checkGameEnd(reg) === 'defeat_thief_escaped', 'побег вора приоритетнее свадьбы (поражение)');
