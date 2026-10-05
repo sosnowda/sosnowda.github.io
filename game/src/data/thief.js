@@ -1867,6 +1867,8 @@ export function checkGameEnd(registry) {
     if (q.elderMurdered) return 'defeat_elder_murdered';
     // Раунд 45 (п.2): изгнание из деревни — отдельный исход Проигрыша
     // (ставится только при репутации −100)
+    // Патч 66.81 (п.9): изгойство за неплаченные долги — отдельный исход
+    if (q.expelledForDebts) return 'defeat_expelled_debts';
     if (q.expelledFromVillage) return 'defeat_expelled';
     if (q.heroDead) return 'defeat_hero_dead';
     if (q.thiefEscaped) return 'defeat_thief_escaped';

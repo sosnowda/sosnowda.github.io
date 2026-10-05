@@ -2093,6 +2093,19 @@ export class VillageScene extends Phaser.Scene {
     doDebtGuard() {
         const res = debtGuardCollect(this.registry);
         this.updateHUD();
+        // ПАТЧ 66.83 (п.9): ИЗГОЙСТВО — всего имущества не хватило на
+        // просроченные долги: изгнание из деревни, ПРОВАЛ ИГРЫ.
+        if (res.expelled) {
+            createDialog(this, t('🚪 ИЗГНАН ЗА ДОЛГИ'),
+                t('«Долг платежом красен, а ты краснеешь только!» — староста грозен. «Мошна пуста, узел пуст, с плеч всё снято — а долг цел. Быть по-тому: изгой! Чтоб духа твоего в деревне не было — ни сроку тебе, ни пощады!»')
+                + '\n\n' + tf(t('Мошна и имущество проданы за {0} д., а просроченных долгов осталось {1} д. Долги не покрыты — ты изгнан из деревни. ЭТО ПРОВАЛ И ОКОНЧАНИЕ ИГРЫ.'), res.collected, res.stillOwed),
+                [{ text: t('Уйти за околицу'), callback: () => {
+                    this.busyDialog = false;
+                    this.scene.start('End');
+                } }],
+                { singleton: false, coverColor: 0x5a0f0f, coverAlpha: 0.85 });
+            return;
+        }
         const itemNote = res.takenItems.length > 0
             ? t('Отобрано на продажу:') + ' ' + res.takenItems.map(i => `${i.emoji} ${t(i.name)} ×${i.count}`).join(', ')
             : t('Имущества к описи не нашлось.');

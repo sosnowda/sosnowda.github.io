@@ -2582,6 +2582,37 @@ const EN = {
     'Стражник сводит тебя к старосте: сходка решает изгнать вора. Имущество отобрано до последнего узелка.':
         'The guard walks you to the elder: the assembly votes to banish the thief. Your property is taken down to the last knapsack.',
 
+    // ===== Патч 66.83 (пп.9,10,12,13): ИЗГОЙСТВО, ЗАКУП, СЕРЫЕ КНОПКИ, ИНСТРУКЦИЯ (RU→EN)
+    '🚪 ИЗГНАН ЗА ДОЛГИ': '🚪 DRIVEN OUT FOR DEBTS',
+    '⚒ Хозяин на поле — мастерская без присмотра: можно поработать.': '⚒ The master is in the field — the workshop is unwatched: you may work.',
+    '⚒ Отработать долг (1 час)': '⚒ Work off the debt (1 hour)',
+    '🧶 Станок — хозяин дома': '🧶 The loom — master at home',
+    '🪓 Подёнка — хозяин дома': '🪓 Daywork — master at home',
+    '🪵 Подёнка — хозяин дома': '🪵 Daywork — master at home',
+    '🤝 О слове — хозяин дома': '🤝 Haggle the rate — master at home',
+    '⚒ Отработать час в закупах': '⚒ Work an hour in bondage',
+    'Час колол дрова, таскал воду и мыл чаны. Плата — {0} д., и вся она ушла в счёт долга. Осталось: {1} д.\n\n(Закуп: отказаться от работы нельзя, пока весь долг не выплачен — всякая плата у Фёдора идёт в счёт долга.)': 'An hour of splitting wood, hauling water and scrubbing vats. The wage — {0} d. — and all of it went toward the debt. Remaining: {1} d.\n\n(Bonded: you cannot refuse the work until the whole debt is repaid — every wage at Fyodor\'s goes toward the debt.)',
+    'Час колол дрова, таскал воду и мыл чаны — и {0} д. платы закрыли долг ПОЛНОСТЬЮ! Фёдор доволен: «Закуп кончился, живи как знаешь».': 'An hour of splitting wood, hauling water and scrubbing vats — and {0} d. of wages closed the debt IN FULL! Fyodor is pleased: "The bondage is done; live as you please."',
+    'Лишек ({0} д.) Фёдор отсчитал деньгами в мошну.': 'Fyodor counted the surplus ({0} d.) back into your purse in coin.',
+    '⚒ Закуп — работа в счёт долга': '⚒ Bonded labour — working off the debt',
+    'хозяин': 'the master',
+    '⚒ Хозяин дома': '⚒ The master is at home',
+    '{0} сейчас дома. Работать в мастерской и торговаться о ставке («О слове») можно, только когда хозяин на поле или на промысле.\n\nПоговори с хозяином сейчас — или приходи в мастерскую, когда он уйдёт (в доме появится подсказка «хозяин на поле»).': '{0} is at home now. Working at the workshop and haggling the rate ("a word of haggle") is possible only while the master is out in the field or away on business.\n\nTalk to the master now — or come to the workshop when he is away (the "master in the field" hint will show in the house).',
+    '📜 Начало': '📜 Getting started',
+    '🎲 Ролевая система': '🎲 Roleplaying rules',
+    '💰 Деньги': '💰 Money',
+    '📅 Календарь': '📅 Calendar',
+    '⭐ Репутация': '⭐ Reputation',
+    '❓ Инструкция — Летописи Руси XV века': '❓ Instructions — The Chronicles of Ruthenia',
+    '🗗 Свернуть': '🗶 Collapse',
+    '⛶ На весь экран': '⛶ Fullscreen',
+    '«Долг платежом красен, а ты краснеешь только!» — староста грозен. «Мошна пуста, узел пуст, с плеч всё снято — а долг цел. Быть по-тому: изгой! Чтоб духа твоего в деревне не было — ни сроку тебе, ни пощады!»': '"A debt is honoured by payment, and you only grow red in the face!" the elder thunders. "The purse is empty, the bundle is empty, everything is off your back — yet the debt stands. So be it: an outcast! Let there be no trace of you in the village — no term, no mercy!"',
+    'Мошна и имущество проданы за {0} д., а просроченных долгов осталось {1} д. Долги не покрыты — ты изгнан из деревни. ЭТО ПРОВАЛ И ОКОНЧАНИЕ ИГРЫ.': 'The purse and goods sold for {0} d., yet {1} d. of overdue debt remain. The debts are not covered — you are driven from the village. THIS IS DEFEAT AND THE END OF THE GAME.',
+    'Долги не выплачены: имущество продано, из деревни изгнан.': 'Debts unpaid: goods sold, driven out of the village.',
+    'ПРАВЁЖ доверху: мошна и всё добро должника ушли на уплату ({0} д.), а долг цел — ещё {1} д. ИЗГОЙСТВО: из деревни изгнан!': 'The levy to the very bottom: the purse and all the debtor\'s goods went to payment ({0} d.), yet the debt stands — {1} d. more. OUTCAST: driven from the village!',
+    'Отработал закупом час у {0}: {1} д. платы ушло в счёт долга (осталось {2} д.).': 'Worked an hour as a bonded debtor for {0}: {1} d. of wages went toward the debt ({2} d. remain).',
+    'Отработал закупом час у {0}: {1} д. платы закрыли долг ПОЛНОСТЬЮ — закуп кончился!': 'Worked an hour as a bonded debtor for {0}: {1} d. of wages closed the debt IN FULL — the bondage is over!',
+
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----

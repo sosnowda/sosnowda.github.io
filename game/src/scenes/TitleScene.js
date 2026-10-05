@@ -2,7 +2,8 @@
 import { RUS } from '../config/RusTheme.js';
 import AudioManager from '../systems/AudioManager.js';
 import { t, tf, tk, getLang, setLang, isEn } from '../systems/i18n.js';
-import { bindRestartOnResize } from '../utils/ui.js';
+// Патч 66.81: createButton — закладки и кнопки инструкции
+import { createButton, bindRestartOnResize } from '../utils/ui.js';
 // Патч 66.75 (приказы 5–6): единая панель «⚙ Настройки» (титул + все игровые сцены)
 import { openSettingsPanel } from '../systems/SettingsPanel.js';
 // Раунд 32 (пп.14,15): строка о времени 1:30 в «Информации по игре» (F1)
@@ -231,32 +232,27 @@ export class TitleScene extends Phaser.Scene {
             'Игра одноразовая — сохранения не поддерживаются.'));
     }
 
-    // П.14: Полное окно помощи
-    // Раунд 39 (п.1 заявки): кнопка «Закрыть» БОЛЬШЕ НЕ перекрывает текст —
-    // раскладка честная: панель по высоте экрана, текст в своей зоне,
-    // при нехватке места шрифт уменьшается, в крайнем случае — прокрутка колесом.
-    showHelp() {
-        const { width, height } = this.scale;
-        // Очищаем старый диалог если есть
-        this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
+    // ============================================================
+    // ПАТЧ 66.81 (п.13 приказа): ИНСТРУКЦИЯ — ПОЛНОСТЬЮ ПЕРЕПИСАНА.
+    //  • ВСЕ правила игры: цель/управление, ролевая система (BRP),
+    //    правила проверок навыков и характеристик;
+    //  • описание ДЕНЕЖНОЙ системы (куна/полтина/гривна/рубль);
+    //  • описание ИГРОВОГО КАЛЕНДАРЯ (месяцы, сезоны, косые часы);
+    //  • правила репутации/правосудия и новые ПРАВИЛА ДОЛГОВ;
+    //  • текст разбит на РАЗДЕЛЫ С ЗАКЛАДКАМИ СВЕРХУ (не надо
+    //    долго листать экран), прокрутка внутри раздела колесом
+    //    и перетаскиванием;
+    //  • экран РАЗВОРАЧИВАЕТСЯ НА ВЕСЬ ЭКРАН (кнопка «⛶»), шрифт
+    //    крупный, в полном экране — ещё крупнее.
+    // ============================================================
 
-        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
-            .setOrigin(0).setInteractive().setDepth(200);
-        const panelW = Math.min(700, width - 24);
-        const panelH = Math.min(640, height - 24);
-        this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
-            .setStrokeStyle(3, 0xC9A961).setDepth(201);
-
-        this.add.text(width / 2, height / 2 - panelH / 2 + 20, t('❓ Инструкция'), {
-            fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
-            fontFamily: 'Georgia, serif',
-            stroke: '#000', strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(202);
-
-        const helpBody = tk('title.help.body', [
+    /** Содержимое разделов инструкции (тексты под закладками). */
+    helpSections() {
+        const start = [
             '🎯 ЦЕЛЬ ИГРЫ:',
-            'Ты — беженец в незнакомой деревне. Прижись, найди работу,',
-            'завоюй доверие жителей. Достигни репутации +100 или женись.',
+            'Ты — беженец в незнакомой деревне Руси XV века. Прижись,',
+            'найди работу, завоюй доверие жителей. Достигни репутации',
+            '+100 или женись — тогда игра будет выиграна.',
             '',
             timeRatioInfoLine(),
             '',
@@ -265,92 +261,351 @@ export class TitleScene extends Phaser.Scene {
             '  E / пробел — взаимодействие (войти в здание, говорить)',
             '  ЛКМ на здании — подойти и войти',
             '  ЛКМ на NPC — подойти и начать разговор',
-            '  ПКМ на NPC — показать репутацию и состояние',
-            '  F1 — окно помощи',
-            '  ESC — главное меню',
+            '  ПКМ на NPC — репутация и состояние жителя',
+            '  M — обзор деревни · P — план деревни',
+            '  F1 — инструкция · ESC — главное меню',
             '',
             '⚠ ПРОИГРЫШ:',
             '  • Смерть героя в бою',
-            '  • Репутация в деревне −100 → изгнание (только на самом дне!)',
-            '  • Вор украдённой иконы сбежал (лимит времени)',
+            '  • Репутация в деревне −100 → изгнание',
+            '  • Вор украденной иконы сбежал (лимит времени)',
+            '  • Долги не выплачены → изгойство (закладка «Долги»)',
             '',
             '🏆 ВЫИГРЫШ:',
             '  • Репутация в деревне +100 → принят как свой',
             '  • Брак с жителем (репутация +90 у NPC, +50 в деревне, 200 д.)',
+        ].join('\n');
+
+        const rp = [
+            '🎲 РОЛЕВАЯ СИСТЕМА — BRP (Basic Roleplaying SRD)',
+            'Характеристики создаются броском 3d6×5 (от 15 до 90),',
+            'все проверки — бросок d100 под значение.',
             '',
-            '⭐ РЕПУТАЦИЯ:',
-            '  Повышение: задания, подарки, похвала, выпивка всем.',
-            '  Понижение: попрошайничество, угрозы, ночное беспокойство.',
-            '  ≤ −30: NPC не говорит. ≤ −50: не торгует. ≤ −80: может напасть.',
-            '  Убил жителя? Деревня и все жители −50, родня — до −100.',
-            '  Виру за обиду принимает староста: мир за серебро (+30 к вражде).',
-            '  Молва живёт: каждую неделю деревня прощает мелкие обиды (+1 к нулю,',
-            '  пока репутация −20…0). ≤ −20 — «подозрительный»: у ворот осмотрят',
-            '  узел и отберут краденое. ≥ +30 — «свой»: пускают в дома без присмотра.',
-            '  Замаливание грехов: 50 д. в церкви раз в месяц — до +5 молвы.',
+            '📊 ПЯТЬ ХАРАКТЕРИСТИК:',
+            '  СИЛ — физическая мощь и урон;   ТЕЛ — здоровье, запас сил;',
+            '  МОЩ — воля и интуиция;          ЛОВ — проворство, меткость;',
+            '  ХАР — первое впечатление и слово.',
+            '  Здоровье: HP = (ТЕЛ + СИЛ) / 10. Бонус урона — по СИЛ+ТЕЛ.',
             '',
-            '💰 ОПЛАТА:',
-            '  Ставки подёнки ×(1 + репутация/200): своему — до ×1.25, чужаку — до ×0.75.',
+            '🎯 НАВЫКИ — 28, по шести категориям:',
+            '  Боевые · Общение · Знания · Манипуляции · Восприятие · Скрытность.',
+            '  Навык = база + характеристика × коэффициент + личная надбавка 1d10.',
+            '  Герой силён в своём ремесле: у следопыта — Скрадывание и след,',
+            '  у воина — меч, у сыщика — слово (Убеждение).',
+            '',
+            '🎲 ПРАВИЛА ПРОВЕРОК НАВЫКОВ И ХАРАКТЕРИСТИК:',
+            '  • Бросается d100: выпало МЕНЬШЕ ИЛИ РАВНО значению навыка — успех.',
+            '  • Критический успех — 1/20 навыка (при 60% это 1–3): наилучший исход.',
+            '  • Особый успех — 1/5 навыка: в бою даёт урон ×2.',
+            '  • Критический провал (fumble): 96+ при навыке ниже 50, иначе ровно 00.',
+            '  • Встречная проверка (торг, спор): оба бросают d100 — чей успех выше.',
+            '  • На бросок влияют: благословение молитвы (+5 к одной проверке),',
+            '    голод и усталость (штрафы к проверкам).',
+            '',
+            '⏳ ЦЕНЫ ВРЕМЕНИ:',
+            '  еда — ровно 1 час (кукдаун трапезы 4 часа); торговля — 30 минут;',
+            '  кража и взлом — 10 минут; час подёнки — 1 час и −2 очка усталости.',
+        ].join('\n');
+
+        const money = [
+            '💰 ДЕНЕЖНАЯ СИСТЕМА РУСИ XV ВЕКА',
+            'Счёт идёт на ДЕНЬГИ — серебряную монету. Медного чекана',
+            'на Руси в XV веке ещё нет. Мошна героя считается деньгами,',
+            'в свитке она показана разложением по крупным единицам.',
+            '',
+            '  1 куна    = 2 деньги',
+            '  1 полтина = 50 денег (полгривны)',
+            '  1 гривна  = 100 денег (серебряный слиток)',
+            '  1 рубль   = 200 денег (две гривны)',
+            '',
+            '🛒 ЦЕНЫ (примеры):',
+            '  Хлеб 2 д. · Каша 5 д. · Квас 3 д. · Медовуха 4 д.',
+            '  Ночлег 4–12 д. · Нож 3 д. · Дубина 2 д. · Меч 30 д.',
+            '  Кольчуга 80 д. · Сабля на заказ 100 д.',
+            '',
+            '💼 ЗАРАБОТКИ:',
+            '  Подёнка у мастеров: 2–7 д. за час (по навыку Ремесла),',
+            '  у кузнеца 2–12 д., служка в храме 3–10 д., гусли за столом',
+            '  3–16 д.; рыба, дичь, ягоды и грибы — скупка на постоялом',
+            '  дворе и у мясника. Ткачиха платит полотном и сукном.',
+            '',
+            '⚖ ОПЛАТА И МОЛВА:',
+            '  Ставки ×(1 + репутация/200): своему до ×1.25, чужаку до ×0.75.',
             '  Зимой у гончара и плотника −20%; у мельницы после урожая +20%.',
             '  «О слове»: раз в сутки уговорись о ставке — успех +25%, крит +50%.',
-        ].join('\n'));
+            '  Денег нет? Еду и ночлег берут В ДОЛГ у трактирщика',
+            '  (все правила — на закладке «Долги»).',
+        ].join('\n');
 
-        // Зона текста: между заголовком и кнопкой «Закрыть» (кнопка — внизу панели)
-        const padX = 20;
-        const btnZoneH = 52;
-        const textX = width / 2 - panelW / 2 + padX;
-        const textY = height / 2 - panelH / 2 + 56;
-        const availTextH = Math.max(80, panelH - 56 - btnZoneH - 12);
+        const cal = [
+            '📅 ИГРОВОЙ КАЛЕНДАРЬ',
+            'Год считают по-старому — от Сотворения мира (лето 70XX)',
+            'и с новолетием по сентябрьскому стилю: сентябрь — первый месяц.',
+            '',
+            'МЕСЯЦЫ НАРОДНОГО КАЛЕНДАРЯ:',
+            '  Вересень (сентябрь) · Паздерник (октябрь) · Грудень (ноябрь)',
+            '  Студень (декабрь) · Просинец (январь) · Лютень (февраль)',
+            '  Березозол (март) · Цветень (апрель) · Травень (май)',
+            '  Кресень (июнь) · Липень (июль) · Серпень (август)',
+            '',
+            'НЕДЕЛЯ — 7 дней: Неделя, Понедѣльник, Вторник, Середа,',
+            'Четверг, Пятница, Субота.',
+            '',
+            '🌾 РАБОТЫ ПОЛЯ (живой мир):',
+            '  Цветень — пахота · Травень — посев · Кресень — сенокос;',
+            '  Липень–Серпень — жатва; Вересень–Паздерник — жнивьё;',
+            '  от Грудня до Лютеня поле спит под снегом.',
+            '',
+            '⏱ ТЕЧЕНИЕ ВРЕМЕНИ:',
+            '  ' + timeRatioInfoLine(),
+            '  Часы — «косые»: и день, и ночь делятся на 12 часов,',
+            '  поэтому летний час длиннее зимнего.',
+            '  Норма еды — 2 трапезы в сутки (полдень и вечер): пропуск',
+            '  бьёт здоровьем. Сон не короче 2 часов; после сна 12 часов',
+            '  спать не тянет. Молитва и травы — со своими откатками.',
+        ].join('\n');
 
-        const createHelpText = (fs) => this.add.text(textX, textY, helpBody, {
-            fontSize: fs + 'px', color: '#E8DCC4',
+        const rep = [
+            '⭐ РЕПУТАЦИЯ (МОЛВА):',
+            '  Повышение: задания, подарки, похвала, угощение всему двору,',
+            '  пожертвования церкви, честная подёнка (+1 в сутки).',
+            '  Понижение: попрошайничество, угрозы, ночное беспокойство,',
+            '  кражи и взломы, а также ДОЛГИ (см. закладку «Долги»).',
+            '  ≤ −30: житель не говорит. ≤ −50: не торгует. ≤ −80: может напасть.',
+            '',
+            '🚶 ЛЕСТНИЦА СТАТУСОВ:',
+            '  ≤ −20 — «подозрительный»: у ворот осмотрят узел и отберут краденое;',
+            '  ≥ +30 — «свой»: в дома пускают без присмотра хозяина.',
+            '  Молва живёт: каждую неделю деревня прощает мелкие обиды',
+            '  (+1 к нулю, пока репутация в пределах −20…0). Повторная',
+            '  однотипная обида бьёт сильнее — ×1.5 (−10 → −15 → −22 → −30).',
+            '',
+            '⚖ ПРАВОСУДИЕ (Судебник 1497, «о татбе»):',
+            '  Обокрал — хозяин всегда подозревает: отвести подозрение может',
+            '  проверка разговорного навыка; провал −10 личной и −5 деревенской.',
+            '  Поимка у ворот: краденое изымается, вира 24 д. + урок за сбытое',
+            '  по полной; повторная поимка — всё ×3; третья — поток и разграбление:',
+            '  всё имущество отобрать и изгнать (провал игры).',
+            '  Мир с обкраденным: вернуть вещи (или серебром по полной) + вира 24 д.',
+            '  Замаливание грехов: 50 д. в церкви раз в месяц — до +5 молвы.',
+        ].join('\n');
+
+        const debts = [
+            '🪙 ДОЛГИ НА ПОСТОЯЛОМ ДВОРЕ',
+            'Денег нет? Трактирщик Фёдор отпускает В ДОЛГ еду',
+            '(меню «Купить еды») и комнату для ночлега (меню «Отдых»).',
+            '',
+            '✔ ПРАВО НА ДОЛГ (строгое):',
+            '  • репутация в деревне ПОЛОЖИТЕЛЬНАЯ,',
+            '  • и репутация у самого кредитора ПОЛОЖИТЕЛЬНАЯ;',
+            '  • сумма всех долгов не бывает БОЛЬШЕ 100 денег.',
+            '',
+            '📉 ЦЕНА ДОЛГА:',
+            '  С каждым взятым долгом молва в деревне И у кредитора',
+            '  ПАДАЕТ — тем сильнее, чем больше сумма (10 д. — по мелочи,',
+            '  100 д. — деревня запомнит надолго).',
+            '',
+            '📅 ДВА СРОКА У КАЖДОГО ДОЛГА:',
+            '  время ВЫДАЧИ и время ВОЗВРАТА — неделя со дня взятия.',
+            '  Сроки видны: свиток персонажа (строки «Долги») и',
+            '  меню «Долги» на постоялом дворе.',
+            '',
+            '⏳ ОТСРОЧКА («и впредь им отложити» — Судебник, о займах):',
+            '  Просрочил — проси отсрочку: проверка разговорного навыка',
+            '  (лучший из Убеждения и Болтовни). Успех продлевает срок',
+            '  на 3 дня. Отсрочек — НЕ БОЛЕЕ ТРЁХ, попытка раз в сутки.',
+            '',
+            '🛡 ПРАВЁЖ (взыскание у ворот):',
+            '  Не вернул просроченный долг, и мошны не хватает — при выходе',
+            '  из деревни тебя остановит стражник: сперва заберёт ВСЮ мошну,',
+            '  потом имущество ИЗ УЗЛА, потом НАДЕТОЕ (оружие, доспех) —',
+            '  всё продаётся за ПОЛОВИНУ цены в счёт долгов. Лишек вернут.',
+            '',
+            '🚪 ИЗГОЙСТВО:',
+            '  Всего имущества не хватило на просроченные долги? Изгоняют',
+            '  из деревни — ЭТО ПРОВАЛ И ОКОНЧАНИЕ ИГРЫ!',
+            '',
+            '⚒ ЗАКУП — ОТРАБОТКА ДОЛГА:',
+            '  Можно наняться в закупы к Фёдору: час работы (дрова, вода,',
+            '  чаны) — и ВСЯ плата идёт в погашение долга. Отказаться от',
+            '  закупа нельзя, пока весь долг не выплачен: любая работа у',
+            '  кредитора оплачивается только в счёт долга (Русская Правда,',
+            '  ст. 56–62: закуп работает на купу).',
+        ].join('\n');
+
+        return [start, rp, money, cal, rep, debts];
+    }
+
+    /** Закладки инструкции (надписи сверху). */
+    helpTabs() {
+        return [
+            t('📜 Начало'),
+            t('🎲 Ролевая система'),
+            t('💰 Деньги'),
+            t('📅 Календарь'),
+            t('⭐ Репутация'),
+            t('🪙 Долги'),
+        ];
+    }
+
+    showHelp(startTab = null) {
+        const { width, height } = this.scale;
+        // Уборка прошлого показа (слушатели колеса/перетаскивания — в том числе)
+        if (typeof this.__helpCleanup === 'function') this.__helpCleanup();
+        this.__helpCleanup = null;
+        this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
+        if (typeof startTab === 'number') this.__helpTab = startTab;
+        if (!Number.isInteger(this.__helpTab)) this.__helpTab = 0;
+
+        const fullscreen = !!this.__helpFullscreen;
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.88)
+            .setOrigin(0).setInteractive().setDepth(200);
+        // П.13: полноэкранный режим — панель разворачивается на весь экран
+        const panelW = fullscreen ? Math.min(1360, width - 16) : Math.min(780, width - 16);
+        const panelH = fullscreen ? height - 16 : Math.min(700, height - 16);
+        this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
+            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+
+        // Заголовок — компактный, чтобы оставить место тексту раздела
+        this.add.text(width / 2, height / 2 - panelH / 2 + 22, t('❓ Инструкция — Летописи Руси XV века'), {
+            fontSize: fullscreen ? '24px' : '20px', color: '#C9A961', fontStyle: 'bold',
+            fontFamily: 'Georgia, serif',
+            stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(202);
+
+        // ----- ЗАКЛАДКИ СВЕРХУ (п.13: разделы без долгой прокрутки) -----
+        const tabs = this.helpTabs();
+        const tabFontSize = fullscreen ? 15 : 13;
+        const tabButtons = tabs.map((label, i) => ({
+            i,
+            c: createButton(this, -999, -999, label, () => {
+                if (this.__helpTab !== i) this.showHelp(i);
+            }, {
+                backgroundColor: this.__helpTab === i ? 0x8B6C1A : 0x4a3520,
+                hoverColor: this.__helpTab === i ? 0xa8821f : 0x5a4530,
+                textColor: this.__helpTab === i ? '#fff6d8' : RUS.text,
+                fontSize: tabFontSize,
+                padding: { left: 10, right: 10, top: 7, bottom: 7 },
+                cornerRadius: 6,
+            }),
+        }));
+        // Закладки — НАД оверлеем (иначе клик по ним глотает блокиратор)
+        tabButtons.forEach((tb) => tb.c.setDepth(204));
+        // Раскладка закладок в 1..2 ряда по фактическим ширинам кнопок
+        const tabsTop = height / 2 - panelH / 2 + 44;
+        const tabGap = 6;
+        const maxTabW = panelW - 28;
+        const tabRows = [];
+        let tabRow = [], tabRowW = 0;
+        tabButtons.forEach((tb) => {
+            const w = Math.max(tb.c.width, 40) + tabGap;
+            if (tabRow.length && tabRowW + w - tabGap > maxTabW) {
+                tabRows.push(tabRow); tabRow = []; tabRowW = 0;
+            }
+            tabRow.push(tb); tabRowW += w;
+        });
+        if (tabRow.length) tabRows.push(tabRow);
+        const tabRowH = 34;
+        tabRows.forEach((r, ri) => {
+            const totalW = r.reduce((s, tb) => s + Math.max(tb.c.width, 40), 0) + tabGap * (r.length - 1);
+            let x = width / 2 - totalW / 2;
+            r.forEach((tb) => {
+                tb.c.setPosition(x + Math.max(tb.c.width, 40) / 2, tabsTop + ri * tabRowH);
+                x += Math.max(tb.c.width, 40) + tabGap;
+            });
+        });
+        const tabsBottom = tabsTop + tabRows.length * tabRowH;
+
+        // ----- ЗОНА ТЕКСТА РАЗДЕЛА -----
+        const footerH = 56;
+        const textX = width / 2 - panelW / 2 + 18;
+        const textY = tabsBottom + 8;
+        const availTextH = Math.max(120, height / 2 + panelH / 2 - footerH - 8 - textY);
+        const body = this.helpSections()[this.__helpTab] || '';
+        // П.13: КРУПНЫЙ шрифт (в полном экране — ещё крупнее)
+        const fontSize = fullscreen ? 19 : 16;
+        const helpText = this.add.text(textX, textY, body, {
+            fontSize: fontSize + 'px', color: '#E8DCC4',
             fontFamily: 'Arial, sans-serif',
             stroke: '#000', strokeThickness: 1,
-            lineSpacing: 3,
-            wordWrap: { width: panelW - padX * 2 },
+            lineSpacing: Math.round(fontSize * 0.45),
+            wordWrap: { width: panelW - 36 },
         }).setOrigin(0, 0).setDepth(202);
 
-        // Подбор шрифта: 13 → 10, пока текст не влезет в свою зону
-        let fs = 13;
-        let helpText = createHelpText(fs);
-        while (helpText.height > availTextH && fs > 10) {
-            fs -= 1;
-            helpText.setStyle({ ...helpText.style, fontSize: fs + 'px' });
-        }
-
-        // Если текст всё ещё выше зоны — маска + прокрутка колесом
+        // Прокрутка: колесо + перетаскивание (палец на мобильном)
         let scrollY = 0;
-        let wheelHandler = null;
         let maskGfx = null;
+        let wheelHandler = null;
+        let dragHandlers = null;
         const overflow = Math.max(0, helpText.height - availTextH);
+        const applyScroll = () => {
+            scrollY = Phaser.Math.Clamp(scrollY, 0, overflow);
+            helpText.y = textY - scrollY;
+        };
         if (overflow > 0) {
             maskGfx = this.make.graphics({ add: false });
-            maskGfx.fillRect(textX - 4, textY - 4, panelW - padX * 2 + 12, availTextH + 10);
+            maskGfx.fillRect(textX - 4, textY - 4, panelW - 28, availTextH + 10);
             helpText.setMask(maskGfx.createGeometryMask());
             wheelHandler = (pointer, over, dx, dy) => {
-                scrollY = Phaser.Math.Clamp(scrollY + dy, 0, overflow);
-                helpText.y = textY - scrollY;
+                scrollY += dy;
+                applyScroll();
             };
             this.input.on('wheel', wheelHandler);
+            let dragStartY = null;
+            let dragStartScroll = 0;
+            const downH = (p) => { dragStartY = p.y; dragStartScroll = scrollY; };
+            const moveH = (p) => {
+                if (dragStartY === null) return;
+                scrollY = dragStartScroll - (p.y - dragStartY) * 1.4;
+                applyScroll();
+            };
+            const upH = () => { dragStartY = null; };
+            this.input.on('pointerdown', downH);
+            this.input.on('pointermove', moveH);
+            this.input.on('pointerup', upH);
+            dragHandlers = { downH, moveH, upH };
+            // Подсказка прокрутки в правом верхнем углу зоны текста
+            this.add.text(width / 2 + panelW / 2 - 18, textY + 6, '⇕', {
+                fontSize: '16px', color: '#8a7a5a',
+            }).setOrigin(0.5, 0).setDepth(202);
         }
 
-        // Кнопка закрытия — ВСЕГДА ниже зоны текста (п.1: без перекрытия)
-        const btnBg = this.add.rectangle(width / 2, height / 2 + panelH / 2 - 30, 140, 35, 0x8B2C1A, 1)
-            .setStrokeStyle(2, 0xC9A961)
-            .setInteractive({ useHandCursor: true }).setDepth(202);
-        this.add.text(width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), {
-            fontFamily: 'Georgia, serif', fontSize: '16px', color: '#E8DCC4',
-        }).setOrigin(0.5).setDepth(203);
+        // ----- НИЖНИЙ РЯД: «⛶ НА ВЕСЬ ЭКРАН» + «ЗАКРЫТЬ» -----
+        const footY = height / 2 + panelH / 2 - 26;
+        createButton(this, width / 2 - 120, footY,
+            this.__helpFullscreen ? t('\u{1F5D7} Свернуть') : t('⛶ На весь экран'), () => {
+                this.__helpFullscreen = !this.__helpFullscreen;
+                this.showHelp();
+            }, {
+                backgroundColor: 0x4f4a1e, hoverColor: 0x5f5a26, textColor: RUS.text,
+                fontSize: 15, padding: { left: 14, right: 14, top: 8, bottom: 8 },
+            }).setDepth(203);
+        createButton(this, width / 2 + 120, footY, t('Закрыть'), () => {
+            this.closeHelp();
+        }, {
+            backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
+            fontSize: 15, padding: { left: 18, right: 18, top: 8, bottom: 8 },
+        }).setDepth(203);
 
-        const closeHelp = () => {
+        // Универсальная уборка (перевызов showHelp и закрытие)
+        this.__helpCleanup = () => {
             if (wheelHandler) { this.input.removeListener('wheel', wheelHandler); wheelHandler = null; }
+            if (dragHandlers) {
+                this.input.off('pointerdown', dragHandlers.downH);
+                this.input.off('pointermove', dragHandlers.moveH);
+                this.input.off('pointerup', dragHandlers.upH);
+                dragHandlers = null;
+            }
             if (maskGfx) { maskGfx.destroy(); maskGfx = null; }
             this.children.list.filter(c => c.depth >= 200).forEach(c => c.destroy());
         };
-        btnBg.on('pointerup', closeHelp);
-        overlay.on('pointerup', closeHelp);
-        this.input.keyboard.once('keydown-ESC', closeHelp);
-        this.input.keyboard.once('keydown-F1', closeHelp);
+        this.closeHelp = () => {
+            if (typeof this.__helpCleanup === 'function') this.__helpCleanup();
+            this.__helpCleanup = null;
+        };
+
+        this.input.keyboard.once('keydown-ESC', () => this.closeHelp());
+        this.input.keyboard.once('keydown-F1', () => this.closeHelp());
     }
 
     // Патч 66.75 (приказы 5–6): панель настроек ВЫНЕСЕНА в общий модуль

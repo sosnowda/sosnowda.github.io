@@ -81,6 +81,8 @@ export class ActionLog {
         else if (finalOutcome === 'defeat_hero_dead') isHeroDead = true;
         // Раунд 45 (п.2): изгнание за дурную славу — отдельный исход
         else if (finalOutcome === 'defeat_expelled') isExpelled = true;
+        // Патч 66.81 (п.9): изгойство за неплаченные долги — тоже изгнание
+        else if (finalOutcome === 'defeat_expelled_debts') isExpelled = true;
         // Раунд 46 (п.2): убийство старосты — немедленный Проигрыш
         else if (finalOutcome === 'defeat_elder_murdered') { isExpelled = true; isElderMurdered = true; }
         else {

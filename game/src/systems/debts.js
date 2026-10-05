@@ -3,6 +3,16 @@
 // ЕДА И НОЧЛЕГ В ДОЛГ У ТРАКТИРЩИКА, УЧЁТ ДОЛГОВ, ОТСРОЧКА,
 // ВЗЫСКАНИЕ ИМУЩЕСТВА СТРАЖНИКОМ.
 //
+// ПАТЧ 66.83 (приказы владельца 9, 10 — дополнение к 66.82):
+//  • п.8 (дословно): имущество описывается «ВНАЧАЛЕ ИЗ ИНВЕНТАРЯ,
+//    ПОТОМ НАДЕТОЕ» — надетое оружие и доспех уходят СЛЕД за узлом;
+//  • п.9: имуществом не покрыл просроченные долги — ИЗГОЙСТВО:
+//    q.expelledForDebts → checkGameEnd 'defeat_expelled_debts' →
+//    финал «🚪 ИЗГНАН ЗА ДОЛГИ» = ПРОВАЛ ИГРЫ;
+//  • п.10: ЗАКУП — hour работы у кредитора, вся плата идёт в счёт
+//    долга; отказаться нельзя, пока весь долг не выплачен
+//    (Русская Правда, ст. 56–62: закуп работает на купу).
+//
 //  1\ В меню персонажа рядом с казной — блок «ДОЛГИ»: строка на
 //     каждый долг (кому, сколько, за что и когда возвращать).
 //  2\ Еда в долг у трактирщика — ТОЛЬКО хлеб и каша (хмельного
@@ -323,10 +333,12 @@ export function debtGuardBill(registry) {
     const totalDebt = loans.reduce((s, l) => s + (l.amount || 0), 0);
     const coins = Math.min(player ? (player.dengas || 0) : 0, totalDebt);
     const items = [];
+    const wornItems = [];
     let saleTotal = 0;
     ((player && player.inventory) || []).forEach((entry, index) => {
         if (!entry || !entry.id) return;
-        // «На человеке и последней рубахи не берут»: надетое не описывают
+        // Надетое (оружие/доспех) описывается СЛЕДОМ за инвентарём (п.8),
+        // поэтому в первую опись не попадает
         if (player.weaponId && entry.id === player.weaponId) return;
         if (player.armorId && entry.id === player.armorId) return;
         const base = baseValueOf(entry);
@@ -343,7 +355,18 @@ export function debtGuardBill(registry) {
             count, unit50, sale50,
         });
     });
-    return { loans, totalDebt, coins, items, saleTotal, covered: coins + saleTotal >= totalDebt };
+    // ПАТЧ 66.83 (п.8 дословно): «потом НАДЕТОЕ» — оружие в руках,
+    // затем доспех; продаются по той же цене 50% базовой стоимости.
+    [['weaponId', WEAPONS, '⚔'], ['armorId', ARMORS, '🛡']].forEach(([slot, REG, emoji]) => {
+        const id = player[slot];
+        if (!id || id === 'fists' || id === 'none') return;
+        const def = REG[id];
+        if (!def || !def.price) return;
+        const sale50 = Math.max(1, Math.floor(def.price * CONFISCATION_PRICE_FACTOR));
+        wornItems.push({ slot, id, name: def.name, emoji, count: 1, sale50 });
+    });
+    const saleAll = saleTotal + wornItems.reduce((s, w) => s + w.sale50, 0);
+    return { loans, totalDebt, coins, items, wornItems, saleTotal, saleAll, covered: coins + saleAll >= totalDebt };
 }
 
 /**
@@ -379,6 +402,24 @@ export function debtGuardCollect(registry) {
         owed -= item.sale50;
     }
 
+    // 2б) ПАТЧ 66.83 (п.8 дословно): «потом НАДЕТОЕ» — оружие в руках,
+    // затем доспех, пока долг не покрыт.
+    const takenWorn = [];
+    bill.wornItems.forEach((w) => {
+        if (owed <= 0) return;
+        if (w.slot === 'weaponId' && player.weaponId === w.id) {
+            player.weaponId = 'fists';
+        } else if (w.slot === 'armorId' && player.armorId === w.id) {
+            player.armorId = 'none';
+        } else {
+            return;
+        }
+        takenWorn.push(w);
+        takenItems.push(w);
+        collected += w.sale50;
+        owed -= w.sale50;
+    });
+
     // 3) Излишек продажи — должнику (продали лишнего — вернули остаток)
     const surplus = Math.max(0, -owed);
     if (surplus > 0) {
@@ -408,10 +449,74 @@ export function debtGuardCollect(registry) {
 
     const stillOwed = totalDebtOf(registry);
     const name = creditorNameOf(registry, 'tavernkeeper');
-    ActionLog.add(registry, tf(t('Стражник у ворот описал добро должника: монет {0} д., имущество продано за {1} д. (50% цены) — в счёт долга перед {2}. {3}'),
-        coinsTaken, collected - coinsTaken - surplus, name,
-        stillOwed > 0 ? tf(t('Долгу ещё {0} д. — молва о неплательщике идёт впереди тебя.'), stillOwed) : t('Долг покрыт.')));
-    return { coinsTaken, takenItems, collected, surplus, settled, stillOwed };
+
+    // ПАТЧ 66.83 (п.9): ИЗГОЙСТВО — всего имущества (мошна, узел, надетое)
+    // не хватило на просроченные долги: должника изгоняют, ПРОВАЛ ИГРЫ.
+    let expelled = false;
+    if (stillOwed > 0) {
+        expelled = true;
+        player.inventory = [];
+        player.dengas = 0;
+        registry.set('player', player);
+        const q = registry.get('quest') || {};
+        q.expelledForDebts = true; // → checkGameEnd 'defeat_expelled_debts'
+        q.currentObjective = t('Долги не выплачены: имущество продано, из деревни изгнан.');
+        registry.set('quest', q);
+        ActionLog.add(registry, tf(t('ПРАВЁЖ доверху: мошна и всё добро должника ушли на уплату ({0} д.), а долг цел — ещё {1} д. ИЗГОЙСТВО: из деревни изгнан!'),
+            collected, stillOwed));
+    } else {
+        ActionLog.add(registry, tf(t('Стражник у ворот описал добро должника: монет {0} д., имущество продано за {1} д. (50% цены) — в счёт долга перед {2}. {3}'),
+            coinsTaken, collected - coinsTaken - surplus, name, t('Долг покрыт.')));
+    }
+    return { coinsTaken, takenItems, takenWorn, collected, surplus, settled, stillOwed, expelled };
+}
+
+// ---------------- ПАТЧ 66.83 (п.10): ЗАКУП — ОТРАБОТКА ДОЛГА ----------------
+
+/** Ставка закупа за час (без лихвы и без торга — работа в счёт долга). */
+export const DEBT_WORK_WAGE = () => 3 + Math.floor(Math.random() * 3); // 3..5 д.
+
+/**
+ * П.10: ЗАКУП — час работы у кредитора (дрова, вода, чаны), и ВСЯ плата
+ * идёт в погашение долга (по старшинству срока). Отказаться от закупа
+ * нельзя, пока весь долг не выплачен: любой час, отработанный у кредитора,
+ * оплачивается только в счёт долга (Русская Правда, ст. 56–62).
+ * Час времени, усталость и здоровье ведёт сцена.
+ * @returns {{ wage:number, applied:number, surplus:number, debtLeft:number }}
+ */
+export function workOffDebt(registry, npcId) {
+    const player = registry.get('player');
+    const st = debtsStateOf(registry);
+    const mine = st.loans.filter(l => l.npcId === npcId);
+    if (!mine.length) return { wage: 0, applied: 0, surplus: 0, debtLeft: 0 };
+    const wage = DEBT_WORK_WAGE();
+    let left = wage;
+    const appliedLoans = mine.sort((a, b) => a.dueDayIdx - b.dueDayIdx);
+    appliedLoans.forEach((loan) => {
+        if (left <= 0) return;
+        const part = Math.min(loan.amount, left);
+        loan.amount -= part;
+        left -= part;
+        loan.bonded = true; // закуп подтверждён работой
+    });
+    st.loans = st.loans.filter(l => l.amount > 0);
+    // Лишек (плата перекрыла остаток долга) — обратно в мошну деньгами
+    if (left > 0) {
+        player.dengas = (player.dengas || 0) + left;
+    }
+    registry.set('player', player);
+    saveDebtsState(registry, st);
+    const applied = wage - left;
+    const debtLeft = totalDebtOf(registry);
+    ActionLog.add(registry, debtLeft > 0
+        ? tf(t('Отработал закупом час у {0}: {1} д. платы ушло в счёт долга (осталось {2} д.).'), creditorNameOf(registry, npcId), applied, debtLeft)
+        : tf(t('Отработал закупом час у {0}: {1} д. платы закрыли долг ПОЛНОСТЬЮ — закуп кончился!'), creditorNameOf(registry, npcId), applied));
+    return { wage, applied, surplus: left, debtLeft };
+}
+
+/** В закупах ли игрок у этого кредитора (п.10 — «отказаться нельзя»). */
+export function isBondedTo(registry, npcId) {
+    return loansOf(registry).some(l => l.npcId === npcId && l.bonded);
 }
 
 // ---------------- ИМЕНА И СТРОКИ ДЛЯ UI (пп.1, 6) ----------------

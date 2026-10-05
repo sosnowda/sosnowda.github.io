@@ -98,6 +98,8 @@ import {
     creditorNameOf, debtShortLineOf, debtFullLineOf, debtIssuedLabelOf, debtDueLabelOf, debtKindName,
     debtRefusalLine, previewDueLabelOf,
     CREDIT_FOOD_IDS, DEBT_MAX_TOTAL, DEBT_MAX_DEFERRALS,
+    // Патч 66.83 (п.10): ЗАКУП — работа в счёт долга без права отказа
+    workOffDebt, isBondedTo,
 } from '../systems/debts.js';
 // Патч 66.79 (пп.9–10): застукали — списания после провала побега
 import { applyOwnersCaught } from '../systems/crime.js';
@@ -412,6 +414,13 @@ export class InteriorScene extends Phaser.Scene {
                 fontSize: '12px', color: '#c9a14a',
                 backgroundColor: '#00000088', padding: { x: 6, y: 3 },
             }).setOrigin(0.5).setDepth(20);
+            // Патч 66.83 (п.12): подсказка у мастерских — почему работа без хозяина
+            if (interior.id === 'potter_house' || interior.id === 'weaver_house' || interior.id === 'carpenter_house') {
+                this.add.text(width * 0.65, height * 0.74, t('\u{2692} Хозяин на поле — мастерская без присмотра: можно поработать.'), {
+                    fontSize: '11px', color: '#8a9a6a',
+                    backgroundColor: '#00000088', padding: { x: 6, y: 3 },
+                }).setOrigin(0.5).setDepth(20);
+            }
         }
 
         // ----- Раунд 27 (пп.6,9): ВТОРАЯ ФИГУРА — ЖЕНА (староста/пасечник) -----
@@ -669,6 +678,11 @@ export class InteriorScene extends Phaser.Scene {
                 // вернуть долг или просить отсрочку (кнопка всегда видна —
                 // нижняя панель не перестраивается после взятия долга)
                 buttons.push({ label: t('\u{1FA99} Долги'), bg: 0x6a4a1a, hover: 0x7a5a2a, cb: () => this.showDebtsMenu(interior) });
+                // Патч 66.83 (п.10): ЗАКУП — час работы в счёт долга; плата
+                // целиком уходит в погашение, отказаться нельзя до полной выплаты
+                if (loansOf(this.registry).some(l => l.npcId === 'tavernkeeper')) {
+                    buttons.push({ label: t('\u{2692} Отработать долг (1 час)'), bg: 0x4a3a1a, hover: 0x5a4a2a, cb: () => this.workOffDebtAtTavern(interior) });
+                }
                 // ПАТЧ 66.78 (приказы 4–5): СКУПЩИК — скупка ТОЛЬКО краденого,
                 // только по ночам и только в его ночи (3–5 ночей недели)
                 if (this.fenceHere) {
@@ -748,6 +762,21 @@ export class InteriorScene extends Phaser.Scene {
             // Патч 66.74 (приказы 13–16): в ПУСТОМ доме доступен сундук
             // (взлом замка двери — на улице, через поп-ап «Дом закрыт»)
             this.pushChestButton(interior, buttons);
+        }
+        // ============================================================
+        // ПАТЧ 66.83 (п.12): СЕРЫЕ КНОПКИ-ПОДСКАЗКИ В МАСТЕРСКИХ.
+        // Подёнка/станок и «О слове» у гончара, ткачихи и плотника видны,
+        // только когда хозяин ВНЕ дома; игрок не понимает, почему кнопки
+        // нет. При хозяине ДОМА видны серые кнопки: клик объясняет, что
+        // работать можно, когда «хозяин на поле».
+        // ============================================================
+        if (hasNpc && ownerHere && !ownerKilled &&
+            (interior.id === 'potter_house' || interior.id === 'weaver_house' || interior.id === 'carpenter_house')) {
+            const workLabel = interior.id === 'weaver_house'
+                ? t('\u{1F9F6} Станок — хозяин дома')
+                : (interior.id === 'carpenter_house' ? t('\u{1FA93} Подёнка — хозяин дома') : t('\u{1FAB5} Подёнка — хозяин дома'));
+            buttons.push({ label: workLabel, bg: 0x332d24, hover: 0x332d24, cb: () => this.showOwnerHomeHint(interior) });
+            buttons.push({ label: t('\u{1F91D} О слове — хозяин дома'), bg: 0x332d24, hover: 0x332d24, cb: () => this.showOwnerHomeHint(interior) });
         }
         const exitAction = () => {
             // Раунд 40: пока открыто меню «Провести время» — ESC закрывает
@@ -1892,8 +1921,55 @@ export class InteriorScene extends Phaser.Scene {
         const head = overdueN > 0
             ? tf(t('Долгу всего {0} д., из них просрочено: {1}. Стражник у ворот спросит за просрочку, а новых долгов тут не дадут.'), totalDebtOf(this.registry), overdueN)
             : tf(t('Долгу всего {0} д. За каждым — свой срок возврата: кто вовремя платит, тому и верят.'), totalDebtOf(this.registry));
+        // Патч 66.83 (п.10): закуп доступен и из самого меню долгов
+        buttons.push({ text: t('\u{2692} Отработать час в закупах'), callback: () => {
+            this.busyDialog = false;
+            this.workOffDebtAtTavern(interior);
+        } });
         createDialog(this, t('🪙 Долги в столбце'), head + '\n\n' + loans.map(l => debtFullLineOf(this.registry, l)).join('\n'),
             buttons, { singleton: false, portraitKey: 'portrait_tavernkeeper' });
+    }
+
+    /**
+     * Патч 66.83 (п.10): ЗАКУП — час работы у Фёдора в счёт долга
+     * (дрова, вода, чаны). Вся плата уходит в погашение (лишек — в мошну);
+     * отказаться от закупа нельзя, пока весь долг не выплачен.
+     */
+    workOffDebtAtTavern(interior) {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        if (!loansOf(this.registry).some(l => l.npcId === 'tavernkeeper')) return;
+        this.busyDialog = true;
+        // Тяжёлая подёнка: час, −2 ОУ, −1 HP (как у кузницы 66.74)
+        tickTime(this.registry, 60, 'work');
+        spendFatigue(this.registry, 2);
+        player.HP = Math.max(1, (player.HP || 1) - 1);
+        const res = workOffDebt(this.registry, 'tavernkeeper');
+        this.registry.set('player', player);
+        this.updateHUD();
+        let text = res.debtLeft > 0
+            ? tf(t('Час колол дрова, таскал воду и мыл чаны. Плата — {0} д., и вся она ушла в счёт долга. Осталось: {1} д.\n\n(Закуп: отказаться от работы нельзя, пока весь долг не выплачен — всякая плата у Фёдора идёт в счёт долга.)'), res.applied, res.debtLeft)
+            : tf(t('Час колол дрова, таскал воду и мыл чаны — и {0} д. платы закрыли долг ПОЛНОСТЬЮ! Фёдор доволен: «Закуп кончился, живи как знаешь».'), res.applied);
+        if (res.surplus > 0) {
+            text += '\n' + tf(t('Лишек ({0} д.) Фёдор отсчитал деньгами в мошну.'), res.surplus);
+        }
+        createDialog(this, t('\u{2692} Закуп — работа в счёт долга'), text,
+            [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
+            { singleton: false, portraitKey: this.npcPortraitKey });
+    }
+
+    /**
+     * Патч 66.83 (п.12): клик по СЕРОЙ кнопке-подсказке в мастерской,
+     * пока хозяин дома. Кнопки подёнки/станка и «О слове» активны только
+     * когда «хозяин на поле» — окно объясняет это прямым текстом.
+     */
+    showOwnerHomeHint(interior) {
+        const ownerName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : t('хозяин');
+        createDialog(this, t('\u{2692} Хозяин дома'),
+            tf(t('{0} сейчас дома. Работать в мастерской и торговаться о ставке («О слове») можно, только когда хозяин на поле или на промысле.\n\nПоговори с хозяином сейчас — или приходи в мастерскую, когда он уйдёт (в доме появится подсказка «хозяин на поле»).'), ownerName),
+            [{ text: t('Понятно'), callback: () => {} }],
+            { singleton: false, portraitKey: this.npcPortraitKey });
     }
 
     /**

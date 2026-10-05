@@ -225,15 +225,25 @@ console.log('--- 8. П.8: излишек продажи возвращается
     ok(p.dengas === 11 && res.stillOwed === 0, 'мошна 11 д., долг закрыт');
 }
 {
+    // Патч 66.83 (п.8 дословно): надетое описывается СЛЕД за инвентарём —
+    // клуб в руках (2 д. цены → 1 д.) и тегиляй (10 д. → 5 д.) дополняют уплату
     const r = makeRegistry({ dengas: 0, villageRep: 10, tkRep: 20 });
     const p = r.get('player');
-    p.inventory = [{ id: 'fish_raw', count: 1 }]; // 1 д. продажи
-    takeDebt(r, { kind: 'lodging', amount: 10 });
+    p.weaponId = 'club';
+    p.armorId = 'padded';
+    p.inventory = [
+        { id: 'fish_raw', count: 1 },   // 1 д. продажи
+        { id: 'club', count: 1 },       // надетое оружие (в руках)
+        { id: 'padded', count: 1 },     // надетый тегиляй
+    ];
+    takeDebt(r, { kind: 'lodging', amount: 6 });
     const g = r.get('gameTime'); g.day += 10; r.set('gameTime', g);
     const res = debtGuardCollect(r);
-    ok(res.stillOwed === 9, 'продажа 1 д. не покрыла долг 10 д. — осталось 9 д.');
-    ok(loansOf(r).length === 1 && loansOf(r)[0].amount === 9, 'долг уменьшен до 9 д. (частичное взыскание)');
-    ok(guardDebtNeeded(r), 'недоплаченный долг всё ещё дело стражника');
+    ok(res.stillOwed === 0, 'после инвентаря (1 д.) и надетого (клуб 1 д. + тегиляй 5 д.) долг 10 д. покрыт');
+    ok(p.weaponId === 'fists' && p.armorId === 'none', 'надетое ушло: оружие → кулаки, доспех → «без доспеха»');
+    ok(loansOf(r).length === 0, 'долг закрыт правежом с надетым (66.83)');
+    ok(p.dengas === 1, 'лишек 1 д. вернулся в мошну');
+    ok(!guardDebtNeeded(r), 'после полного правежа (66.83) стражнику дела нет');
 }
 
 console.log('--- 9. Строки для свитка и меню (пп.1, 6) ---');

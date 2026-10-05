@@ -82,6 +82,11 @@ export class EndScene extends Phaser.Scene {
         } else if (quest.thiefEscaped) {
             endTitle = t('🏃 ВОР СБЕЖАЛ');
             endColor = '#ff6040';
+        } else if (quest.expelledForDebts) {
+            // Патч 66.81 (п.9): изгойство за неплаченные долги (правёж у ворот) —
+            // свой титул провала, не «Герой пал»
+            endTitle = t('🚪 ИЗГНАН ЗА ДОЛГИ');
+            endColor = '#ff4040';
         } else if (quest.expelledFromVillage) {
             // Раунд 45 (п.2): изгнание за дурную славу (репутация −100) —
             // свой титул, не «Герой пал»
