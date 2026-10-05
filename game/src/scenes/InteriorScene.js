@@ -91,6 +91,14 @@ import {
     isSuspecting, noteTheftDone, attemptInnocence, suspectCheckSkill,
     isCaughtByHost, noteSoldStolen, reconcileNeeds, reconcileWithHost, THEFT_VIRA_SALE,
 } from '../systems/justice.js';
+// Патч 66.82 (приказы 1–9): ДОЛГИ — еда/ночлег в долг, возврат, отсрочка
+import {
+    canTakeDebt, takeDebt, repayLoan, attemptDeferral,
+    loansOf, totalDebtOf, overdueLoansOf, loanIsOverdue, debtDayIndex,
+    creditorNameOf, debtShortLineOf, debtFullLineOf, debtIssuedLabelOf, debtDueLabelOf, debtKindName,
+    debtRefusalLine, previewDueLabelOf,
+    CREDIT_FOOD_IDS, DEBT_MAX_TOTAL, DEBT_MAX_DEFERRALS,
+} from '../systems/debts.js';
 // Патч 66.79 (пп.9–10): застукали — списания после провала побега
 import { applyOwnersCaught } from '../systems/crime.js';
 // Патч 66.80 (пп.11-а/г): недельное «забывание» обид + епитимья в церкви
@@ -657,6 +665,10 @@ export class InteriorScene extends Phaser.Scene {
                 // (сбор со стола за успех; риск гнева Церкви)
                 buttons.push({ label: t('\u{1FA95} Скоморошить (Скоморошество)'), bg: 0x5a3a1a, hover: 0x6a4a2a, cb: () => this.performAtTavern(interior) });
                 buttons.push({ label: t('\u{1F6CF} Отдых'), bg: 0x4a3a5a, hover: 0x5a4a6a, cb: () => this.showTavernRestMenu(interior) });
+                // Патч 66.82 (пп.1,6,7): ДОЛГИ — постоянная кнопка трактирщика:
+                // вернуть долг или просить отсрочку (кнопка всегда видна —
+                // нижняя панель не перестраивается после взятия долга)
+                buttons.push({ label: t('\u{1FA99} Долги'), bg: 0x6a4a1a, hover: 0x7a5a2a, cb: () => this.showDebtsMenu(interior) });
                 // ПАТЧ 66.78 (приказы 4–5): СКУПЩИК — скупка ТОЛЬКО краденого,
                 // только по ночам и только в его ночи (3–5 ночей недели)
                 if (this.fenceHere) {
@@ -1693,11 +1705,15 @@ export class InteriorScene extends Phaser.Scene {
         items.forEach((item, i) => {
             const y = startY + i * 44;
             const canAfford = (player.dengas || 0) >= item.price;
-            createButton(this, width / 2, y, `${t(item.name)} — ${item.price} ${t('д.')} (${item.effect})`, () => {
+            const creditFood = CREDIT_FOOD_IDS.includes(item.id); // п.2: только хлеб и каша
+            const btnLabel = creditFood && !canAfford
+                ? `${t(item.name)} — ${item.price} ${t('д.')} (${item.effect}) · ${t('в долг')}`
+                : `${t(item.name)} — ${item.price} ${t('д.')} (${item.effect})`;
+            createButton(this, width / 2, y, btnLabel, () => {
                 if (!canAfford) {
-                    createDialog(this, t('Постоялый двор'), t('Не хватает денег!'), [
-                        { text: t('Понятно'), callback: () => {} },
-                    ], { singleton: false, portraitKey: 'portrait_tavernkeeper' });
+                    // Патч 66.82 (пп.2,4): денег нет — еда в ДОЛГ у трактирщика
+                    // (только хлеб и каша; хмельного в долг не дают)
+                    this.offerFoodOnCredit(item);
                     return;
                 }
                 // Раунд 66.16 (приказ 3): кулдаун еды 4 часа — при попытке
@@ -1740,6 +1756,144 @@ export class InteriorScene extends Phaser.Scene {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
             fontSize: 17, padding: { left: 20, right: 20, top: 10, bottom: 10 },
         }).setDepth(202);
+    }
+
+    /**
+     * Патч 66.82 (пп.2,4): ЕДА В ДОЛГ у трактирщика, когда денег не хватает.
+     * Только хлеб и каша (хмельного в долг не дают — «пропьёшь»); условия п.4:
+     * положительная репутация в деревне И у трактирщика, суммарный долг ≤ 100 д.,
+     * просрочек быть не должно. Долг создаётся с двумя сроками (п.6), репутация
+     * падает по сумме (п.5). Еда съедается сразу (канон 66.77).
+     */
+    offerFoodOnCredit(item) {
+        const player = this.registry.get('player');
+        if (!player) return;
+        if (!CREDIT_FOOD_IDS.includes(item.id)) {
+            createDialog(this, t('Постоялый двор'),
+                t('«Хмельного в долг не держу — пропьёшь. А вот хлеб да кашу — это дело другое».'),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: 'portrait_tavernkeeper' });
+            return;
+        }
+        const chk = canTakeDebt(this.registry, item.price);
+        if (!chk.ok) {
+            createDialog(this, t('Постоялый двор'), debtRefusalLine(chk.reason),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: 'portrait_tavernkeeper' });
+            return;
+        }
+        const dueLabel = previewDueLabelOf(this.registry);
+        createDialog(this, t('🪙 Долг у трактирщика'),
+            tf(t('«Денег нет — а есть хочешь. Что ж, хлеб да соль в долг даю, без лихвы: {0} д., вернуть до {1}. Запишу в столбец — деревня про такие дела узнает, молва подсядет».'), item.price, dueLabel)
+            + '\n\n' + tf(t('(Долг: {0} д. из {1} возможных. Два срока — выдача и возврат через неделю. Репутация в деревне и у трактирщика упадёт.)'), chk.totalDebt + item.price, DEBT_MAX_TOTAL),
+            [
+                { text: tf(t('🙏 В долг ({0} д.)'), item.price), callback: () => {
+                    const res = takeDebt(this.registry, { npcId: 'tavernkeeper', kind: 'food', amount: item.price });
+                    if (!res.ok) return;
+                    // Еда съедается сразу (канон 66.77) — как при обычной покупке
+                    player.HP = Math.min(player.HPmax, player.HP + item.heal);
+                    registerMeal(this.registry);
+                    tickTime(this.registry, MEAL_DURATION_MIN);
+                    this.registry.set('player', player);
+                    ActionLog.add(this.registry, tf(t('Взял «{0}» в долг и съел сразу (+{1} HP, час времени).'), t(item.name), item.heal));
+                    this.updateHUD();
+                    // ПАТЧ 66.82 (QA-фикс): убрать панель лавки ПОЛНОСТЬЮ —
+                    // подложка (d200), пергамент (d201) и кнопки (d202); раньше
+                    // уничтожались только кнопки — невидимая подложка оставалась
+                    // и блокировала ВСЕ клики по нижней панели интерьеров.
+                    this.children.list.filter(c => c.depth >= 200 && c.depth <= 205).forEach(c => c.destroy());
+                    this.showTavernShop(); // обновлённая лавка (баланс и долг)
+                } },
+                { text: t('Отказаться'), callback: () => {} },
+            ],
+            { singleton: false, portraitKey: 'portrait_tavernkeeper' });
+    }
+
+    /**
+     * Патч 66.82 (пп.3,4): НОЧЛЕГ В ДОЛГ у трактирщика, когда денег не хватает.
+     * Условия те же (п.4): репутация в деревне И у трактирщика положительная,
+     * суммарный долг ≤ 100 д., без просрочек. Срок — неделя (п.6).
+     */
+    offerLodgingOnCredit(interior, hours, sleepMinutes, cost) {
+        const player = this.registry.get('player');
+        if (!player) return;
+        const chk = canTakeDebt(this.registry, cost);
+        if (!chk.ok) {
+            createDialog(this, t('🛏 Отдых'), debtRefusalLine(chk.reason),
+                [{ text: t('Понятно'), callback: () => {} }],
+                { singleton: false, portraitKey: this.npcPortraitKey });
+            return;
+        }
+        const dueLabel = previewDueLabelOf(this.registry);
+        createDialog(this, t('🛏 Отдых'),
+            tf(t('Фёдор чешет затылок: «Пусто в мошне, а ночлег нужен... Ну, бери в долг, без лихвы: {0} д., вернуть до {1}. Запись в столбце — как без неё».'), cost, dueLabel)
+            + '\n\n' + tf(t('(Долг: {0} д. из {1} возможных. Репутация в деревне и у трактирщика упадёт.)'), chk.totalDebt + cost, DEBT_MAX_TOTAL),
+            [
+                { text: tf(t('🛏 Ночлег в долг ({0} д.)'), cost), callback: () => {
+                    const res = takeDebt(this.registry, { npcId: 'tavernkeeper', kind: 'lodging', amount: cost });
+                    if (!res.ok) return;
+                    this.restInTavern(interior, hours, sleepMinutes, { credit: true });
+                } },
+                { text: t('Отказаться'), callback: () => {} },
+            ],
+            { singleton: false, portraitKey: this.npcPortraitKey });
+    }
+
+    /**
+     * Патч 66.82 (пп.1,6,7): МЕНЮ ДОЛГОВ у трактирщика — возврат и отсрочка.
+     * Каждый долг — двумя сроками (выдача и возврат); просроченным — отсрочка
+     * через проверку разговорного навыка (не более 3 раз).
+     */
+    showDebtsMenu(interior) {
+        const player = this.registry.get('player');
+        if (!player) return;
+        closeAllSingletonDialogs(this);
+        const loans = loansOf(this.registry);
+        if (!loans.length) {
+            createDialog(this, t('🪙 Долги в столбце'),
+                t('«Столбец-то чист: долгов за тобой нет». (Вернул в срок — и молодец: такому и в долг дадут.)'),
+                [{ text: t('Закрыть'), callback: () => {} }],
+                { singleton: false, portraitKey: 'portrait_tavernkeeper' });
+            return;
+        }
+        const nowIdx = debtDayIndex(getTime(this.registry));
+        const buttons = [];
+        loans.forEach((loan) => {
+            const overdue = loanIsOverdue(loan, nowIdx);
+            const name = creditorNameOf(this.registry, loan.npcId);
+            if ((player.dengas || 0) >= loan.amount) {
+                buttons.push({ text: tf(t('🪙 Вернуть {0} д. ({1})'), loan.amount, debtDueLabelOf(loan)), callback: () => {
+                    chargeTradeTime(this.registry); // дело при деньгах — 30 минут (канон 66.78)
+                    repayLoan(this.registry, loan.id);
+                    this.registry.set('player', player);
+                    this.updateHUD();
+                    this.showDebtsMenu(interior); // обновлённый список
+                } });
+            } else if (!overdue) {
+                buttons.push({ text: tf(t('🪙 {0} д. — в мошне не хватает'), loan.amount), callback: () => {} });
+            }
+            if (overdue && loan.deferrals < DEBT_MAX_DEFERRALS) {
+                buttons.push({ text: tf(t('🎙 Просить отсрочку у {0} (Убеждение)'), name), callback: () => {
+                    tickTime(this.registry, 10); // разговор — 10 минут (канон торга)
+                    const res = attemptDeferral(this.registry, loan.id, player);
+                    this.registry.set('player', player);
+                    this.updateHUD();
+                    const head = res.ok
+                        ? tf(t('«Ну, погляжу я на тебя. Подожму до {0} — и чтоб к сроку!» (отсрочка №{1} из {2})'), debtDueLabelOf(loansOf(this.registry).find(l => l.id === loan.id) || loan), res.deferrals, DEBT_MAX_DEFERRALS)
+                        : tf(t('«Слов у тебя много, а долгу — ни полушки. Иди, достань серебро!» (бросок {0} против {1}%) — отсрочки нет.'), res.roll, res.skill);
+                    createDialog(this, t('🎙 Отсрочка долга'), head,
+                        [{ text: t('Дальше'), callback: () => this.showDebtsMenu(interior) }],
+                        { singleton: false, portraitKey: 'portrait_tavernkeeper' });
+                } });
+            }
+        });
+        buttons.push({ text: t('Закрыть'), callback: () => {} });
+        const overdueN = overdueLoansOf(this.registry).length;
+        const head = overdueN > 0
+            ? tf(t('Долгу всего {0} д., из них просрочено: {1}. Стражник у ворот спросит за просрочку, а новых долгов тут не дадут.'), totalDebtOf(this.registry), overdueN)
+            : tf(t('Долгу всего {0} д. За каждым — свой срок возврата: кто вовремя платит, тому и верят.'), totalDebtOf(this.registry));
+        createDialog(this, t('🪙 Долги в столбце'), head + '\n\n' + loans.map(l => debtFullLineOf(this.registry, l)).join('\n'),
+            buttons, { singleton: false, portraitKey: 'portrait_tavernkeeper' });
     }
 
     /**
@@ -2212,7 +2366,7 @@ export class InteriorScene extends Phaser.Scene {
      * лечение ПРОПОРЦИОНАЛЬНО: 8 ч = 100% (полное), меньше — по доле
      * restHealPct (2 ч = 25%, 4 ч = 50%, 6 ч = 75%).
      */
-    restInTavern(interior, hours, minutesOverride) {
+    restInTavern(interior, hours, minutesOverride, opts = {}) {
         if (this.busyDialog) return;
         const player = this.registry.get('player');
         const cost = Math.min(12, Math.max(4, hours * 2));
@@ -2233,18 +2387,18 @@ export class InteriorScene extends Phaser.Scene {
             return;
         }
 
-        if ((player.dengas || 0) < cost) {
-            createDialog(this, t('🛏 Отдых'),
-                tf(t('Не хватает денег: нужно {0} д., а у тебя {1}.'), cost, player.dengas || 0),
-                [{ text: t('Понятно'), callback: () => {} }],
-                { singleton: false, portraitKey: this.npcPortraitKey });
+        if (!opts.credit && (player.dengas || 0) < cost) {
+            // Патч 66.82 (пп.3,4): денег нет — НОЧЛЕГ В ДОЛГ (условия п.4);
+            // opts.credit — повторный вызов после взятия долга: монет не проверяем
+            this.offerLodgingOnCredit(interior, hours, sleepMinutes, cost);
             return;
         }
 
         this.busyDialog = true;
         this.cameras.main.fadeOut(600, 0, 0, 0);
         this.time.delayedCall(650, () => {
-            player.dengas = (player.dengas || 0) - cost;
+            const onCredit = !!opts.credit; // патч 66.82: ночлег В ДОЛГ — денег не списываем
+            if (!onCredit) player.dengas = (player.dengas || 0) - cost;
 
             // Время реально течёт (8 часов = 32 тика погони!);
             // приказ 4: после пробуждения — кулдаун сна на 12 часов
@@ -2269,7 +2423,9 @@ export class InteriorScene extends Phaser.Scene {
             this.registry.set('player', player);
             this.updateHUD();
             if (this.audioManager) this.audioManager.playSound('sfx_heal');
-            ActionLog.add(this.registry, tf(t('Отдохнул в таверне ({0} ч) за {1} д. {2}'), hours, cost, effectText));
+            ActionLog.add(this.registry, onCredit
+                ? tf(t('Отдохнул в таверне ({0} ч) В ДОЛГ ({1} д. — записаны в столбец). {2}'), hours, cost, effectText)
+                : tf(t('Отдохнул в таверне ({0} ч) за {1} д. {2}'), hours, cost, effectText));
             this.cameras.main.fadeIn(600, 0, 0, 0);
 
             const end = checkGameEnd(this.registry);

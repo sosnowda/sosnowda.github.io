@@ -61,6 +61,8 @@ import { hasChest, attemptBreakIn } from '../systems/burglary.js';
 import { crimeWarnedOnce, markCrimeWarned, CRIME_WARNING_TEXT } from '../systems/crime.js';
 // Патч 66.79 (пп.5,7,8): СТРАЖНИК У ВОРОТ — осмотр узла, вира по Судебнику, изгнание
 import { hasGuardBusiness, guardBill, guardInspection, guardLightSearchNeeded, guardLightSearch } from '../systems/justice.js';
+// Патч 66.82 (п.8): СТРАЖНИК И ВЗЫСКАНИЕ ДОЛГОВ — монеты и имущество (по 50% цены)
+import { guardDebtNeeded, debtGuardBill, debtGuardCollect } from '../systems/debts.js';
 // Патч 66.80 (пп.11-а/в): недельное «забывание» мелких обид + статус в HUD
 import { tickWeeklyRepForget, villageRepStatusSuffix } from '../systems/repBalance.js';
 // Раунд 66.70 (приказы 1–2): счётчик сытости в HUD (норма 2 трапезы/сутки)
@@ -1983,6 +1985,12 @@ export class VillageScene extends Phaser.Scene {
             this.showSuspiciousSearch();
             return;
         }
+        // Патч 66.82 (п.8): ПРОСРОЧЕННЫЙ ДОЛГ — стражник останавливает должника:
+        // монеты и имущество (по 50% базовой цены) идут в счёт уплаты.
+        if (guardDebtNeeded(this.registry)) {
+            this.showDebtGuard();
+            return;
+        }
         tickTime(this.registry, 60);
         ActionLog.add(this.registry, t('Игрок вышел за околицу.'));
         this.scene.start('Fork');
@@ -2052,6 +2060,52 @@ export class VillageScene extends Phaser.Scene {
             + shortNote,
             [{ text: t('Отойти от ворот'), callback: () => { this.busyDialog = false; } }],
             { singleton: false });
+    }
+
+    // ================================================================
+    // ПАТЧ 66.82 (п.8): СТРАЖНИК И ДОЛГИ. У просрочившего должника
+    // при выходе из деревни стражник описывает имущество: монеты идут
+    // в уплату первыми, движимое добро (не надетое) продаётся по 50%
+    // базовой цены; излишек возвращается. Надетое и оружие в руках
+    // не отбирают — «на человеке и последней рубахи не берут».
+    // ================================================================
+
+    /** Поп-ап взыскания долга (превью счёта). */
+    showDebtGuard() {
+        if (this.busyDialog) return;
+        const player = this.registry.get('player');
+        if (!player) return;
+        const bill = debtGuardBill(this.registry);
+        this.busyDialog = true;
+        const itemLines = bill.items.length > 0
+            ? t('Имущество к описи (цена продажи — половина базовой):') + '\n'
+                + bill.items.map(i => `  ${i.emoji} ${t(i.name)} ×${i.count} — ${i.sale50} ${t('д.')}`).join('\n')
+            : t('Помимо надетого — описывать нечего.');
+        createDialog(this, t('🛡 Стражник и долг'),
+            t('«Стой! За тобой долг — трактирщик Фёдор бьёт челом: срок вышел, а серебра нет. Судебник велит должнику добро описать. Плати, что есть!»')
+            + '\n\n' + tf(t('Долг: {0} д. Монет в мошне: {1} д. Продаёмого имущества на {2} д.'), bill.totalDebt, bill.coins, bill.saleTotal)
+            + '\n\n' + itemLines,
+            [{ text: t('Отдать долг, чем есть'), callback: () => { this.busyDialog = false; this.doDebtGuard(); } }],
+            { singleton: false, coverColor: 0x2a2438, coverAlpha: 0.72 });
+    }
+
+    /** Взыскание (списания) и итог. */
+    doDebtGuard() {
+        const res = debtGuardCollect(this.registry);
+        this.updateHUD();
+        const itemNote = res.takenItems.length > 0
+            ? t('Отобрано на продажу:') + ' ' + res.takenItems.map(i => `${i.emoji} ${t(i.name)} ×${i.count}`).join(', ')
+            : t('Имущества к описи не нашлось.');
+        const surplusNote = res.surplus > 0
+            ? '\n\n' + tf(t('Продано с излишком — остаток ({0} д.) вернули в мошну.'), res.surplus)
+            : '';
+        const stillNote = res.stillOwed > 0
+            ? '\n\n' + tf(t('Долгу ещё {0} д. — Фёдор ждёт, стражник запомнил.'), res.stillOwed)
+            : '\n\n' + t('Долг покрыт — до следующих времён.');
+        createDialog(this, t('🛡 Долг взыскан'),
+            tf(t('Монет в уплату: {0} д. {1}{2}{3}'), res.coinsTaken, itemNote, surplusNote, stillNote),
+            [{ text: t('Отойти от ворот'), callback: () => { this.busyDialog = false; } }],
+            { singleton: false, coverColor: 0x2a2438, coverAlpha: 0.72 });
     }
 
     // ================================================================

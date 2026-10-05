@@ -26,6 +26,9 @@ import { getQuiver, countInventoryArrows, loadQuiver, unloadQuiver, quiverWord, 
 import { createDialog } from '../utils/ui.js';
 // 66.33: буст пака в свитке персонажа (карта heroes.js по архетипу|полу)
 import { getBustFor } from '../data/heroes.js';
+// Патч 66.82 (п.1): ДОЛГИ — блок рядом с казной: кому, сколько, за что и срок
+import { loansOf, totalDebtOf, debtShortLineOf, loanIsOverdue, debtDayIndex } from '../systems/debts.js';
+import { getTime } from '../systems/TimeSystem.js';
 
 export class CharacterScene extends Phaser.Scene {
     constructor() {
@@ -207,6 +210,37 @@ export class CharacterScene extends Phaser.Scene {
             fontSize: '16px', color: '#c9a14a', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0, 0.5);
+
+        // Патч 66.82 (п.1): ДОЛГИ — рядом с казной. Строка на КАЖДЫЙ долг:
+        // кому, сколько, за что (еда/ночлег) и срок возврата; просрочка — красным.
+        const loans = loansOf(this.registry);
+        const debtTotal = totalDebtOf(this.registry);
+        this.add.text(colX, top + 332, t('📜 Долги:') + (loans.length ? ` ${debtTotal} ${t('д.')}` : ''), {
+            fontSize: '15px', color: loans.length ? '#d46a4a' : '#c9a14a', fontStyle: 'bold',
+            stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0, 0.5);
+        if (!loans.length) {
+            this.add.text(colX + 10, top + 354, t('Долгов нет.'), {
+                fontSize: '13px', color: RUS.textDim,
+                stroke: '#000', strokeThickness: 1,
+            }).setOrigin(0, 0.5);
+        } else {
+            const nowIdx = debtDayIndex(getTime(this.registry));
+            const shown = loans.slice(0, 6);
+            shown.forEach((loan, i) => {
+                const overdue = loanIsOverdue(loan, nowIdx);
+                this.add.text(colX + 10, top + 354 + i * 18, debtShortLineOf(this.registry, loan), {
+                    fontSize: '12px', color: overdue ? '#ff8040' : RUS.text,
+                    stroke: '#000', strokeThickness: 1,
+                }).setOrigin(0, 0.5);
+            });
+            if (loans.length > shown.length) {
+                this.add.text(colX + 10, top + 354 + shown.length * 18, tf(t('…и ещё {0} долгов.'), loans.length - shown.length), {
+                    fontSize: '12px', color: RUS.textDim,
+                    stroke: '#000', strokeThickness: 1,
+                }).setOrigin(0, 0.5);
+            }
+        }
 
         // 66.33: буст героя — портрет справа от колонки навыков (только широкие
         // экраны: при width<900 навыки доходят до правого края — наложение)
