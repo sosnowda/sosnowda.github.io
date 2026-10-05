@@ -838,14 +838,24 @@ export class BootScene extends Phaser.Scene {
             g.generateTexture(`deco_flower_${i}`, 10, 12);
         });
 
-        // ===== Травяная кочка (14×8): пучок тёмных травинок =====
+        // ===== Травяная кочка (18×11): пушистый веер травинок (66.86) =====
         g.clear();
+        // тёмное основание кочки
+        g.fillStyle(0x2a4d1f, 1);
+        g.fillEllipse(9, 9, 14, 5);
+        // травинки веером — тёмный ряд
         g.fillStyle(0x2f5a24, 1);
-        g.fillRect(1, 5, 2, 3); g.fillRect(4, 3, 2, 5); g.fillRect(7, 4, 2, 4);
-        g.fillRect(10, 2, 2, 6); g.fillRect(6, 6, 4, 2);
+        g.fillRect(2, 6, 1, 4); g.fillRect(5, 3, 1, 7); g.fillRect(8, 2, 1, 8);
+        g.fillRect(11, 3, 1, 7); g.fillRect(14, 5, 1, 5); g.fillRect(16, 7, 1, 3);
+        // средний ряд
         g.fillStyle(0x3f6b2f, 1);
-        g.fillRect(2, 6, 2, 2); g.fillRect(5, 4, 2, 4); g.fillRect(11, 3, 2, 5);
-        g.generateTexture('deco_grass_tuft', 14, 8);
+        g.fillRect(3, 8, 1, 3); g.fillRect(6, 5, 1, 6); g.fillRect(9, 4, 1, 7);
+        g.fillRect(12, 5, 1, 6); g.fillRect(15, 7, 1, 4);
+        // светлые верхушки
+        g.fillStyle(0x52803c, 1);
+        g.fillRect(5, 3, 1, 2); g.fillRect(8, 2, 1, 2); g.fillRect(11, 3, 1, 2);
+        g.fillRect(9, 4, 1, 2); g.fillRect(14, 5, 1, 2);
+        g.generateTexture('deco_grass_tuft', 18, 11);
 
         // ===== Раунд 15: снежная наметь (26×10) — зимняя стилизация травы =====
         g.clear();

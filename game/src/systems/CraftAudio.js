@@ -11,10 +11,11 @@
 //      из 3–6 ударов с интервалом 0.38–0.6 с, затем передышка 2.2–5.2 с;
 //      изредка — «шип» закалки в бочке с водой (высокочастотный шум 0.9 с).
 //      Пустая кузница (мастер и ученик погибли) МОЛЧИТ — громкость 0.
-//   2) ПРЯЛКА — дом ткачихи (weaver_house) и дом вдовы Марфы
-//      (villager_house_2, текстура int_deco_spinning): ровное жужжание
-//      веретена (bandpass ~850 Гц с «дыханием» LFO) + ритмичные щелчки
-//      колеса (~1.1 с: короткий bandpass-треск + низкий стук).
+//   2) ПРЯЛКА-КОПЫЛ — дом ткачихи (weaver_house) и дом вдовы Марфы
+//      (villager_house_2, текстура int_deco_spinning с 66.86 — прялка-копыл,
+//      НЕ самопрялка: колёса на Руси XV века ещё не было): ровный шорох
+//      сучения веретена (bandpass ~850 Гц с «дыханием» LFO) + редкие
+//      щелчки-подскоки веретена (нерегулярно ~1.9 с).
 //   3) ТАВЕРНА — постоялый двор (tavern): гул голосов ПОВЕРХ трека
 //      ambient_tavern.ogg (бурый шум band 420/750 Гц с медленными
 //      приливами-репликами) + редкий деревянный стук кружки о стол.
@@ -279,9 +280,9 @@ export function attachCraftAudio(scene, interiorId, { volume } = {}) {
         lfoGain.connect(whirr.gain.gain);
         lfo.start();
         craft.layers.push({ ...whirr, lfo });
-        // щелчок колеса за оборот
+        // щелчок-подскок веретена (нерегулярный, копыл — без колеса)
         craft.timers.push(scene.time.addEvent({
-            delay: 1100, loop: true,
+            delay: 1900, loop: true,
             callback: () => {
                 if (!craft.dead && !craft.scene.registry.get('settings.audio.sfxMuted')) {
                     playWheelTick(craft, craft.volume);

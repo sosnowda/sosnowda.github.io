@@ -16,8 +16,12 @@
 // узла), ткачество только для женского персонажа; бамп v117→v118 —
 // исходники game/src/** (loot.js/InteriorScene.js/questGenerator.js/i18n.js),
 // ассеты и vendor не тронуты — game-assets-v43 цел.
-const CACHE_NAME = 'chronicles-ruthenia-v120';
-const GAME_ASSETS_CACHE = 'game-assets-v44';
+// 66.86 (приказы владельца 1–4): бамп v120→v121 — HTML/JS лендинга
+// (галерея без 10-го кадра) и game/src (housesFX, BootScene-кочка,
+// CraftAudio); бамп game-assets-v44→v45 — 11 фасадов fb_*.png (дымницы),
+// 4 тайла травы + pasture, deco_spinning.png и 2 интерьера (копыл).
+const CACHE_NAME = 'chronicles-ruthenia-v121';
+const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {
     self.skipWaiting();

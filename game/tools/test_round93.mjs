@@ -80,45 +80,47 @@ function pngPixels(p) {
 const read = (rel) => readFileSync(join(game, rel), 'utf-8');
 
 // ============================================================
-console.log('— 1. Трубы Авдея/Прасковьи в стиле пака —');
-ok(existsSync(join(game, 'tools/make_chimneys_6637.py')), 'tools/make_chimneys_6637.py в репо');
+console.log('— 1. Дымницы Авдея/Прасковьи (66.86: каменные трубы стёрты) —');
+ok(existsSync(join(game, 'tools/make_chimneys_6637.py')), 'tools/make_chimneys_6637.py в репо (история 66.37)');
 ok(existsSync(join(game, 'tools/fb_originals_6637/fb_log_thatch.png')) &&
    existsSync(join(game, 'tools/fb_originals_6637/fb_thatch_big.png')),
    'оригиналы 66.36 сохранены в fb_originals_6637/');
+// 66.86 (актуализация): деревянные дымницы вместо каменных труб —
+// стирание труб r86_dymnitsa.py, новые точки дыма в housesFX.js
 ok(HOUSES_FX.fb_log_thatch.chimneys.length === 1 &&
-   HOUSES_FX.fb_log_thatch.chimneys[0][0] === 144 && HOUSES_FX.fb_log_thatch.chimneys[0][1] === 10,
-   'fb_log_thatch: жерло трубы (144,10)');
+   HOUSES_FX.fb_log_thatch.chimneys[0][0] === 146 && HOUSES_FX.fb_log_thatch.chimneys[0][1] === 64,
+   'fb_log_thatch: отверстие дымницы (146,64) — 66.86 (актуализация)');
 ok(HOUSES_FX.fb_thatch_big.chimneys.length === 1 &&
-   HOUSES_FX.fb_thatch_big.chimneys[0][0] === 178 && HOUSES_FX.fb_thatch_big.chimneys[0][1] === 34,
-   'fb_thatch_big: жерло трубы (178,34)');
-// жерло на текстуре — тёмный проём (камень колпака светлый вокруг)
+   HOUSES_FX.fb_thatch_big.chimneys[0][0] === 179 && HOUSES_FX.fb_thatch_big.chimneys[0][1] === 60,
+   'fb_thatch_big: отверстие дымницы (179,60) — 66.86 (актуализация)');
+// отверстие дымницы на текстуре — тёмный проём под деревянным козырьком
 {
     const t1 = pngPixels(join(game, 'assets/sprites/fb_log_thatch.png'));
     let dark = 0;
     for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
-        const [r, g, b, a] = t1.at(144 + dx, 10 + dy);
+        const [r, g, b, a] = t1.at(146 + dx, 64 + dy);
         if (a > 100 && r + g + b < 260) dark++;
     }
-    ok(dark >= 6, `fb_log_thatch: жерло тёмное (тёмных пикселей ${dark} ≥ 6)`);
+    ok(dark >= 6, `fb_log_thatch: отверстие дымницы тёмное (тёмных пикселей ${dark} ≥ 6)`);
     const t2 = pngPixels(join(game, 'assets/sprites/fb_thatch_big.png'));
     let dark2 = 0;
     for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
-        const [r, g, b, a] = t2.at(178 + dx, 34 + dy);
+        const [r, g, b, a] = t2.at(179 + dx, 60 + dy);
         if (a > 100 && r + g + b < 260) dark2++;
     }
-    ok(dark2 >= 6, `fb_thatch_big: жерло тёмное (тёмных пикселей ${dark2} ≥ 6)`);
-    // труба НЕ срезана краем текстуры: у fb_log_thatch камень над коньком (y=2..8)
+    ok(dark2 >= 6, `fb_thatch_big: отверстие дымницы тёмное (тёмных пикселей ${dark2} ≥ 6)`);
+    // 66.86: камня над коньком больше нет — на месте бывшей трубы кровля
     let stone = 0;
-    for (let y = 3; y <= 8; y++) { const [, , , a] = t1.at(135, y); if (a > 100) stone++; }
-    ok(stone >= 4, `fb_log_thatch: тело трубы выше конька цело (${stone}/6)`);
+    for (let y = 3; y <= 8; y++) { const [r, g, b, a] = t1.at(135, y); if (a > 100 && r + g + b > 300) stone++; }
+    ok(stone <= 2, `fb_log_thatch: каменной трубы нет — кровля/дымница (${stone} светлых ≤ 2)`);
 }
-// остальные дома по-прежнему с аутентичными трубами
+// остальные дома — по дымнице на дом (66.86)
 ok(HOUSES_FX.fb_elder.chimneys.length === 2 && HOUSES_FX.fb_inn.chimneys.length === 1 &&
    HOUSES_FX.fb_smithy.chimneys.length === 1 && HOUSES_FX.fb_manor.chimneys.length === 1 &&
    HOUSES_FX.fb_log_big.chimneys.length === 1 && HOUSES_FX.fb_log_flowers.chimneys.length === 2 &&
    HOUSES_FX.fb_thatch_small.chimneys.length === 1 && HOUSES_FX.fb_tudor_fl.chimneys.length === 1 &&
    HOUSES_FX.fb_tudor_sm.chimneys.length === 1 && HOUSES_FX.fb_church.chimneys.length === 0,
-   'остальные дома: аутентичные трубы пака без изменений (66.42: гончар×2)');
+   'остальные дома: дымницы без труб (66.86: гончар×2, церковь 0)');
 
 // ============================================================
 console.log('— 2. Мировые листы (assets/sprites/world/) —');
@@ -214,8 +216,8 @@ ok(apiary.includes('TS / 32 * 0.75 * WORLD_K') && apiary.includes('body.setSize(
 console.log('— 5. SW: site-cache v96, game-assets-v44 —');
 const sw = read('../sw.js');
 const swlog = read('../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v120';"), 'SW: site-cache v112 (актуализация 66.70)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v44';"), 'SW: game-assets-v44');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v121';"), 'SW: site-cache v121 (66.86 актуализация)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45 (66.86 актуализация)');
 ok(swlog.includes('v87 — итерация 66.37'), 'SW: журнал содержит запись v87');
 ok(swlog.includes('v86 — итерация 66.36'), 'SW: журнал хранит v86');
 

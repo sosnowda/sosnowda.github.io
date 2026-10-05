@@ -216,7 +216,8 @@ console.log('\n[5] ЛАЙТБОКС СО СТРЕЛКАМИ (п.5)');
     for (const page of ['../index.html', '../en/index.html']) {
         const html = read(page);
         const cards = (html.match(/screenshot-card/g) || []).length;
-        ok(cards === 10, `${page}: 10 карточек галереи (${cards}) — 66.85 добавил кадр тракта`);
+        ok(cards === 9, `${page}: 9 карточек галереи (${cards}) — 66.86 убрал кадр тракта`);
+        ok(!html.includes('10-tract'), `${page}: кадра тракта в галерее нет (66.86)`);
         ok(!html.includes('10-blacksmith'), `${page}: кузницы в галерее нет (регресс 66.5)`);
     }
 }
@@ -255,7 +256,7 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     const sw = read('../sw.js');
     // 66.47: записи журнала живут в docs/SW_CHANGELOG.md
     const swlog = read('../docs/SW_CHANGELOG.md');
-    ok(sw.includes("chronicles-ruthenia-v120"), 'SW: версия сайта актуальна');
+    ok(sw.includes("chronicles-ruthenia-v121"), 'SW: версия сайта актуальна (66.86 актуализация)');
     ok(sw.includes("game-assets-v44"), 'SW: кеш ассетов актуален');
     ok(swlog.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи

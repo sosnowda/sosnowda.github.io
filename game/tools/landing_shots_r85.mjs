@@ -19,7 +19,7 @@ const SHOTS = [
     ['priest', '07-priest-dialogue'],
     ['combat', '08-combat'],
     ['thief', '09-thief-encounter'],
-    ['tract', '10-tract'],          // 66.85: новая грунтовая дорога
+    // 66.86: 10-й кадр «Тракт» УДАЛЁН по приказу владельца — снова 9 кадров
 ];
 
 const browser = await chromium.launch({ headless: true, args: ['--mute-audio', '--disable-gpu', '--no-zygote', '--no-sandbox'] });
