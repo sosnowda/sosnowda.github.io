@@ -3206,10 +3206,8 @@ const EN_KEYS = {
     'Только что видел тут вора, у {0} — да как сорвался с места, так и был таков: ушёл в темноту, и след простыл. Куда подался — не ведаю.':
         'Just saw the thief here, at {0} — but he bolted and was gone: vanished into the dark without a trace. Where he went, I cannot say.',
     'Стражник поделился наводкой: {0}': 'The guard shared a tip: {0}',
-    // Обновлённая справка боя (раунд 66.28)
-    // 66.44 (приказ 12): справка без «Травы»/«Исследования» (кнопки сняты)
-    '⚔ Бой пошаговый (BRP d100): атака, уклон, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\nПосле первого удара противника видно мастерство его оружия.\n🏹 Стрельба из лука тратит стрелу из колчана (вместимость 10);\nпустой колчан — выстрела не будет, стрелы носят пачками по 10.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.':
-        '⚔ Combat is turn-based (BRP d100): attack, dodge, flee.\nSkill checks roll d100: success is within the skill,\ncrit — 1/20 of the skill (damage ×1.5), special — 1/5 (damage ×2).\n🛡 Armor absorbs the damage of every hit.\nAfter the enemy\'s first strike the mastery of his weapon is shown.\n🏹 A bow shot spends an arrow from the quiver (capacity 10);\nan empty quiver means no shot — arrows are carried in packs of 10.\n🎒 Changing the weapon in hand costs a turn; loading arrows too.',
+    // Обновлённая справка боя (раунд 66.28) — 66.89: заменена канонической
+    // (особый/крит по SRD, прицел, телеграф, мораль, строй) — см. блок 66.89
 
     // ===== Патч 66.80 (пп.11–12): БАЛАНС РЕПУТАЦИИ И ОПЛАТЫ (RU→EN)
     'Хозяин крякнул и почесал затылок: «Складно баешь, спорить нечего. Ладно, накину четверть — только работай так, как баешь!» Ставка +25% на день.': 'The master crouks and scratches his head: "You plead well, no arguing with that. Fine, I will add a quarter — only work as well as you plead!" Rate +25% for the day.',
@@ -3313,6 +3311,76 @@ const EN_KEYS = {
     'Долгу ещё {0} д. — Фёдор ждёт, стражник запомнил.': 'Still owing {0} d. — Fyodor waits, and the guard remembers.',
     'Долг покрыт — до следующих времён.': 'The debt is covered — until another time.',
     'Монет в уплату: {0} д. {1}{2}{3}': 'Coin paid: {0} d. {1}{2}{3}',
+
+    // ===== Итерация 66.89 (приказы владельца 1–19): канон боёв BRP SRD,
+    // SIZ возвращён, прицел/перехват/телеграф/мораль, медведь и стая волков =====
+
+    // --- Характеристика РАЗМЕР (SIZ) ---
+    'Размер': 'Size',
+    'Габариты и масса тела (влияет на бонус урона)': 'Bodily bulk and mass (affects the damage bonus)',
+
+    // --- Панель боя: новые действия ---
+    '🔭 Прицел (ход)': '🔭 Aim (a turn)',
+    '⚔ Перехват (ход)': '⚔ Intercept (a turn)',
+    'Прицелиться можно только с луком или самострелом в руках.': 'You can only aim with a bow or a crossbow in hand.',
+    'Руки заняты тетивой самострела — прицеливаться некогда! Заведи тетиву.': 'Your hands are busy with the crossbow cord — no time to aim! Crank the cord.',
+    'Ты выцеливаешь противника: следующий выстрел точнее (+25%). Потрачен ход!': 'You take careful aim: your next shot is truer (+25%). A turn is spent!',
+    'Прицеливался перед выстрелом (ход).': 'Took aim before shooting (a turn).',
+    'Ты перехватил замах {0}: оружие выбито в сторону — особый удар сорван! (бросок {1})': 'You intercepted {0}\'s wind-up: the weapon is beaten aside — the special strike is spoiled! (roll {1})',
+    'Перехват не удался (бросок {0}) — {1} всё ещё заносит удар!': 'The intercept failed (roll {0}) — {1} still raises the weapon!',
+
+    // --- Телеграфия особого удара (В-2) + уклон + окно контратаки (В-1) ---
+    '⚠ {0} заносит {1} — готовит ОСОБЫЙ удар! Уклонись (+20%), перехвати или прими удар.': '⚠ {0} raises {1} — a SPECIAL strike is coming! Dodge (+20%), intercept it, or take the blow.',
+    'Ты уходишь в оборонительную стойку, готовясь уклониться от ОСОБОГО удара (+20%).': 'You take a defensive stance, ready to slip the SPECIAL strike (+20%).',
+    'Ты уклонился от ОСОБОГО удара {0} ({1})!': 'You dodged {0}\'s SPECIAL strike ({1})!',
+    'Уклонение не спасло от занесённого удара {0} (бросок {1})...': 'The dodge did not save you from {0}\'s swinging blow (roll {1})...',
+    '{0} обрушивает ОСОБЫЙ удар ({1}): урон {2}{3} (бросок {4}){5}.': '{0} brings down a SPECIAL strike ({1}): {2} damage{3} (roll {4}){5}.',
+    '✚ Окно контратаки! Следующая атака точнее (+10%).': '✚ Counter-attack window! Your next attack is truer (+10%).',
+    'контратака +10%': 'counter +10%',
+
+    // --- Оружейные особенности (В-4) + цена уклонения врага (CB-3) ---
+    'стрельба в упор −10%': 'point-blank shot −10%',
+    'прицел +25%': 'aimed +25%',
+    'копьё против бездоспешного +10%': 'spear vs. unarmored +10%',
+    'Прицел сбит: оружие в руках сменилось.': 'The aim is broken: the weapon in hand has changed.',
+    '{0}: попадание! Урон {1}{2} (бросок {3}){4}{5}{6}.': '{0}: a hit! {1} damage{2} (roll {3}){4}{5}{6}.',
+    '{0} теснится в строю — не достать (в ближнем строю бьют двое).': '{0} jostles in the melee line — cannot reach (only two strike in a melee line).',
+    '{0} бьёт {1}: урон {2}{3} ({4}).': '{0} strikes {1}: {2} damage{3} (roll {4}).',
+    '{0} уклонился от удара ({1}) — промах в никуда утомляет (−1 ОУ).': '{0} dodged your strike ({1}) — a swing at empty air tires you (−1 FP).',
+    'Болт самострела не отбить уклоном — зверь или человек успевает лишь моргнуть.': 'A crossbow bolt cannot be dodged aside — beast or man has time only to blink.',
+    ' (дробящее сминает кольчугу: бронь −1)': ' (the crushing blow buckles the mail: armor −1)',
+
+    // --- Мораль по BRP (В-3): сдача и бегство ---
+    '⚔ {0} теряет волю к борьбе и обращается в бегство!': '⚔ {0} loses heart and turns to flee!',
+    '{0} обратился в бегство (мораль, бросок {1}).': '{0} fled the fight (morale, roll {1}).',
+    '⚔ {0} бросает оружие: «Пощади!» — сдался в плен.': '⚔ {0} drops the weapon: "Spare me!" — taken prisoner.',
+    '{0} сдался в плен (мораль, бросок {1}).': '{0} surrendered (morale, roll {1}).',
+    'сдался': 'surrendered',
+    'Житель бросил оружие и сдался — крови не пролито (перемирье 12 часов).': 'The villager dropped his weapon and gave up — no blood spilled (a 12-hour truce).',
+    'Житель сдался — крови не пролито.': 'The villager surrendered — no blood spilled.',
+    'Разбойник обратился в бегство — тракт свободен.': 'The bandit fled — the road is clear.',
+    'Разбойник сдался в плен — тракт свободен.': 'The bandit surrendered — the road is clear.',
+    'Бой с воровкой выигран: воровка обезоружена и взята живьём!': 'The fight with the thief-woman is won: she was disarmed and taken alive!',
+    'Бой с вором выигран: вор обезоружен и взят живьём!': 'The fight with the thief is won: he was disarmed and taken alive!',
+    'Воровка обезоружена и взята живьём! Икона у тебя!': 'The thief-woman is disarmed and taken alive! The icon is yours!',
+    'Вор обезоружен и взят живьём! Икона у тебя!': 'The thief is disarmed and taken alive! The icon is yours!',
+    '🏆 Воровка взята живьём!': '🏆 The thief-woman is taken alive!',
+    '🏆 Вор взят живьём!': '🏆 The thief is taken alive!',
+    'Ты связал обезоруженную воровку и забрал за пазухой чудотворную икону Богородицы — целую и невредимую. Живой лиходей дороже мёртвого: староста платит ПРЕМИЮ 20 денег за пленника, сданного на суд. Возвращайся в деревню!': 'You bound the disarmed thief-woman and tucked the wonder-working icon of the Mother of God — whole and unharmed — into your shirt. A living malefactor is worth more than a dead one: the starosta pays a BONUS of 20 dengas for a prisoner brought to judgment. Return to the village!',
+    'Ты связал обезоруженного вора и забрал за пазухой чудотворную икону Богородицы — целую и невредимую. Живой лиходей дороже мёртвого: староста платит ПРЕМИЮ 20 денег за пленника, сданного на суд. Возвращайся в деревню!': 'You bound the disarmed thief and tucked the wonder-working icon of the Mother of God — whole and unharmed — into your shirt. A living malefactor is worth more than a dead one: the starosta pays a BONUS of 20 dengas for a prisoner brought to judgment. Return to the village!',
+
+    // --- Медведь (п.15) и стая волков (п.16) ---
+    'Наткнулся на МЕДВЕДЯ в Густом лесу!': 'Stumbled upon a BEAR in the Deep Forest!',
+    'НАПАЛА СТАЯ ВОЛКОВ — {0} штуки! Приготовься!': 'A WOLF PACK ATTACKS — {0} beasts! Ready yourself!',
+    'Разделал тушу убитого МЕДВЕДЯ (Выживание {0}%: бросок {1}): +{2} сырое мясо и медвежья шкура — добыча всей жизни!': 'Butchered the slain BEAR (Survival {0}%: roll {1}): +{2} raw meat and the bear\'s pelt — the catch of a lifetime!',
+    'Обобрал тушу убитого МЕДВЕДЯ (Выживание {0}%: бросок {1}): лишь +{2} сырое мясо — шкура порвана в схватке.': 'Stripped the slain BEAR (Survival {0}%: roll {1}): only +{2} raw meat — the pelt was torn in the struggle.',
+    'Освежевал {0} туш убитых волков (Выживание {1}%): +{2} сырое мясо{3}{4}.': 'Skinned {0} slain wolves (Survival {1}%): +{2} raw meat{3}{4}.',
+    ', шкуры ×{0}': ', pelts ×{0}',
+    ' и ЦЕННЫЕ ТРОФЕИ — волчьи клыки ×{0}': ' and PRECIOUS TROPHIES — wolf fangs ×{0}',
+
+    // --- Справка боя 66.89 (канон SRD) ---
+    '⚔ Бой пошаговый (BRP d100): атака, уклон, прицел, перехват, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nособый успех — 1/5 (урон: максимум оружия + обычный бросок + бонус),\nкрит — 1/20 (максимум оружия + максимум бонуса, СКВОЗЬ броню).\n🛡 Доспех поглощает урон каждого попадания (крит — насквозь).\n💪 Бонус урона — BRP-канон (СИЛ+РАЗМ): от −1d6 до +2d6 по таблице SRD.\n⚠ Враг, бросивший особый/критический удар, заносит оружие ХОД —\nуклонись (+20% к уклонению), перехвати (сбей замах) или прими удар.\n✚ Успешное уклонение от медленного врага (ЛОВ ниже твоей) даёт\nокно контратаки: следующая атака +10%.\n🧠 Раненый враг (HP < 25%) проверяет МОЩь: сломится — сдаётся или бежит.\nВора можно взять живьём и отвести старосте — премия 20 денег.\n🏹 Лук/самострел тратят стрелу (колчан 10); стрельба в упор −10%,\nвыстрел с прицела +25%; болт самострела уклонением НЕ отбивается;\nперезарядка самострела — каждый второй ход.\n⚔ В ближнем строю бьют не более двоих одновременно (инициатива по ЛОВ).\nПосле первого удара противника видно мастерство его оружия.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.':
+        '⚔ Combat is turn-based (BRP d100): attack, dodge, aim, intercept, flee.\nSkill checks roll d100: success is within the skill,\nspecial success — 1/5 (damage: maximum weapon + a normal roll + bonus),\ncritical — 1/20 (maximum weapon + maximum bonus, THROUGH armor).\n🛡 Armor absorbs the damage of every hit (a critical pierces it).\n💪 Damage bonus — BRP canon (STR+SIZ): from −1d6 to +2d6 per the SRD table.\n⚠ An enemy who rolls a special/critical strike raises his weapon for a TURN —\ndodge (+20% to the dodge), intercept (beat the blow aside), or take it.\n✚ A successful dodge against a slower foe (lower DEX) opens\na counter-attack window: your next attack +10%.\n🧠 A wounded enemy (HP < 25%) tests POW: if broken, he surrenders or flees.\nA thief can be taken alive and handed to the starosta — a 20-denga bonus.\n🏹 Bow/crossbow shots spend arrows (quiver 10); point-blank shooting −10%,\nan aimed shot +25%; a crossbow bolt CANNOT be dodged aside;\nthe crossbow is reloaded every other turn.\n⚔ In a melee line no more than two foes strike at once (DEX initiative).\nAfter the enemy\'s first strike the mastery of his weapon is shown.\n🎒 Changing the weapon in hand costs a turn; loading arrows too.',
 };
 
 // ----- Месяцы / дни недели (сентябрьский стиль индексации) -----

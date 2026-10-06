@@ -32,9 +32,11 @@
 import { createCharacter, SKILLS } from '../systems/Character.js';
 import { applyAgingToStats, getAgeRow, COMBAT_SKILLS, WISDOM_SKILLS } from '../systems/AgeRules.js';
 
-// --- Характеристики: [СИЛ, ТЕЛ, МОЩ, ЛОВ, ХАР] (раунд 66.71: 5 штук по SRD) ---
-const S = (STR, CON, POW, DEX, CHA) =>
-    ({ STR, CON, POW, DEX, CHA });
+// --- Характеристики: [СИЛ, ТЕЛ, МОЩ, ЛОВ, ХАР] (66.71: без РАЗ; 66.89: —
+// опциональный 6-й аргумент SIZ «Размер» для телосложения; по умолчанию
+// 50 — обычный рост; кузнец/дровосек — крепче, дети — мельче) ---
+const S = (STR, CON, POW, DEX, CHA, SIZ = 50) =>
+    ({ STR, CON, SIZ, POW, DEX, CHA });
 
 // --- Навыки: только используемые жителем (ключ → значение, %) ---
 // Кузнец: рука от молота (Рукопашная 45 = его attackSkill в бою).
@@ -67,12 +69,12 @@ export const NPC_STAT_BLOCKS = {
     // === РЕМЕСЛЕННИКИ ===
     blacksmith: {
         name: 'Кузнец Данила',
-        stats: S(65, 60, 50, 45, 40),
+        stats: S(65, 60, 50, 45, 40, 65),  // 66.89: кузнец — крепкий (РАЗМ 65)
         skills: SMITH_SKILLS,
     },
     apprentice: {
         name: 'Ученик кузнеца',
-        stats: S(40, 45, 45, 50, 45),
+        stats: S(40, 45, 45, 50, 45, 45),  // 66.89: юн и мельче мастера
         skills: APPRENTICE_SKILLS,
     },
     peasant1: {
@@ -322,8 +324,9 @@ export function getNpcSkillResistance(npc, skillKey) {
  */
 export function createNpcCharacter(npc) {
     const block = (npc && NPC_STAT_BLOCKS[npc.id]) || null;
-    // Раунд 66.71: 5 характеристик (fallback для случайных незнакомцев)
-    const stats = block ? block.stats : { STR: 50, CON: 50, POW: 50, DEX: 50, CHA: 45 };
+    // Раунд 66.71: 5 характеристик (fallback для случайных незнакомцев);
+    // 66.89: добавлен РАЗМЕР (обычный рост)
+    const stats = block ? block.stats : { STR: 50, CON: 50, SIZ: 50, POW: 50, DEX: 50, CHA: 45 };
     const usable = block ? Object.keys(block.skills) : ['brawl', 'dodge', 'spot', 'listen'];
     // Детерминированные значения навыков — только из блока жителя
     const overrides = {};

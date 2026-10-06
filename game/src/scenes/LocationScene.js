@@ -13,7 +13,7 @@ import {
 } from '../data/thief.js';
 import { onLocationVisited, getActiveQuests, getBlessedSkill } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
-import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
+import { createButtonRow, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
@@ -76,6 +76,20 @@ import { WORLD_K } from '../systems/WorldLook.js';
 
 // Раунд 27 (п.1): прозрачные деревья без фона вместо квадратных тайлов
 const TREE_KEYS = ['deco_tree_0', 'deco_tree_1', 'deco_tree_2', 'deco_tree_3', 'deco_tree_4', 'deco_pine_0', 'deco_pine_1'];
+
+// Итерация 66.89 (приказ владельца 15): МЕДВЕДЬ В ГУСТОМ ЛЕСУ.
+// Редкий шанс наткнуться на хозяина чащи при входе в «Густой лес».
+// Шанс и «раз в сутки»: чтобы повторные входы-выходы не превратили
+// лес в медвежью ловушку (и медведь не пачкой), и чтобы встреча
+// оставалась событием, а не фоном.
+const BEAR_ENCOUNTER_CHANCE = 0.09;   // ~1 из 11 входов в чащу
+const BEAR_LOCATIONS = ['forest'];    // «Густой лес» — глубина цепочки леса
+
+/** Итерация 66.89: медведь уже встречался сегодня? */
+function bearSeenToday(registry) {
+    const q = registry.get('quest') || {};
+    return q.bearDay === dayKeyOf(registry);
+}
 
 const LOCATION_BG = {
     forest: 0x1a2a1a,
@@ -318,6 +332,23 @@ export class LocationScene extends Phaser.Scene {
             this.time.delayedCall(400, () => presentThiefEncounter(this, this.locationId));
         }
 
+        // ----- Итерация 66.89 (приказ владельца 15): МЕДВЕДЬ В ГУСТОМ ЛЕСУ.
+        // Редкий шанс наткнуться на хозяина чащи при входе (раз в сутки).
+        // Проверка — ПОСЛЕ поп-апов наводки: медведь перебивает их боем —
+        // так и должно быть: не до расспросов, когда из чащи выходит зверь. -----
+        if (BEAR_LOCATIONS.includes(this.locationId)
+            && !bearSeenToday(this.registry)
+            && Math.random() < BEAR_ENCOUNTER_CHANCE) {
+            const q = this.registry.get('quest') || {};
+            q.bearDay = dayKeyOf(this.registry);   // не чаще раза в сутки
+            this.registry.set('quest', q);
+            ActionLog.add(this.registry, t('Наткнулся на МЕДВЕДЯ в Густом лесу!'));
+            // Патч 66.73: схватка со зверем — охота/бой (голод ×2)
+            tickTime(this.registry, 5, 'hunt');
+            this.time.delayedCall(500, () => this.scene.start('Combat', { enemyKeys: ['bear'], fromScene: 'Location', fromLocation: this.locationId }));
+            return;   // сцена уходит в бой — остальную раскладку не строим
+        }
+
         // П.11,16: Названия кнопок зависят от локации.
         // Для Реки: «Поиск» и «Выход». Для трактов: «Осмотр» и «Выход».
         // Для остальных: «Искать следы» и «Назад к развилке».
@@ -344,93 +375,85 @@ export class LocationScene extends Phaser.Scene {
             exitLabel = (isRiver || isRoad) ? t('🚪 Выход') : t('◀ Назад к развилке');
         }
 
-        // ----- Кнопка поиска/осмотра (только пока активна погоня и НЕТ следов:
-        // раунд 30 — где вор прошёл, там следы проверяются по одному кликом) -----
+        // ----- Итерация 66.89 (приказ владельца 1): КНОПКИ АКТИВНОСТЕЙ —
+        // ОДНОЙ строкой у нижнего края экрана (раньше стекались вертикально
+        // по центру и наезжали друг на друга). Порядок в ряду: поиск /
+        // глубже / рыбалка / работа / торг / выход (выход — последним). -----
+        // Кнопка поиска/осмотра — только пока активна погоня и НЕТ следов:
+        // (раунд 30 — где вор прошёл, там следы проверяются по одному кликом)
         const hasSearchBtn = chaseActive && !alreadySearched && !hasFootprints;
+        const rowButtons = [];
         if (hasSearchBtn) {
-            createButton(this, width / 2, height - 100, tf(t('{0} (проверка Внимательности)'), t(searchLabel)), () => {
-                this.doSearch();
-            }, {
-                backgroundColor: RUS.accent, hoverColor: RUS.accentLight, textColor: RUS.text,
-                fontSize: 18, padding: { left: 24, right: 24, top: 14, bottom: 14 },
-                cornerRadius: 8,
-            }).setScrollFactor(0).setDepth(50);
+            rowButtons.push({
+                text: tf(t('{0} (проверка Внимательности)'), t(searchLabel)),
+                cb: () => this.doSearch(),
+                bg: RUS.accent, hover: RUS.accentLight, textColor: RUS.text,
+                fontSize: 17, padding: { left: 20, right: 20, top: 12, bottom: 12 },
+            });
         }
-
-        // ----- Кнопка «глубже в лес» — только в лесной цепочке (п.23) -----
         if (deeperLoc) {
-            const hasSearch = hasSearchBtn;
-            const deeperY = hasSearch ? height - 152 : height - 100;
-            createButton(this, width / 2, deeperY, tf(t('🌿 Глубже в лес: {0} →'), t(deeperLoc.name)), () => {
-                // Патч 66.73: переход по карте — перемещение (голод ×1.5, −1 ОУ форс-марша)
-                tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk');   // переход = 1 игровой час
-                spendFatigue(this.registry, 1);
-                ActionLog.add(this.registry, tf(t('Игрок углубился в лес: «{0}».'), t(deeperLoc.name)));
-                onLocationVisited(this.registry, deeperId);
-                this.scene.restart({ locationId: deeperId, from: this.from });
-            }, {
-                backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, textColor: '#c9e0b0',
-                fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
-                cornerRadius: 8,
-            }).setScrollFactor(0).setDepth(50);
+            rowButtons.push({
+                text: tf(t('🌿 Глубже в лес: {0} →'), t(deeperLoc.name)),
+                cb: () => {
+                    // Патч 66.73: переход по карте — перемещение (голод ×1.5, −1 ОУ форс-марша)
+                    tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk');   // переход = 1 игровой час
+                    spendFatigue(this.registry, 1);
+                    ActionLog.add(this.registry, tf(t('Игрок углубился в лес: «{0}».'), t(deeperLoc.name)));
+                    onLocationVisited(this.registry, deeperId);
+                    this.scene.restart({ locationId: deeperId, from: this.from });
+                },
+                bg: 0x2e4a2e, hover: 0x3c5c3c, textColor: '#c9e0b0',
+                fontSize: 15, padding: { left: 18, right: 18, top: 11, bottom: 11 },
+            });
         }
-
         // ----- Кнопка рыбалки на Реке (раунд 36: пруд в деревне удалён,
         // рыба ловится на броду через реку — как в XV веке) -----
         if (isRiver) {
-            const fishY = (chaseActive && !alreadySearched && !hasFootprints) ? height - 150 : height - 100;
-            createButton(this, width / 2, fishY, t('🎣 Рыбалка'), () => {
-                this.goFishing();
-            }, {
-                backgroundColor: 0x2a4a5a, hoverColor: 0x3a5a6a, textColor: RUS.text,
-                fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
-                cornerRadius: 8,
-            }).setScrollFactor(0).setDepth(50);
+            rowButtons.push({
+                text: t('🎣 Рыбалка'), cb: () => this.goFishing(),
+                bg: 0x2a4a5a, hover: 0x3a5a6a, textColor: RUS.text,
+                fontSize: 15, padding: { left: 18, right: 18, top: 11, bottom: 11 },
+            });
         }
-
         // ----- ПАТЧ 66.76 (приказ 1): МЕЛЬНИЦА — РАБОТА У МЕЛЬНИКА.
         // Мельничное дело: 1 час, оплата ТОЛЬКО деньгами (зерно из наград
         // исключено приказом владельца). Кнопка — как рыбалка на Реке. -----
         if (this.locationId === 'mill') {
-            const millY = (chaseActive && !alreadySearched && !hasFootprints) ? height - 150 : height - 100;
-            createButton(this, width / 2, millY, t('⚙ Работать у мельника (1 час)'), () => {
-                this.workAtMill();
-            }, {
-                backgroundColor: 0x5a4a2a, hoverColor: 0x6a5a3a, textColor: RUS.text,
-                fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
-                cornerRadius: 8,
-            }).setScrollFactor(0).setDepth(50);
+            rowButtons.push({
+                text: t('⚙ Работать у мельника (1 час)'), cb: () => this.workAtMill(),
+                bg: 0x5a4a2a, hover: 0x6a5a3a, textColor: RUS.text,
+                fontSize: 15, padding: { left: 18, right: 18, top: 11, bottom: 11 },
+            });
             // Патч 66.80 (п.12-в): торг о ставке с мельником (раз в сутки)
             if (canWageDealToday(this.registry)) {
-                createButton(this, width / 2, millY - 52, t('🤝 О слове (Убеждение)'), () => {
-                    this.wageDealAtMill();
-                }, {
-                    backgroundColor: 0x2a4a5a, hoverColor: 0x3a5a6a, textColor: RUS.text,
-                    fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
-                    cornerRadius: 8,
-                }).setScrollFactor(0).setDepth(50);
+                rowButtons.push({
+                    text: t('🤝 О слове (Убеждение)'), cb: () => this.wageDealAtMill(),
+                    bg: 0x2a4a5a, hover: 0x3a5a6a, textColor: RUS.text,
+                    fontSize: 15, padding: { left: 18, right: 18, top: 11, bottom: 11 },
+                });
             }
         }
-
         // ----- Кнопка выхода: из леса — НАЗАД ПО ЦЕПОЧКЕ (п.23);
-        // с опушки и из обычных локаций — на околицу/разилку -----
-        createButton(this, width / 2, height - 50, exitLabel, () => {
-            // Раунд 32 (п.5): любое перемещение по карте — РОВНО 1 игровой час
-            // Патч 66.73: переход по карте — перемещение (голод ×1.5, −1 ОУ форс-марша)
-            tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk');
-            spendFatigue(this.registry, 1);
-            if (inForest && shallowerLoc) {
-                ActionLog.add(this.registry, tf(t('Игрок вышел из леса на «{0}».'), t(shallowerLoc.name)));
-                this.scene.restart({ locationId: shallowerId, from: this.from });
-            } else {
-                ActionLog.add(this.registry, tf(t('Игрок покинул локацию «{0}».'), t(loc.name)));
-                this.scene.start(this.from);
-            }
-        }, {
-            backgroundColor: 0x4a3520, hoverColor: 0x5a4530, textColor: RUS.text,
-            fontSize: 16, padding: { left: 20, right: 20, top: 12, bottom: 12 },
-            cornerRadius: 8,
-        }).setScrollFactor(0).setDepth(50);
+        // с опушки и из обычных локаций — на околицу/разилку (последняя в ряду) -----
+        rowButtons.push({
+            text: exitLabel,
+            cb: () => {
+                // Раунд 32 (п.5): любое перемещение по карте — РОВНО 1 игровой час
+                // Патч 66.73: переход по карте — перемещение (голод ×1.5, −1 ОУ форс-марша)
+                tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk');
+                spendFatigue(this.registry, 1);
+                if (inForest && shallowerLoc) {
+                    ActionLog.add(this.registry, tf(t('Игрок вышел из леса на «{0}».'), t(shallowerLoc.name)));
+                    this.scene.restart({ locationId: shallowerId, from: this.from });
+                } else {
+                    ActionLog.add(this.registry, tf(t('Игрок покинул локацию «{0}».'), t(loc.name)));
+                    this.scene.start(this.from);
+                }
+            },
+            bg: 0x4a3520, hover: 0x5a4530, textColor: RUS.text,
+            fontSize: 15, padding: { left: 18, right: 18, top: 11, bottom: 11 },
+        });
+        createButtonRow(this, rowButtons, { depth: 50, marginBottom: 8, gap: 12 });
 
         // Раунд 40 (заявка п.1): [📜 Персонаж] / [🎒 Инвентарь] вверху
         // справа — ВО ВСЕХ локациях, единый стиль с деревней/лесом/пасекой

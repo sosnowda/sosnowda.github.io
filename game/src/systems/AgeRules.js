@@ -41,8 +41,9 @@ export const AGE_DEFAULT = 25; // в расцвете — старт без шт
 export const AGE_ROWS = [
     {
         min: 15, max: 17, group: 'отрок', groupF: 'отроковица',
-        // Раунд 66.71: РАЗ изъят (5 характеристик) — юниорская мелкость не моделируется
-        stats: { STR: -5, DEX: +5 },
+        // 66.89: SIZ возвращён — юниорская мелкость восстановлена по канону
+        // (до 66.71 у отрока было «−5 РАЗМ»): тело ещё растёт — меньше размер.
+        stats: { STR: -5, SIZ: -5, DEX: +5 },
         combatMod: -5, dodgeMod: +5, wisdomMod: 0,
     },
     {
@@ -93,9 +94,9 @@ export const AGE_ROWS = [
     },
 ];
 
-// Раунд 66.71: 5 характеристик SRD; МОЩЬ (бывш. «Сила воли»), ХАРИЗМА (бывш. «Обаяние»)
+// 66.89: SIZ («Размер») возвращён — 6 характеристик; порядок канонический SRD
 const STAT_NAMES = {
-    STR: 'Сила', CON: 'Телосложение', POW: 'Мощь', DEX: 'Ловкость', CHA: 'Харизма',
+    STR: 'Сила', CON: 'Телосложение', SIZ: 'Размер', POW: 'Мощь', DEX: 'Ловкость', CHA: 'Харизма',
 };
 
 // Боевые и «умные» навыки игры (Character.js SKILLS)
@@ -172,13 +173,14 @@ export function applyAgeModifiers(chr) {
         }
     });
 
-    // 2. Пересчёт производных BRP (CON/DEX могли измениться)
-    // Раунд 66.71: канон (CON+SIZ)/10 → (CON+STR)/10; MP удалён (приказ 7);
-    // DB — СИЛ+ТЕЛ (таблица та же); Build — от ТЕЛ; MOV без РАЗ.
-    chr.HPmax = Math.ceil((chr.CON + chr.STR) / 10);
+    // 2. Пересчёт производных BRP (CON/DEX/SIZ могли измениться)
+    // 66.89 (приказ владельца 3/8): канон SRD восстановлен с возвратом SIZ —
+    // HP=(CON+SIZ)/10, DB=(STR+SIZ) по таблице SRD (см. BRPEngine),
+    // Build — от РАЗМЕРА. MP удалён (приказ 7); MOV без РАЗ не менялся.
+    chr.HPmax = Math.ceil((chr.CON + chr.SIZ) / 10);
     chr.HP = chr.HPmax;
-    chr.DB = damageBonus(chr.STR, chr.CON);
-    chr.Build = chr.CON >= 65 ? 1 : (chr.CON <= 35 ? -1 : 0);
+    chr.DB = damageBonus(chr.STR, chr.SIZ);
+    chr.Build = chr.SIZ >= 65 ? 1 : (chr.SIZ <= 35 ? -1 : 0);
     chr.MOV = 10 + (chr.DEX >= 60 ? 1 : 0);
 
     return applied;
@@ -199,6 +201,8 @@ export function applyAgingToStats(baseStats, age) {
         const mod = row.stats[k] || 0;
         out[k] = Math.max(3, Math.min(99, v + mod));
     });
+    // 66.89: у старых наборов без РАЗМЕРА — обычный рост (SIZ 50) с учётом возраста
+    if (out.SIZ == null) out.SIZ = Math.max(3, Math.min(99, 50 + (row.stats.SIZ || 0)));
     return out;
 }
 

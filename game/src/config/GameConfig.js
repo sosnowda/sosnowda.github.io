@@ -14,7 +14,7 @@ export const WEAPONS = {
     palitsa: { name: 'Палица',          skill: 'blunt', dice: { min: 1, max: 8 }, bonus: 0 },
     mace:    { name: 'Булава',          skill: 'blunt', dice: { min: 1, max: 6 }, bonus: 1 },
     flail:   { name: 'Кистень',         skill: 'blunt', dice: { min: 1, max: 8 }, bonus: 1 },
-    knife:   { name: 'Нож',             skill: 'brawl', dice: { min: 1, max: 4 }, bonus: 1 },
+    knife:   { name: 'Нож',             skill: 'brawl', dice: { min: 1, max: 4 }, bonus: 2 },
     spear:   { name: 'Копьё',           skill: 'spear', dice: { min: 1, max: 8 }, bonus: 0 },
     sword:   { name: 'Меч',             skill: 'sword', dice: { min: 1, max: 8 }, bonus: 1 },
     axe:     { name: 'Боевой топор',    skill: 'brawl', dice: { min: 1, max: 8 }, bonus: 1 },

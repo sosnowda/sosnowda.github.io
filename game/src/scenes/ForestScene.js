@@ -1321,10 +1321,20 @@ export class ForestScene extends Phaser.Scene {
         this.busyDialog = true;
         wolf.cooldownUntil = this.time.now + 4000;
         this.registry.set('forestReturnPos', { x: this.playerObj.x, y: this.playerObj.y });
-        ActionLog.add(this.registry, t('Волк напал в Тёмном лесу!'));
-        // Патч 66.73: схватка с волком — охота/бой (голод ×2)
+        // Итерация 66.89 (приказ владельца 16): СТАЯ ВОЛКОВ — нападает не один
+        // волк, а 1–3 одновременно (вес: один 45%, пара 35%, тройка 20%).
+        // Волчья стая бьёт согласованно — одиночки подбивают к стае.
+        const packRoll = Math.random();
+        const packSize = packRoll < 0.45 ? 1 : (packRoll < 0.80 ? 2 : 3);
+        const enemyKeys = Array.from({ length: packSize }, () => 'wolf');
+        if (packSize === 1) {
+            ActionLog.add(this.registry, t('Волк напал в Тёмном лесу!'));
+        } else {
+            ActionLog.add(this.registry, tf(t('НАПАЛА СТАЯ ВОЛКОВ — {0} штуки! Приготовься!'), packSize));
+        }
+        // Патч 66.73: схватка с волками — охота/бой (голод ×2)
         tickTime(this.registry, 5, 'hunt');
-        this.scene.start('Combat', { enemyKeys: ['wolf'], fromScene: 'Forest' });
+        this.scene.start('Combat', { enemyKeys, fromScene: 'Forest' });
     }
 
     leaveForest() {

@@ -7,7 +7,7 @@
 import { RUS } from '../config/RusTheme.js';
 import { getHuntState, checkGameEnd, hintFreshness } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
-import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
+import { createButtonRow, createDialog, bindRestartOnResize, addSceneMenuButtons } from '../utils/ui.js';
 // Раунд 32 (пп.14,15): F1 — «Информация по игре» со соотношением времени 1:30
 import { timeRatioInfoLine } from '../systems/WorldClock.js';
 import AudioManager from '../systems/AudioManager.js';
@@ -239,6 +239,8 @@ export class ForkScene extends Phaser.Scene {
         }
 
         // ===== НИЖНЯЯ ПАНЕЛЬ: прогулка + возврат в деревню + подсказка цепочки =====
+        // Итерация 66.89 (приказ владельца 1): кнопки — ОДНОЙ строкой у нижнего края
+        // (раньше — две кнопки по жёстким смещениям ±140 от центра).
         if (!lowH) {
             this.add.text(width / 2, height - bottomH + 4, t(FOREST_CHAIN_HINT), {
                 fontSize: '11px', color: '#8fae7a',
@@ -248,45 +250,54 @@ export class ForkScene extends Phaser.Scene {
                 wordWrap: { width: width - 60 },
             }).setOrigin(0.5, 0).setDepth(50).setAlpha(0.9);
 
-            createButton(this, width / 2 - 140, height - 30, t('🌲 Тёмный лес — прогулка'), () => {
-                ActionLog.add(this.registry, t('Игрок отправился гулять в Тёмный лес.'));
-                // Патч 66.73: дорога — перемещение (голод ×1.5, −1 ОУ форс-марша)
-                tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk'); // раунд 32 (п.5): ровно 1 час
-                spendFatigue(this.registry, 1);
-                this.scene.start('Forest', { from: 'Fork' });
-            }, {
-                backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, pressColor: 0x1e321e,
-                textColor: '#c9e0b0',
-                fontSize: 13, padding: { left: 14, right: 14, top: 7, bottom: 7 },
-                cornerRadius: 6,
-            });
-            createButton(this, width / 2 + 140, height - 30, t('◀ Вернуться в деревню'), () => {
-                // Патч 66.73: дорога — перемещение (голод ×1.5, −1 ОУ форс-марша)
-                tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk'); // раунд 32 (п.5): ровно 1 час
-                spendFatigue(this.registry, 1);
-                this.scene.start('Village');
-            }, {
-                backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
-                fontSize: 13, padding: { left: 14, right: 14, top: 7, bottom: 7 },
-                cornerRadius: 6,
-            });
+            createButtonRow(this, [
+                {
+                    text: t('🌲 Тёмный лес — прогулка'),
+                    cb: () => {
+                        ActionLog.add(this.registry, t('Игрок отправился гулять в Тёмный лес.'));
+                        // Патч 66.73: дорога — перемещение (голод ×1.5, −1 ОУ форс-марша)
+                        tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk'); // раунд 32 (п.5): ровно 1 час
+                        spendFatigue(this.registry, 1);
+                        this.scene.start('Forest', { from: 'Fork' });
+                    },
+                    bg: 0x2e4a2e, hover: 0x3c5c3c, textColor: '#c9e0b0',
+                    fontSize: 14, padding: { left: 16, right: 16, top: 9, bottom: 9 },
+                },
+                {
+                    text: t('◀ Вернуться в деревню'),
+                    cb: () => {
+                        // Патч 66.73: дорога — перемещение (голод ×1.5, −1 ОУ форс-марша)
+                        tickTime(this.registry, MAP_TRAVEL_MINUTES, 'walk'); // раунд 32 (п.5): ровно 1 час
+                        spendFatigue(this.registry, 1);
+                        this.scene.start('Village');
+                    },
+                    bg: 0x5a4030, hover: 0x6a5040, textColor: RUS.text,
+                    fontSize: 14, padding: { left: 16, right: 16, top: 9, bottom: 9 },
+                },
+            ], { depth: 50, marginBottom: 8, gap: 12 });
         } else {
-            // Низкий экран: две компактные кнопки в одну строку
-            createButton(this, width / 2 - 90, height - 24, t('🌲 Тёмный лес'), () => {
-                ActionLog.add(this.registry, t('Игрок отправился гулять в Тёмный лес.'));
-                tickTime(this.registry, MAP_TRAVEL_MINUTES);
-                this.scene.start('Forest', { from: 'Fork' });
-            }, {
-                backgroundColor: 0x2e4a2e, hoverColor: 0x3c5c3c, pressColor: 0x1e321e,
-                textColor: '#c9e0b0', fontSize: 12, padding: { left: 10, right: 10, top: 5, bottom: 5 }, cornerRadius: 6,
-            });
-            createButton(this, width / 2 + 90, height - 24, t('◀ В деревню'), () => {
-                tickTime(this.registry, MAP_TRAVEL_MINUTES);
-                this.scene.start('Village');
-            }, {
-                backgroundColor: 0x5a4030, hoverColor: 0x6a5040, textColor: RUS.text,
-                fontSize: 12, padding: { left: 10, right: 10, top: 5, bottom: 5 }, cornerRadius: 6,
-            });
+            // Низкий экран: те же две кнопки одним рядом у края
+            createButtonRow(this, [
+                {
+                    text: t('🌲 Тёмный лес'),
+                    cb: () => {
+                        ActionLog.add(this.registry, t('Игрок отправился гулять в Тёмный лес.'));
+                        tickTime(this.registry, MAP_TRAVEL_MINUTES);
+                        this.scene.start('Forest', { from: 'Fork' });
+                    },
+                    bg: 0x2e4a2e, hover: 0x3c5c3c, textColor: '#c9e0b0',
+                    fontSize: 12, padding: { left: 10, right: 10, top: 6, bottom: 6 },
+                },
+                {
+                    text: t('◀ В деревню'),
+                    cb: () => {
+                        tickTime(this.registry, MAP_TRAVEL_MINUTES);
+                        this.scene.start('Village');
+                    },
+                    bg: 0x5a4030, hover: 0x6a5040, textColor: RUS.text,
+                    fontSize: 12, padding: { left: 10, right: 10, top: 6, bottom: 6 },
+                },
+            ], { depth: 50, marginBottom: 5, gap: 10 });
         }
 
         // ----- Overlay дня/ночи -----

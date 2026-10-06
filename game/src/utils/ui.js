@@ -526,6 +526,115 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
 }
 
 // ============================================================
+// Итерация 66.89 (приказ владельца 1): РЯД КНОПОК АКТИВНОСТЕЙ.
+// Все кнопки активностей локации — ОДНОЙ строкой у нижнего края экрана
+// (раньше стекались вертикально по центру и наезжали друг на друга).
+// Поведение:
+//   • ряд центрируется и прижимается к нижнему краю (отступ marginBottom);
+//   • при узком окне кнопки равномерно сжимаются (setScale) до 0.6;
+//   • если не влезают даже сжатыми и maxRows=2 — переносятся на второй ряд
+//     (боевая панель на телефоне); для локаций maxRows=1 — только сжатие;
+//   • ряд сам перестраивается при ресайзе (onSceneResize) и по вызову
+//     relayout() — после смены подписи кнопки или её видимости.
+// buttons: [{ text, cb, bg, hover, textColor, fontSize, padding, visible }]
+// opts: { gap, marginX, marginBottom, depth, maxRows }
+// Возвращает { buttons: [контейнеры…], relayout() }.
+// ============================================================
+export function createButtonRow(scene, buttons, opts = {}) {
+    const gapBase = opts.gap != null ? opts.gap : 14;
+    const marginX = opts.marginX != null ? opts.marginX : 8;
+    const marginBottom = opts.marginBottom != null ? opts.marginBottom : 6;
+    const depth = opts.depth != null ? opts.depth : 50;
+    const maxRows = opts.maxRows != null ? opts.maxRows : 1;
+    const MIN_SCALE = 0.6;
+
+    const entries = buttons.map((b) => {
+        const btn = createButton(scene, -2000, -2000, b.text, b.cb, {
+            backgroundColor: b.bg || COLORS.primary,
+            hoverColor: b.hover || COLORS.light,
+            textColor: b.textColor || TYPOGRAPHY.textColor.primary,
+            fontSize: b.fontSize || 16,
+            padding: b.padding || { left: 16, right: 16, top: 11, bottom: 11 },
+            cornerRadius: 8,
+            autoPlayAnim: false,          // ряд появляется целиком, без каскада
+        });
+        btn.setScrollFactor(0).setDepth(depth);
+        if (b.visible === false) btn.setVisible(false);
+        return { ...b, btn };
+    });
+
+    // Текущая ширина по текстовому ребёнку (подписи меняются в бою —
+    // «Завести тетиву (ход)» шире «Самострела»).
+    const measure = (e) => {
+        const txt = e.btn.list ? e.btn.list.find(c => c && c.setText && c.text) : null;
+        const pad = e.padding || { left: 16, right: 16 };
+        const padW = (pad.left || 0) + (pad.right || 0);
+        return Math.max(56, (txt ? txt.width : (e.btn.width || 100)) + padW);
+    };
+
+    const layoutRow = (vis, widths, heights, scale, bottomEdge) => {
+        const w = scene.scale.width;
+        const gap = Math.min(gapBase, widths.length > 1 ? 10 : 0);
+        const total = widths.reduce((s, x) => s + x, 0) * scale + gap * (widths.length - 1);
+        let x = w / 2 - total / 2;
+        vis.forEach((e, i) => {
+            e.btn.setScale(scale);
+            e.btn.setPosition(x + widths[i] * scale / 2, bottomEdge - heights[i] * scale / 2);
+            x += widths[i] * scale + gap;
+        });
+        return total;
+    };
+
+    const relayout = () => {
+        const w = scene.scale.width;
+        const h = scene.scale.height;
+        const vis = entries.filter(e => e.btn.visible);
+        if (vis.length === 0) return;
+        const widths = vis.map(measure);
+        const heights = vis.map(e => e.btn.height || 42);
+        const avail = Math.max(120, w - marginX * 2);
+
+        // Попытка: одна строка с равным сжатием всех кнопок.
+        const rawTotal = widths.reduce((s, x) => s + x, 0) + gapBase * (widths.length - 1);
+        let scale = rawTotal > avail ? Math.max(0, avail / rawTotal) : 1;
+        const needRows = (scale < MIN_SCALE && vis.length > 1 && maxRows >= 2)
+            || (scale < MIN_SCALE && maxRows === 1 && vis.length > 2);
+
+        if (!needRows) {
+            layoutRow(vis, widths, heights, Math.max(scale, MIN_SCALE * 0.9), h - marginBottom);
+            return;
+        }
+        // Две строки: первая — длиннее (Math.ceil), обе прижаты к низу стопкой.
+        const mid = Math.ceil(vis.length / 2);
+        const rows = [vis.slice(0, mid), vis.slice(mid)].filter(r => r.length > 0);
+        let bottom = h - marginBottom;
+        rows.forEach((row) => {
+            const idx = row.map(e => vis.indexOf(e));
+            const rw = idx.map(i => widths[i]);
+            const rh = idx.map(i => heights[i]);
+            const total1 = rw.reduce((s, x) => s + x, 0) + gapBase * (rw.length - 1);
+            const s = total1 > avail ? Math.max(0.55, avail / total1) : 1;
+            const rowMaxH = Math.max(...rh) * s;
+            layoutRow(row, rw, rh, s, bottom);
+            bottom -= rowMaxH + 6;
+        });
+    };
+
+    // Первичная раскладка + перестройка при ресайзе (хелпер вызывается
+    // ПОСЛЕ анкоров-регистри, поэтому ряд всегда «побеждает»).
+    onSceneResize(scene, relayout);
+    // Отложить на один кадр: тексты измеряются после первого рендера шрифта
+    scene.time.delayedCall(0, relayout);
+    relayout();
+
+    return {
+        buttons: entries.map(e => e.btn),
+        relayout,
+        entries,
+    };
+}
+
+// ============================================================
 // createDialog — модальное окно на чистом Phaser
 // ============================================================
 

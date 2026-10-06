@@ -18,7 +18,7 @@ import { ActionLog } from '../data/actionLog.js';
 // Патч 66.74 (приказ 3): БОРТНИЧЕСТВО на ульях — мёд и воск (loot.js)
 import { bortnikGather, getLootDef } from '../systems/loot.js';
 import { dayKeyOf } from '../data/daily.js';
-import { createDialog, createButton } from '../utils/ui.js';
+import { createDialog, createButtonRow } from '../utils/ui.js';
 // Патч 66.75 (приказы 5–6): кнопка «⚙ Настройки» в статус-баре пасеки
 import { addSettingsGearButton } from '../systems/SettingsPanel.js';
 import AudioManager from '../systems/AudioManager.js';
@@ -197,20 +197,17 @@ export class ApiaryScene extends Phaser.Scene {
             return;
         }
 
-        // Кнопка поиска (низ-центр, между джойстиком и кнопкой E).
+        // Кнопка поиска (низ экрана, единый ряд активностей — 66.89 п.1).
         // Раунд 20 ФИКС: камера пасеки СКРОЛИТСЯ за игроком — кнопка обязана
         // быть привязана к экрану (scrollFactor 0), иначе «уплывает» с камерой.
-        const searchBtn = createButton(this, width / 2, height - 90,
-            tf('{0} (проверка Внимательности)', t('🔍 Искать следы')),
-            () => this.doHuntSearch(),
+        createButtonRow(this, [
             {
-                backgroundColor: 0x4a6a4a, hoverColor: 0x5a7a5a, pressColor: 0x2a3a2a,
-                textColor: '#f0e6c8', fontSize: 15,
-                padding: { left: 20, right: 20, top: 10, bottom: 10 },
-                cornerRadius: 8,
-            });
-        searchBtn.setScrollFactor(0);
-        searchBtn.each ? searchBtn.list.forEach(o => o.setScrollFactor && o.setScrollFactor(0)) : null;
+                text: tf('{0} (проверка Внимательности)', t('🔍 Искать следы')),
+                cb: () => this.doHuntSearch(),
+                bg: 0x4a6a4a, hover: 0x5a7a5a, textColor: '#f0e6c8',
+                fontSize: 15, padding: { left: 20, right: 20, top: 10, bottom: 10 },
+            },
+        ], { depth: 102, marginBottom: 8, gap: 12 });
     }
 
     /** Поиск следов вора на пасеке (та же логика, что в LocationScene, раунд 21). */

@@ -90,7 +90,10 @@ ok(combatSrc.includes('equipWeapon(p, w.id)') && combatSrc.includes('enemyTurn()
     'смена оружия экипирует и тратит ход (п.4)');
 ok(combatSrc.includes('loadQuiver(p)') && combatSrc.includes('Наложил стрелы в колчан'),
     'наложение стрел в колчан из боевой панели (ход)');
-ok(combatSrc.includes('perRow') && combatSrc.includes("height - 50 - row * 52"),
+// 66.89 (актуализация): раскладка панели боя переведена на createButtonRow —
+// один ряд у нижнего края; на узких экранах — равномерное сжатие, при
+// невозможности — перенос на второй ряд (maxRows: 2).
+ok(combatSrc.includes('createButtonRow(this, acts.map') && combatSrc.includes('maxRows: 2'),
     'кнопки боя переносятся на второй ряд на узких экранах');
 ok(combatSrc.includes('spendArrow(this.player)') && combatSrc.includes("t('Колчан пуст!')"),
     'стрельба тратит стрелу; пустой колчан — поп-ап (пп.7,8)');

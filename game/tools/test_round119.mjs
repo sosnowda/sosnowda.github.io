@@ -48,22 +48,19 @@ const swlog = read('docs/SW_CHANGELOG.md');
 const changes = read('CHANGES.md');
 const worklog = read('worklog.md');
 
-console.log('--- 1. Характеристики: 5 по BRP SRD (приказ 15) ---');
-ok(/CHARACTER_KEYS = \[\s*\{ key: 'STR'[\s\S]*\{ key: 'CON'[\s\S]*\{ key: 'POW'[\s\S]*\{ key: 'DEX'[\s\S]*\{ key: 'CHA'[\s\S]*\];/.test(character),
-    'Character.js: CHARACTER_KEYS = STR/CON/POW/DEX/CHA');
-ok(!/key: 'SIZ'|key: 'INT'|key: 'APP'/.test(character), 'Character.js: РАЗ/ИНТ/ВНШ изъяты из ключей');
-ok(character.includes("name: 'Мощь'") && character.includes("name: 'Харизма'"), 'МОЩЬ и ХАРИЗМА — каноничные имена SRD');
-ok(!/stats: \{[^}]*SIZ/.test(character), 'пресеты героев: без SIZ');
+console.log('--- 1. Характеристики: 5 по BRP SRD (приказ 15; 66.89 АКТУАЛИЗАЦИЯ: SIZ возвращён приказом владельца 4/8 — 6 характеристик) ---');
+ok(/CHARACTER_KEYS = \[\s*\{ key: 'STR'[\s\S]*\{ key: 'CON'[\s\S]*\{ key: 'SIZ'[\s\S]*\{ key: 'POW'[\s\S]*\{ key: 'DEX'[\s\S]*\{ key: 'CHA'[\s\S]*\];/.test(character),
+    'Character.js: CHARACTER_KEYS = STR/CON/SIZ/POW/DEX/CHA (66.89: SIZ возвращён)');
+ok(!/key: 'INT'|key: 'APP'/.test(character), 'Character.js: ИНТ/ВНШ по-прежнему изъяты (SIZ возвращён приказом 66.89)');
+ok(character.includes("name: 'Мощь'") && character.includes("name: 'Харизма'") && character.includes("name: 'Размер'"), 'МОЩЬ, ХАРИЗМА и РАЗМЕР — каноничные имена SRD');
 ok(!/stats: \{[^}]*INT/.test(character), 'пресеты героев: без INT');
-ok(ageRules.includes("POW: 'Мощь'") && ageRules.includes("CHA: 'Харизма'"), 'AgeRules: имена 5 характеристик');
-ok(!ageRules.includes('SIZ:'), 'AgeRules: возрастная таблица без РАЗ');
-ok(!/S\(.*SIZ/.test(npcStats) && /const S = \(STR, CON, POW, DEX, CHA\)/.test(npcStats),
-    'npcStats: S(СИЛ,ТЕЛ,МОЩ,ЛОВ,ХАР) — 5 аргументов');
-ok(!/stats: S\([^)]*,[^)]*,[^)]*,[^)]*,[^)]*,/.test(npcStats.replace(/S = \(STR, CON, POW, DEX, CHA\) =>[\s\S]*?\n/, '')),
-    'npcStats: все блоки жителей — по 5 значений');
-ok(characters.includes('stats: { STR: 65, CON: 60, POW: 50, DEX: 70, CHA: 40 }'),
-    'characters.js: вор — 5 характеристик');
-ok(!/SIZ|INT:|APP:/.test(characters.split('ENEMY_TEMPLATES')[1].split('spawnEnemy')[0]), 'characters.js: шаблоны без РАЗ/ИНТ/ВНШ');
+ok(ageRules.includes("POW: 'Мощь'") && ageRules.includes("CHA: 'Харизма'") && ageRules.includes("SIZ: 'Размер'"), 'AgeRules: имена характеристик (66.89: + РАЗМЕР)');
+ok(!ageRules.includes('INT:') && !ageRules.includes('APP:'), 'AgeRules: возрастная таблица без ИНТ/ВНШ (SIZ: −5 у отрока возвращён 66.89)');
+ok(/const S = \(STR, CON, POW, DEX, CHA, SIZ = 50\)/.test(npcStats),
+    'npcStats: S(СИЛ,ТЕЛ,МОЩ,ЛОВ,ХАР[,РАЗМ]) — 66.89: опциональный РАЗМЕР (по умолчанию 50)');
+ok(characters.includes('stats: { STR: 65, CON: 30, SIZ: 40, POW: 50, DEX: 70, CHA: 40 }'),
+    'characters.js: вор — 6 характеристик (66.89: + SIZ, худой беглец)');
+ok(!/INT:|APP:/.test(characters.split('ENEMY_TEMPLATES')[1].split('spawnEnemy')[0]), 'characters.js: шаблоны без ИНТ/ВНШ (SIZ добавлен 66.89)');
 
 console.log('--- 2. MP (Воля) удалены из игры (приказ 7) ---');
 ok(!/MPmax/.test(character) && !/chr\.MP\b/.test(character), 'Character.js: ни MPmax, ни MP');
@@ -168,9 +165,11 @@ for (const k of ['Ударное оружие', 'Мощь', 'Харизма', '�
     ok(i18n.includes(`'${k}'`), `i18n: «${k.slice(0, 44)}…»`);
 }
 for (const k of ["'Красноречие':", "'Верховая езда':", "'Следопытство':", "'Исследование':",
-    "'Интеллект':", "'Сила воли':", "'Внешность':", "'Размер':"]) {
+    "'Интеллект':", "'Сила воли':", "'Внешность':"]) {
     ok(!i18n.includes(k), `i18n: мёртвый ключ ${k} удалён`);
 }
+// 66.89 (актуализация): «Размер» снова ЖИВОЙ ключ — SIZ возвращён приказом владельца
+ok(i18n.includes("'Размер': 'Size'"), 'i18n: «Размер» — живой ключ (66.89: SIZ возвращён)');
 // no-dupe-keys покрывает r116 (объект-осознанный статический парсер);
 // здесь — только целостность НОВОЙ секции: ни один новый ключ не объявлен дважды.
 {
@@ -184,17 +183,17 @@ for (const k of ["'Красноречие':", "'Верховая езда':", "'
 console.log('--- 10. Runtime: модель, благословение, травы, штраф, жители ---');
 {
     const { CHARACTER_KEYS, SKILLS, WEAPONS, createCharacter } = await import('../src/systems/Character.js');
-    ok(CHARACTER_KEYS.length === 5 && CHARACTER_KEYS.map(c => c.key).join(',') === 'STR,CON,POW,DEX,CHA',
-        'runtime: 5 характеристик в порядке SRD');
+    ok(CHARACTER_KEYS.length === 6 && CHARACTER_KEYS.map(c => c.key).join(',') === 'STR,CON,SIZ,POW,DEX,CHA',
+        'runtime: 6 характеристик в каноническом порядке (66.89 актуализация: + РАЗМЕР)');
     ok(SKILLS.some(s => s.key === 'blunt') && !SKILLS.some(s => ['oratory','ride','investigate'].includes(s.key)),
         'runtime: SKILLS — blunt есть, удалённых нет (track возвращён 66.74)');
     ok(WEAPONS.club.skill === 'blunt' && WEAPONS.palitsa.skill === 'blunt' && WEAPONS.mace.skill === 'blunt' && WEAPONS.flail.skill === 'blunt',
         'runtime: 4 дробящих оружия на навыке blunt');
     const hero = createCharacter('Тест', { STR: 45, CON: 60, POW: 55, DEX: 70, CHA: 35 });
-    ok(hero.HPmax === 11 && hero.MPmax === undefined, 'runtime: HP=(CON+STR)/10=11, MP нет');
+    ok(hero.HPmax === 11 && hero.MPmax === undefined, 'runtime: HP=(CON+SIZ)/10=11 (без SIZ в наборе — обычный рост 50), MP нет');
     ok(hero.skills.blunt >= 1 && hero.skills.fast_talk >= 1, 'runtime: blunt/болтовня генерируются');
-    const warrior = createCharacter('Воин', { STR: 80, CON: 75, POW: 50, DEX: 55, CHA: 35 });
-    ok(warrior.DB.text === '+2d6', 'runtime: DB воина СИЛ+ТЕЛ=155 → +2d6 (ступень сохранена)');
+    const warrior = createCharacter('Воин', { STR: 80, CON: 75, SIZ: 70, POW: 50, DEX: 55, CHA: 35 });
+    ok(warrior.DB.text === '+1d4', 'runtime: DB воина СИЛ+РАЗМ по канону SRD (66.89 актуализация: было +2d6 от СИЛ+ТЕЛ)');
 
     const regs = await import('../src/data/questGenerator.js');
     const registry = { store: {}, get(k) { return this.store[k]; }, set(k, v) { this.store[k] = v; } };
@@ -222,10 +221,10 @@ console.log('--- 10. Runtime: модель, благословение, трав
 
     const npc = await import('../src/data/npcStats.js');
     const bad = Object.entries(npc.NPC_STAT_BLOCKS).filter(([, b]) =>
-        !b.stats || Object.keys(b.stats).sort().join(',') !== 'CHA,CON,DEX,POW,STR');
-    ok(bad.length === 0, `runtime: все ${Object.keys(npc.NPC_STAT_BLOCKS).length} блоков жителей — 5 характеристик (${bad.length} плохих)`);
+        !b.stats || Object.keys(b.stats).sort().join(',') !== 'CHA,CON,DEX,POW,SIZ,STR');
+    ok(bad.length === 0, `runtime: все ${Object.keys(npc.NPC_STAT_BLOCKS).length} блоков жителей — 6 характеристик с РАЗМЕРОМ (66.89 актуализация) (${bad.length} плохих)`);
     const stats = npc.getNpcResolvedStats({ id: 'blacksmith', age: 40 });
-    ok(stats.STR === 62 && stats.CON === 57 && !('SIZ' in stats), 'runtime: aging жителя по 5 характеристикам (СИЛ 65−3=62)');
+    ok(stats.STR === 62 && stats.CON === 57 && stats.SIZ === 65, 'runtime: aging жителя (СИЛ 65−3=62, РАЗМ кузнеца 65 — 66.89 актуализация)');
 }
 
 console.log('--- 11. node --check всех правленых файлов ---');

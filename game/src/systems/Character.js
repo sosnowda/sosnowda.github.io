@@ -49,14 +49,27 @@ import { AGE_DEFAULT, AGE_MIN, AGE_MAX, applyAgeModifiers, applyAgeSkillModifier
 // Раунд 66.28 (пп.5,10): стартовый колчан стрел у героев с луком
 import { QUIVER_CAP } from './ammo.js';
 
-// === ХАРАКТЕРИСТИКИ BRP (раунд 66.71: 5 штук по SRD) ===
+// === ХАРАКТЕРИСТИКИ BRP ===
+// Итерация 66.89 (приказ владельца 3/8): SIZ («Размер») ВОЗВРАЩЁН —
+// DB снова считается по BRP-канону от (STR+SIZ), оружие больше не
+// обесценено табличным +2d6 у всех героев. Порядок — канонический SRD:
+// STR, CON, SIZ, POW, DEX, CHA (§2.3: STR 3d6, CON 3d6, SIZ 2d6+6…).
 export const CHARACTER_KEYS = [
     { key: 'STR', name: 'Сила', desc: 'Физическая мощь и сырая мышечная сила' },
     { key: 'CON', name: 'Телосложение', desc: 'Здоровье, бодрость и жизнеспособность' },
+    { key: 'SIZ', name: 'Размер', desc: 'Габариты и масса тела (влияет на бонус урона)' },
     { key: 'POW', name: 'Мощь', desc: 'Сила воли, интуиция и духовное развитие' },
     { key: 'DEX', name: 'Ловкость', desc: 'Скорость, проворство и координация' },
     { key: 'CHA', name: 'Харизма', desc: 'Первое впечатление и привлекательность' },
 ];
+
+// Каноническая кость РАЗМЕРА человека (BRP SRD §2.3): 2d6+6 — в игровом
+// масштабе ×5 это 40..90 (среднее 65). СИЛ/ТЕЛ/МОЩ/ЛОВ/ХАР — 3d6×5.
+export function rollSiz() {
+    let sum = 0;
+    for (let i = 0; i < 2; i++) sum += 1 + Math.floor(Math.random() * 6);
+    return (sum + 6) * 5;
+}
 
 // === НАВЫКИ BRP (по категориям SRD) ===
 export const SKILL_CATEGORIES = {
@@ -142,7 +155,7 @@ export const WEAPONS = {
     palitsa: { id: 'palitsa', name: 'Палица',          skill: 'blunt', dice: { min: 1, max: 8 }, bonus: 0, price: 6 },
     mace:    { id: 'mace',    name: 'Булава',          skill: 'blunt', dice: { min: 1, max: 6 }, bonus: 1, price: 15 },
     flail:   { id: 'flail',   name: 'Кистень',         skill: 'blunt', dice: { min: 1, max: 8 }, bonus: 1, price: 20 },
-    knife:   { id: 'knife',   name: 'Нож',             skill: 'brawl', dice: { min: 1, max: 4 }, bonus: 1, price: 3 },
+    knife:   { id: 'knife',   name: 'Нож',             skill: 'brawl', dice: { min: 1, max: 4 }, bonus: 2, price: 3 },
     spear:   { id: 'spear',   name: 'Копьё',           skill: 'spear', dice: { min: 1, max: 8 }, bonus: 0, price: 8 },
     sword:   { id: 'sword',   name: 'Меч',             skill: 'sword', dice: { min: 1, max: 8 }, bonus: 1, price: 30 },
     axe:     { id: 'axe',     name: 'Боевой топор',    skill: 'brawl', dice: { min: 1, max: 8 }, bonus: 1, price: 25 },
@@ -205,8 +218,8 @@ export function formatMoney(dengas) {
 //      трудный бой из всех, но проходимый (см. отчёт симуляции раунда 32).
 //  ПРИКЛЮЧЕНЕЦ (Ратибор/Милонега): МЕЧ (1d8+1, навык 55) + КОЖАНАЯ БРОНЯ
 //      (def 2), 40 д. — универсал на прожиточном минимуме: середина во всём.
-//  ВОР (враг): КРИВОЙ КИНЖАЛ (1d6+1, атака 50%, уклонение 35) + КОЖАНАЯ
-//      БРОНЯ (def 2) — см. ENEMY_TEMPLATES в data/characters.js.
+//  ВОР (враг): КРИВОЙ КИНЖАЛ (1d6+1, атака 50%, уклонение 30) + ТЕГИЛЯЙ
+//      (def 1) — см. ENEMY_TEMPLATES в data/characters.js.
 export const PRESET_HEROES = [
     // === СЛЕДОПЫТ ===
     {
@@ -217,7 +230,7 @@ export const PRESET_HEROES = [
         age: 30,
         sprite: 'player',
         description: 'Хорошие навыки разведки и чтения следов, средние боевые, слабое общение.',
-        stats: { STR: 45, CON: 60, POW: 55, DEX: 70, CHA: 35 },
+        stats: { STR: 45, CON: 60, SIZ: 50, POW: 55, DEX: 70, CHA: 35 },
         skillOverrides: {
             // Раунд 66.71: spot = max(старый spot, track 75); fast_talk = max(20, oratory 25)
             // Патч 66.74 (приказ 9): специализация «Следопыт» — высокие Скрадывание,
@@ -245,7 +258,7 @@ export const PRESET_HEROES = [
         age: 22,
         sprite: 'npc_merchant',
         description: 'Хорошие навыки разведки и чтения следов, средние боевые, слабое общение.',
-        stats: { STR: 40, CON: 55, POW: 55, DEX: 75, CHA: 35 },
+        stats: { STR: 40, CON: 55, SIZ: 45, POW: 55, DEX: 75, CHA: 35 },
         skillOverrides: {
             spot: 78, survival: 72, listen: 68,
             sword: 42, bow: 60, brawl: 38, dodge: 55,
@@ -271,7 +284,7 @@ export const PRESET_HEROES = [
         age: 25,
         sprite: 'player',
         description: 'Слабые навыки розыска и общения, но отличные боевые навыки.',
-        stats: { STR: 80, CON: 75, POW: 50, DEX: 55, CHA: 35 },
+        stats: { STR: 80, CON: 75, SIZ: 70, POW: 50, DEX: 55, CHA: 35 },
         skillOverrides: {
             sword: 80, brawl: 75, spear: 70, dodge: 55, bow: 35,
             spot: 30, survival: 35, listen: 30,
@@ -297,7 +310,7 @@ export const PRESET_HEROES = [
         age: 24,
         sprite: 'npc_merchant',
         description: 'Слабые навыки розыска и общения, но отличные боевые навыки.',
-        stats: { STR: 70, CON: 70, POW: 50, DEX: 65, CHA: 40 },
+        stats: { STR: 70, CON: 70, SIZ: 65, POW: 50, DEX: 65, CHA: 40 },
         skillOverrides: {
             sword: 78, brawl: 70, spear: 68, dodge: 60, bow: 40,
             spot: 35, survival: 38, listen: 32,
@@ -326,7 +339,7 @@ export const PRESET_HEROES = [
         age: 35,
         sprite: 'player',
         description: 'Хорошие навыки общения и поиска улик в разговорах, средние боевые.',
-        stats: { STR: 45, CON: 55, POW: 60, DEX: 55, CHA: 70 },
+        stats: { STR: 45, CON: 55, SIZ: 50, POW: 60, DEX: 55, CHA: 70 },
         skillOverrides: {
             // Раунд 66.71: fast_talk = max(62, oratory 72); spot = max(68, track 52)
             persuade: 78, fast_talk: 72, intimidate: 38,
@@ -353,7 +366,7 @@ export const PRESET_HEROES = [
         age: 27,
         sprite: 'npc_merchant',
         description: 'Хорошие навыки общения и поиска улик в разговорах, средние боевые.',
-        stats: { STR: 40, CON: 55, POW: 60, DEX: 60, CHA: 75 },
+        stats: { STR: 40, CON: 55, SIZ: 45, POW: 60, DEX: 60, CHA: 75 },
         skillOverrides: {
             persuade: 80, fast_talk: 75, intimidate: 40,
             spot: 70, listen: 75,
@@ -379,7 +392,7 @@ export const PRESET_HEROES = [
         age: 30,
         sprite: 'player',
         description: 'Все навыки среднего уровня — универсал.',
-        stats: { STR: 55, CON: 55, POW: 60, DEX: 60, CHA: 60 },
+        stats: { STR: 55, CON: 55, SIZ: 55, POW: 60, DEX: 60, CHA: 60 },
         skillOverrides: {
             sword: 55, bow: 50, brawl: 50, spear: 50, dodge: 50,
             persuade: 55, fast_talk: 55, intimidate: 45,
@@ -404,7 +417,7 @@ export const PRESET_HEROES = [
         age: 20,
         sprite: 'npc_merchant',
         description: 'Все навыки среднего уровня — универсал.',
-        stats: { STR: 50, CON: 55, POW: 60, DEX: 62, CHA: 62 },
+        stats: { STR: 50, CON: 55, SIZ: 50, POW: 60, DEX: 62, CHA: 62 },
         skillOverrides: {
             sword: 55, bow: 52, brawl: 48, spear: 50, dodge: 52,
             persuade: 56, fast_talk: 56, intimidate: 44,
@@ -456,9 +469,21 @@ function randInt(min, max) {
 // Создание персонажа. Можно передать готовые характеристики в opts.
 export function createCharacter(name, opts = {}) {
     const chr = {};
+    // 66.89: частичный набор характеристик (старые вызовы/наборы без РАЗМЕРА)
+    // получает детерминированный обычный рост (SIZ 50); ПОЛНЫЙ случайный
+    // герой (без статов в opts) канонически бросает РАЗМЕР 2d6+6 ×5.
+    const hasStats = opts && CHARACTER_KEYS.some(c => opts[c.key] != null);
     CHARACTER_KEYS.forEach(c => {
-        chr[c.key] = (opts && opts[c.key] != null) ? opts[c.key] : rollCharacteristic();
+        if (opts && opts[c.key] != null) {
+            chr[c.key] = opts[c.key];
+        } else if (c.key === 'SIZ') {
+            chr[c.key] = hasStats ? 50 : rollSiz();   // миграция 50 / канон 2d6+6 ×5
+        } else {
+            chr[c.key] = rollCharacteristic();
+        }
     });
+    // Страховка миграции (объекты до 66.89 без РАЗМЕРА — обычный рост)
+    if (chr.SIZ == null) chr.SIZ = 50;
     chr.name = name || 'Путник';
     chr.gender = opts.gender || (Math.random() < 0.5 ? 'male' : 'female');
     chr.archetype = opts.archetype || 'Случайный';
@@ -474,13 +499,13 @@ export function createCharacter(name, opts = {}) {
 
     // BRP производные (fallback для прямых вызовов без возраста):
     // applyAgeModifiers уже выставил их; здесь только страховка.
-    // Раунд 66.71: канон (CON+SIZ)/10 → (CON+STR)/10; очки мощи (MP)
-    // УДАЛЕНЫ приказом 7; DB — СИЛ+ТЕЛ; Build — от ТЕЛ; MOV без РАЗ.
+    // 66.89 (SIZ возвращён): канон SRD восстановлен — HP=(CON+SIZ)/10,
+    // DB=(STR+SIZ) по таблице SRD, Build — от РАЗМЕРА. MP удалён (приказ 7).
     if (chr.HPmax == null) {
-        chr.HPmax = Math.ceil((chr.CON + chr.STR) / 10);
+        chr.HPmax = Math.ceil((chr.CON + chr.SIZ) / 10);
         chr.HP = chr.HPmax;
-        chr.DB = damageBonus(chr.STR, chr.CON); // {text, min, max}
-        chr.Build = chr.CON >= 65 ? 1 : (chr.CON <= 35 ? -1 : 0);
+        chr.DB = damageBonus(chr.STR, chr.SIZ); // {text, min, max}
+        chr.Build = chr.SIZ >= 65 ? 1 : (chr.SIZ <= 35 ? -1 : 0);
         chr.MOV = 10 + (chr.DEX >= 60 ? 1 : 0);
     }
     

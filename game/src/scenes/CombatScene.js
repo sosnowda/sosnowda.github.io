@@ -9,13 +9,19 @@ import {
     getQuiver, spendArrow, loadQuiver, countInventoryArrows,
     quiverWord, QUIVER_CAP,
 } from '../systems/ammo.js';
-import { skillCheck, rollDamage, ROLL_RESULT, applyDamage } from '../systems/BRPEngine.js';
+// Итерация 66.89 (приказы 3,7,9,10–14,15–19): канон BRP SRD в бою —
+// особый/критический урон по §5.13 (паритет игрока и врага), DB=(STR+SIZ),
+// прицел (+25%), телеграфия особого удара (+20% к уклонению / перехват),
+// мораль (HP<25% → проверка МОЩи → сдача/бегство), окно контратаки,
+// оружейные особенности, ближний строй ≤2 + инициатива по ЛОВ,
+// самострел без уклонения болта, стая волков 1–3, МЕДВЕДЬ в чаще.
+import { skillCheck, rollDamage, damageTierOf, ROLL_RESULT, applyDamage } from '../systems/BRPEngine.js';
 import { spawnEnemy, spawnVillagerEnemy, VILLAGER_COMBAT } from '../data/characters.js';
 // 66.44 (приказ 12): кнопки «Трава» и «Исследование» с нижней панели боя
 // УДАЛЕНЫ (методы useHerb/examineEnemy сняты вместе с ними); раскрытие
 // мастерства оружия после первого удара противника сохранено в enemyTurn.
 import { ruSkillName } from '../data/npcStats.js';
-import { createButton, createDialog, createFloatingText, registerAnchoredUI, onSceneResize } from '../utils/ui.js';
+import { createButton, createButtonRow, createDialog, createFloatingText, registerAnchoredUI, onSceneResize } from '../utils/ui.js';
 import AudioManager from '../systems/AudioManager.js';
 import SaveManager from '../systems/SaveManager.js';
 import { ActionLog } from '../data/actionLog.js';
@@ -135,6 +141,13 @@ export class CombatScene extends Phaser.Scene {
         }
         this.busy = false;
         this.playerDodging = false;
+        // Итерация 66.89 — новые боевые флаги (сброс в create(): экземпляр сцены живёт всю игру)
+        this.playerDodgeBonus = 0;     // В-2: +20% к уклонению против телеграфированного удара
+        this.counterWindow = false;    // В-1: окно контратаки после успешного уклонения от медленного врага
+        this.aiming = false;           // п.9: прицел — следующий выстрел +25% к навыку
+        this.spearFirstStrike = true;  // В-4: первый удар копьём (+10% против бездоспешного)
+        this.__enemyFled = false;      // В-3: кто-то из врагов бежал (без победной анимации)
+        this.__enemySurrendered = false; // В-3: кто-то сдался в плен
         this.logLines = [];
         this.barGfx = this.add.graphics().setDepth(50);
 
@@ -238,7 +251,11 @@ export class CombatScene extends Phaser.Scene {
             });
         }
         this.enemies.forEach((e, i) => {
-            const y = height * 0.35 + (n > 1 ? i * (height * 0.3) : height * 0.18);
+            // 66.89 (п.16): стая до ТРЁХ врагов — тройка не уезжает за нижний край
+            // (прежняя формула давала третьему 0.95h — за экраном)
+            const y = n >= 3
+                ? height * (0.30 + i * 0.24)
+                : (n > 1 ? height * 0.35 + i * (height * 0.3) : height * 0.18);
             const x = width * 0.72 + (n > 1 ? (i % 2) * 60 - 30 : 0);
             let sp;
             let isWolf = false;
@@ -256,6 +273,14 @@ export class CombatScene extends Phaser.Scene {
                     .setScale(2.5).setOrigin(0.5, 1 / 6);
                 sp.play(`battle_${thiefLook}_idle`);
                 e.battleLookKey = thiefLook;   // атаки/стойка — см. playEnemyAttackAnim
+            } else if (e.spriteKey === 'enemy_bear' && this.anims.exists('wolf_side_idle')) {
+                // Итерация 66.89 (приказ 15): МЕДВЕДЬ — крупный зверь на волчьем
+                // боковом листе в бурой масти: масса и неповоротливость читаются сразу.
+                sp = this.add.sprite(x, y, 'wolf_full_1', 5).setScale(3.6).setOrigin(0.5, 0.25);
+                sp.setFlipX(true);
+                sp.setTint(0x7a5230);
+                sp.play('wolf_side_idle');
+                isWolf = true;
             } else if (e.spriteKey === 'enemy_wolf' && this.anims.exists('wolf_side_idle')) {
                 // Раунд 23: боковой вид волка (мордой вправо) — флипаем,
                 // чтобы морда была направлена ВЛЕВО, на игрока.
@@ -327,7 +352,7 @@ export class CombatScene extends Phaser.Scene {
             this.busyDialog = true;
             createDialog(this, '❓ Информация по игре',
                 timeRatioInfoLine() + '\n\n' +
-                t('⚔ Бой пошаговый (BRP d100): атака, уклон, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nкрит — 1/20 навыка (урон ×1.5), особый успех — 1/5 (урон ×2).\n🛡 Доспех поглощает урон каждого попадания.\nПосле первого удара противника видно мастерство его оружия.\n🏹 Стрельба из лука тратит стрелу из колчана (вместимость 10);\nпустой колчан — выстрела не будет, стрелы носят пачками по 10.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.'),
+                t('⚔ Бой пошаговый (BRP d100): атака, уклон, прицел, перехват, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nособый успех — 1/5 (урон: максимум оружия + обычный бросок + бонус),\nкрит — 1/20 (максимум оружия + максимум бонуса, СКВОЗЬ броню).\n🛡 Доспех поглощает урон каждого попадания (крит — насквозь).\n💪 Бонус урона — BRP-канон (СИЛ+РАЗМ): от −1d6 до +2d6 по таблице SRD.\n⚠ Враг, бросивший особый/критический удар, заносит оружие ХОД —\nуклонись (+20% к уклонению), перехвати (сбей замах) или прими удар.\n✚ Успешное уклонение от медленного врага (ЛОВ ниже твоей) даёт\nокно контратаки: следующая атака +10%.\n🧠 Раненый враг (HP < 25%) проверяет МОЩь: сломится — сдаётся или бежит.\nВора можно взять живьём и отвести старосте — премия 20 денег.\n🏹 Лук/самострел тратят стрелу (колчан 10); стрельба в упор −10%,\nвыстрел с прицела +25%; болт самострела уклонением НЕ отбивается;\nперезарядка самострела — каждый второй ход.\n⚔ В ближнем строю бьют не более двоих одновременно (инициатива по ЛОВ).\nПосле первого удара противника видно мастерство его оружия.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
                 { singletonKey: 'combat-help' });
         });
@@ -361,16 +386,6 @@ export class CombatScene extends Phaser.Scene {
      *    смена оружия в руках тратит ОДИН ХОД.
      */
     createActions() {
-        const { width, height } = this.scale;
-        const mk = (x, y, label, cb, bg, hover) => createButton(
-            this, x, y, label, () => { if (this.busy) return; cb(); },
-            {
-                backgroundColor: bg, hoverColor: hover, textColor: RUS.text, fontSize: 16,
-                padding: { left: 14, right: 14, top: 10, bottom: 10 },
-                cornerRadius: 8,
-            },
-        );
-
         // Раунд 14: основная кнопка = реально экипированное оружие.
         // Раунд 66.28: надпись теперь зависит ОТ ВИДА ОРУЖИЯ В РУКАХ:
         // «Стрельба из лука» / «Удар оружием» / «Удар кулаком».
@@ -383,6 +398,13 @@ export class CombatScene extends Phaser.Scene {
         // в этот ход УКЛОН недоступен (руки заняты воротом).
         const isCrossbow = equippedKey === 'crossbow';
         const reloadDue = isCrossbow && !!this.__crossbowReload;
+        // Итерация 66.89 (приказ 9): РАСШИРЕННАЯ ПАНЕЛЬ БОЯ — один ряд у нижнего края:
+        // [атака] [кулак] [Уклон] [Прицел (ход)] [Перехват (ход)] [Смена оружия] [Бежать]
+        // Прицел виден только с луком/самострелом, Перехват — пока враг телеграфирует
+        // особый удар; ряд сам перестраивается (см. refreshMainActionLabel/refreshInterceptButton).
+        // ПАТЧ 66.76: панель строится ОДИН раз (create) — главная кнопка
+        // сама решает по флагу в момент клика (перезарядка → crank),
+        // а подпись обновляет refreshMainActionLabel().
         const mainLabel = reloadDue
             ? `⚙ ${t('Завести тетиву (ход)')}`
             : (isCrossbow
@@ -390,11 +412,8 @@ export class CombatScene extends Phaser.Scene {
                 : (isBow
                     ? `🏹 ${t('Стрельба из лука')}`
                     : (isFists ? `🤜 ${t('Удар кулаком')}` : `⚔ ${t('Удар оружием')}`)));
-        // ПАТЧ 66.76: панель строится ОДИН раз (create) — главная кнопка
-        // сама решает по флагу в момент клика (перезарядка → crank),
-        // а подпись обновляет refreshMainActionLabel().
         const acts = [
-            { label: mainLabel, cb: () => {
+            { key: '__mainActionBtn', label: mainLabel, cb: () => {
                 const eqNow = (this.player.weapon || WEAPONS.fists).id || 'fists';
                 if (eqNow === 'crossbow' && this.__crossbowReload) this.crossbowCrank();
                 else this.playerAttack(eqNow);
@@ -406,32 +425,35 @@ export class CombatScene extends Phaser.Scene {
         }
         // Уклон остаётся на панели всегда; в ход перезарядки его гейтит
         // dodge() (руки заняты воротом — приказ 2 «уклонение недоступно»).
+        acts.push({ label: t('Уклон'), cb: () => this.dodge(), bg: 0x4a6a4a, hover: 0x5a7a5a });
+        // 66.89 (приказ 9): ПРИЦЕЛ — ход прицеливания, следующий выстрел +25%.
+        acts.push({ key: '__aimBtn', label: t('🔭 Прицел (ход)'), cb: () => this.aimAction(),
+            bg: 0x2a4a5a, hover: 0x3a5a6a,
+            visible: (equippedKey === 'bow' || equippedKey === 'crossbow') });
+        // 66.89 (В-2): ПЕРЕХВАТ — сбить замах готовящего особый удар врага.
+        acts.push({ key: '__interceptBtn', label: t('⚔ Перехват (ход)'), cb: () => this.interceptAction(),
+            bg: 0x6a2a2a, hover: 0x7a3a3a, visible: this.anyTelegraphPending() });
+        // 66.44 (приказ 12): кнопки «Трава» и «Исследование» сняты с панели —
+        // Раунд 66.28 (п.4): смена оружия за ход — инвентарь прямо в бою
         acts.push(
-            { label: t('Уклон'), cb: () => this.dodge(), bg: 0x4a6a4a, hover: 0x5a7a5a },
-        );
-        acts.push(
-            // 66.44 (приказ 12): кнопки «Трава» и «Исследование» сняты с панели —
-            // осталось: атака, уклон, смена оружия, побег.
-            // Раунд 66.28 (п.4): смена оружия за ход — инвентарь прямо в бою
             { label: t('🎒 Смена оружия'), cb: () => this.openWeaponSwapPanel(), bg: 0x5a4a2a, hover: 0x6a5a3a },
             { label: t('🏃 Бежать'), cb: () => this.flee(), bg: 0x2a2a5a, hover: 0x3a3a6a },
         );
-        // Равномерная раскладка по центру; на узких экранах (телефон)
-        // кнопки переносятся на ВТОРОЙ РЯД, чтобы не уходили за край.
-        const gap = 160;
-        const perRow = Math.max(2, Math.min(acts.length, Math.floor((width - 24) / gap)));
-        acts.forEach((a, i) => {
-            const row = Math.floor(i / perRow);            // 0 — НИЖНИЙ ряд
-            const inRow = i % perRow;
-            const rowCount = Math.min(perRow, acts.length - row * perRow);
-            const x = width / 2 - (gap * (rowCount - 1)) / 2 + inRow * gap;
-            const y = height - 50 - row * 52;
-            const btn = mk(x, y, a.label, a.cb, a.bg, a.hover);
-            if (i === 0) this.__mainActionBtn = btn;   // 66.76: главная кнопка
-        });
+        // Итерация 66.89 (приказ 1): один ряд у нижнего края (на узких экранах —
+        // равномерное сжатие, при невозможности — второй ряд: maxRows: 2).
+        const row = createButtonRow(this, acts.map(a => ({
+            text: a.label,
+            cb: () => { if (this.busy) return; a.cb(); },
+            bg: a.bg, hover: a.hover, textColor: RUS.text,
+            fontSize: 15, padding: { left: 13, right: 13, top: 10, bottom: 10 },
+            visible: a.visible,
+        })), { depth: 50, maxRows: 2, marginBottom: 26, gap: 8 });
+        acts.forEach((a, i) => { if (a.key) this[a.key] = row.entries[i].btn; });
+        this.__rowRelayout = row.relayout;
     }
 
-    /** Раунд 66.28 (п.7): строка «что в руках · сколько стрел в колчане». */
+    /** Раунд 66.28 (п.7): строка «что в руках · сколько стрел в колчан».
+     *  66.89: попутно — видимость кнопки «Прицел» (только стрелковое оружие). */
     updateGearStatus() {
         if (!this.gearStatusText || !this.gearStatusText.active) return;
         const w = this.player.weapon || WEAPONS.fists;
@@ -439,6 +461,14 @@ export class CombatScene extends Phaser.Scene {
         const parts = [`${t('В руках')}: ${t(w.name)} (${w.dice.min}-${w.dice.max}${w.bonus ? `+${w.bonus}` : ''})`];
         parts.push(`🪶 ${t('Колчан')}: ${q}/${QUIVER_CAP}`);
         this.gearStatusText.setText(parts.join('   ·   '));
+        // 66.89 (приказ 9): прицел — только для лука/самострела
+        if (this.__aimBtn) {
+            const ranged = (w.id || 'fists') === 'bow' || (w.id || 'fists') === 'crossbow';
+            if (this.__aimBtn.visible !== ranged) {
+                this.__aimBtn.setVisible(ranged);
+                if (this.__rowRelayout) this.__rowRelayout();
+            }
+        }
     }
 
     /**
@@ -488,9 +518,15 @@ export class CombatScene extends Phaser.Scene {
                 if (isEquipped) { closePanel(); return; } // то же оружие — ход не тратим
                 equipWeapon(p, w.id);
                 this.registry.set('player', p);
+                // 66.89 (п.9): прицел сбивается сменой оружия (прицелился с лука — а стреляешь с меча)
+                if (this.aiming) {
+                    this.aiming = false;
+                    this.pushLog(t('Прицел сбит: оружие в руках сменилось.'));
+                }
                 this.pushLog(tf(t('Ты сменил оружие в руках: теперь {0}. Потрачен ход!'), t(w.name)));
                 ActionLog.add(this.registry, tf(t('Сменил оружие в бою: {0} (потрачен ход).'), t(w.name)));
                 this.updateGearStatus();
+                this.refreshMainActionLabel();  // 66.89 ФИКС: подпись главной кнопки обязана обновиться
                 closePanel();
                 this.busy = true;
                 this.time.delayedCall(600, () => this.enemyTurn());
@@ -611,14 +647,15 @@ export class CombatScene extends Phaser.Scene {
         };
         // HP игрока (зелёный)
         bar(this.playerSprite.x - 50, this.playerSprite.y - 90, 100, this.player.HP / this.player.HPmax, 0x4caf50);
-        // HP врагов (красный)
+        // HP врагов (красный) — 66.89: сдавшиеся/бежавшие (вне боя) полосы не имеют
         this.enemySprites.forEach(e => {
-            if (e.combatant.HP > 0) bar(e.sprite.x - 50, e.sprite.y - 90, 100, e.combatant.HP / e.combatant.HPmax, 0xc0492f);
+            if (e.combatant.HP > 0 && !e.combatant.__out) bar(e.sprite.x - 50, e.sprite.y - 90, 100, e.combatant.HP / e.combatant.HPmax, 0xc0492f);
         });
     }
 
     firstAlive() {
-        const e = this.enemySprites.find(x => x.combatant.HP > 0);
+        // 66.89 (В-3): сдавшиеся/бежавшие враги не цель — только живые и в строю
+        const e = this.enemySprites.find(x => x.combatant.HP > 0 && !x.combatant.__out);
         return e ? e.combatant : null;
     }
 
@@ -792,9 +829,39 @@ export class CombatScene extends Phaser.Scene {
         // Раунд 66.71: благословение батюшки усиливает и удар оружием (+10%, приказ 4)
         // Патч 66.73: при изнеможении удар возможен, но с дополнительным штрафом −20
         // (мягкая адаптация BRP «недееспособности» — бой без мягкого блока)
-        const skill = Math.max(1, getBlessedSkill(this.registry, this.player.skills[w.skill] || 20)
+        // Итерация 66.89: к проверке добавляются тактические модификаторы
+        // (окно контратаки В-1, стрелковое в упор В-4, прицел п.9, копьё В-4).
+        let skill = Math.max(1, getBlessedSkill(this.registry, this.player.skills[w.skill] || 20)
             - combatExhaustionPenalty(this.registry));
-        const res = skillCheck(skill);
+        const mods = [];
+        // В-1: окно контратаки — успешное уклонение от медленного врага открыло
+        // брешь: следующая атака героя +10%. Флаг расходуется этим ударом.
+        if (this.counterWindow) {
+            this.counterWindow = false;
+            skill += 10;
+            mods.push(t('контратака +10%'));
+        }
+        // В-4: лук/самострел — враг в ближнем бою, успеть прицелиться: −10%.
+        if (weaponKey === 'bow' || weaponKey === 'crossbow') {
+            skill -= 10;
+            mods.push(t('стрельба в упор −10%'));
+        }
+        // п.9 (приказ владельца): ПРИЦЕЛ — ход прицеливания дал +25% к выстрелу.
+        if ((weaponKey === 'bow' || weaponKey === 'crossbow') && this.aiming) {
+            this.aiming = false;
+            skill += 25;
+            mods.push(t('прицел +25%'));
+        }
+        // В-4: копьё — первый удар против врага без доспеха +10% (длинная древковая).
+        if (weaponKey === 'spear' && this.spearFirstStrike) {
+            this.spearFirstStrike = false;   // «первый удар» расходуется первой же пробой
+            if (!target.armor || target.armor.def === 0) {
+                skill += 10;
+                mods.push(t('копьё против бездоспешного +10%'));
+            }
+        }
+        const res = skillCheck(Math.max(1, skill));
+        const modsText = mods.length > 0 ? ` (${mods.join(', ')})` : '';
 
         // Патч 66.73: боевой раунд — напряжённая деятельность (−1 ОУ, голод ×2.5)
         spendFatigue(this.registry, 1);
@@ -814,7 +881,7 @@ export class CombatScene extends Phaser.Scene {
                 this.refreshMainActionLabel();
             }
             this.playBowShot(this.playerSprite, targetSprite,
-                () => this.resolvePlayerAttack(w, res, target, targetSprite));
+                () => this.resolvePlayerAttack(w, res, target, targetSprite, modsText));
             return;
         }
 
@@ -836,7 +903,7 @@ export class CombatScene extends Phaser.Scene {
         if (this.audioManager) this.audioManager.playWeaponSwing();
         // Анимация подхода игрока
         this.playLunge(this.playerSprite, targetSprite, () => {
-            this.resolvePlayerAttack(w, res, target, targetSprite);
+            this.resolvePlayerAttack(w, res, target, targetSprite, modsText);
         });
     }
 
@@ -902,42 +969,62 @@ export class CombatScene extends Phaser.Scene {
     /**
      * Разрешение атаки игрока (выделено из playerAttack раундом 66.28:
      * общий код ближнего удара и выстрела из лука).
+     * Итерация 66.89: канон BRP SRD — особый успех по §5.13 (максимум
+     * оружия + обычный бросок + БУ), крит — через броню; самострел не
+     * отбивается уклонением (§5.7); успешное уклонение врага стоит игроку
+     * 1 ОУ (CB-3); раненые враги проверяют мораль (В-3).
      */
-    resolvePlayerAttack(w, res, target, targetSprite) {
+    resolvePlayerAttack(w, res, target, targetSprite, modsText = '') {
         {
             // Обработка результата после подхода
-            if (res.result === ROLL_RESULT.FAIL || res.result === ROLL_RESULT.FUMBLE) {
-                this.pushLog(`${t(w.name)}: ${res.roll} — ${t('промах!')}`);
+            const tier = damageTierOf(res);
+            if (tier === 0) {
+                this.pushLog(`${t(w.name)}: ${res.roll} — ${t('промах!')}${modsText}`);
                 this.playHitEffect(targetSprite.x, targetSprite.y, 'dust');
                 if (this.audioManager) this.audioManager.playSwordMiss();
             } else {
                 const tw = this.enemySprites.find(x => x.combatant === target);
-                const dodgeRes = skillCheck(target.dodge);
-                if (dodgeRes.result === ROLL_RESULT.SUCCESS || dodgeRes.result === ROLL_RESULT.CRITICAL) {
-                    this.pushLog(tf('{0} уклонился от удара ({1}).', t(target.name), dodgeRes.roll));
+                // 66.89 (приказ 5, BRP SRD §5.7): от болта самострела уклониться
+                // НЕЛЬЗЯ — высокоскоростной снаряд не отбивается (усиливает и
+                // выделяет самострел из линейки — CB-5а).
+                const boltCannotBeDodged = w.skill === 'crossbow';
+                const dodgeRes = boltCannotBeDodged ? null : skillCheck(target.dodge);
+                if (dodgeRes && (dodgeRes.result === ROLL_RESULT.SUCCESS || dodgeRes.result === ROLL_RESULT.CRITICAL)) {
+                    // CB-3 (приказ 7): успешное уклонение врага имеет ЦЕНУ —
+                    // промах в никуда утомляет: −1 ОУ игроку.
+                    spendFatigue(this.registry, 1);
+                    this.pushLog(tf(t('{0} уклонился от удара ({1}) — промах в никуда утомляет (−1 ОУ).'), t(target.name), dodgeRes.roll) + modsText);
                     this.playHitEffect(targetSprite.x, targetSprite.y, 'dust');
                     if (this.audioManager) this.audioManager.playSwordMiss();
                 } else {
-                    // BRP SRD: урон = weapon dice + DB, особый успех ×2.
-                    // Раунд 35 (QA-фикс P1): критический успех одновременно
-                    // считался «особым» (крит — подмножество особых), и урон
-                    // получал ×2 (особый) и ×1.5 (крит) = ×3, хотя справка боя
-                    // обещает «крит ×1.5». Теперь крит не удваивает урон как
-                    // особый — применяется только обещанный множитель ×1.5.
-                    const isCrit = res.result === ROLL_RESULT.CRITICAL;
-                    let dmg = rollDamage(w.dice, this.player.DB, res.special && !isCrit);
+                    if (boltCannotBeDodged) {
+                        this.pushLog(t('Болт самострела не отбить уклоном — зверь или человек успевает лишь моргнуть.'));
+                    }
+                    // 66.89 (приказ 3): канон BRP SRD, ПАРИТЕТ с врагом —
+                    // особый (§5.13): максимум оружия + обычный бросок + БУ, броня действует;
+                    // крит: максимум оружия + МАКСИМУМ БУ, броня НЕ защищает.
+                    // (Раньше: игрок ×1.5, враг фактически ×2 — асимметрия CB-2.)
+                    let dmg = rollDamage(w.dice, this.player.DB, tier);
                     dmg += (w.bonus || 0);
-                    if (isCrit) dmg = Math.ceil(dmg * 1.5);
-                    // Броня врага поглощает урон
-                    const targetArmorDef = target.armor ? target.armor.def : 0;
-                    const { actualDmg, absorbed } = applyDamage(target, dmg, targetArmorDef);
+                    // В-4: дробящее против кольчуги — ударная волна сминает кольца (бронь −1)
+                    let bluntNote = '';
+                    let targetArmorDef = target.armor ? target.armor.def : 0;
+                    if (w.skill === 'blunt' && target.armorId === 'chain' && targetArmorDef > 0) {
+                        targetArmorDef -= 1;
+                        bluntNote = t(' (дробящее сминает кольчугу: бронь −1)');
+                    }
+                    // Крит пробивает броню насквозь (канон старшинства степеней BRP)
+                    const { actualDmg, absorbed } = applyDamage(target, dmg, tier >= 3 ? 0 : targetArmorDef);
 
                     // Flash цели
                     tw.sprite.setTintFill(0xff6060);
                     this.time.delayedCall(80, () => tw.sprite.clearTint());
 
                     createFloatingText(this, tw.sprite.x, tw.sprite.y - 60, `-${actualDmg}`, '#ff6b5a');
-                    this.pushLog(tf('{0}: попадание! Урон {1}{2} (бросок {3}){4}{5}.', t(w.name), actualDmg, absorbed > 0 ? tf(' (бронь {0})', absorbed) : '', res.roll, isCrit ? t(' [КРИТ!]') : '', res.special ? t(' [ОСОБЫЙ!]') : ''));
+                    const critWord = tier >= 3 ? t(' [КРИТ!]')
+                        : (tier >= 2 ? t(' [ОСОБЫЙ!]') : '');
+                    this.pushLog(tf(t('{0}: попадание! Урон {1}{2} (бросок {3}){4}{5}{6}.'),
+                        t(w.name), actualDmg, absorbed > 0 ? tf(t(' (бронь {0})'), absorbed) : '', res.roll, critWord, bluntNote, modsText));
 
                     // Раунд 23 (п.5): звук по исходу удара — тело / доспех / щит
                     if (this.audioManager) {
@@ -948,13 +1035,15 @@ export class CombatScene extends Phaser.Scene {
                             this.audioManager.playSwordHit();
                         }
                     }
-                    if (isCrit) {
+                    if (tier >= 3) {
                         this.playCritEffect(tw.sprite.x, tw.sprite.y);
                         if (this.audioManager) this.audioManager.playLevelUp();
+                    } else if (tier >= 2) {
+                        this.playCritEffect(tw.sprite.x, tw.sprite.y);
                     } else {
                         this.playHitEffect(tw.sprite.x, tw.sprite.y, 'blood');
                     }
-                    this.cameras.main.shake(140, isCrit ? 0.012 : 0.006);
+                    this.cameras.main.shake(140, tier >= 3 ? 0.012 : 0.006);
 
                     if (target.HP <= 0) {
                         // Патч 66.18 (QA-66.17): род глагола — по имени врага
@@ -973,11 +1062,14 @@ export class CombatScene extends Phaser.Scene {
                             duration: 400,
                             ease: 'Quad.easeIn',
                         });
+                    } else {
+                        // В-3 (66.89): мораль по BRP — враг с HP < 25% проверяет МОЩь
+                        this.checkMorale(tw);
                     }
                 }
             }
             this.drawBars();
-            if (this.allDead()) {
+            if (this.allOut()) {
                 this.time.delayedCall(500, () => this.endCombatVictory());
                 return;
             }
@@ -1035,21 +1127,117 @@ export class CombatScene extends Phaser.Scene {
         }
 
         this.playerDodging = true;
-        this.pushLog(t('Ты занимаешь оборонительную стойку, готовясь уклониться.'));
+        // В-2 (66.89): если враг телеграфирует особый удар — уклонение получает
+        // +20% к проверке (приказ 11: «уклон (+20% к следующей проверке уклонения)»)
+        this.playerDodgeBonus = this.anyTelegraphPending() ? 20 : 0;
+        this.pushLog(this.playerDodgeBonus > 0
+            ? t('Ты уходишь в оборонительную стойку, готовясь уклониться от ОСОБОГО удара (+20%).')
+            : t('Ты занимаешь оборонительную стойку, готовясь уклониться.'));
         this.busy = true;
         this.time.delayedCall(500, () => this.enemyTurn());
     }
 
-    /** Ход противника: атаки всех живых врагов, затем — ход игрока. */
-    enemyTurn() {
-        this.playerDodging = false;
-        const alive = this.enemySprites.filter(e => e.combatant.HP > 0);
-        if (alive.length === 0) { this.endCombatVictory(); return; }
+    /** Есть ли враг, готовящий ОСОБЫЙ удар (видимость кнопки «Перехват», В-2). */
+    anyTelegraphPending() {
+        return this.enemySprites.some(r => r.combatant.HP > 0 && !r.combatant.__out && !!r.telegraph);
+    }
 
-        alive.forEach((e, idx) => {
+    /** Обновить видимость кнопки «Перехват» и перестроить ряд панели. */
+    refreshInterceptButton() {
+        if (this.__interceptBtn) {
+            const pending = this.anyTelegraphPending();
+            if (this.__interceptBtn.visible !== pending) {
+                this.__interceptBtn.setVisible(pending);
+                if (this.__rowRelayout) this.__rowRelayout();
+            }
+        }
+    }
+
+    /** Итерация 66.89 (приказ 9): ПРИЦЕЛ — ход прицеливания; следующий выстрел +25%. */
+    aimAction() {
+        const eq = (this.player.weapon || WEAPONS.fists).id || 'fists';
+        if (eq !== 'bow' && eq !== 'crossbow') {
+            this.pushLog(t('Прицелиться можно только с луком или самострелом в руках.'));
+            return;   // ход НЕ тратится (выстрела не было)
+        }
+        if (eq === 'crossbow' && this.__crossbowReload) {
+            this.pushLog(t('Руки заняты тетивой самострела — прицеливаться некогда! Заведи тетиву.'));
+            return;
+        }
+        this.aiming = true;
+        this.busy = true;
+        this.pushLog(t('Ты выцеливаешь противника: следующий выстрел точнее (+25%). Потрачен ход!'));
+        ActionLog.add(this.registry, t('Прицеливался перед выстрелом (ход).'));
+        this.time.delayedCall(500, () => this.enemyTurn());
+    }
+
+    /**
+     * Итерация 66.89 (В-2): ПЕРЕХВАТ — сбить замах врага, готовящего ОСОБЫЙ
+     * удар. Проверка навыка оружия в руках; успех — замах сорван (враг потратил
+     * ход зря), провал — удар неминуч. Тратит ход.
+     */
+    interceptAction() {
+        const targetRec = this.enemySprites.find(r => r.combatant.HP > 0 && !r.combatant.__out && r.telegraph);
+        if (!targetRec) return;
+        const w = this.player.weapon || WEAPONS.fists;
+        const skill = Math.max(1, getBlessedSkill(this.registry, this.player.skills[w.skill] || 20)
+            - combatExhaustionPenalty(this.registry));
+        const res = skillCheck(skill);
+        this.busy = true;
+        spendFatigue(this.registry, 1);
+        if (res.result === ROLL_RESULT.SUCCESS || res.result === ROLL_RESULT.CRITICAL) {
+            targetRec.telegraph = null;
+            this.pushLog(tf(t('Ты перехватил замах {0}: оружие выбито в сторону — особый удар сорван! (бросок {1})'), t(targetRec.combatant.name), res.roll));
+        } else {
+            this.pushLog(tf(t('Перехват не удался (бросок {0}) — {1} всё ещё заносит удар!'), res.roll, t(targetRec.combatant.name)));
+        }
+        this.refreshInterceptButton();
+        this.time.delayedCall(600, () => this.enemyTurn());
+    }
+
+    /** Ход противника: атаки врагов, затем — ход игрока.
+     *  Итерация 66.89:
+     *   • CB-1 (приказ 2): сброс playerDodging УДАЛЁН — раньше флаг стирался
+     *     до проверки уклонения, и «Уклон» был плацебо; снимает флаг afterEnemy();
+     *   • В-5 (приказ 14): инициатива по ЛОВ; ближний строй — бьют ≤2 одновременно;
+     *   • В-2 (приказ 11): особые/критические броски врага ТЕЛЕГРАФИРУЮТСЯ —
+     *     враг тратит ход на замах, игрок может: уклон (+20%), перехват, принять. */
+    enemyTurn() {
+        // CB-1: прежняя первая строка «this.playerDodging = false» удалена —
+        // она делала кнопку «Уклон» плацебо (проверка уклонения шла ПОСЛЕ стирания).
+        const combatants = this.enemySprites.filter(e => e.combatant.HP > 0 && !e.combatant.__out);
+        if (combatants.length === 0) { this.endCombatVictory(); return; }
+        // В-5: инициатива по ЛОВ — быстрые бьют первыми (волк ЛОВ 65 успевает раньше)
+        combatants.sort((a, b) => ((b.combatant.DEX || 50) - (a.combatant.DEX || 50)));
+        // В-5: ближний строй — в узком месте бьют не более ДВУХ, остальные теснятся
+        const acting = combatants.slice(0, 2);
+        combatants.slice(2).forEach(e => {
+            if (!e.combatant.__waitedLogged) {
+                e.combatant.__waitedLogged = true;
+                this.pushLog(tf(t('{0} теснится в строю — не достать (в ближнем строю бьют двое).'), t(e.combatant.name)));
+            }
+        });
+
+        acting.forEach((e, idx) => {
             this.time.delayedCall(idx * 800 + 200, () => {
                 if (this.player.HP <= 0) return;
                 const en = e.combatant;
+
+                // В-2: исполняется ЗАТЕЛЕГРАФИРОВАННЫЙ особый удар прошлого хода
+                if (e.telegraph) {
+                    const saved = e.telegraph;
+                    e.telegraph = null;
+                    this.refreshInterceptButton();
+                    if (this.audioManager) this.audioManager.playWeaponSwing();
+                    this.playEnemyAttackAnim(e);
+                    this.playLunge(e.sprite, this.playerSprite, () => {
+                        this.restoreEnemyIdle(e);
+                        this.resolveTelegraphedStrike(e, saved);
+                        if (this.player.HP > 0 && idx === acting.length - 1) this.afterEnemy();
+                    });
+                    return;
+                }
+
                 const res = skillCheck(en.attackSkill);
 
                 // Раунд 48 (п.5 заявки): после ПЕРВОГО удара противника герой
@@ -1068,25 +1256,51 @@ export class CombatScene extends Phaser.Scene {
                 this.playEnemyAttackAnim(e);
                 this.playLunge(e.sprite, this.playerSprite, () => {
                     this.restoreEnemyIdle(e);
-                    if (res.result === ROLL_RESULT.FAIL || res.result === ROLL_RESULT.FUMBLE) {
+                    const tier = damageTierOf(res);
+                    if (tier === 0) {
                         this.pushLog(tf('{0}: {1} — промах.', t(en.name), res.roll));
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'dust');
                         if (this.audioManager) this.audioManager.playSwordMiss();
+                    } else if (tier >= 2) {
+                        // В-2: ТЕЛЕГРАФ — враг НЕ бьёт сразу: заносит оружие на
+                        // особый/критический удар. Ход потрачен на замах —
+                        // игрок может уклониться (+20%), перехватить или принять.
+                        e.telegraph = { res };
+                        this.pushLog(tf(t('⚠ {0} заносит {1} — готовит ОСОБЫЙ удар! Уклонись (+20%), перехвати или прими удар.'), t(en.name), t(en.weapon.name)));
+                        // визуальный телеграф: оранжевая вспышка на замахе
+                        e.sprite.setTintFill(0xffa040);
+                        this.time.delayedCall(160, () => { if (e.sprite.active) e.sprite.clearTint(); });
+                        this.refreshInterceptButton();
+                        this.time.delayedCall(450, () => {
+                            if (this.player.HP > 0 && idx === acting.length - 1) this.afterEnemy();
+                        });
+                        return;
                     } else {
+                        // Обычный удар: уклонение игрока (если встал в стойку)
                         if (this.playerDodging) {
-                            // Раунд 66.71: благословение усиливает и ответное уклонение
-                            const dr = skillCheck(getBlessedSkill(this.registry, this.player.skills.dodge));
+                            // 66.71: благословение усиливает уклонение; В-2: +20% к уклонению
+                            // против телеграфированного удара (бонус ставит dodge()).
+                            const dodgeSkill = getBlessedSkill(this.registry, this.player.skills.dodge)
+                                + (this.playerDodgeBonus || 0);
+                            const dr = skillCheck(dodgeSkill);
                             if (dr.result === ROLL_RESULT.SUCCESS || dr.result === ROLL_RESULT.CRITICAL) {
                                 this.pushLog(tf('Ты уклонился от {0} ({1})!', t(en.name), dr.roll));
+                                // В-1: успешное уклонение от МЕДЛЕННОГО врага открывает
+                                // окно контратаки — следующая атака героя +10%.
+                                if ((en.DEX || 50) < this.player.DEX) {
+                                    this.counterWindow = true;
+                                    this.pushLog(t('✚ Окно контратаки! Следующая атака точнее (+10%).'));
+                                }
                                 this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'dust');
                                 if (this.audioManager) this.audioManager.playSwordMiss();
                                 this.drawBars();
-                                if (idx === alive.length - 1) this.afterEnemy();
+                                if (idx === acting.length - 1) this.afterEnemy();
                                 return;
                             }
                         }
-                        // BRP SRD: урон = weapon dice + DB, особый успех ×2
-                        const dmg = rollDamage(en.weapon.dice, en.DB, res.special);
+                        // 66.89: канон BRP урона (обычный успех — бросок оружия + БУ;
+                        // сюда попадают только обычные степени — особые уходят в телеграф)
+                        const dmg = rollDamage(en.weapon.dice, en.DB, 1);
                         // Броня игрока поглощает урон
                         const playerArmorDef = this.player.armor ? this.player.armor.def : 0;
                         const { actualDmg, absorbed } = applyDamage(this.player, dmg, playerArmorDef);
@@ -1096,7 +1310,7 @@ export class CombatScene extends Phaser.Scene {
                         this.time.delayedCall(80, () => this.playerSprite.clearTint());
 
                         createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `-${actualDmg}`, '#ff6b5a');
-                        this.pushLog(tf('{0} бьёт {1}: урон {2}{3} ({4}){5}.', t(en.name), t(en.weapon.name), actualDmg, absorbed > 0 ? tf(' (бронь {0})', absorbed) : '', res.roll, res.special ? t(' [ОСОБЫЙ!]') : ''));
+                        this.pushLog(tf('{0} бьёт {1}: урон {2}{3} ({4}).', t(en.name), t(en.weapon.name), actualDmg, absorbed > 0 ? tf(' (бронь {0})', absorbed) : '', res.roll));
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'blood');
                         // Раунд 23 (п.5): звук по исходу — тело / доспех / щит;
                         // при полном попадании герой вздрагивает (knight_hit)
@@ -1123,20 +1337,134 @@ export class CombatScene extends Phaser.Scene {
                             return;
                         }
                     }
-                    if (idx === alive.length - 1) this.afterEnemy();
+                    if (idx === acting.length - 1) this.afterEnemy();
                 });
             });
         });
     }
 
+    /**
+     * В-2 (66.89): разрешение телеграфированного ОСОБОГО/критического удара.
+     * Бросок уже сделан (сохранён в телеграфе) — удар точный; спастись можно
+     * было уклонением (+20% к проверке — приказ 11) или перехватом (ходом ранее).
+     * Урон — канон BRP SRD §5.13 (паритет с игроком): особый — максимум оружия +
+     * обычный бросок + БУ, крит — максимум оружия + максимум БУ СКВОЗЬ броню.
+     */
+    resolveTelegraphedStrike(e, saved) {
+        const en = e.combatant;
+        const tier = damageTierOf(saved.res);
+        if (this.playerDodging) {
+            const dodgeSkill = getBlessedSkill(this.registry, this.player.skills.dodge)
+                + (this.playerDodgeBonus || 0);
+            const dr = skillCheck(dodgeSkill);
+            if (dr.result === ROLL_RESULT.SUCCESS || dr.result === ROLL_RESULT.CRITICAL) {
+                this.pushLog(tf(t('Ты уклонился от ОСОБОГО удара {0} ({1})!'), t(en.name), dr.roll));
+                // В-1: окно контратаки — и от медленного зверя успел уйти в сторону
+                if ((en.DEX || 50) < this.player.DEX) {
+                    this.counterWindow = true;
+                    this.pushLog(t('✚ Окно контратаки! Следующая атака точнее (+10%).'));
+                }
+                this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'dust');
+                if (this.audioManager) this.audioManager.playSwordMiss();
+                this.drawBars();
+                return;
+            }
+            this.pushLog(tf(t('Уклонение не спасло от занесённого удара {0} (бросок {1})...'), t(en.name), dr.roll));
+        }
+        const dmg = rollDamage(en.weapon.dice, en.DB, tier);
+        // Крит пробивает броню насквозь (паритет с игроком — приказ 3)
+        const playerArmorDef = (tier >= 3) ? 0 : (this.player.armor ? this.player.armor.def : 0);
+        const { actualDmg, absorbed } = applyDamage(this.player, dmg, playerArmorDef);
+
+        this.playerSprite.setTintFill(0xff6060);
+        this.time.delayedCall(80, () => this.playerSprite.clearTint());
+        createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `-${actualDmg}`, '#ff6b5a');
+        const critWord = tier >= 3 ? t(' [КРИТ!]') : t(' [ОСОБЫЙ!]');
+        this.pushLog(tf(t('{0} обрушивает ОСОБЫЙ удар ({1}): урон {2}{3} (бросок {4}){5}.'),
+            t(en.name), t(en.weapon.name), actualDmg, absorbed > 0 ? tf(t(' (бронь {0})'), absorbed) : '', saved.res.roll, critWord));
+        this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'blood');
+        if (this.audioManager) {
+            if (absorbed > 0) {
+                if (actualDmg === 0) this.audioManager.playShieldHit();
+                else this.audioManager.playArmorHit();
+            } else {
+                this.audioManager.playSwordHit();
+            }
+        }
+        this.cameras.main.shake(200, 0.012);
+        this.drawBars();
+        if (this.player.HP <= 0) {
+            this.time.delayedCall(400, () => this.endCombatDefeat());
+        }
+    }
+
     afterEnemy() {
         this.busy = false;
         this.playerDodging = false;
+        this.playerDodgeBonus = 0;   // В-2: бонус уклонения израсходован этим ходом
+        this.refreshInterceptButton();
         this.pushLog(t('Твой ход.'));
     }
 
     allDead() {
         return this.enemySprites.every(e => e.combatant.HP <= 0);
+    }
+
+    /** 66.89 (В-3): бой окончен, когда все враги мертвы ИЛИ вышли из боя
+     *  (сдались/бежали). */
+    allOut() {
+        return this.enemySprites.every(e => e.combatant.HP <= 0 || !!e.combatant.__out);
+    }
+
+    /**
+     * В-3 (66.89, приказ 12): МОРАЛЬ ПО BRP SRD — враг с HP < 25% проверяет
+     * МОЩь (POW). Провал: зверь обращается в бегство, человек сдаётся
+     * («бросает оружие») или бежит. Сдавшегося вора можно отвести старосте —
+     * премия 20 д. за живьём (стимул «поймать, а не зарезать» по Судебнику).
+     * Вызывается после урона игрока, пока враг жив.
+     */
+    checkMorale(rec) {
+        const en = rec.combatant;
+        if (en.HP <= 0 || en.__out) return;
+        if (en.HP >= Math.ceil(en.HPmax * 0.25)) return;   // ещё держится
+        const res = skillCheck(Math.max(5, en.POW || 50));
+        if (res.result === ROLL_RESULT.SUCCESS || res.result === ROLL_RESULT.CRITICAL) {
+            return;   // пересилил страх — дерётся дальше
+        }
+        // Воля сломлена: зверь — только бегство; человек — сдача или бегство (50/50)
+        const flees = !!en.isAnimal || Math.random() < 0.5;
+        rec.telegraph = null;              // замах отменяется — не до него
+        en.__out = flees ? 'fled' : 'surrendered';
+        this.refreshInterceptButton();
+        if (flees) {
+            this.__enemyFled = true;
+            this.pushLog(tf(t('⚔ {0} теряет волю к борьбе и обращается в бегство!'), t(en.name)));
+            ActionLog.add(this.registry, tf(t('{0} обратился в бегство (мораль, бросок {1}).'), t(en.name), res.roll));
+            if (rec.sprite && rec.sprite.active) {
+                rec.sprite.setAlpha(0.95);
+                this.tweens.add({
+                    targets: rec.sprite,
+                    x: rec.sprite.x + 520,
+                    duration: 750,
+                    ease: 'Quad.easeIn',
+                    onComplete: () => { if (rec.sprite.active) rec.sprite.setAlpha(0).setVisible(false); },
+                });
+            }
+            if (rec.label && rec.label.active) rec.label.setVisible(false);
+        } else {
+            this.__enemySurrendered = true;
+            this.pushLog(tf(t('⚔ {0} бросает оружие: «Пощади!» — сдался в плен.'), t(en.name)));
+            ActionLog.add(this.registry, tf(t('{0} сдался в плен (мораль, бросок {1}).'), t(en.name), res.roll));
+            if (rec.sprite && rec.sprite.active) {
+                rec.sprite.setTint(0x9a9a9a);
+                rec.sprite.setAlpha(0.75);
+            }
+            if (rec.label && rec.label.active) rec.label.setText(`${t(en.name)} (${t('сдался')})`);
+        }
+        // Все вышли из боя — победа (через задержку, чтобы увидеть сданного/бегущего)
+        if (this.allOut()) {
+            this.time.delayedCall(700, () => this.endCombatVictory());
+        }
     }
 
     autosave() {
@@ -1145,36 +1473,56 @@ export class CombatScene extends Phaser.Scene {
     }
 
     endCombatVictory() {
+        // В-3 (66.89): исходы морали — кто-то сдался/бежал; если враги ТОЛЬКО бежали
+        // (никого не убито и никто не сдался) — победа без триумфа (приказ 12:
+        // «бой завершается без победной анимации»)
+        const anyOut = this.enemies.some(e => e.__out);
+        const anyKilled = this.enemies.some(e => e.HP <= 0);
+        const fledWithoutBlood = anyOut && !anyKilled && !this.__enemySurrendered;
         // 66.32: победная анимация боевого облика (последний кадр остаётся)
-        if (this.usesBattleLook) {
+        if (!fledWithoutBlood && this.usesBattleLook) {
             const vic = `battle_${this.battleLook}_victory`;
             if (this.anims.exists(vic)) this.playerSprite.play(vic);
         }
         const q = this.registry.get('quest');
         // Если это был вор — победа в ПОГОНЕ, но игра продолжается (раунд 21)
         const isThiefFight = this.enemies.some(e => e.isThief) || this.npcId === 'thief';
-        // Раунд 45 (п.3): убитый герой ЖИТЕЛЬ (бой из интерьера — npcId «xxx_hostile»)
-        const murderVictimId = (!isThiefFight && this.npcId && this.npcId.endsWith('_hostile'))
+        // В-3 (66.89): вор, сдавшийся в плен (мораль), — не убит: икона изъята,
+        // лиходея можно отвести старосте живьём — премия 20 д. при сдаче иконы.
+        const thiefCaptured = isThiefFight && this.enemies.some(e => e.isThief && e.__out === 'surrendered');
+        // Раунд 45 (п.3): убитый герой ЖИТЕЛЬ (бой из интерьера — npcId «xxx_hostile»).
+        // В-3 (66.89): если житель СДАЛСЯ/УБЕЖАЛ — крови нет, вир не грозит.
+        const villagerDefeatedPeacefully = !!(this.npcId && this.npcId.endsWith('_hostile')
+            && this.enemies.some(e => e.__out) && !anyKilled);
+        const murderVictimId = (!isThiefFight && !villagerDefeatedPeacefully && this.npcId && this.npcId.endsWith('_hostile'))
             ? this.npcId.slice(0, -'_hostile'.length)
             : null;
         let murderInfo = null;
         if (murderVictimId) {
             // Убийство жителя — кровная вина: деревня и все НПЦ −50, родня −100
             murderInfo = applyNpcMurderConsequences(this.registry, murderVictimId);
+        } else if (villagerDefeatedPeacefully) {
+            // Сдавшийся житель — перемирье на 12 часов (не нападёт сразу), без вирa
+            const victimId = this.npcId.slice(0, -'_hostile'.length);
+            setNpcTruce(this.registry, victimId, 12);
+            ActionLog.add(this.registry, t('Житель бросил оружие и сдался — крови не пролито (перемирье 12 часов).'));
         }
         // Раунд 46 (п.2 заявки): убийство СТАРОСТЫ — репутация до −100 и
         // немедленный Проигрыш (отдельный финал «⚖ Убийство старосты»)
         const elderMurdered = !!(murderInfo && murderInfo.elderMurdered);
         if (isThiefFight) {
-            // Вор повержен в бою — икона в инвентарь, погоня завершена
+            // Вор повержен/пойман в бою — икона в инвентарь, погоня завершена
             // Патч 66.18 (QA-66.17): согласование рода (вор/воровка)
             const _thiefFem = getThiefGender(this.registry) === 'female';
-            recoverStolenItem(this.registry, 'killed', null);
-            ActionLog.add(this.registry, _thiefFem
-                ? t('Бой с воровкой выигран. Воровка повержена!')
-                : t('Бой с вором выигран. Вор повержен!'));
+            // В-3 (66.89): 'captured' (живьём) — премия старосты при сдаче иконы сработает сама
+            recoverStolenItem(this.registry, thiefCaptured ? 'captured' : 'killed', null);
+            ActionLog.add(this.registry, thiefCaptured
+                ? (_thiefFem ? t('Бой с воровкой выигран: воровка обезоружена и взята живьём!') : t('Бой с вором выигран: вор обезоружен и взят живьём!'))
+                : (_thiefFem ? t('Бой с воровкой выигран. Воровка повержена!') : t('Бой с вором выигран. Вор повержен!')));
         } else if (this.npcId === 'bandit') {
             q.banditDefeated = true;
+            if (this.__enemyFled) ActionLog.add(this.registry, t('Разбойник обратился в бегство — тракт свободен.'));
+            else if (this.__enemySurrendered) ActionLog.add(this.registry, t('Разбойник сдался в плен — тракт свободен.'));
         }
         if (!isThiefFight) {
             // Раунд 21: боевые процедурные поручения (волк/разбойники) завершаются
@@ -1182,21 +1530,38 @@ export class CombatScene extends Phaser.Scene {
             // Раунд 45 (п.3): после убийства жителя баннер ведёт к вире
             q.currentObjective = murderVictimId
                 ? t('Кровная вина на тебе. Староста может помирить за виру.')
-                : t('Враг повержен');
+                : (villagerDefeatedPeacefully ? t('Житель сдался — крови не пролито.') : t('Враг повержен'));
             // РАУНД 66.17 (п.11): с убитого волка снимают мясо — объём ПО РАЗМЕРУ
             // ЗВЕРЯ (раунд 66.28, п.13: ВОЛК 5–9 — самый крупный зверь в боях).
-            // РАУНД 66.70 (приказ 8): обдир — проверка ВЫЖИВАНИЯ: успех — мясо +
-            // шкура; неудача — неловкий обдир (половина мяса, без шкуры); крит —
-            // мясо ×2 и шкура. Сырое: готовить или продавать.
+            // РАУНД 66.70 (приказ 8): обдир — проверка ВЫЖИВАНИЯ.
+            // 66.89 (п.16): СТАЯ волков — разделывается КАЖДАЯ убитая туша.
             if (this.enemyKeys && this.enemyKeys.includes('wolf')) {
                 // Патч 66.73 (приказ 13): у волка ценный лут — крит разделки
                 // даёт волчьи клыки (трофей на продажу).
-                const res = survivalButcher(this.registry, this.player, [5, 9], true, { trophy: 'wolf_fangs' });
-                ActionLog.add(this.registry, (res.trophy > 0
-                    ? tf(t('Освежевал тушу убитого волка (Выживание {0}%: бросок {1}): +{2} сырое мясо, шкура и ЦЕННЫЙ ТРОФЕЙ — волчьи клыки (продать на постоялом дворе).'), res.skill, res.roll, res.meat)
-                    : (res.skin > 0
-                        ? tf(t('Освежевал тушу убитого волка (Выживание {0}%: бросок {1}): +{2} сырое мясо и шкура (приготовить на костре или продать).'), res.skill, res.roll, res.meat)
-                        : tf(t('Обобрал тушу убитого волка (Выживание {0}%: бросок {1}): лишь +{2} сырое мясо — шкура порвана.'), res.skill, res.roll, res.meat))));
+                const deadWolves = Math.max(1, this.enemies.filter(e => e.HP <= 0).length);
+                let meat = 0, skins = 0, trophies = 0, lastRoll = null, lastSkill = null;
+                for (let i = 0; i < deadWolves; i++) {
+                    const res = survivalButcher(this.registry, this.player, [5, 9], true, { trophy: 'wolf_fangs' });
+                    meat += res.meat; skins += (res.skin > 0 ? 1 : 0); trophies += (res.trophy > 0 ? 1 : 0);
+                    lastRoll = res.roll; lastSkill = res.skill;
+                }
+                ActionLog.add(this.registry, (deadWolves > 1
+                    ? tf(t('Освежевал {0} туш убитых волков (Выживание {1}%): +{2} сырое мясо{3}{4}.'),
+                        deadWolves, lastSkill, meat,
+                        skins > 0 ? tf(t(', шкуры ×{0}'), skins) : '',
+                        trophies > 0 ? tf(t(' и ЦЕННЫЕ ТРОФЕИ — волчьи клыки ×{0}'), trophies) : '')
+                    : (trophies > 0
+                        ? tf(t('Освежевал тушу убитого волка (Выживание {0}%: бросок {1}): +{2} сырое мясо, шкура и ЦЕННЫЙ ТРОФЕЙ — волчьи клыки (продать на постоялом дворе).'), lastSkill, lastRoll, meat)
+                        : (skins > 0
+                            ? tf(t('Освежевал тушу убитого волка (Выживание {0}%: бросок {1}): +{2} сырое мясо и шкура (приготовить на костре или продать).'), lastSkill, lastRoll, meat)
+                            : tf(t('Обобрал тушу убитого волка (Выживание {0}%: бросок {1}): лишь +{2} сырое мясо — шкура порвана.'), lastSkill, lastRoll, meat)))));
+            }
+            // 66.89 (п.15): туша МЕДВЕДЯ — много мяса и шкура (дорогая)
+            if (this.enemyKeys && this.enemyKeys.includes('bear') && anyKilled) {
+                const res = survivalButcher(this.registry, this.player, [15, 25], true);
+                ActionLog.add(this.registry, (res.skin > 0
+                    ? tf(t('Разделал тушу убитого МЕДВЕДЯ (Выживание {0}%: бросок {1}): +{2} сырое мясо и медвежья шкура — добыча всей жизни!'), res.skill, res.roll, res.meat)
+                    : tf(t('Обобрал тушу убитого МЕДВЕДЯ (Выживание {0}%: бросок {1}): лишь +{2} сырое мясо — шкура порвана в схватке.'), res.skill, res.roll, res.meat)));
             }
         } else {
             q.currentObjective = t('Икона у тебя! Верни её старосте или священнику.');
@@ -1207,23 +1572,31 @@ export class CombatScene extends Phaser.Scene {
         this.pushLog(murderVictimId
             ? tf('{0} убит! Кровная вина пала на тебя...', t(this.enemies[0].name))
             : (isThiefFight
-                ? (getThiefGender(this.registry) === 'female'
-                    ? t('Воровка повержена! Икона у тебя!')
-                    : t('Вор повержен! Икона у тебя!'))
+                ? (thiefCaptured
+                    ? (getThiefGender(this.registry) === 'female'
+                        ? t('Воровка обезоружена и взята живьём! Икона у тебя!')
+                        : t('Вор обезоружен и взят живьём! Икона у тебя!'))
+                    : (getThiefGender(this.registry) === 'female'
+                        ? t('Воровка повержена! Икона у тебя!')
+                        : t('Вор повержен! Икона у тебя!')))
                 : t('Враг повержен! Ты одержал победу.')));
-        if (this.audioManager) this.audioManager.playLevelUp();
-        // Эффект победы — золотые частицы
-        const emitter = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
-            speed: { min: -150, max: 150 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 2, end: 0 },
-            lifespan: 1000,
-            blendMode: 'ADD',
-            tint: 0xffcc40,
-        });
-        emitter.explode(30);
+        // В-3 (66.89): без победного звона/частиц, если враги просто бежали
+        let victoryFx = { destroy: () => {} };
+        if (!fledWithoutBlood) {
+            if (this.audioManager) this.audioManager.playLevelUp();
+            // Эффект победы — золотые частицы
+            victoryFx = this.add.particles(this.playerSprite.x, this.playerSprite.y, 'particle_spark', {
+                speed: { min: -150, max: 150 },
+                angle: { min: 0, max: 360 },
+                scale: { start: 2, end: 0 },
+                lifespan: 1000,
+                blendMode: 'ADD',
+                tint: 0xffcc40,
+            });
+            victoryFx.explode(30);
+        }
         this.time.delayedCall(1500, () => {
-            emitter.destroy();
+            try { victoryFx.destroy(); } catch (e) { /* уже сгорел */ }
             // Раунд 46 (п.2): убийство старосты — немедленный Проигрыш
             if (elderMurdered) {
                 createDialog(this, t('☠ Кровь старосты!'),
@@ -1240,15 +1613,26 @@ export class CombatScene extends Phaser.Scene {
             // Раунд 21: после победы над вором — НЕ конец игры, а возврат в деревню
             // (икону нужно вернуть старосте или священнику; игра продолжается)
             if (isThiefFight) {
-                // Патч 66.18 (QA-66.17): заголовок и текст — по роду вора
+                // Патч 66.18 (QA-66.17): заголовок и текст — по роду вора;
+                // В-3 (66.89): пойманного живьём — отдельный текст (премия старосты)
                 const _femWin = getThiefGender(this.registry) === 'female';
-                createDialog(this,
-                    _femWin ? t('🏆 Воровка повержена!') : t('🏆 Вор повержен!'),
-                    _femWin
-                        ? t('Ты обыскал тело поверженной воровки и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.')
-                        : t('Ты обыскал тело поверженного вора и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.'),
-                    [{ text: t('В деревню!'), callback: () => this.scene.start('Village') }],
-                    { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
+                if (thiefCaptured) {
+                    createDialog(this,
+                        _femWin ? t('🏆 Воровка взята живьём!') : t('🏆 Вор взят живьём!'),
+                        _femWin
+                            ? t('Ты связал обезоруженную воровку и забрал за пазухой чудотворную икону Богородицы — целую и невредимую. Живой лиходей дороже мёртвого: староста платит ПРЕМИЮ 20 денег за пленника, сданного на суд. Возвращайся в деревню!')
+                            : t('Ты связал обезоруженного вора и забрал за пазухой чудотворную икону Богородицы — целую и невредимую. Живой лиходей дороже мёртвого: староста платит ПРЕМИЮ 20 денег за пленника, сданного на суд. Возвращайся в деревню!'),
+                        [{ text: t('В деревню!'), callback: () => this.scene.start('Village') }],
+                        { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
+                } else {
+                    createDialog(this,
+                        _femWin ? t('🏆 Воровка повержена!') : t('🏆 Вор повержен!'),
+                        _femWin
+                            ? t('Ты обыскал тело поверженной воровки и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.')
+                            : t('Ты обыскал тело поверженного вора и нашёл чудотворную икону Богородицы — целую и невредимую. Возвращайся в деревню: отдай святыню старосте или батюшке и получи заслуженную награду.'),
+                        [{ text: t('В деревню!'), callback: () => this.scene.start('Village') }],
+                        { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
+                }
             } else if (murderVictimId) {
                 // Раунд 45 (п.3): убийство жителя — честное предупреждение о цене крови
                 const kinText = murderInfo && murderInfo.kinNames.length > 0
@@ -1259,7 +1643,7 @@ export class CombatScene extends Phaser.Scene {
                     [{ text: t('В деревню!'), callback: () => this.scene.start('Village') }],
                     { singleton: false, portraitKey: 'portrait_narrator', typing: true, typingSpeed: 25 });
             } else if (this.fromScene === 'Forest') {
-                // Стая напугана на 4 игровых часа
+                // Стая напугана на 4 игровых часа (после победы над волками/стаей)
                 const ts = this.registry.get('gameTime');
                 if (ts) {
                     const q2 = this.registry.get('quest') || {};
@@ -1267,6 +1651,9 @@ export class CombatScene extends Phaser.Scene {
                     this.registry.set('quest', q2);
                 }
                 this.scene.start('Forest', { from: 'Combat' });
+            } else if (this.enemyKeys && this.enemyKeys.includes('bear') && this.fromLocation) {
+                // 66.89 (п.15): после схватки с медведем герой остаётся в Густом лесу
+                this.scene.start('Location', { locationId: this.fromLocation, from: 'Fork' });
             } else {
                 this.scene.start('Village');
             }
