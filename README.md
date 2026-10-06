@@ -11,7 +11,7 @@
 index.html          # Лендинг (одностраничник, ru)
 en/index.html       # Английская версия лендинга (hreflang + переключатель RU/EN)
 styles.css          # Стили (тёмная средневековая тема: золото + киноварь)
-main.js             # Интерактив лендинга (reveal, lightbox, d100, частицы)
+js/main.js          # Интерактив лендинга (reveal, lightbox, d100, частицы; модули в js/modules/)
 game/               # Браузерное демо на Phaser 3
   index.html        #   Точка входа демо
   src/scenes/       #   Сцены: Boot → Title → Characters → Village → Combat → End

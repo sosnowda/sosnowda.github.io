@@ -60,7 +60,7 @@ const mainJs = read('js/main.js');
 ok(mainJs.includes('initMapLightbox') && mainJs.includes('initGallery'), 'main.js: импорты и вызовы обоих модулей сохранены');
 
 console.log('--- 4. SW v103 (бамп 66.58 — консолидация styles.css; в 66.57 был v102 под P3-3) ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v121';"), 'sw.js: v121 (актуализация 66.87 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v122';"), 'sw.js: v122 (актуализация 66.88 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets v45');
 // 66.57 (актуализация: в 66.55 ассерты запрещали запись v102 — теперь она ожидаема)
 ok(swLog.includes('- v102 — итерация 66.57'), 'SW_CHANGELOG: запись v102 добавлена (66.57)');

@@ -20,7 +20,11 @@
 // (галерея без 10-го кадра) и game/src (housesFX, BootScene-кочка,
 // CraftAudio); бамп game-assets-v44→v45 — 11 фасадов fb_*.png (дымницы),
 // 4 тайла травы + pasture, deco_spinning.png и 2 интерьера (копыл).
-const CACHE_NAME = 'chronicles-ruthenia-v121';
+// 66.88 (приказы владельца 1–4): бамп v121→v122 — en/index.html
+// (P3-1 аудита 66.87: h1 EN-лендинга переведён на монолингвальный
+// английский «The Chronicles of Ruthenia — a 15th-century Rus' RPG»);
+// game-assets-v45 цел (ассеты не тронуты), код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v122';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {

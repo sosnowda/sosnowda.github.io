@@ -130,7 +130,7 @@ const ok = (cond, name) => {
 {
     const sw = readFileSync(path.join(REPO, 'sw.js'), 'utf8');
     const swlog = readFileSync(path.join(REPO, 'docs', 'SW_CHANGELOG.md'), 'utf8'); // 66.47: журнал переехал
-    ok(sw.includes("CACHE_NAME = 'chronicles-ruthenia-v121'"), '6: site-cache v121 (актуализация 66.87)');
+    ok(sw.includes("CACHE_NAME = 'chronicles-ruthenia-v122'"), '6: site-cache v122 (актуализация 66.88)');
     ok(sw.includes("GAME_ASSETS_CACHE = 'game-assets-v45'"), '6: game-assets v45');
     ok(swlog.includes('итерация 66.46'), '6: журнал версий дополнен');
 }
