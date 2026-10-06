@@ -120,12 +120,13 @@ for (const [k, [w, h]] of Object.entries(SIZES)) {
     const chimBad = (fx.chimneys || []).filter(([cx, cy]) => cx < 0 || cx > w || cy < 0 || cy > h);
     ok(chimBad.length === 0, `${k}: жерла труб в границах`);
 }
-// 66.37: у Авдея и Прасковьи трубы ДОРИСОВАНЫ в стиле пака (жерла 144,10 и 178,34)
+// 66.86 (актуализация 66.87): каменные трубы СТЁРТЫ, деревянные дымницы
+// (Авдей fb_log_thatch — жерло дымницы 146,64; Прасковья fb_thatch_big — 179,60)
 ok(HOUSES_FX.fb_log_thatch.chimneys.length === 1 &&
-   HOUSES_FX.fb_log_thatch.chimneys[0][0] === 144 && HOUSES_FX.fb_log_thatch.chimneys[0][1] === 10 &&
+   HOUSES_FX.fb_log_thatch.chimneys[0][0] === 146 && HOUSES_FX.fb_log_thatch.chimneys[0][1] === 64 &&
    HOUSES_FX.fb_thatch_big.chimneys.length === 1 &&
-   HOUSES_FX.fb_thatch_big.chimneys[0][0] === 178 && HOUSES_FX.fb_thatch_big.chimneys[0][1] === 34,
-    'у Авдея и Прасковьи дорисованные трубы в стиле пака (66.37)');
+   HOUSES_FX.fb_thatch_big.chimneys[0][0] === 179 && HOUSES_FX.fb_thatch_big.chimneys[0][1] === 60,
+    'у Авдея и Прасковьи дымницы 66.86 (жерла 146,64 и 179,60; актуализация 66.87)');
 ok(HOUSES_FX.fb_church.chimneys.length === 0, 'у церкви трубы нет');
 ok(HOUSES_FX.fb_elder.chimneys.length === 2 && HOUSES_FX.fb_inn.chimneys.length === 1 &&
    HOUSES_FX.fb_smithy.chimneys.length === 1 && HOUSES_FX.fb_manor.chimneys.length === 1 &&
@@ -164,8 +165,8 @@ ok(BUILDINGS.every(b => b.col >= 1), 'все дома ≥1 тайл от зап�
 // ---------- 5. SW: кэши подняты ----------
 console.log('--- 5. SW: game-assets-v44 / site-cache v96 ---');
 const sw = readFileSync(join(root, 'sw.js'), 'utf-8');
-ok(sw.includes("game-assets-v44"), 'SW: game-assets-v44 (текстуры fb_* изменились)');
-ok(sw.includes("'chronicles-ruthenia-v120'"), 'SW: site-cache v112 (актуализация 66.70)');
+ok(sw.includes("game-assets-v45"), 'SW: game-assets-v45 (текстуры fb_* изменились)');
+ok(sw.includes("'chronicles-ruthenia-v121'"), 'SW: site-cache v121 (актуализация 66.87)');
 
 console.log(`\n=== ИТОГ: ${passed} зелёных, ${failed} красных ===`);
 process.exit(failed ? 1 : 0);

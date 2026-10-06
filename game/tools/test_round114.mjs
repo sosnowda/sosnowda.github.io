@@ -79,8 +79,8 @@ const canonBlock = styles.slice(styles.indexOf('.fund-bar {') >= 0 ? styles.inde
 ok(canonBlock.includes('line-height:1.2'), 'styles.css: инвариант 66.60 line-height:1.2 в каноническом блоке цел');
 
 console.log('--- 5. SW: vendor в cache-first, v112 + game-assets-v44 ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v120';"), 'sw.js: site-cache v112 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v44';"), 'sw.js: game-assets-v44 (новый бакет под новую ветку маршрута /game/vendor/)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v121';"), 'sw.js: site-cache v121 (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 (новый бакет под новую ветку маршрута /game/vendor/)');
 ok(sw.includes("url.pathname.startsWith('/game/assets/') || url.pathname.startsWith('/game/vendor/')"), 'sw.js: /game/vendor/ в cache-first ветке ассетов (неизменяемая библиотека — как /game/assets/)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт офлайн-фолбэка цел (66.57 P3-3)');
 ok(sw.includes('/game/vendor/ — с 66.64'), 'sw.js: шапка отражает vendor-маршрут');

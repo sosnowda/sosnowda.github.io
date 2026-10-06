@@ -101,8 +101,8 @@ ok(src.includes('settings.audio.sfxMuted'), 'CraftAudio: уважает мьют
 ok(src.includes('SHUTDOWN'), 'CraftAudio: очистка при уходе со сцены (SHUTDOWN)');
 ok(src.includes('playAnvilBlow') && src.includes('playQuenchHiss'),
     'молот: удар по наковальне + шип закалки');
-ok(src.includes('playWheelTick') && src.includes('1100'),
-    'прялка: щелчок колеса за оборот (~1.1 с)');
+ok(src.includes('playWheelTick') && src.includes('1900'),
+    'прялка-копыл: щелчок-подскок веретена (~1.9 с, нерегулярный; актуализация 66.86/66.87)');
 ok(src.includes('playMugClink'), 'таверна: редкий стук деревянной кружки о стол');
 ok(!/[а-яА-Я]/.test(src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')), 'CraftAudio: без видимых строк вне комментариев (звук без UI)');
 ok(/раунд 66\.9/i.test(src), 'CraftAudio: комментарий с номером раунда (стилистика кода)');
@@ -179,7 +179,7 @@ setLang('ru');
 }
 
 console.log('\n— Регрессия: SW на актуальной версии (66.19 — чистка ассетов, бамп v22) —');
-ok(read('../sw.js').includes("const CACHE_NAME = 'chronicles-ruthenia-v120';"),
+ok(read('../sw.js').includes("const CACHE_NAME = 'chronicles-ruthenia-v121';"),
     'SW актуален (v86, 66.36)');
 
 console.log(`\nИТОГО: ${pass} зелёных, ${fail} красных`);

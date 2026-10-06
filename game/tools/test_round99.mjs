@@ -210,8 +210,8 @@ console.log('— 6. SW v93 / game-assets-v44 —');
 {
     const sw = read('sw.js');
     const swlog = read('docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v120';"), 'SW: site-cache v112 (актуализация 66.70)');
-    ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v44';"), 'SW: game-assets-v44 (новые листы вора + тайл частокола)');
+    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v121';"), 'SW: site-cache v121 (актуализация 66.87)');
+    ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45 (новые листы вора + тайл частокола)');
     ok(swlog.includes('итерация 66.43'), 'SW-журнал: запись 66.43 есть');
 }
 

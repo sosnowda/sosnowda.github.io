@@ -117,8 +117,8 @@ ok(existsSync(join(ROOT, 'game/assets/sprites/battle/MANIFEST_6642.txt')), 'MANI
 
 console.log('— 4. Печные трубы 66.42 —');
 const fx = read('game/src/data/housesFX.js');
-ok(fx.includes('[[48, 3], [150, 13]]'), 'housesFX: гончар — фонарь + новая каменная труба (150,13)');
-ok(fx.includes('[[105, 17]]'), 'housesFX: знахарка/ремесленник — труба на коньке (105,17)');
+ok(fx.includes('[[40, 18], [148, 66]]'), 'housesFX: гончар — дымницы 66.86 (жерла 40,18 и 148,66; актуализация 66.87)');
+ok(fx.includes('[[102, 34]]'), 'housesFX: знахарка/ремесленник — дымница 66.86 (жерло 102,34; актуализация 66.87)');
 ok(!fx.includes('[[125, 38]]'), 'housesFX: старое жерло «фонарика» (125,38) снято');
 // суммарно дымовых точек: 17 домов по 1 + староста 2 + гончар 2 = 20? нет:
 // 18 зданий, у церкви 0. Считаем по фактам: 11 текстур домов с трубами,
@@ -162,8 +162,8 @@ for (const f of ['qa_battle_thief_6642.mjs', 'qa_chimneys_6642.mjs', 'make_chimn
 console.log('— 7. SW v92 / game-assets-v44 —');
 const sw = read('sw.js');
 const swlog = read('docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v120';"), 'SW: site-cache v112 (актуализация 66.70)');
-ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v44';"), 'SW: game-assets-v44');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v121';"), 'SW: site-cache v121 (актуализация 66.87)');
+ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45');
 ok(swlog.includes('66.42'), 'SW-журнал: запись 66.42 есть');
 
 console.log(`\ntest_round98: ${pass} зелёных, ${fail} красных`);
