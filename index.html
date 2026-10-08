@@ -63,7 +63,10 @@
     <link rel="preload" href="styles.css" as="style">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prata&family=PT+Sans:wght@400;700&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap">
+    <!-- 66.91 (P3 аудита): курсивный PT Serif (1,400) снят — весь курсив лендинга
+         рендерит системный шрифт (.hero-subtitle — Georgia, .section-intro em — body);
+         PT Serif остался 400/700 (d100-кубик, pt-scale, d100-result) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prata&family=PT+Sans:wght@400;700&family=PT+Serif:wght@400;700&display=swap">
     <!-- 66.64 (аудит 66.61, P3-5): в стек включён и загружен PT Sans (400/700,
          кириллица+латиница юникод-рангами) — ранее объявлялся в font-family
          (.fund-bar/.btn-share/.copy-toast), но вебшрифтом не грузился -->
@@ -73,7 +76,7 @@
 
     <!-- JSON-LD -->
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"VideoGame","name":"Летописи Руси XV века","description":"AI-narrative RPG про Русь 1400-1505.","genre":["RPG","Historical","AI"],"applicationCategory":"Game","operatingSystem":"Web Browser, Windows","url":"https://sosnowda.github.io/","image":"https://sosnowda.github.io/assets/images/og-image.jpg","author":{"@type":"Person","name":"sosnowda"},"softwareVersion":"0.3.0-alpha","offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"}}
+    {"@context":"https://schema.org","@type":"VideoGame","name":"Летописи Руси XV века","description":"AI-narrative RPG про Русь 1400-1505.","genre":["RPG","Historical","AI"],"applicationCategory":"Game","operatingSystem":"Web Browser, Windows","url":"https://sosnowda.github.io/","image":"https://sosnowda.github.io/assets/images/og-image.jpg","author":{"@type":"Person","name":"sosnowda"},"softwareVersion":"0.3.0-alpha","inLanguage":["ru","en"],"offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"}}
     </script>
 
     <link rel="stylesheet" href="styles.css">
@@ -102,7 +105,7 @@
 <!-- СБОР СРЕДСТВ -->
 <!-- 66.47 (аудит №20): div → настоящий <button> — доступность без role-костылей -->
 <button type="button" class="fund-bar" aria-haspopup="dialog" aria-controls="fundPopup">
-    💰 Сбор средств на развитие проекта — нажмите, чтобы поддержать!
+    <span aria-hidden="true">💰</span> Сбор средств на развитие проекта — нажмите, чтобы поддержать!
 </button>
 <!-- 66.63 (аудит 66.61, P3-3): .fund-popup переехал в конец body (после
      </footer>) — его заголовок h3 больше не стоит в DOM до sr-only h1 героя
@@ -152,14 +155,16 @@
                 <source srcset="assets/images/title-480.webp 480w, assets/images/title-960.webp 960w, assets/images/title-1280.webp 1280w, assets/images/title.webp 1920w"
                         sizes="(max-width: 1180px) 100vw, 1180px"
                         type="image/webp">
-                <img src="assets/images/title.jpg" alt="Летописи Руси XV века — титульная картинка" class="hero-image" width="1920" height="1097" fetchpriority="high">
+                <!-- 66.91 (P3 аудита): JPEG-фолбэк полегчал 2МБ → 137КБ (title-1280.jpg,
+                     1280×731 q82) — соотношение сторон то же, инвариант CLS=0 цел -->
+                <img src="assets/images/title-1280.jpg" alt="Летописи Руси XV века — титульная картинка" class="hero-image" width="1920" height="1097" fetchpriority="high">
             </picture>
         </div>
     </section>
 
 <!-- АЛЬФА-ВЕРСИЯ -->
 <div class="alpha-banner">
-    ⚔️ Игра находится на стадии Альфа-версии. Дата релиза неизвестна.
+    <span aria-hidden="true">⚔️</span> Игра находится на стадии Альфа-версии. Дата релиза неизвестна.
 </div>
 
     <!-- ОБ ИГРЕ -->
@@ -184,32 +189,32 @@
             </div>
             <div class="features-grid features-grid--push">
                 <div class="feature-card">
-                    <span class="feature-icon">📜</span>
+                    <span class="feature-icon" aria-hidden="true">📜</span>
                     <h3>RAG-База Исторических Данных</h3>
                     <p>Многобазовая система Retrieval-Augmented Generation, наполненная реальными историческими источниками по Руси XV века и мировой истории. Нейросеть не выдумывает — она выбирает из проверенных фактов.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">🧮</span>
+                    <span class="feature-icon" aria-hidden="true">🧮</span>
                     <h3>BRP Universal Game Engine d100</h3>
                     <p>Математически выверенная ролевая система Basic Roleplaying. Проработанная, адаптированная под сеттинг Руси XV века, с реалистичными шансами, навыками и боевыми механиками.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">🤖</span>
+                    <span class="feature-icon" aria-hidden="true">🤖</span>
                     <h3>LLM-Нарратор</h3>
                     <p>Локальная нейросеть на llama.cpp server или любая облачная модель через OpenAI-совместимый API. Качество повествования зависит от выбранной модели и её «весов».</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">⚔️</span>
+                    <span class="feature-icon" aria-hidden="true">⚔️</span>
                     <h3>Реалистичные пошаговые бои</h3>
                     <p>Графический бой в 2.5D изометрии или текстовый режим. Реальное историческое оружие, доспехи и одежда. Возможность умереть от одного удачного удара в уязвимое место.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">🌍</span>
+                    <span class="feature-icon" aria-hidden="true">🌍</span>
                     <h3>Живой исторический мир</h3>
                     <p>Все мировые события отражаются в игре: слухи от купцов, новости от иностранных гостей, политические изменения. Смена дня и ночи, времён года, погоды. Реалистичные дороги и расстояния.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">💾</span>
+                    <span class="feature-icon" aria-hidden="true">💾</span>
                     <h3>Умное управление памятью</h3>
                     <p>Rolling Summary + State Injection вокруг контекстного окна модели. Нет переполнения контекста — нейросеть всегда помнит ключевые события вашей истории.</p>
                 </div>
@@ -467,7 +472,7 @@
             <div class="section-label">Технический фундамент</div>
             <h2>Как это работает</h2>
             <div class="tech-panel">
-                <h3>🏗️ Архитектура проекта</h3>
+                <h3><span aria-hidden="true">🏗️</span> Архитектура проекта</h3>
                 <ul>
                     <li>
 <strong>Игровой движок Godot</strong> — управляет игровым окружением, загрузкой нейросетей, ведёт все расчёты и следит за исторической достоверностью промптов через RAG-базу.</li>
@@ -494,17 +499,17 @@
             </div>
             <div class="tech-cards-grid">
                 <div class="feature-card">
-                    <span class="feature-icon">🔗</span>
+                    <span class="feature-icon" aria-hidden="true">🔗</span>
                     <h3>Hugging Face</h3>
                     <p>Загрузка выбранной локальной модели нейросети из открытого репозитория при первом запуске.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">🌐</span>
+                    <span class="feature-icon" aria-hidden="true">🌐</span>
                     <h3>OpenAI-совместимый API</h3>
                     <p>Подключение любых облачных моделей: OpenAI, Anthropic, Mistral, локальные серверы и другие.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">📚</span>
+                    <span class="feature-icon" aria-hidden="true">📚</span>
                     <h3>BRP SRD Chaosium</h3>
                     <p>Официальная система Basic Roleplaying — проверенная десятилетиями ролевая механика d100.</p>
                 </div>
@@ -765,7 +770,7 @@
             <!-- 66.47 (аудит №7): hover-эффект перенесён в CSS (.btn-game-start) -->
             <a href="game/index.html" target="_blank" rel="noopener noreferrer"
                id="game-start-btn" class="btn-game-start">
-                ⚔️ Запустить игру
+                <span aria-hidden="true">⚔️</span> Запустить игру
             </a>
             <p class="game-start-note">
                 Игра откроется в отдельном окне. Управление: WASD/стрелки — движение, E — взаимодействие, ESC — выход.<br>
@@ -785,13 +790,13 @@
         </p>
         <div class="support-row">
             <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--boosty">
-                🚀 Boosty (подписка)
+                <span aria-hidden="true">🚀</span> Boosty (подписка)
             </a>
             <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--yoomoney">
-                💰 ЮMoney (перевод)
+                <span aria-hidden="true">💰</span> ЮMoney (перевод)
             </a>
             <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--vk">
-                👥 ВКонтакте
+                <span aria-hidden="true">👥</span> ВКонтакте
             </a>
         </div>
         <div class="share-block">
@@ -801,7 +806,7 @@
                 <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=%D0%9B%D0%B5%D1%82%D0%BE%D0%BF%D0%B8%D1%81%D0%B8%20%D0%A0%D1%83%D1%81%D0%B8%20XV%20%D0%B2%D0%B5%D0%BA%D0%B0%20%E2%80%94%20AI-narrative%20RPG" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--tg">Telegram</a>
                 <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--ok">Одноклассники</a>
                 <!-- 66.47 (аудит №4): alert() → тост в стиле сайта + .catch с фолбэком (main.js) -->
-                <button type="button" class="btn-share btn-share--copy" data-url="https://sosnowda.github.io" data-toast="Ссылка скопирована!">📋 Копировать</button>
+                <button type="button" class="btn-share btn-share--copy" data-url="https://sosnowda.github.io" data-toast="Ссылка скопирована!"><span aria-hidden="true">📋</span> Копировать</button>
             </div>
         </div>
     </div>
@@ -838,7 +843,7 @@
             <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--yoomoney">ЮMoney</a>
             <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--vk">ВК игры</a>
             <a href="https://vk.ru/id521470239?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--vkauthor">Автор ВК</a>
-            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=beta_access" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--beta">🔒 Код закрыт — доступ для бета-тестеров</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=beta_access" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--beta"><span aria-hidden="true">🔒</span> Код закрыт — доступ для бета-тестеров</a>
         </div>
 
         <div class="footer-engine">

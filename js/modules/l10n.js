@@ -42,6 +42,8 @@ export const UI_DICT = {
         },
         // Попап поддержки
         popup: { closeAria: 'Закрыть окно поддержки' },
+        // Мобильное меню (aria-label бургера в такт aria-expanded, 66.91)
+        menu: { open: 'Открыть меню', close: 'Закрыть меню' },
         // Тост копирования ссылки
         toast: {
             copied: 'Ссылка скопирована!',
@@ -80,6 +82,8 @@ export const UI_DICT = {
         },
         // Support popup
         popup: { closeAria: 'Close support dialog' },
+        // Mobile menu (burger aria-label synced with aria-expanded, 66.91)
+        menu: { open: 'Open menu', close: 'Close menu' },
         // Copy-link toast
         toast: {
             copied: 'Link copied!',

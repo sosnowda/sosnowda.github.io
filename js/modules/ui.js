@@ -21,18 +21,28 @@ function initMobileMenu() {
     const toggle = document.querySelector('.mobile-menu-toggle');
     const nav = document.querySelector('.nav-links');
     if (toggle && nav) {
+        // 66.91 (P3 аудита): aria-label бургера живёт в такт aria-expanded —
+        // «Открыть меню» ↔ «Закрыть меню» (словарь l10n.js, RU/EN);
+        // статичная разметка остаётся no-JS-фолбэком
+        const syncMenuAria = function () {
+            const nowOpen = toggle.getAttribute('aria-expanded') === 'true';
+            toggle.setAttribute('aria-label', nowOpen ? STR.menu.close : STR.menu.open);
+        };
         toggle.addEventListener('click', function () {
             const isOpen = toggle.getAttribute('aria-expanded') === 'true';
             toggle.setAttribute('aria-expanded', !isOpen);
+            syncMenuAria();
             nav.classList.toggle('open');
         });
         // Закрыть меню при клике на ссылку
         nav.querySelectorAll('a').forEach(function (link) {
             link.addEventListener('click', function () {
                 toggle.setAttribute('aria-expanded', 'false');
+                syncMenuAria();
                 nav.classList.remove('open');
             });
         });
+        syncMenuAria();
     }
 }
 

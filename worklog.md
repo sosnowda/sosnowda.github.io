@@ -2901,3 +2901,24 @@ Stage Summary:
 - Все три правки P1+P2 в main: sticky починен одной строкой (clip), контраст двух переменных по AA с запасом ≥3%, мобильный герой грузит 20–82 КиБ вместо 189.
 - Регресс 69/69 зелёных; живые пробы RU/EN desktop+mobile без ошибок консоли; инварианты P4-9 (нет двойной загрузки героя) и CLS=0 сохранены.
 - Поправка к аудиту: FAIL .cta-meta был гипотетическим (реальный цвет элемента — text-dim, PASS 7.93).
+
+---
+Task ID: 66.91
+Agent: Super Z (GLM)
+Task: P3-хвост внешнего аудита лендинга сразу в main (приказ владельца «понаблюдать LCP в Метрике и, если захотите продолжить, — P3-хвост аудита»): мёртвые ассеты, лёгкий JPEG-фолбэк героя, JSON-LD inLanguage, aria-hidden декоративных emoji, живой aria-label бургера, курсивный PT Serif.
+
+Work Log:
+- МЁРТВЫЕ АССЕТЫ: удалены assets/images/maps/herberstein_1550.avif + vida_lyatsky_1542.avif (854 КБ; AVIF-варианты пережили свой <source> — в разметке webp-source + jpg-фолбэк, ссылок на .avif в HTML/JS/тестах ноль) и assets/images/title.jpg (2 МБ, JPEG-фолбэк героя). ПОПРАВКА К АУДИТУ: og-demo.jpg (240 КБ) — НЕ мёртвый, это og:image/twitter:image/JSON-LD игры (game/index.html); файл цел, в r133 добавлен пин-щит от будущих «чисток».
+- JPEG-ФОЛБЭК: сгенерирован assets/images/title-1280.jpg (PIL LANCZOS 1280×731, q82, progressive; 137 КБ = 7% от 2МБ; скрипт scripts/make_jpeg_fallback_6691.py — вне репо); <img>-фолбэк RU+EN переведён на него, width/height 1920×1097 и fetchpriority не тронуты — CLS=0 цел; webp-srcset/imagesrcset 66.90 не тронуты.
+- JSON-LD RU: + "inLanguage":["ru","en"] (у EN ["en","ru"] и игры уже был).
+- ШРИФТЫ: css2-линк RU+EN без ital-оси (PT Serif 1,400 снят — курсив лендинга рендерит системные Georgia/.hero-subtitle и body/.section-intro em; PT Serif 400/700 цел — d100-кубик/pt-scale/d100-result).
+- A11Y EMOJI: RU+EN ×18 декоративных emoji обёрнуты в <span aria-hidden="true"> (fund-bar 💰, альфа ⚔️, feature-icon ×9 📜🧮🤖⚔️🌍💾🔗🌐📚, 🏗️ в h3, кнопки ⚔️/🚀/💰/👥/📋/🔒); видимый рендер не менялся.
+- БУРГЕР: aria-label синхронизирован с aria-expanded («Открыть меню»↔«Закрыть меню» / Open↔Close menu): l10n.js menu.open/close ×2 локали (прецедент d100/66.50), ui.js syncMenuAria — старт/клик/закрытие ×3; статичная разметка — no-JS-фолбэк.
+- ПИНЫ (прецедент 66.87/66.90): 38 × test_round*.mjs v123→v124 + «актуализация 66.91»; 3 многострочных лейбла (r72/r118/r119); r117 §7 фолбэк-пин → title-1280.jpg (скрипт scripts/update_pins_6691.py — вне репо). НОВЫЙ test_round133 (54 проверки: мёртвые ассеты/ссылки, пин-щит og-demo, JPEG-сигнатура+вес, inLanguage ×3, ital ×2 снят, aria-hidden ×18/локаль, menu-словарь ×2, syncMenuAria ×3, SW v124, lastmod --check).
+- РЕГРЕСС 64–133 = 70/70 зелёных (r86–89 из game/tools, остальные из корня); node --check ui.js/l10n.js/sw.js/пинов чисто.
+- СЛУЖЕБНОЕ: SW v123→v124 (HTML RU+EN + js/modules; сайт network-first, прекеш-списка нет), game-assets-v45 цел, код sw.js не менялся; SW_CHANGELOG v124; CHANGES.md «Патч 66.91»; sitemap lastmod — bump_lastmod.py после коммита + amend (§5).
+
+Stage Summary:
+- P3-хвост в main: репо/деплой полегчал на ~2,9 МБ (2 AVIF + title.jpg − 137 КБ нового фолбэка), фолбэк героя 137 КБ вместо 2 МБ, structured data консистентна (inLanguage на всех трёх страницах), скринридеры не озвучивают декоративные emoji и актуальное состояние бургера.
+- Поправка к аудиту: og-demo.jpg живой (og:image игры) — не удалялся, пин-щит в r133.
+- Регресс 70/70 зелёных; живые пробы RU/EN без ошибок консоли; прод проверяется после пуша.

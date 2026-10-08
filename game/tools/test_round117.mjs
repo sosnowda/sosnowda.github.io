@@ -61,7 +61,7 @@ ok(styles.indexOf('clip-path: inset(50%)') > styles.indexOf('.sr-only {') &&
 
 console.log('--- 2. P4-2: sw.js — var→const ×5, v112, механика не тронута ---');
 ok((sw.match(/\bvar\s+[A-Za-z_$]/gm) || []).length === 0, 'sw.js: объявлений var — ноль (no-var §9.2)');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v123';"), 'sw.js: const CACHE_NAME v123 (HTML/CSS менялись → бамп §4)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v124';"), 'sw.js: const CACHE_NAME v124 (HTML/CSS менялись → бамп §4)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: const GAME_ASSETS_CACHE v45 (ассеты/vendor не тронуты)');
 ok(sw.includes("const url = new URL(event.request.url);") &&
    sw.includes("const clone = response.clone();") &&
@@ -138,8 +138,8 @@ for (const [html, locale, base, preLow] of [
     ok(!!isrcset && isrcset === candidates, `${locale}: imagesrcset preload === srcset <source> — двойной загрузки нет (инвариант P4-9, форма 66.90)`);
     ok(html.includes('imagesizes="(max-width: 1180px) 100vw, 1180px"') && /<source[^>]*sizes="\(max-width: 1180px\) 100vw, 1180px"/.test(html),
         `${locale}: sizes/imagesizes = реальная ширина .hero-image-wrap (100% до max-width 1180px)`);
-    ok(html.includes(`class="hero-image" width="1920" height="1097" fetchpriority="high">`) && html.includes(`.jpg" alt=`),
-        `${locale}: fallback <img> (title.jpg, размеры-инвариант CLS=0) цел`);
+    ok(html.includes(`class="hero-image" width="1920" height="1097" fetchpriority="high">`) && html.includes(`src="${base}/title-1280.jpg" alt=`),
+        `${locale}: fallback <img> (title-1280.jpg 137КБ вместо title.jpg 2МБ, размеры-инвариант CLS=0) цел (66.91)`);
 }
 
 console.log('--- 8. SW/доки/lastmod (§4/§7/§8) ---');

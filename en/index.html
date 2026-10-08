@@ -63,7 +63,10 @@
     <link rel="preload" href="../styles.css" as="style">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prata&family=PT+Sans:wght@400;700&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap">
+    <!-- 66.91 (P3 audit): italic PT Serif (1,400) dropped — all landing italics
+         render a system font (.hero-subtitle — Georgia, .section-intro em — body);
+         PT Serif stays 400/700 (d100 dice face, pt-scale, d100-result) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prata&family=PT+Sans:wght@400;700&family=PT+Serif:wght@400;700&display=swap">
     <!-- 66.64 (audit 66.61, P3-5): PT Sans added to the webfont set (400/700,
          Cyrillic+Latin via unicode-range) — it was declared in font-family
          (.fund-bar/.btn-share/.copy-toast) but never loaded as a webfont -->
@@ -102,7 +105,7 @@
 <!-- FUNDRAISING BAR -->
 <!-- 66.47 (audit #20): div → a real <button> — accessibility without role shims -->
 <button type="button" class="fund-bar" aria-haspopup="dialog" aria-controls="fundPopup">
-    💰 Fundraising for the project — click to support!
+    <span aria-hidden="true">💰</span> Fundraising for the project — click to support!
 </button>
 <!-- 66.63 (audit 66.61, P3-3): .fund-popup moved to the end of <body> (after
      </footer>) — its h3 heading no longer precedes the sr-only h1 in the DOM
@@ -152,14 +155,16 @@
                 <source srcset="../assets/images/title-480.webp 480w, ../assets/images/title-960.webp 960w, ../assets/images/title-1280.webp 1280w, ../assets/images/title.webp 1920w"
                         sizes="(max-width: 1180px) 100vw, 1180px"
                         type="image/webp">
-                <img src="../assets/images/title.jpg" alt="The Chronicles of Ruthenia — title art" class="hero-image" width="1920" height="1097" fetchpriority="high">
+                <!-- 66.91 (P3 audit): JPEG fallback slimmed 2MB → 137KB (title-1280.jpg,
+                     1280×731 q82) — same aspect ratio, CLS=0 invariant intact -->
+                <img src="../assets/images/title-1280.jpg" alt="The Chronicles of Ruthenia — title art" class="hero-image" width="1920" height="1097" fetchpriority="high">
             </picture>
         </div>
     </section>
 
 <!-- ALPHA NOTICE -->
 <div class="alpha-banner">
-    ⚔️ The game is in Alpha. Release date TBD.
+    <span aria-hidden="true">⚔️</span> The game is in Alpha. Release date TBD.
 </div>
 
     <!-- ABOUT -->
@@ -184,32 +189,32 @@
             </div>
             <div class="features-grid features-grid--push">
                 <div class="feature-card">
-                    <span class="feature-icon">📜</span>
+                    <span class="feature-icon" aria-hidden="true">📜</span>
                     <h3>RAG Historical Knowledge Base</h3>
                     <p>A multi-source Retrieval-Augmented Generation system filled with real historical sources on 15th-century Rus' and world history. The AI does not invent — it selects from verified facts.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">🧮</span>
+                    <span class="feature-icon" aria-hidden="true">🧮</span>
                     <h3>BRP Universal Game Engine d100</h3>
                     <p>The mathematically rigorous Basic Roleplaying system, carefully adapted to the 15th-century Rus' setting, with realistic odds, skills and combat mechanics.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">🤖</span>
+                    <span class="feature-icon" aria-hidden="true">🤖</span>
                     <h3>LLM Narrator</h3>
                     <p>A local neural network on llama.cpp server, or any cloud model via an OpenAI-compatible API. Narrative quality depends on the chosen model and its weights.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">⚔️</span>
+                    <span class="feature-icon" aria-hidden="true">⚔️</span>
                     <h3>Realistic Turn-Based Combat</h3>
                     <p>Graphical combat in 2.5D isometric view or a text mode. Historically accurate weapons, armour and clothing. You can die from a single well-placed blow to a vulnerable spot.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">🌍</span>
+                    <span class="feature-icon" aria-hidden="true">🌍</span>
                     <h3>A Living Historical World</h3>
                     <p>Every world event is reflected in the game: rumours from merchants, news from foreign guests, political shifts. Day and night, seasons and weather change. Realistic roads and distances.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">💾</span>
+                    <span class="feature-icon" aria-hidden="true">💾</span>
                     <h3>Smart Memory Management</h3>
                     <p>Rolling Summary + State Injection around the model's context window. No context overflow — the AI always remembers the key events of your story.</p>
                 </div>
@@ -466,7 +471,7 @@
             <div class="section-label">Technical foundation</div>
             <h2>How it works</h2>
             <div class="tech-panel">
-                <h3>🏗️ Project architecture</h3>
+                <h3><span aria-hidden="true">🏗️</span> Project architecture</h3>
                 <ul>
                     <li>
 <strong>Godot game engine</strong> — manages the game environment, loads neural networks, performs all calculations and supervises the historical accuracy of prompts via the RAG base.</li>
@@ -493,17 +498,17 @@
             </div>
             <div class="tech-cards-grid">
                 <div class="feature-card">
-                    <span class="feature-icon">🔗</span>
+                    <span class="feature-icon" aria-hidden="true">🔗</span>
                     <h3>Hugging Face</h3>
                     <p>The chosen local model is downloaded from an open repository on first launch.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">🌐</span>
+                    <span class="feature-icon" aria-hidden="true">🌐</span>
                     <h3>OpenAI-compatible API</h3>
                     <p>Connect any cloud models: OpenAI, Anthropic, Mistral, local servers and more.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon">📚</span>
+                    <span class="feature-icon" aria-hidden="true">📚</span>
                     <h3>BRP SRD by Chaosium</h3>
                     <p>The official Basic Roleplaying system — a d100 roleplaying mechanic proven over decades.</p>
                 </div>
@@ -765,7 +770,7 @@
             <!-- 66.47 (audit #7): hover effect moved to CSS (.btn-game-start) -->
             <a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer"
                id="game-start-btn" class="btn-game-start">
-                ⚔️ Launch the game
+                <span aria-hidden="true">⚔️</span> Launch the game
             </a>
             <p class="game-start-note">
                 The game opens in a separate window. Controls: WASD/arrows — move, E — interact, ESC — exit.<br>
@@ -785,13 +790,13 @@
         </p>
         <div class="support-row">
             <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--boosty">
-                🚀 Boosty (subscription)
+                <span aria-hidden="true">🚀</span> Boosty (subscription)
             </a>
             <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--yoomoney">
-                💰 YuMoney (transfer)
+                <span aria-hidden="true">💰</span> YuMoney (transfer)
             </a>
             <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--vk">
-                👥 VKontakte
+                <span aria-hidden="true">👥</span> VKontakte
             </a>
         </div>
         <div class="share-block">
@@ -801,7 +806,7 @@
                 <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=The%20Chronicles%20of%20Ruthenia%20%E2%80%94%20AI-narrative%20RPG" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--tg">Telegram</a>
                 <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--ok">OK</a>
                 <!-- 66.47 (audit #4): alert() → site-styled toast + .catch with fallback (main.js) -->
-                <button type="button" class="btn-share btn-share--copy" data-url="https://sosnowda.github.io/en/" data-toast="Link copied!">📋 Copy</button>
+                <button type="button" class="btn-share btn-share--copy" data-url="https://sosnowda.github.io/en/" data-toast="Link copied!"><span aria-hidden="true">📋</span> Copy</button>
             </div>
         </div>
     </div>
@@ -838,7 +843,7 @@
             <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--yoomoney">YuMoney</a>
             <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--vk">VK games</a>
             <a href="https://vk.ru/id521470239?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--vkauthor">Author VK</a>
-            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=beta_access" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--beta">🔒 Closed code — beta testers access</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=beta_access" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--beta"><span aria-hidden="true">🔒</span> Closed code — beta testers access</a>
         </div>
 
         <div class="footer-engine">

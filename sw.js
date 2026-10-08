@@ -31,7 +31,14 @@
 // и 3 новых ассета assets/images/title-{480,960,1280}.webp (сайт —
 // network-first, список прекеша не ведётся); game-assets-v45 цел,
 // код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v123';
+// 66.91 (P3-хвост аудита): бамп v123→v124 — index.html + en/index.html
+// (JPEG-фолбэк героя title-1280.jpg 137КБ вместо title.jpg 2МБ, JSON-LD
+// inLanguage, aria-hidden декоративных emoji, css2 без курсивного PT Serif)
+// и js/modules (ui.js + l10n.js — aria-label бургера в такт aria-expanded);
+// удалены мёртвые ассеты (2 AVIF-карты без ссылок в разметке, title.jpg) —
+// сайт network-first, список прекеша не ведётся; game-assets-v45 цел,
+// код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v124';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {
