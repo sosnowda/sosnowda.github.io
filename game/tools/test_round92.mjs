@@ -166,7 +166,7 @@ ok(BUILDINGS.every(b => b.col >= 1), 'все дома ≥1 тайл от зап�
 console.log('--- 5. SW: game-assets-v44 / site-cache v96 ---');
 const sw = readFileSync(join(root, 'sw.js'), 'utf-8');
 ok(sw.includes("game-assets-v45"), 'SW: game-assets-v45 (текстуры fb_* изменились)');
-ok(sw.includes("'chronicles-ruthenia-v124'"), 'SW: site-cache v124 (актуализация 66.91)');
+ok(sw.includes("'chronicles-ruthenia-v125'"), 'SW: site-cache v125 (актуализация 66.92)');
 
 console.log(`\n=== ИТОГ: ${passed} зелёных, ${failed} красных ===`);
 process.exit(failed ? 1 : 0);

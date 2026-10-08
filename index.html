@@ -692,7 +692,11 @@
             Короткое промо-видео о «Летописях Руси XV века» — концепция, атмосфера, геймплей.
         </p>
         <div class="video-frame">
-            <video controls preload="none" poster="assets/images/title.webp" width="1920" height="1080">
+            <!-- 66.92 (находка замера Lighthouse): постер видео был 1920px title.webp
+                 (188 КиБ, грузился на каждом просмотре параллельно с героем-srcset —
+                 двойная загрузка героя). Теперь title-1280.webp (82 КиБ): desktop —
+                 тот же URL, что герой 1280w (один запрос), mobile −106 КиБ. -->
+            <video controls preload="none" poster="assets/images/title-1280.webp" width="1920" height="1080">
                 <source src="assets/video/promo.webm" type="video/webm">
                 <source src="assets/video/promo.mp4" type="video/mp4">
                 Ваш браузер не поддерживает видео. <a href="assets/video/promo.mp4">Скачать промо</a>.

@@ -11,6 +11,22 @@ export function initReveal() {
     }
 
     const sections = document.querySelectorAll('section, .feature-card, .epoch-card, .detailed-item, .map-card');
+
+    // 66.92 (PF-4 аудита 66.88): два прохода «только чтения» → «только записи».
+    // Раньше getBoundingClientRect вызывался в цикле ПОСЛЕ style-записей
+    // предыдущей итерации — каждый элемент форсировал синхронный reflow
+    // (layout thrashing, длинная задача ~234 мс на мобильном профиле
+    // Lighthouse). Теперь все rect читаются до первой записи — один
+    // батч-рефлоу вместо N.
+    const targets = [];
+    sections.forEach(function (el) {
+        // Прячем только то, что ещё НЕ во вьюпорте — первый экран всегда виден
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) return;
+        targets.push(el);
+    });
+    if (targets.length === 0) return true;
+
     const observer = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
             if (entry.isIntersecting) {
@@ -19,10 +35,7 @@ export function initReveal() {
             }
         });
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-    sections.forEach(function (el) {
-        // Прячем только то, что ещё НЕ во вьюпорте — первый экран всегда виден
-        const rect = el.getBoundingClientRect();
-        if (rect.top < window.innerHeight && rect.bottom > 0) return;
+    targets.forEach(function (el) {
         el.style.opacity = '0';
         el.style.transform = 'translateY(30px)';
         el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';

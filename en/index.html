@@ -691,7 +691,10 @@
             A short promo video about The Chronicles of Ruthenia — concept, atmosphere, gameplay.
         </p>
         <div class="video-frame">
-            <video controls preload="none" poster="../assets/images/title.webp" width="1920" height="1080">
+            <!-- 66.92 (Lighthouse finding): video poster was 1920px title.webp
+                 (188 KiB, fetched on every view alongside the hero srcset —
+                 double hero download). Now title-1280.webp (82 KiB). -->
+            <video controls preload="none" poster="../assets/images/title-1280.webp" width="1920" height="1080">
                 <source src="../assets/video/promo.webm" type="video/webm">
                 <source src="../assets/video/promo.mp4" type="video/mp4">
                 Your browser does not support video. <a href="../assets/video/promo.mp4">Download the promo</a>.

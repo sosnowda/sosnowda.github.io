@@ -103,7 +103,7 @@ ok(styles.includes('.sr-only'), 'styles.css: .sr-only существует (ск
 
 console.log('--- 5. Service Worker v99 и журнал ---');
 const sw = read('sw.js');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v124';"), 'SW: site-cache v124 (66.91 актуализация; ранее — актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; ассерт актуализирован из v111)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v125';"), 'SW: site-cache v125 (66.92 актуализация; ранее — актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; ассерт актуализирован из v111)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45 (66.86: дымницы/трава/копыл)');
 const swlog = read('docs/SW_CHANGELOG.md');
 ok(swlog.includes('- v99 — итерация 66.49'), 'SW-журнал: запись v99 добавлена');

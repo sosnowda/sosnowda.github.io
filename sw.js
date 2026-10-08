@@ -38,7 +38,14 @@
 // удалены мёртвые ассеты (2 AVIF-карты без ссылок в разметке, title.jpg) —
 // сайт network-first, список прекеша не ведётся; game-assets-v45 цел,
 // код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v124';
+// 66.92 (PF-1+PF-4 аудита 66.88 + находка замера): бамп v124→v125 —
+// game/index.html (+регистрация SW — прямые посетители игры теперь
+// получают SW, повторный визит из кэша game-assets-v45), index.html +
+// en/index.html (постер промо-видео title.webp 188 КиБ → title-1280.webp
+// 82 КиБ — двойная загрузка героя устранена), js/modules/reveal.js
+// (два прохода чтение→запись, длинная задача ~234 мс устранена);
+// game-assets-v45 цел (ассеты не тронуты), код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v125';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {

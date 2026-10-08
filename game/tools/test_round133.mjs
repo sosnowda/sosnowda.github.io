@@ -115,7 +115,7 @@ ok(indexRu.includes('aria-label="Открыть меню"') && indexEn.includes(
    'RU+EN: статичная разметка-фолбэк целa (no-JS)');
 
 console.log('--- 7. SW v124 + доки + sitemap ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v124';"), 'sw.js: site-cache v124 (66.91 актуализация)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v125';"), 'sw.js: site-cache v125 (66.92 актуализация)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 цел (ассеты игры не тронуты)');
 ok(swlog.includes('- v124 —'), 'SW_CHANGELOG: запись v124 добавлена');
 ok(changes.includes('## Патч 66.91'), 'CHANGES.md: секция патча 66.91 добавлена');
