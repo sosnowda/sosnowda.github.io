@@ -67,9 +67,9 @@ ok(indexEn.includes('<link rel="preload" href="../assets/screenshots/01-title.we
     'EN: preload 01-title.webp БЕЗ fetchpriority');
 ok(!/rel="preload"[^>]*fetchpriority="low"/.test(indexRu) && !/rel="preload"[^>]*fetchpriority="low"/.test(indexEn),
     'RU+EN: ни одного preload с fetchpriority="low" больше нет');
-ok(indexRu.includes('<link rel="preload" href="assets/images/title.webp" as="image" fetchpriority="high">') &&
-   indexEn.includes('<link rel="preload" href="../assets/images/title.webp" as="image" fetchpriority="high">'),
-    'RU+EN: hero preload сохранён с fetchpriority="high" (не тронут, прецедент 66.69/P4-9)');
+ok(indexRu.includes('<link rel="preload" href="assets/images/title-1280.webp" as="image" fetchpriority="high"') &&
+   indexEn.includes('<link rel="preload" href="../assets/images/title-1280.webp" as="image" fetchpriority="high"'),
+    'RU+EN: hero preload сохранён с fetchpriority="high" (66.90: href=title-1280.webp + imagesrcset под srcset-кандидаты; прецедент 66.69/P4-9)');
 
 console.log('--- 4. webvitals.js: Web Vitals → Метрика, CSP-чисто, досрочный вызов ---');
 ok(wv.includes('export function initWebVitals'), 'webvitals.js: экспорт initWebVitals');
@@ -107,8 +107,8 @@ ok(indexEn.includes('<link rel="manifest" href="/en/manifest.json">'),
     'en/index.html: link rel="manifest" ведёт на существующий /en/manifest.json (404 невозможен)');
 
 console.log('--- 6. SW: v112, v42 цел, механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v122';"),
-    'sw.js: const CACHE_NAME v112 (HTML RU+EN лендингов + webvitals.js → бамп §4)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v123';"),
+    'sw.js: const CACHE_NAME v123 (66.90 актуализация; ранее — HTML RU+EN лендингов + webvitals.js → бамп §4)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"),
     'sw.js: const GAME_ASSETS_CACHE v42 (ассеты/vendor не тронуты)');
 ok((sw.match(/\bvar\s+[A-Za-z_$]/gm) || []).length === 0, 'sw.js: объявлений var — ноль (no-var §9.2)');

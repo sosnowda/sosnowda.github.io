@@ -166,7 +166,7 @@ for (const f of actual) {
 console.log('— 10. SW v92 + аудио lazy-cache —');
 const sw = read('sw.js');
 const swlog = read('docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v122';"), 'SW: site-cache v122 (актуализация 66.88)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v123';"), 'SW: site-cache v123 (актуализация 66.90)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45');
 ok(swlog.includes('66.41'), 'SW-журнал: запись 66.41 есть');
 ok(!sw.includes('addAll'), 'SW: precache-списка нет (аудио кэшируется лениво по запросу)');

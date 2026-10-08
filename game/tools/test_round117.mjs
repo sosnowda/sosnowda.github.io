@@ -61,7 +61,7 @@ ok(styles.indexOf('clip-path: inset(50%)') > styles.indexOf('.sr-only {') &&
 
 console.log('--- 2. P4-2: sw.js — var→const ×5, v112, механика не тронута ---');
 ok((sw.match(/\bvar\s+[A-Za-z_$]/gm) || []).length === 0, 'sw.js: объявлений var — ноль (no-var §9.2)');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v122';"), 'sw.js: const CACHE_NAME v122 (HTML/CSS менялись → бамп §4)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v123';"), 'sw.js: const CACHE_NAME v123 (HTML/CSS менялись → бамп §4)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: const GAME_ASSETS_CACHE v45 (ассеты/vendor не тронуты)');
 ok(sw.includes("const url = new URL(event.request.url);") &&
    sw.includes("const clone = response.clone();") &&
@@ -123,16 +123,21 @@ console.log('--- 6. P4-6/P4-8: vendor без sourcemap-ссылок; r98 без 
 ok(!read('game/vendor/phaser.min.js').includes('sourceMappingURL'), 'vendor/phaser.min.js: ссылок на sourcemap нет (решение P4-6 «принято» закреплено)');
 ok(!read('game/tools/test_98_pixel_probe.py').includes('/home/z/'), 'test_98_pixel_probe.py: зашитых абсолютных путей нет (P4-8, закрыт в 66.67, Path(__file__))');
 
-console.log('--- 7. P4-9: preload hero — цели ровно в первичный кандидат <picture> ---');
-for (const [html, locale, pre, preLow] of [
-    [indexRu, 'RU', '<link rel="preload" href="assets/images/title.webp" as="image" fetchpriority="high">', '<link rel="preload" href="assets/screenshots/01-title.webp" as="image">'],
-    [indexEn, 'EN', '<link rel="preload" href="../assets/images/title.webp" as="image" fetchpriority="high">', '<link rel="preload" href="../assets/screenshots/01-title.webp" as="image">'],
+console.log('--- 7. P4-9 + 66.90 (PF-2): preload hero — imagesrcset зеркалит srcset источника ---');
+for (const [html, locale, base, preLow] of [
+    [indexRu, 'RU', 'assets/images', '<link rel="preload" href="assets/screenshots/01-title.webp" as="image">'],
+    [indexEn, 'EN', '../assets/images', '<link rel="preload" href="../assets/screenshots/01-title.webp" as="image">'],
 ]) {
-    ok(html.includes(pre), `${locale}: preload hero (title.webp, fetchpriority=high) на месте`);
+    const candidates = `${base}/title-480.webp 480w, ${base}/title-960.webp 960w, ${base}/title-1280.webp 1280w, ${base}/title.webp 1920w`;
+    ok(html.includes(`rel="preload" href="${base}/title-1280.webp" as="image" fetchpriority="high"`),
+        `${locale}: preload hero (href=title-1280.webp — вероятнейший кандидат и фолбэк для UA без imagesrcset, fetchpriority=high) на месте`);
     ok(html.includes(preLow), `${locale}: preload карточки меню на месте (66.70: fetchpriority="low" снят)`);
-    const srcset = (html.match(/<source srcset="([^"]+)" type="image\/webp">/) || [])[1];
-    const href = (html.match(/rel="preload" href="([^"]+)" as="image" fetchpriority="high">/) || [])[1];
-    ok(!!srcset && srcset === href, `${locale}: preload href === первичный кандидат <source srcset> («${href}») — двойной загрузки нет`);
+    const srcset = (html.match(/<source srcset="([^"]+)"/) || [])[1];
+    const isrcset = (html.match(/imagesrcset="([^"]+)"/) || [])[1];
+    ok(!!srcset && srcset === candidates, `${locale}: <source srcset> = 480/960/1280/1920w (66.90: PF-2 аудита 66.88 закрыт)`);
+    ok(!!isrcset && isrcset === candidates, `${locale}: imagesrcset preload === srcset <source> — двойной загрузки нет (инвариант P4-9, форма 66.90)`);
+    ok(html.includes('imagesizes="(max-width: 1180px) 100vw, 1180px"') && /<source[^>]*sizes="\(max-width: 1180px\) 100vw, 1180px"/.test(html),
+        `${locale}: sizes/imagesizes = реальная ширина .hero-image-wrap (100% до max-width 1180px)`);
     ok(html.includes(`class="hero-image" width="1920" height="1097" fetchpriority="high">`) && html.includes(`.jpg" alt=`),
         `${locale}: fallback <img> (title.jpg, размеры-инвариант CLS=0) цел`);
 }

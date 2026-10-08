@@ -9,13 +9,17 @@ html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель 
             --bg-card: #241a10;
             --gold: #c9a227;
             --gold-bright: #e6c34a;
-            --gold-dim: #8a6d1f;
+            /* 66.90 (аудит): было #8a6d1f — 3.72:1, FAIL WCAG AA (обычный текст);
+               #a8862a — 5.30:1 PASS на всех фонах переменной */
+            --gold-dim: #a8862a;
             --red-deep: #6b1f1f;
             --red-bright: #a83232;
             --blood: #7a1f1f;
             --text-main: #e8dcc8;
             --text-dim: #b8a88a;
-            --text-muted: #8a7a62;
+            /* 66.90 (аудит): было #8a7a62 — 4.38:1, FAIL WCAG AA (обычный текст,
+               вкл. .cta-meta 4.26:1); #94836a — 4.83–4.96:1 PASS на всех фонах переменной */
+            --text-muted: #94836a;
             --border-dark: #3a2a18;
             --border-gold: rgba(201, 162, 39, 0.35);
             --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.6);
@@ -38,7 +42,11 @@ html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель 
             color: var(--text-main);
             font-family: var(--font-body);
             line-height: 1.65;
-            overflow-x: hidden;
+            /* 66.90 (P1 аудита): было overflow-x: hidden — hidden делает body
+               scroll-контейнером, что ломает position: sticky (шапка и полоса
+               сбора не прилипали к верху). clip обрезает горизонтальное
+               переполнение, НЕ создавая scroll-контейнер — sticky работает */
+            overflow-x: clip;
             -webkit-font-smoothing: antialiased;
         }
 

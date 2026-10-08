@@ -24,7 +24,14 @@
 // (P3-1 аудита 66.87: h1 EN-лендинга переведён на монолингвальный
 // английский «The Chronicles of Ruthenia — a 15th-century Rus' RPG»);
 // game-assets-v45 цел (ассеты не тронуты), код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v122';
+// 66.90 (аудит: P1+P2): бамп v122→v123 — styles.css (P1: body
+// overflow-x hidden→clip, sticky шапки/полосы сбора починен; P2: контраст
+// --text-muted/--gold-dim по WCAG AA), index.html + en/index.html (P2
+// PF-2 аудита 66.88: srcset героя 480/960/1280w + imagesrcset в preload)
+// и 3 новых ассета assets/images/title-{480,960,1280}.webp (сайт —
+// network-first, список прекеша не ведётся); game-assets-v45 цел,
+// код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v123';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {

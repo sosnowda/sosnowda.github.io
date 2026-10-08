@@ -94,7 +94,7 @@ ok(game.includes('<meta http-equiv="Content-Security-Policy"'), 'регресс 
 ok(game.includes('<title>Летописи Руси — Браузерное демо</title>'), 'регресс: title игры не тронут');
 
 console.log('--- 5. SW v107 + документация ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v122';"), 'sw.js: site-cache v122 (актуализация 66.88) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v123';"), 'sw.js: site-cache v123 (актуализация 66.90) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 без изменений');
 ok(sw.includes("event.request.mode !== 'navigate'") && sw.includes('return cached;'), 'регресс 66.57: navigate-гейт цел');
 ok(swlog.includes('- v107 — итерация 66.63'), 'SW_CHANGELOG: запись v107 добавлена');

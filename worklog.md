@@ -2882,3 +2882,22 @@ Stage Summary:
 - Все 19 приказов выполнены: бои переведены на канон BRP SRD (сверка с официальным SRD), «Уклон» починен, DB=(STR+SIZ) с возвратом РАЗМЕРА, самострел без уклонения болта + прицел, тактика В-1..В-5 (контратака/телеграф/мораль-сдача по Судебнику/оружейные особенности/строй ≤2), медведь и стая волков добавлены и отбалансированы Монте-Карло по паттернам героев.
 - Артефакты: docs/COMBAT_BALANCE_R6689.md (новый), game/tools/test_round132.mjs (новый), game/tools/qa_6689.mjs (новый), scripts/combat_sim_6689.mjs (вне репо) + sim_6689_final.txt; правки: BRPEngine, Character, AgeRules, npcStats, characters, CombatScene, LocationScene, ForestScene, ForkScene, ApiaryScene, ui.js, i18n.js, GAME_DOCUMENTATION.md, CHANGES.md.
 - Регресс 69/69 зелёных; живой QA 19/19, 0 JS-ошибок; прод проверяется после пуша.
+
+---
+Task ID: 66.90
+Agent: Super Z (GLM)
+Task: Правки P1+P2 внешнего аудита лендинга сразу в main (приказ владельца): P1 sticky-шапка/полоса сбора, P2 контраст --text-muted/--gold-dim, P2 мобильный srcset героя (PF-2 аудита 66.88).
+
+Work Log:
+- P1 ДИАГНОЗ/ФИКС: body{overflow-x:hidden} → scroll-контейнер → position:sticky шапки и .fund-bar не работал (аудит: headerTop = −scrollY, подтверждено экспериментом overflowX='visible'). Выбран `overflow-x: clip` вместо простого удаления: сохраняет горизонтальную обрезку переполнения (исходный смысл hidden), не создавая scroll-контейнера; live-проверка после правки: scrollY 600–800 → headerTop=0, fundTop=0 (desktop 1440×900 и mobile 390×844), переполнение 0 px на html и body. Поддержка clip: Chrome 90+/FF 81+/Safari 16+, старые UA теряют только clip (безобидно).
+- P2 КОНТРАСТ: --text-muted #8a7a62→#94836a, --gold-dim #8a6d1f→#a8862a (styles.css :root, 2 строки). Пересчёт по всем реальным фонам потребителей: #94836a — 4.64–4.96:1, #a8862a — 4.97–5.63:1 (PASS AA; сценарий contrast_check.py дополнен ревизией 66.90). ПОПРАВКА К АУДИТУ (честно зафиксирована в CHANGES): .cta-meta 4.26:1 был гипотетическим — по CSSOM-замеру элемент красится .cta-section p (0,1,1) в var(--text-dim) #b8a88a = 7.93:1 PASS; живые потребители --text-muted покрываются заменой переменной.
+- P2 SRCSET ГЕРОЯ (PF-2/66.88): сгенерированы title-480/960/1280.webp (PIL LANCZOS, q80 method 6; 20/56/82 КиБ от 189 КиБ оригинала, скрипт scripts/make_hero_variants_6690.py — вне репо); <source> RU+EN: srcset 4 кандидатов + sizes="(max-width: 1180px) 100vw, 1180px" (= ширина .hero-image-wrap); preload: imagesrcset (зеркало srcset — инвариант «двойной загрузки нет» P4-9) + imagesizes, href=title-1280.webp (фолбэк UA без imagesrcset). Fallback img (title.jpg, width/height) не тронут — CLS=0 цел.
+- ЖИВАЯ ВЕРИФИКАЦИЯ ВЫБОРА (headless, resource-timing): desktop 1440→1280w; mobile 390 DPR1→480w; iPhone 14 DPR3→1280w; постер видео (title.webp, preload=none) — прежнее поведение, не путать с героем. Артефакт headless-currentSrc (показывал title.webp при фактической загрузке варианта) разобран: истина — initiator=img записи и плотностно-скорректированный naturalWidth (389–390). 0 ошибок консоли RU/EN; скриншоты-доказательства audit_6690_sticky_desktop.png / audit_6690_mobile_sticky.png.
+- ПИНЫ (прецедент 66.87): 38 × test_round*.mjs v122→v123 + лейблы «актуализация 66.90» (скрипт scripts/update_pins_6690.py — вне репо, строчные замены только на assert-строках); r117 §7 переписан под imagesrcset===srcset источника + sizes/imagesizes; r118 §3 — новый hero-preload; выровнены 3 устаревших лейбла многострочных ok() (r72/r118/r119). node --check 38/38.
+- РЕГРЕСС 64–132 = 69/69 зелёных (запуск из корня, r86–89 из game/tools).
+- СЛУЖЕБНОЕ: SW v122→v123 (§4: styles.css + HTML RU+EN + 3 сайт-ассета; сайт network-first, прекеш-списка нет), game-assets-v45 цел, код sw.js не менялся; SW_CHANGELOG v123; CHANGES.md «Патч 66.90»; sitemap lastmod — bump_lastmod.py после коммита + amend (§5).
+
+Stage Summary:
+- Все три правки P1+P2 в main: sticky починен одной строкой (clip), контраст двух переменных по AA с запасом ≥3%, мобильный герой грузит 20–82 КиБ вместо 189.
+- Регресс 69/69 зелёных; живые пробы RU/EN desktop+mobile без ошибок консоли; инварианты P4-9 (нет двойной загрузки героя) и CLS=0 сохранены.
+- Поправка к аудиту: FAIL .cta-meta был гипотетическим (реальный цвет элемента — text-dim, PASS 7.93).
