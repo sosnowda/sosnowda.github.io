@@ -72,7 +72,7 @@ for (const h of ['hero_baenor', 'hero_huntress']) {
 ok(existsSync('../docs/PACK_ANALYSIS_6629.md'), 'анализ пака Medieval - Heroes I задокументирован (game/docs/PACK_ANALYSIS_6629.md)');
 
 console.log('--- 7. SW и кеши ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v126';"), 'SW: site-cache v126 (актуализация 66.93)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v127';"), 'SW: site-cache v127 (актуализация 66.94)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45 (листы 66.33 + бусты)');
 ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 

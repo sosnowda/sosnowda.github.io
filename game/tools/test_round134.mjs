@@ -78,7 +78,7 @@ ok(indexRu.includes('"inLanguage"') && indexEn.includes('"inLanguage"'), 'JSON-L
 ok(exists('assets/images/og-demo.jpg'), 'og-demo.jpg цел (og:image игры — щит r133)');
 
 console.log('--- 6. SW v125 + доки + sitemap ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v126';"), 'sw.js: site-cache v126');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v127';"), 'sw.js: site-cache v127');
 ok(swlog.includes('- v125 —'), 'SW_CHANGELOG: запись v125 добавлена');
 ok(changes.includes('## Патч 66.92'), 'CHANGES.md: секция патча 66.92 добавлена');
 ok(worklog.includes('Task ID: 66.92'), 'worklog: запись 66.92 добавлена');

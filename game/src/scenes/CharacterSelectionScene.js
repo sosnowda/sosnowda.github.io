@@ -32,7 +32,7 @@ import { composeWorldPlayerTexture } from '../systems/WorldLook.js';
 // в героя (bustKey + battleLookKey)
 import { getBustFor, bustVariantsFor, ALT_LOOK_NAMES } from '../data/heroes.js';
 // 66.44 (приказ 9): УНИКАЛЬНЫЕ облики 8 прегенов + случайная сборка
-import { HERO_WORLD_LOOKS, rollHeroWorldLook } from '../systems/WorldLook.js';
+import { HERO_WORLD_LOOKS, rollHeroWorldLook, resetNpcLookCache } from '../systems/WorldLook.js';
 
 export class CharacterSelectionScene extends Phaser.Scene {
     constructor() {
@@ -582,6 +582,11 @@ export class CharacterSelectionScene extends Phaser.Scene {
         // Инициализируем игровое время
         initTime(this.registry, startDate);
         // Инициализируем NPC со случайными историческими именами (п.6)
+        // 66.94 (P2-15 аудита): ПЕРЕД генерацией новых имён — сброс кэша
+        // обликов жителей (npc_lpc_*/npc_var_*): ранние return по
+        // textures.exists в ensureWorldNpcTexture/buildNpcLookTextures
+        // иначе вернут новой партии облик жителей ПРОШЛОЙ партии.
+        resetNpcLookCache(this);
         initNpcNames(this.registry);
         // Инициализируем систему репутации
         initReputation(this.registry);

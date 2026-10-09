@@ -458,3 +458,52 @@ export function ensureWorldNpcTexture(scene, registry, npc) {
     if (!registerWorldTexture(scene, key, canvas)) return null;
     return key;
 }
+
+/**
+ * 66.94 (P2-15 аудита игры): сброс кэша обликов жителей при НОВОЙ ПАРТИИ.
+ *
+ * Текстуры npc_lpc_<id> (ensureWorldNpcTexture) и npc_var_<id>
+ * (NpcLook.buildNpcLookTextures) кэшируются в ГЛОБАЛЬНОМ TextureManager
+ * по ключу npc.id и переживают партию: ранние return по
+ * textures.exists (WorldLook.js:445, NpcLook.js:185) возвращали новой
+ * партии композиты/перекраски ПРОШЛОЙ партии — облик деревни «залипал»
+ * вопреки контракту npcNames. Анимы снимаются тоже: в Phaser 3.88
+ * anims.create() на существующем ключе только предупреждает в консоль
+ * и НЕ перезаписывает («Animation key exists»).
+ *
+ * Вызывается из CharacterSelectionScene.startGameWithHero ПЕРЕД
+ * initNpcNames — единственной точки старта новой партии. В этот момент
+ * сцены прошлой партии остановлены, живых спрайтов с этими ключами нет
+ * (гонка «remove/add на лету», раунд 41, здесь невозможна).
+ */
+export function resetNpcLookCache(scene) {
+    if (!scene || !scene.textures) return;
+    let textures = 0;
+    let anims = 0;
+    try {
+        scene.textures.getTextureKeys().forEach((key) => {
+            if (key.startsWith('npc_lpc_') || key.startsWith('npc_var_')) {
+                scene.textures.remove(key);
+                textures++;
+            }
+        });
+        if (scene.anims && scene.anims.anims && typeof scene.anims.anims.forEach === 'function') {
+            const stale = [];
+            scene.anims.anims.forEach((anim, animKey) => {
+                if (typeof animKey === 'string'
+                    && (animKey.startsWith('npc_lpc_') || animKey.startsWith('npc_var_'))) {
+                    stale.push(animKey);
+                }
+            });
+            stale.forEach((animKey) => {
+                try { scene.anims.remove(animKey); anims++; } catch (e) { /* noop */ }
+            });
+        }
+    } catch (e) {
+        console.warn('[WorldLook] сброс npc-кэша не удался (фолбэк — старые облики):', e);
+        return;
+    }
+    if (textures || anims) {
+        console.info(`[WorldLook] новая партия: сброшено текстур ${textures}, анимаций ${anims}`);
+    }
+}

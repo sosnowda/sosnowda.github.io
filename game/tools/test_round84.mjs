@@ -159,7 +159,7 @@ for (const f of ['landing_shots.mjs', 'convert_shots.js', 'update_shots_6624.py'
 
 console.log('\n[5] П.4: скриншоты лендинга и SW');
 const swSrc = read('../sw.js');
-ok(swSrc.includes("const CACHE_NAME = 'chronicles-ruthenia-v126'"), 'SW: site-cache v126 (66.93 актуализация)');
+ok(swSrc.includes("const CACHE_NAME = 'chronicles-ruthenia-v127'"), 'SW: site-cache v127 (66.94 актуализация)');
 ok(swSrc.includes("const GAME_ASSETS_CACHE = 'game-assets-v45'"), 'SW: game-assets-v45 (дымницы 66.86)');
 ok(existsSync(join(root, '..', 'assets/screenshots/05-map.webp')), 'кадр карты местности 05-map.webp на месте');
 

@@ -115,8 +115,13 @@ export class VirtualControls {
         this.actionButton = { base: actionBase, text: actionText, ax, ay, ar };
 
         // Раунд 20: при ресайзе окна контролы прилипают к нижним углам заново
+        // 66.94 (P2-6 аудита игры): scale-менеджер ГЛОБАЛЕН — анонимная
+        // подписка переживает destroy() и накапливается с каждым входом
+        // в сцену с виртуальными контролами (Village/Forest/Apiary).
+        // Именованный обработчик; отписка — в destroy() (его зовут shutdown
+        // сцены — VillageScene.js:789 и соседи).
         if (this.scene.scale) {
-            this.scene.scale.on('resize', (gameSize) => {
+            this.__onScaleResize = (gameSize) => {
                 if (!this.joystick || !this.actionButton) return;
                 const jx2 = 100;
                 const jy2 = gameSize.height - 100;
@@ -130,7 +135,8 @@ export class VirtualControls {
                 this.actionButton.ay = ay2;
                 this.actionButton.base.setPosition(ax2, ay2);
                 this.actionButton.text.setPosition(ax2, ay2);
-            });
+            };
+            this.scene.scale.on('resize', this.__onScaleResize);
         }
     }
 
@@ -194,6 +200,12 @@ export class VirtualControls {
     }
 
     destroy() {
+        // 66.94 (P2-6): снимаем глобальный scale-обработчик ДО уничтожения
+        // объектов (иначе подписка переживала пересоздание контролов).
+        if (this.__onScaleResize && this.scene && this.scene.scale) {
+            try { this.scene.scale.off('resize', this.__onScaleResize); } catch (e) { /* noop */ }
+            this.__onScaleResize = null;
+        }
         if (this.joystick) {
             this.joystick.base.destroy();
             this.joystick.thumb.destroy();

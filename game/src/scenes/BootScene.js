@@ -222,6 +222,51 @@ export class BootScene extends Phaser.Scene {
             }).setOrigin(0.5);
         }
 
+        // ============================================================
+        // 66.94 (P2-10 аудита игры): СТОРОЖ ПРЕЛОДА.
+        // Симптом (реестр аудита): битая сеть = вечное «Загрузка...»
+        // (застрявший лоадер) или старт с розовыми квадратами (loaderror
+        // никем не обрабатывался). Гард из трёх частей:
+        //   1) this.load.on('loaderror') — собирает битые файлы и сразу
+        //      показывает экран «Перезагрузить» (лоадер добивает очередь
+        //      в фоне — резать его нельзя, Phaser сам дойдёт до complete);
+        //   2) таймаут-сторож ПРОСТОЯ прогресса: 30 c без единого события
+        //      fileprogress при живом лоадере — тот же экран (медленная
+        //      сеть с движущимся прогрессом НЕ трогается);
+        //   3) финальный гвард в create(): при __bootFailed Title НЕ
+        //      стартует — розовых квадратов игрок не увидит.
+        // Единственная P2 аудита, потребовавшая нового UI-элемента (§12.2).
+        // ============================================================
+        this.__bootFailed = false;
+        this.__bootLoadErrors = [];
+        this.__bootLastProgressAt = Date.now();
+        this.load.on('loaderror', (file) => {
+            try {
+                const url = (file && (file.url || file.src)) || '?';
+                this.__bootLoadErrors.push({ key: (file && file.key) || '?', url });
+                console.warn('[Летописи:сторож] loaderror:', (file && file.key) || '?', url);
+                this.showBootErrorScreen('loaderror');
+            } catch (e) { /* сторож не роняет лоадер */ }
+        });
+        this.load.on('fileprogress', () => { this.__bootLastProgressAt = Date.now(); });
+        this.__bootWatchdog = this.time.addEvent({
+            delay: 5000,
+            loop: true,
+            callback: () => {
+                try {
+                    if (this.__bootFailed) return;
+                    const loading = (typeof this.load.isLoading === 'function')
+                        ? this.load.isLoading()
+                        : this.load.state === Phaser.Loader.LOADING;
+                    if (!loading) return;
+                    if (Date.now() - this.__bootLastProgressAt > 30000) {
+                        console.warn('[Летописи:сторож] прелоад стоит >30 c — экран перезагрузки');
+                        this.showBootErrorScreen('stall');
+                    }
+                } catch (e) { /* сторож не роняет лоадер */ }
+            },
+        });
+
         // ----- ТАЙЛЫ -----
         // Трава
         for (let v = 0; v < 4; v++) this.load.image(`tile_grass_${v}`, `assets/tiles/grass_${v}.png`);
@@ -638,6 +683,58 @@ export class BootScene extends Phaser.Scene {
         this.registry.set('audioKeys', sfxKeys);
     }
 
+    /**
+     * 66.94 (P2-10): экран сторожа прелоада — «Ошибка загрузки» + кнопка
+     * «Перезагрузить» (location.reload(); при повторном входе SW отдаст
+     * закэшированное и докачает недостающее). BootScene рисуется ПОВЕРХ
+     * Preload (launch позже), но Preload всё равно глушится — как в финале
+     * create (останавливаются его таймеры подсказок). Повторный вызов
+     * (несколько loaderror / сторож) — no-op. Причины:
+     *   'loaderror' — часть файлов не загрузилась (HTTP-ошибки);
+     *   'stall'     — лоадер жив, но прогресс стоит >30 c (зависшая сеть).
+     */
+    showBootErrorScreen(reason) {
+        if (this.__bootFailed) return;
+        this.__bootFailed = true;
+        try {
+            if (this.__bootWatchdog) { this.__bootWatchdog.remove(); this.__bootWatchdog = null; }
+        } catch (e) { /* noop */ }
+        try {
+            if (this.scene.isActive('Preload')) this.scene.stop('Preload');
+        } catch (e) { /* noop */ }
+        const { width, height } = this.scale;
+        const en = isEn();
+        const GOLD = '#c9a14a';
+        this.add.rectangle(width / 2, height / 2, width, height, 0x2e2118, 0.97).setDepth(1000);
+        this.add.text(width / 2, height / 2 - 100, en ? 'Loading error' : 'Ошибка загрузки', {
+            fontFamily: 'Georgia, serif', fontSize: '30px', color: GOLD, fontStyle: 'bold',
+        }).setOrigin(0.5).setDepth(1001);
+        const detail = reason === 'stall'
+            ? (en ? 'The game resources stopped loading (network stalled).'
+                 : 'Ресурсы игры перестали загружаться (сеть не отвечает).')
+            : (en ? 'Some game files failed to load.'
+                 : 'Часть файлов игры не смогла загрузиться.');
+        const errs = this.__bootLoadErrors || [];
+        const shown = errs.slice(0, 3).map((e) => `· ${e.url}`).join('\n');
+        const more = errs.length > 3 ? (en ? `\n…and ${errs.length - 3} more` : `\n…и ещё ${errs.length - 3}`) : '';
+        this.add.text(width / 2, height / 2 - 36, detail + (shown ? `\n\n${shown}${more}` : ''), {
+            fontFamily: 'Georgia, serif', fontSize: '16px', color: '#f3e9d2',
+            align: 'center', wordWrap: { width: Math.max(240, Math.min(640, width - 48)) },
+        }).setOrigin(0.5).setDepth(1001);
+        const btnY = height / 2 + 90;
+        const btn = this.add.rectangle(width / 2, btnY, 264, 56, 0x4a3624)
+            .setStrokeStyle(2, 0xc9a14a).setDepth(1001)
+            .setInteractive({ useHandCursor: true });
+        const label = this.add.text(width / 2, btnY, en ? 'Reload' : 'Перезагрузить', {
+            fontFamily: 'Georgia, serif', fontSize: '22px', color: '#f3e9d2',
+        }).setOrigin(0.5).setDepth(1002).setInteractive({ useHandCursor: true });
+        const reload = () => { try { location.reload(); } catch (e) { /* noop */ } };
+        btn.on('pointerover', () => btn.setFillStyle(0x5a4530));
+        btn.on('pointerout', () => btn.setFillStyle(0x4a3624));
+        btn.on('pointerup', reload);
+        label.on('pointerup', reload);
+    }
+
     create() {
         // ----- Раунд 39 (п.4 заявки): оверлей груди для женских LPC-персонажей —
         // canvas-слой «поверх одежды», один раз за игру (см. CharacterAppearance.js)
@@ -801,6 +898,10 @@ export class BootScene extends Phaser.Scene {
         // 66.31 (п.1): ассеты готовы — гасим золотой прелоад и открываем меню.
         // Порядок важен: сначала гасим Preload, потом стартуем Title, чтобы
         // между ними не мелькал фон пустой сцены.
+        // 66.94 (P2-10): при сработавшем стороже (loaderror/зависший лоадер)
+        // экран «Перезагрузить» уже показан — Title НЕ стартуем, розовых
+        // квадратов игрок не увидит.
+        if (this.__bootFailed) return;
         try {
             if (this.scene.isActive('Preload')) this.scene.stop('Preload');
         } catch (e) { /* noop */ }

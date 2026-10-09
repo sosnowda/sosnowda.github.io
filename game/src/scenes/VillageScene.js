@@ -589,9 +589,18 @@ export class VillageScene extends Phaser.Scene {
         this.applyCameraFit();
         // Раунд 52 (QA-фикс): после остановки сцены камера уничтожена —
         // resize-хендлер больше не должен падать на setZoom.
-        this.scale.on('resize', () => {
+        // 66.94 (P2-6 аудита игры): scale-менеджер ГЛОБАЛЕН — анонимная
+        // подписка не снималась в shutdown и накапливалась с каждым входом
+        // в деревню (сотни хендлеров за долгую сессию). Именованный
+        // обработчик + events.once('shutdown') по образцу ui.js
+        // (ensureSceneResizeBinding: scale.on + scale.off в shutdown).
+        this.__onScaleResize = () => {
             if (!this.scene.isActive() || !this.cameras || !this.cameras.main) return;
             this.applyCameraFit();
+        };
+        this.scale.on('resize', this.__onScaleResize);
+        this.events.once('shutdown', () => {
+            try { this.scale.off('resize', this.__onScaleResize); } catch (e) { /* noop */ }
         });
 
         // ----- Управление -----

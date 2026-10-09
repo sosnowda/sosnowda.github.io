@@ -257,7 +257,10 @@ export class LocationScene extends Phaser.Scene {
         const player = this.registry.get('player');
         // Раунд 45 (п.1 заявки): параметр «меч» (⚔%) из верхнего виджета удалён
         // Раунд 46 (п.8 заявки): из статус-бара удалён и параметр «✦ Воля» (MP)
-        this.add.text(16, 12, `❤ ${player.HP}/${player.HPmax}`, {
+        // 66.94 (P2-9 аудита): ссылка сохраняется — updateHUD теперь тянет
+        // живой HP (раньше текст создавался статично и после работы на
+        // мельнице (−3 HP) показывал старое здоровье до перезахода).
+        this.hpHudText = this.add.text(16, 12, `❤ ${player.HP}/${player.HPmax}`, {
             fontSize: '14px', color: RUS.text, backgroundColor: '#000000aa', padding: { x: 8, y: 6 },
             stroke: '#000', strokeThickness: 2,
         }).setDepth(100);
@@ -1245,6 +1248,14 @@ export class LocationScene extends Phaser.Scene {
      * оверлей дня/ночи + тёплый слой и тени системы SunLight.
      */
     updateHUD() {
+        // 66.94 (P2-9 аудита): ЖИВОЙ HP в HUD — ДО раннего return по
+        // timeState. Мельница списывает −3 HP и честно зовёт updateHUD
+        // (строка ~3460), но тот обновлял только освещение — ❤-текст
+        // оставался со значением на момент входа на локацию.
+        if (this.hpHudText && this.hpHudText.scene) {
+            const p = this.registry.get('player');
+            if (p) this.hpHudText.setText(`❤ ${p.HP}/${p.HPmax}`);
+        }
         const timeState = getTime(this.registry);
         if (!timeState) return;
         if (this.dayNightOverlay && this.dayNightOverlay.scene) {

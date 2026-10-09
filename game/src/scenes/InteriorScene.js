@@ -125,6 +125,17 @@ export class InteriorScene extends Phaser.Scene {
         // Патч 66.74 (приказ 13): режим ВЗЛОМА — игрок вскрыл замок пустого дома
         // (VillageScene attemptBreakIn). В пустом доме доступен сундук.
         this.burglary = !!(data && data.burglary);
+        // 66.94 (P2-7 аудита игры): флаги открытых меню не переживают рестарт
+        // сцены (bindRestartOnResize → scene.restart → init). Рестарт при
+        // открытом «Провести время»/«Скупка» оставлял __spendTimeOpen/
+        // __sellLootOpen = true НАВСЕГДА: гард exitAction (787) убивал ESC,
+        // гард showTavernRestMenu (2365) — «Отдых», в этом экземпляре сцены.
+        // Образец — сброс busyDialog в LocationScene.init (раунд 30 QA-фикс).
+        this.__spendTimeOpen = false;
+        this.__sellLootOpen = false;
+        // 66.94 (P2-8 аудита): свежий массив источников света на каждый вход.
+        // Раньше старые визиты протекали в новый create() — см. гвард на 4054.
+        this._lightSources = [];
     }
 
     create() {
@@ -4051,7 +4062,11 @@ export class InteriorScene extends Phaser.Scene {
         // === Раунд 9: инфраструктура света ===
         // Собираем источники света (печь, свечи, лампада, камин),
         // в конце рендерим тёплые пятна: днём — лёгкая база, ночью — ярко.
-        this._lightSources = [];
+        // 66.94 (P2-8 аудита): было `this._lightSources = []` — безусловная
+        // зачистка УБИВАЛА тёплые пятна hasBg-фонов (очаг кузницы/церкви/
+        // горниц, наполнение на 3995–4005 идёт ВЫШЕ этой строки). Теперь —
+        // безопасное объединение: массив свежий (init), hasBg-пятна живут.
+        this._lightSources = this._lightSources || [];
         const timeState = getTime(this.registry);
         const hour = timeState ? timeState.hour : 12;
         let daylight = 0;                 // насколько ярко за окном (для столбов света)

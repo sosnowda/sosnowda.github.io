@@ -52,7 +52,13 @@
 // dodge врагов P2-1 / busy в playerAttack P2-2 / защёлка __victoryQueued
 // P2-3, TimeSystem — кламп advanceTime P2-20); game-assets-v45 цел
 // (ассеты не тронуты), код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v126';
+// 66.94 (эшелон 2 аудита игры): бамп v126→v127 — game/src (VillageScene +
+// VirtualControls — снятие scale-подписок P2-6, InteriorScene — сброс
+// флагов меню P2-7 и возврат источников света P2-8, LocationScene —
+// живой HP в HUD P2-9, BootScene — loaderror + сторож прелоада P2-10,
+// WorldLook/CharacterSelectionScene — сброс npc-кэша новой партии P2-15);
+// game-assets-v45 цел (ассеты не тронуты), код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v127';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {
