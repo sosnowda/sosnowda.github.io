@@ -208,7 +208,7 @@ function finish() {
         'game/index.html: декод %20-версии = прежний SVG бит-в-бит (рендер фавиконки не изменён)');
 
     console.log('--- 6. SW: бамп по §4 (HTML страниц изменён), механика не тронута ---');
-    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v125';"), 'sw.js: site-cache v125 (актуализация 66.92) (P4 66.69: sr-only/<main>/aria-label в HTML, clip-path в styles.css, var→const sw.js → бамп)');
+    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v126';"), 'sw.js: site-cache v126 (актуализация 66.93) (P4 66.69: sr-only/<main>/aria-label в HTML, clip-path в styles.css, var→const sw.js → бамп)');
     ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 без изменений (ассеты/vendor не тронуты)');
     ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел');
     ok(swlog.includes('- v112 — итерация 66.70'), 'SW_CHANGELOG: запись v112 добавлена');

@@ -132,6 +132,11 @@ export function getSeason(month) {
 
 // Продвинуть время на указанное количество минут
 export function advanceTime(timeState, minutes) {
+    // 66.93 (P2-20 аудита игры): кламп входа — Infinity вешает while-цикл
+    // ниже НАВСЕГДА («тихое замерзание» от одного битого хука), NaN отравляет
+    // весь таймстейт каскадом (минута/час/день → NaN). Потолок 1440 = сутки;
+    // легитимные вызовы (сон 480, отдых 240…) заведомо меньше.
+    minutes = Math.min(1440, Math.max(0, Math.floor(Number(minutes) || 0)));
     timeState.minute += minutes;
     while (timeState.minute >= 60) {
         timeState.minute -= 60;

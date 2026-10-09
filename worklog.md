@@ -1,4 +1,26 @@
 ---
+Task ID: 66.93
+Agent: Z.ai Code (main)
+Task: Эшелон 1 плана аудита игры — 7 однострочных фиксов: P1×3 (meal.js tf, тач-кнопка двойной E, activePointers) + P2×4 (dodge врагов, busy в playerAttack, защёлка победы, кламп advanceTime) — приказ владельца «внесу правки сразу в main по отработанной схеме 66.90–66.92».
+
+Work Log:
+- P1-1: meal.js — `import { t, tf } from './i18n.js'` (tf используется в showHerbBlockedPopup; без импорта повторный приём травы = ReferenceError; воспроизведено в Node в аудите; точки вызова CharacterScene:610/627, loot.js:457).
+- P1-2: VirtualControls.js — из pointerdown тач-кнопки действия убран emit('keydown-E'): сцены (VillageScene:600/ForestScene:157/ApiaryScene:156) слушают keydown-E и вызывают тот же tryInteract → тап исполнял взаимодействие ДВАЖДЫ; оставлен только прямой вызов tryInteract (клавиатурный E не тронут).
+- P1-3: game/index.html — конфиг Phaser + `input: { activePointers: 2 }`: дефолт (1) = мышь + один тач-слот, зажатый джойстик блокировал тап кнопки действия (двигаться + взаимодействовать/атаковать было невозможно).
+- P2-1: CombatScene.js — `skillCheck(target.dodge)` → `skillCheck(target.skills.dodge)`: у врагов навык в skills.dodge (шаблоны 15–35, NPC — getNpcSkillResistance/fallbackDodge), target.dodge всегда undefined → уклонение врага ~1%.
+- P2-2: CombatScene.js — защёлка `this.busy = true` СРАЗУ ПОСЛЕ гварда пустого колчана (там ход НЕ тратится и busy трогать нельзя — иначе мягкая блокировка атаки) и до расчёта навыка/анимации; сброс в afterEnemy() уже был. Окно спам-клика ~400–500 мс (двойная проверка+урон, двойной enemyTurn) закрыто.
+- P2-3: CombatScene.js — защёлка `__victoryQueued` в endCombatVictory (образец __endQueued ForkScene) + сброс в create(): мораль (delayedCall 700) и добивание (delayedCall 500) вызывали endCombatVictory дважды → двойные награды/летопись/диалоги.
+- P2-20: TimeSystem.js — advanceTime клампит вход `Math.min(1440, Math.max(0, Math.floor(Number(minutes) || 0)))`: Infinity вешал while-цикл навсегда, NaN отравлял таймстейт. Функционально проверено в Node (r135): Infinity → ровно сутки, NaN → 0, −50 → 0, '90' → 1ч30м.
+- НЮАНС реализации: busy нельзя ставить в самое начало playerAttack — ранний return «колчан пуст» не тратит ход; защёлка поставлена после всего гварда (позиционный инвариант закреплён тестом r135).
+- sw.js v125→v126 (§4 АГЕНТ.md: game/index.html + game/src изменены); game-assets-v45 цел (ассеты не тронуты), код sw.js не менялся; пины 39 × test_round*.mjs (update_pins_6693.py, node --check 39/39); НОВЫЙ test_round135 (30+ проверок, в т.ч. ФУНКЦИОНАЛЬНЫЙ Node-тест клампа времени через import TimeSystem.js); CHANGES/SW_CHANGELOG/worklog; sitemap bump_lastmod СИНХРОН.
+- Регресс 64–135 = 72/72 зелёных; прод-верификация после пуша: sha256-сверка, SW v126, 0 ошибок консоли.
+
+Stage Summary:
+- Эшелон 1 в проде: все три P1 и четыре острые P2 боя/времени закрыты однострочными правками; мобильный геймплей (мультитач + одинарное срабатывание тач-кнопки) и честность боевого баланса (уклонение врагов, окно спам-клика, двойная победа) восстановлены; таймсистема защищена от Infinity/NaN.
+- Рекомендованные живые QA-сценарии (§12.4 аудита): двойная трава за 12 ч; тач E у двери (один интерьер за тап); бой с бандитом ≥20 уклонений врага; мораль над стаей волков = одна награда.
+- Приоритет следующей итерации (эшелон 2 плана): блок состояния сцен (P2-6…P2-9, P2-15) и сторож прелоада (P2-10).
+
+---
 Task ID: 66.92
 Agent: Z.ai Code (main)
 Task: Реестр аудита 66.88 — PF-1 (SW для /game/), PF-4 (reveal.js), PF-5 (решение) + находка замера Lighthouse до/после: постер видео = двойная загрузка героя (приказ владельца «взять пункты P4-реестра или замерить Lighthouse до/после»).

@@ -141,6 +141,9 @@ export class CombatScene extends Phaser.Scene {
         }
         this.busy = false;
         this.playerDodging = false;
+        // 66.93 (P2-3 аудита игры): защёлка победы — сброс в create() обязателен,
+        // экземпляр сцены живёт всю игру (образец — __endQueued в ForkScene).
+        this.__victoryQueued = false;
         // Итерация 66.89 — новые боевые флаги (сброс в create(): экземпляр сцены живёт всю игру)
         this.playerDodgeBonus = 0;     // В-2: +20% к уклонению против телеграфированного удара
         this.counterWindow = false;    // В-1: окно контратаки после успешного уклонения от медленного врага
@@ -825,6 +828,13 @@ export class CombatScene extends Phaser.Scene {
             this.updateGearStatus();
         }
 
+        // 66.93 (P2-2 аудита игры): защёлка занятости ДО анимации — окно
+        // ~400–500 мс до resolvePlayerAttack позволяло спам-кликом получить
+        // двойную проверку навыка + урон и двойной enemyTurn. Ставим ПОСЛЕ
+        // гварда колчана (там ход НЕ тратится — busy трогать нельзя);
+        // сброс — в afterEnemy() после хода врага.
+        this.busy = true;
+
         // Раунд 22 (п.11): благословение батюшки усиливает ОДНУ проверку навыка
         // Раунд 66.71: благословение батюшки усиливает и удар оружием (+10%, приказ 4)
         // Патч 66.73: при изнеможении удар возможен, но с дополнительным штрафом −20
@@ -988,7 +998,11 @@ export class CombatScene extends Phaser.Scene {
                 // НЕЛЬЗЯ — высокоскоростной снаряд не отбивается (усиливает и
                 // выделяет самострел из линейки — CB-5а).
                 const boltCannotBeDodged = w.skill === 'crossbow';
-                const dodgeRes = boltCannotBeDodged ? null : skillCheck(target.dodge);
+                // 66.93 (P2-1 аудита игры): у врагов навык в skills.dodge
+                // (characters.js spawnEnemy/spawnVillagerEnemy), поле target.dodge
+                // всегда undefined → враги уклонялись в ~1% вместо шаблонных
+                // 15–35%, баланс был смещён к игроку.
+                const dodgeRes = boltCannotBeDodged ? null : skillCheck(target.skills.dodge);
                 if (dodgeRes && (dodgeRes.result === ROLL_RESULT.SUCCESS || dodgeRes.result === ROLL_RESULT.CRITICAL)) {
                     // CB-3 (приказ 7): успешное уклонение врага имеет ЦЕНУ —
                     // промах в никуда утомляет: −1 ОУ игроку.
@@ -1473,6 +1487,12 @@ export class CombatScene extends Phaser.Scene {
     }
 
     endCombatVictory() {
+        // 66.93 (P2-3 аудита игры): защёлка от двойного вызова. При победе по
+        // морали delayedCall(700) из checkMorale и delayedCall(500) из
+        // resolvePlayerAttack могут сработать в одном окне — второй вызов давал
+        // двойные награды/записи летописи/диалоги победы. Повтор — тихий no-op.
+        if (this.__victoryQueued) return;
+        this.__victoryQueued = true;
         // В-3 (66.89): исходы морали — кто-то сдался/бежал; если враги ТОЛЬКО бежали
         // (никого не убито и никто не сдался) — победа без триумфа (приказ 12:
         // «бой завершается без победной анимации»)

@@ -93,11 +93,12 @@ export class VirtualControls {
         actionBase.on('pointerdown', () => {
             actionBase.setScale(0.9);
             actionText.setScale(0.9);
-            // Триггерим E
-            if (this.scene.input && this.scene.input.keyboard) {
-                // Эмулируем нажатие E через emit
-                this.scene.input.keyboard.emit('keydown-E', { key: 'E' });
-            }
+            // 66.93 (P1-2 аудита игры): ТОЛЬКО прямой вызов tryInteract().
+            // Раньше рядом стояла эмуляция нажатия E через keyboard.emit —
+            // принимающие сцены (VillageScene:600, ForestScene:157,
+            // ApiaryScene:156) слушают то же событие клавиатуры и вызывают
+            // тот же tryInteract, тап по кнопке исполнял взаимодействие
+            // ДВАЖДЫ (двойная трава, двойной лут).
             if (this.scene.tryInteract) {
                 this.scene.tryInteract();
             }

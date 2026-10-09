@@ -45,7 +45,14 @@
 // 82 КиБ — двойная загрузка героя устранена), js/modules/reveal.js
 // (два прохода чтение→запись, длинная задача ~234 мс устранена);
 // game-assets-v45 цел (ассеты не тронуты), код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v125';
+// 66.93 (эшелон 1 аудита игры): бамп v125→v126 — game/index.html
+// (input: { activePointers: 2 } — P1-3: второй тач-поинтер, движение +
+// взаимодействие/атака одновременно) и game/src (meal.js — импорт tf P1-1,
+// VirtualControls — двойное срабатывание кнопки E P1-2, CombatScene —
+// dodge врагов P2-1 / busy в playerAttack P2-2 / защёлка __victoryQueued
+// P2-3, TimeSystem — кламп advanceTime P2-20); game-assets-v45 цел
+// (ассеты не тронуты), код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v126';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {
