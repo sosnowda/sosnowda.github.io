@@ -1,6 +1,8 @@
 // Сцена локации (лес/тракт/река/поле) — поиск следов вора.
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
+// 66.97 (§12.3 аудита 66.92, п.5): шансы событий сцены — в конфиге
+import { SCENE_CHANCES } from '../config/GameConfig.js';
 import { FORK_LOCATIONS } from '../data/interiors.js';
 import { getLocationById, isForestLocation, forestDeeper, forestShallower } from '../data/mapLocations.js';
 import {
@@ -159,7 +161,7 @@ export class LocationScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-F1', () => {
             if (this.busyDialog) return;
             this.busyDialog = true;
-            createDialog(this, '❓ Информация по игре',
+            createDialog(this, t('❓ Информация по игре'),
                 timeRatioInfoLine() + '\n\n' +
                 t('🔍 Каждый след проверяется отдельно и только один раз;\nнеудача затирает след. Ночью следы читаются хуже.\n🕐 Обследование следа занимает ровно 1 игровой час.\n◀ Назад к развилке — тоже час дороги.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
@@ -297,14 +299,15 @@ export class LocationScene extends Phaser.Scene {
         // ----- Состояние поиска + погоня (раунд 21) -----
         const chaseActive = isChaseActive(this.registry);
         // Раунд 66.12 (п.5 приказа): ЛИХИЕ ЛЮДИ на большой дороге. Поручение
-        // «Избить лихих людей» теперь выполняется ЗАСАДОЙ на дороге (шанс 60%
-        // при входе на большой тракт с активным поручением) — раньше
+        // «Избить лихих людей» теперь выполняется ЗАСАДОЙ на дороге (шанс
+        // SCENE_CHANCES.roadAmbush — 66.97 §12.3: в конфиге — при входе на большой
+        // тракт с активным поручением) — раньше
         // единственным «разбойником» в игре был... враждебный житель в деревне.
         // Раунд 66.24: засада работает на ОБОИХ трактах — Южном и Северном.
         if ((this.locationId === 'road_south' || this.locationId === 'road_north') && !chaseActive) {
             const banditQuest = getActiveQuests(this.registry).find(qq =>
                 qq.combat && qq.enemyKeys && qq.enemyKeys.includes('bandit'));
-            if (banditQuest && Math.random() < 0.6) {
+            if (banditQuest && Math.random() < SCENE_CHANCES.roadAmbush) {
                 ActionLog.add(this.registry, t('На большом тракте тебе преградили путь лихие люди!'));
                 // 66.44 (приказ 2): fromLocation — бой рисуется на фоне тракта
                 this.time.delayedCall(500, () => this.scene.start('Combat', { enemyKeys: ['bandit'], fromScene: 'Location', fromLocation: this.locationId }));

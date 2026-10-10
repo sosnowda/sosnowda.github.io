@@ -31,6 +31,7 @@
 
 import { createCharacter, SKILLS } from '../systems/Character.js';
 import { applyAgingToStats, getAgeRow, COMBAT_SKILLS, WISDOM_SKILLS } from '../systems/AgeRules.js';
+import { t, isEn } from '../systems/i18n.js'; // 66.97: oppSkillLabel (§12.3 п.4)
 
 // --- Характеристики: [СИЛ, ТЕЛ, МОЩ, ЛОВ, ХАР] (66.71: без РАЗ; 66.89: —
 // опциональный 6-й аргумент SIZ «Размер» для телосложения; по умолчанию
@@ -394,6 +395,25 @@ const RU_GENITIVE = {
     'Скоморошество': 'Скоморошества', 'Ремесло': 'Ремесла', 'Кузнечное дело': 'Кузнечного дела', 'Взлом': 'Взлома',
 };
 export function ruGenitive(ruName) { return RU_GENITIVE[ruName] || ruName; }
+
+// --- 66.97 (§12.3 аудита 66.92, п.4 i18n-гигиена): подпись встречного навыка ---
+// RU: родительный падеж + принадлежность («Убеждения жителя») — как раньше.
+// EN: притяжательная форма («villager's Persuasion») — родительных падежей
+// в английском нет, словарь на композит RU-ключей не рассчитан.
+const OPP_WHO_EN = {
+    'жителя': "villager's",
+    'торговца': "merchant's",
+    'хозяина': "shopkeeper's",
+};
+/** Имя встречного навыка НПЦ для строки formatOpposedCheck().
+ *  whoRu — принадлежность на русском ('жителя' | 'торговца' | 'хозяина'). */
+export function oppSkillLabel(opp, whoRu) {
+    if (isEn()) {
+        const who = OPP_WHO_EN[whoRu] || '';
+        return (who ? `${who} ` : '') + t(opp.ruName);
+    }
+    return `${opp.ruNameGen} ${whoRu}`;
+}
 
 /**
  * Строка параметров жителя — раскрывается ТОЛЬКО успешной проверкой

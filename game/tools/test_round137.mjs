@@ -23,7 +23,7 @@
 //      смотрел на уже заменённый this.ambient — старый трек не останавливался);
 //  10) P2-19: utils/ui.js — removeScrollListeners + dialog.once('destroy')
 //      (DialogueRunner делает прямой destroy() — до 5 висячих слушателей);
-//  11) SW v127→v128; game-assets-v45 цел; доки (CHANGES/SW_CHANGELOG/worklog);
+//  11) SW v127→v130; game-assets-v45 цел; доки (CHANGES/SW_CHANGELOG/worklog);
 //      живой bump_lastmod --check.
 // Запуск из корня репозитория: node game/tools/test_round137.mjs
 import { execSync } from 'child_process';
@@ -189,8 +189,8 @@ ok((ui.match(/removeListener\('pointerdown'/g) || []).length === 1,
    'P2-19: снятие pointerdown живёт ТОЛЬКО в хелпере (дублей нет)');
 ok(ui.includes("scene.input.removeListener('pointerupoutside'"), 'P2-19: pointerupoutside снимается (все 4 drag-слушателя)');
 
-console.log('--- 10. SW v128 + game-assets-v45 ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v128';"), 'sw.js: CACHE_NAME v128');
+console.log('--- 10. SW v130 + game-assets-v45 ---');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v130';"), 'sw.js: CACHE_NAME v130');
 ok(!sw.includes("chronicles-ruthenia-v127'"), 'sw.js: старого v127 как CACHE_NAME нет');
 ok(sw.includes('66.95 (эшелон 3 аудита игры)'), 'sw.js: коммент-шапка бампа 66.95');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: бакет game-assets-v45 цел (ассеты не тронуты)');
@@ -199,8 +199,8 @@ console.log('--- 11. Доки: CHANGES / SW_CHANGELOG / worklog ---');
 ok(changes.includes('## Патч 66.95') && changes.indexOf('## Патч 66.95') < changes.indexOf('## Патч 66.94'),
    'CHANGES.md: «Патч 66.95» сверху журнала');
 ok(changes.includes('## Патч 66.94'), 'CHANGES.md: заголовок 66.94 цел (не затёрт вставкой)');
-ok(swlog.includes('- v128 — патч 66.95') && swlog.indexOf('- v128') < swlog.indexOf('- v127'),
-   'SW_CHANGELOG: v128 сверху журнала');
+ok(swlog.includes('- v130 — патч 66.97') && swlog.indexOf('- v130') < swlog.indexOf('- v129'),
+   'SW_CHANGELOG: v130 сверху журнала');
 ok(worklog.includes('Task ID: 66.95') && worklog.indexOf('Task ID: 66.95') < worklog.indexOf('Task ID: 66.94'),
    'worklog: запись 66.95 сверху');
 

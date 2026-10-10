@@ -123,7 +123,10 @@ export class EndScene extends Phaser.Scene {
         // Раунд 41 (QA): титулы вида «Путник пал» теперь подставляют имя героя
         const hero = this.registry.get('player') || {};
         const heroName = hero.name || (hero.gender === 'female' ? t('Путница') : t('Путник'));
-        const titleLine = t(rating.title).replace(/Путница|Путник(ка)?/, heroName);
+        // Раунд 41 (QA): титулы вида «Путник пал» теперь подставляют имя героя.
+        // 66.97 (§12.3 п.4): EN-титулы («The Wanderer Fell») не менялись —
+        // регулярка знала только RU-формы; добавлены Wanderess/Wanderer.
+        const titleLine = t(rating.title).replace(/Путница|Путник(ка)?|Wanderess|Wanderer/, heroName);
         this.add.text(width / 2, panelY + 140, titleLine, {
             fontSize: '24px', color: RUS.text, fontStyle: 'bold',
             fontFamily: 'Georgia, serif',

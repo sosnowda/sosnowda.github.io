@@ -4,7 +4,7 @@
 import { RUS } from '../config/RusTheme.js';
 import { createCharacter } from '../systems/Character.js';
 import { paletteLayerFiles } from '../systems/NpcLpc.js';
-import { isEn } from '../systems/i18n.js';  // раунд 37 (п.7): полоска загрузки по языку
+import { t, isEn } from '../systems/i18n.js';  // 66.97: + t — дефолтное имя/цель квеста (§12.3 п.4); раунд 37 (п.7): полоска загрузки по языку
 import { ensureFemaleChestTexture, ensureHeadTextures } from '../systems/CharacterAppearance.js'; // раунд 39 (п.4) + головы (р.61)
 // 66.31 (п.2): регулятор частиц — reduced-motion и пауза в скрытой вкладке
 // (батарея телефонов). Патч ставится ЗДЕСЬ: BootScene — единственный модуль,
@@ -872,7 +872,9 @@ export class BootScene extends Phaser.Scene {
 
         // Создаём персонажа и квест, если их ещё нет в реестре
         if (!this.registry.get('player')) {
-            this.registry.set('player', createCharacter('Путник'));
+            // 66.97 (§12.3 п.4): дефолтное имя было сырым «Путник» — EN-игрок при
+            // обходе CharacterSelection видел русский (словарь: «Путник» → «Wanderer»)
+            this.registry.set('player', createCharacter(t('Путник')));
         }
         if (!this.registry.get('quest')) {
             this.registry.set('quest', {
@@ -882,7 +884,7 @@ export class BootScene extends Phaser.Scene {
                 banditDefeated: false,
                 hasHerb: false,
                 tutorialStep: 0,
-                currentObjective: 'Поговори со старейшиной',
+                currentObjective: t('Поговори со старейшиной'),
                 // chestsOpened — ИСТОРИЧЕСКОЕ имя ключа дневных действий
                 // (рыбалка и т.п.; data/daily.js). Имя не менять — совместимость сейвов.
                 chestsOpened: [],

@@ -68,7 +68,7 @@ ok((sitemap.match(/hreflang=/g) || []).length === 6, 'sitemap: hreflang-альт
 ok(!sitemap.includes('2026-09-27'), 'sitemap: устаревшая дата 2026-09-27 исчезла');
 
 console.log('--- 4. SW без бампа ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v128';"), 'sw.js: site-cache v128 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v130';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 (актуализация 66.87)');
 
 console.log(`\nИТОГ: ${pass} ✓ / ${fail} ✗`);

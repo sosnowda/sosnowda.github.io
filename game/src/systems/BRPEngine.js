@@ -1,6 +1,9 @@
 // Ядро системы BRP (Basic Roleplaying Universal Game Engine SRD).
 // Чистая логика без зависимостей от движка.
 // Все функции используют Math.random, поэтому пригодны и для тестов, и для игры.
+// 66.97: единственный импорт — i18n (тоже Node-безопасный): подписи встречных
+// проверок formatOpposedCheck локализованы (§12.3 аудита 66.92, п.4).
+import { t, tf } from './i18n.js';
 
 // ============================================================
 // Раунд 48 (п.4 заявки): ВСТРЕЧНЫЕ проверки БЕЗ «СОПРОТИВЛЕНИЙ».
@@ -57,17 +60,22 @@ export function opposedSkillCheck(playerValue, npcValue, difficulty = 0) {
 // Короткая подпись проверки для диалогов/летописи (без сопротивлений,
 // сложность — один раз):
 // «бросок 22 при сложности +10: Убеждение 45 против Убеждения жителя 40 (бросок НПЦ 55) — успех»
+// 66.97 (§12.3 аудита 66.92, п.4 i18n-гигиена): строки обёрнуты в t()/tf() —
+// раньше EN-игрок видел русскую строку в диалогах и летописи (промах словаря).
+// Имена навыков приходят от вызывающей стороны — они тоже обязаны быть t()-обёрнуты
+// (см. oppSkillLabel в data/npcStats.js для встречной стороны).
 export function formatOpposedCheck(res, playerSkillName, npcSkillName) {
     if (!res || res.playerSkill == null) return '';
     const diffPart = res.difficulty
-        ? ` при сложности ${res.difficulty > 0 ? '+' : ''}${res.difficulty}`
+        ? tf(t(' при сложности {0}'), `${res.difficulty > 0 ? '+' : ''}${res.difficulty}`)
         : '';
-    const verdict = res.result === 'critical' ? 'ОСОБЫЙ УСПЕХ'
-        : res.result === 'success' ? 'успех'
-        : res.result === 'fumble' ? 'провал (fumble)' : 'провал';
-    return `бросок ${res.roll}${diffPart}: ${playerSkillName} ${res.playerSkill}` +
-        ` против ${npcSkillName} ${res.npcValue != null ? res.npcValue : '?'} (бросок НПЦ ${res.npcRoll != null ? res.npcRoll : '?'})` +
-        ` — ${verdict}`;
+    const verdict = res.result === 'critical' ? t('ОСОБЫЙ УСПЕХ')
+        : res.result === 'success' ? t('успех')
+        : res.result === 'fumble' ? t('провал (fumble)') : t('провал');
+    return tf(t('бросок {0}{1}: {2} {3} против {4} {5} (бросок НПЦ {6}) — {7}'),
+        res.roll, diffPart, playerSkillName, res.playerSkill,
+        npcSkillName, res.npcValue != null ? res.npcValue : '?',
+        res.npcRoll != null ? res.npcRoll : '?', verdict);
 }
 
 // Бросок d100: 1..100

@@ -38,7 +38,7 @@ import { getReputation, getVillageRep, changeVillageRepExact } from '../data/rep
 import { opposedSkillCheck, formatOpposedCheck } from './BRPEngine.js';
 // §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
 import { absDay } from './gameCalendar.js';
-import { getNpcOpposition } from '../data/npcStats.js';
+import { getNpcOpposition, oppSkillLabel } from '../data/npcStats.js'; // 66.97: oppSkillLabel (§12.3 п.4)
 import { getChaEdgeMod, clearChaEdge } from './charisma.js';
 import { getSeason } from './TimeSystem.js';
 
@@ -258,8 +258,8 @@ export function attemptWageDeal(registry, npcId, skillValue) {
     const opp = getNpcOpposition({ id: npcId }, 'persuade');
     const edge = getChaEdgeMod(registry);
     const res = opposedSkillCheck((Number(skillValue) || 1) + edge, opp.value, 0);
-    const checkLine = formatOpposedCheck(res, 'Убеждение' + (edge ? (edge > 0 ? ` (+${edge} обаяние)` : ` (${edge} обаяние)`) : ''),
-        `${opp.ruNameGen} хозяина`);
+    const checkLine = formatOpposedCheck(res, t('Убеждение') + (edge ? (edge > 0 ? tf(t(' (+{0} обаяние)'), edge) : tf(t(' ({0} обаяние)'), edge)) : ''),
+        oppSkillLabel(opp, 'хозяина'));
 
     let mult = 1;
     let message;

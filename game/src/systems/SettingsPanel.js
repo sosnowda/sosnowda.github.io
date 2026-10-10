@@ -166,7 +166,9 @@ export function openSettingsPanel(scene, opts = {}) {
     // 4. Язык интерфейса — только на титульном экране (перезагрузка страницы)
     if (opts.showLanguage) {
         const other = getLang() === 'en' ? 'Русский' : 'English';
-        const langLabel = tf('🌐 Язык: {0} → {1}', getLang() === 'en' ? 'English' : 'Русский', other);
+        // 66.97 (§12.3 аудита 66.92, п.4): ключ есть в словаре, но вызывался tf без t() —
+        // EN-игрок видел «🌐 Язык: …» вместо «🌐 Language: …»
+        const langLabel = tf(t('🌐 Язык: {0} → {1}'), getLang() === 'en' ? 'English' : 'Русский', other);
         mkToggle(y, langLabel, () => {
             setLang(getLang() === 'en' ? 'ru' : 'en');
             try {

@@ -67,7 +67,7 @@
 // jobs/Weather/TimeSystem/AccessHours — полный список в CHANGES.md 66.96);
 // /game/src/ идёт мимо SW (network direct) — прекеш-список не нужен;
 // game-assets-v45 цел (ассеты не тронуты), код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v129';
+const CACHE_NAME = 'chronicles-ruthenia-v130';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {

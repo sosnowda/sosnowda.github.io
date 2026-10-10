@@ -157,8 +157,8 @@ console.log('— п.3: имена персонажей и топонимы —')
     const ml = stripComments(read('game/src/data/mapLocations.js'));
     ok(!ml.includes('Погостъ') && !ml.includes('Выпасъ') && !ml.includes('Рѣка') && !ml.includes('югъ'),
         'орфография локаций выровнена (без ѣ/ъ)');
-    ok(ml.includes("name: t('Южный Тракт')"), 'локация road_south — «Южный Тракт» (переименование 66.24)');
-    ok(ml.includes("id: 'road_north'") && ml.includes("name: t('Северный Тракт')"), 'локация road_north — «Северный Тракт» (66.24)');
+    ok(ml.includes("get name() { return t('Южный Тракт'); }"), 'локация road_south — «Южный Тракт» (переименование 66.24)');
+    ok(ml.includes("id: 'road_north'") && ml.includes("get name() { return t('Северный Тракт'); }"), 'локация road_north — «Северный Тракт» (66.24)');
     const w = read('game/src/data/world.js');
     ok(!w.includes('Пёрмышль') && !w.includes('Царёво Займище') && !w.includes('Торжок-Новый'),
         'названия деревень выправлены');

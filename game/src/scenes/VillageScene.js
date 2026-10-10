@@ -1059,7 +1059,7 @@ export class VillageScene extends Phaser.Scene {
             // Раунд 45 (п.2): отдельный флаг изгнания — свой титул финала
             // «🚪 ИЗГНАН ИЗ ДЕРЕВНИ» и своя оценка в итогах
             q.expelledFromVillage = true;
-            q.currentObjective = 'Изгнан из деревни за дурную славу.';
+            q.currentObjective = t('Изгнан из деревни за дурную славу.');
             this.registry.set('quest', q);
             // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
             if (!this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
@@ -2016,7 +2016,8 @@ export class VillageScene extends Phaser.Scene {
     // Уличённому в воровстве (хозяева застукали) при выходе из деревни
     // останавливает стражник Илья: осмотр узла (инвентаря), краденое
     // изымается и возвращается хозяевам, вира по Судебнику 1497:
-    //  • продажа за татьбу — 24 д. (12 гривен по 2 д.);
+    //  • продажа за татьбу — 24 д. = 12 кун по 2 д. (66.97 §12.3 п.5: канон денег —
+    //    гривна 100 д., куна 2 д.; прежнее «12 гривен по 2 д.» создавало вторую гривну);
     //  • урок за ПРОДАННОЕ краденое пойманных домов — по полной стоимости;
     //  • повторная поимка — всё ×3 (п.7);
     //  • ТРЕТЬЯ поимка — всё имущество в казну и ИЗГНАНИЕ: провал игры (п.8).
@@ -2398,7 +2399,7 @@ export class VillageScene extends Phaser.Scene {
             info = `${interior.name}\n` +
                 `${tf('NPC: {0}', npcName)}\n` +
                 `${tf(t('Личная репутация: {0} ({1})'), `${npcRep > 0 ? '+' : ''}${npcRep}`, t(repLevel.name))}\n` +
-                `${tf('Сейчас: {0}', activity)}`;
+                `${tf(t('Сейчас: {0}'), activity)}`;
         }
         
         // Показываем как всплывающую подсказку
@@ -2431,8 +2432,8 @@ export class VillageScene extends Phaser.Scene {
         const { width, height } = this.scale;
         const era = novoletie.era || (eraYear(getTime(this.registry)) + 1);
         const msg = novoletie.style === 'march'
-            ? `✨ Новолетие! Весенний год пошёл: лето ${era}-е от Сотворения мира`
-            : `✨ Новолетие! Настало лето ${era}-е от Сотворения мира`;
+            ? tf(t('✨ Новолетие! Весенний год пошёл: лето {0}-е от Сотворения мира'), era)
+            : tf(t('✨ Новолетие! Настало лето {0}-е от Сотворения мира'), era);
         const txt = this.add.text(width / 2, height * 0.22, msg, {
             fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif', align: 'center',

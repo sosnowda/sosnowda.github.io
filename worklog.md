@@ -1,3 +1,14 @@
+
+---
+
+## 66.97 — §12.3 аудита 66.92, остаток эшелона: i18n-гигиена, баланс в конфиг, комментарии=коду
+
+- Приказ: «остаток §12.3 — i18n-гигиена, баланс в конфиг, комментарии=коду» (пп.4–6 плана §12.3; пп.1–3 — в 66.96).
+- i18n-гигиена: mapLocations (24) + interiors (62+18+VILLAGE_GATE) — load-time t() → ленивые геттеры; 8 промахов аудита обёрнуты (+6 однотипных вскрылось сканом: CombatScene ×5, SkyClock ×1); formatOpposedCheck двуязычен + вызывающие стороны (новый oppSkillLabel в npcStats.js); примета «have flocking» → «have flocked»; словарь +26/−7.
+- Баланс в конфиг: зеркало WEAPONS удалено (одна таблица — Character.js); GameConfig += COMBAT_MODS (10/10/25/10/0.25/5), SCENE_PRICES (10/5, 50/25), SCENE_CHANCES (0.15, 0.2, 0.6); CombatScene/InteriorScene/LocationScene читают конфиг; гривна согласована с CURRENCY (24 д. = 12 кун; диалог «40 кун (80 д.)»), значения не менялись.
+- Комментарии=коду: WorldClock (1:20/20/5/72/TALK_MINUTES=10) и DialogueRunner (10 минут); RusTime чист.
+- Тесты: НОВЫЙ test_round139 (101✓); регресс 64–139 = 76/76 (r86–89 — cwd game/tools); пины: 44 файла v128/v129→v130, r75/77 геттеры, r81 12КБ, r116 2073/541, r119/132/137 §12.3.
+- Живой смоук qa_6697_local: 16/16. SW v129→v130.
 ---
 Task ID: 66.96
 Agent: Z.ai Code (main)

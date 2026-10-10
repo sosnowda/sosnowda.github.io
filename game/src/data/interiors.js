@@ -1,23 +1,26 @@
 // Определения интерьеров зданий деревни.
 // Каждое здание имеет: id, name, вход (дверь), интерьер (NPC, предметы, диалоги).
 // Раунд 15: названия/описания/NPC локализованы (i18n).
+// 66.97 (§12.3 аудита 66.92, п.4 i18n-гигиена): t() переведён с load-time на
+// ЛЕНИВОЕ оборачивание при выводе (геттеры) — name/npcName/description/label
+// вычисляются в момент обращения, а не при импорте модуля.
 import { t } from '../systems/i18n.js';
 
 export const INTERIORS = {
     elder_house: {
         id: 'elder_house',
-        name: t('Дом старосты'),
+        get name() { return t('Дом старосты'); },
         npcId: 'elder',
-        npcName: t('Староста Мирослав'),
+        get npcName() { return t('Староста Мирослав'); },
         npcSprite: 'npc_elder',
         portrait: 'portrait_elder',
         // Староста выдаёт задание
         dialogueId: 'elder_quest',
-        description: t('Уютная горница с иконами в углу. Староста сидит за столом, перебирая бумаги.'),
+        get description() { return t('Уютная горница с иконами в углу. Староста сидит за столом, перебирая бумаги.'); },
         decor: ['icons', 'table', 'candle'],
         // Раунд 27 (п.9): у старосты есть жена — Любава (у печи)
         secondaryNpcId: 'elder_wife',
-        secondaryNpcName: t('Любава, жена старосты'),
+        get secondaryNpcName() { return t('Любава, жена старосты'); },
         secondaryNpcSprite: 'npc_elder',
         secondaryPortrait: 'portrait_villager_f',
         secondaryDialogueId: 'elder_wife',
@@ -27,13 +30,13 @@ export const INTERIORS = {
     // (внутренний id 'tavern' не меняем — на нём завязаны сейвы и код).
     tavern: {
         id: 'tavern',
-        name: t('Постоялый двор «У дороги»'),
+        get name() { return t('Постоялый двор «У дороги»'); },
         npcId: 'tavernkeeper',
-        npcName: t('Тавернщик Фёдор'),
+        get npcName() { return t('Тавернщик Фёдор'); },
         npcSprite: 'npc_merchant',
         portrait: 'portrait_tavernkeeper',
         dialogueId: 'tavernkeeper',
-        description: t('Просторный зал с деревянными столами. Пахнет хлебом да хмельным мёдом. У печи греются путники.'),
+        get description() { return t('Просторный зал с деревянными столами. Пахнет хлебом да хмельным мёдом. У печи греются путники.'); },
         decor: ['bar', 'tables', 'fireplace'],
         public: true,  // раунд 37: постоялый двор открыт всегда (тавернщик за стойкой 24/7)
         services: ['eat', 'drink', 'rest'],
@@ -46,13 +49,13 @@ export const INTERIORS = {
 
     blacksmith: {
         id: 'blacksmith',
-        name: t('Кузница'),
+        get name() { return t('Кузница'); },
         npcId: 'blacksmith',
-        npcName: t('Кузнец Данила'),
+        get npcName() { return t('Кузнец Данила'); },
         npcSprite: 'npc_soldier',
         portrait: 'portrait_blacksmith',
         dialogueId: 'blacksmith',
-        description: t('Жарко. Стук молота по наковальне. На стенах — топоры, копья да кольчуги.'),
+        get description() { return t('Жарко. Стук молота по наковальне. На стенах — топоры, копья да кольчуги.'); },
         decor: ['anvil', 'forge', 'weapons'],
         services: ['buy_weapon', 'buy_armor'],
         // Раунд 45 (п.6 заявки — АУДИТ ОРУЖИЯ/БРОНИ): прежний массив items
@@ -66,26 +69,26 @@ export const INTERIORS = {
 
     villager_house_1: {
         id: 'villager_house_1',
-        name: t('Дом крестьянина'),
+        get name() { return t('Дом крестьянина'); },
         npcId: 'peasant1',
-        npcName: t('Крестьянин Авдей'),
+        get npcName() { return t('Крестьянин Авдей'); },
         npcSprite: 'npc_merchant',
         portrait: 'portrait_peasant',
         dialogueId: 'peasant1',
-        description: t('Скромная изба. Хозяин сидит на лавке, с обеспокоенным лицом.'),
+        get description() { return t('Скромная изба. Хозяин сидит на лавке, с обеспокоенным лицом.'); },
         decor: ['bed', 'table'],
     },
 
     villager_house_2: {
         id: 'villager_house_2',
-        name: t('Дом Марфы'),
+        get name() { return t('Дом Марфы'); },
         npcId: 'widow',
-        npcName: t('Пасечница Марфа'),
+        get npcName() { return t('Пасечница Марфа'); },
         npcSprite: 'npc_elder',
         // Раунд 66.21 (приказ 8): портрет по возрасту (55 лет)
         portrait: 'portrait_healer',
         dialogueId: 'widow',
-        description: t('Тихий дом. Пахнет сушёными травами и мёдом. Хозяйка приглядывает за горшками с целебными настоями.'),
+        get description() { return t('Тихий дом. Пахнет сушёными травами и мёдом. Хозяйка приглядывает за горшками с целебными настоями.'); },
         decor: ['bed', 'icon'],
     },
 
@@ -93,17 +96,17 @@ export const INTERIORS = {
     // ДОМ ПАХАРЯ (не пасечника!): Тарас днём на поле, Фёкла с семерыми детьми.
     beekeeper_house: {
         id: 'beekeeper_house',
-        name: t('Дом пахаря'),
+        get name() { return t('Дом пахаря'); },
         npcId: 'beekeeper1',
-        npcName: t('Пахарь Тарас'),
+        get npcName() { return t('Пахарь Тарас'); },
         npcSprite: 'npc_merchant',
         portrait: 'portrait_peasant',
         dialogueId: 'beekeeper1',
-        description: t('Изба полна детского гомона: у Тараса и Фёклы семеро детей. У крыльца — соха, на лавках — клубки шерсти, в углу — плетёные корзины для грибов.'),
+        get description() { return t('Изба полна детского гомона: у Тараса и Фёклы семеро детей. У крыльца — соха, на лавках — клубки шерсти, в углу — плетёные корзины для грибов.'); },
         decor: ['bed', 'table', 'cradle'],
         // Жена — вторая фигура в доме (как у старосты)
         secondaryNpcId: 'beekeeper_wife',
-        secondaryNpcName: t('Фёкла, жена пахаря'),
+        get secondaryNpcName() { return t('Фёкла, жена пахаря'); },
         secondaryNpcSprite: 'npc_elder',
         secondaryPortrait: 'portrait_villager_f',
         secondaryDialogueId: 'beekeeper_wife',
@@ -114,17 +117,17 @@ export const INTERIORS = {
     // (молотьба) переехала сюда как «помощь в мастерской».
     potter_house: {
         id: 'potter_house',
-        name: t('Дом гончара'),
+        get name() { return t('Дом гончара'); },
         npcId: 'potter1',
-        npcName: t('Гончар Игнат'),
+        get npcName() { return t('Гончар Игнат'); },
         npcSprite: 'npc_merchant',
         portrait: 'portrait_peasant',
         dialogueId: 'potter1',
-        description: t('Тесная мастерская: круг, стопки сырых горшков, запах глины и печного жара. Хозяин приглядывает к заготовкам, вымазанный по локти.'),
+        get description() { return t('Тесная мастерская: круг, стопки сырых горшков, запах глины и печного жара. Хозяин приглядывает к заготовкам, вымазанный по локти.'); },
         decor: ['bed', 'table', 'pottery'],
         // Жена — вторая фигура в доме (как у старосты)
         secondaryNpcId: 'potter_wife',
-        secondaryNpcName: t('Анна, жена гончара'),
+        get secondaryNpcName() { return t('Анна, жена гончара'); },
         secondaryNpcSprite: 'npc_elder',
         secondaryPortrait: 'portrait_villager_f',
         secondaryDialogueId: 'potter_wife',
@@ -135,13 +138,13 @@ export const INTERIORS = {
     // молитва, пожертвование и осмотр киота теперь живут здесь.
     church: {
         id: 'church',
-        name: t('Церковь Рождества Богородицы'),
+        get name() { return t('Церковь Рождества Богородицы'); },
         npcId: 'priest',
-        npcName: t('Отец Савватий'),
+        get npcName() { return t('Отец Савватий'); },
         npcSprite: 'npc_elder',
         portrait: 'portrait_priest',
         dialogueId: 'priest',
-        description: t('Небольшая деревянная церковь с резным иконостасом. Пахнет ладаном и воском. У алтаря молится седой священник, а ниша главного киота пуста — чудотворную икону этой ночью унесли воры.'),
+        get description() { return t('Небольшая деревянная церковь с резным иконостасом. Пахнет ладаном и воском. У алтаря молится седой священник, а ниша главного киота пуста — чудотворную икону этой ночью унесли воры.'); },
         decor: ['empty_kiot', 'altar', 'icons', 'candles'],
         public: true,
     },
@@ -151,16 +154,16 @@ export const INTERIORS = {
     // Дом знахарки — свой дом для травницы (раньше «жила» у Марфы)
     healer_house: {
         id: 'healer_house',
-        name: t('Дом знахарки'),
+        get name() { return t('Дом знахарки'); },
         npcId: 'healer',
-        npcName: t('Знахарка Февронья'),
+        get npcName() { return t('Знахарка Февронья'); },
         npcSprite: 'npc_elder',
         portrait: 'portrait_healer',
         dialogueId: 'healer1',
-        description: t('Пахнет сушёными травами и воском. Пучки полыни и зверобоя под потолком, ступка, у печи — бабушка с внучкой перебирают коренья.'),
+        get description() { return t('Пахнет сушёными травами и воском. Пучки полыни и зверобоя под потолком, ступка, у печи — бабушка с внучкой перебирают коренья.'); },
         decor: ['bed', 'icon', 'herbs'],
         secondaryNpcId: 'kid9',
-        secondaryNpcName: t('Ульяна, внучка знахарки'),
+        get secondaryNpcName() { return t('Ульяна, внучка знахарки'); },
         secondaryNpcSprite: 'npc_elder',
         secondaryPortrait: 'portrait_girl',
         secondaryDialogueId: 'kid9',
@@ -169,17 +172,17 @@ export const INTERIORS = {
     // Дом рыбака — свой дом для рыбака (был «у Авдея»)
     fisher_house: {
         id: 'fisher_house',
-        name: t('Дом рыбака'),
+        get name() { return t('Дом рыбака'); },
         npcId: 'fisherman',
-        npcName: t('Рыбак Ерёма'),
+        get npcName() { return t('Рыбак Ерёма'); },
         npcSprite: 'npc_merchant',
         // Раунд 66.21 (приказ 8): портрет по возрасту (42 года)
         portrait: 'portrait_tavernkeeper',
         dialogueId: 'fisherman1',
-        description: t('Сети сушатся под потолком, на лавке — плетёные верши и уды. У печи хозяйка потрошит улов.'),
+        get description() { return t('Сети сушатся под потолком, на лавке — плетёные верши и уды. У печи хозяйка потрошит улов.'); },
         decor: ['bed', 'table', 'nets'],
         secondaryNpcId: 'fisher_wife',
-        secondaryNpcName: t('Домна, жена рыбака'),
+        get secondaryNpcName() { return t('Домна, жена рыбака'); },
         secondaryNpcSprite: 'npc_elder',
         secondaryPortrait: 'portrait_villager_f',
         secondaryDialogueId: 'fisher_wife',
@@ -188,16 +191,16 @@ export const INTERIORS = {
     // Дом плотника — новый двор (Микула и Матрёна)
     carpenter_house: {
         id: 'carpenter_house',
-        name: t('Дом плотника'),
+        get name() { return t('Дом плотника'); },
         npcId: 'carpenter1',
-        npcName: t('Плотник Микула'),
+        get npcName() { return t('Плотник Микула'); },
         npcSprite: 'npc_merchant',
         portrait: 'portrait_peasant',
         dialogueId: 'carpenter1',
-        description: t('Во дворе — брёвна, тесла и скобы. В избе пахнет свежей стружкой: хозяин тешет ложки, жена прядёт у печи.'),
+        get description() { return t('Во дворе — брёвна, тесла и скобы. В избе пахнет свежей стружкой: хозяин тешет ложки, жена прядёт у печи.'); },
         decor: ['bed', 'table', 'tools'],
         secondaryNpcId: 'carpenter_wife',
-        secondaryNpcName: t('Матрёна, жена плотника'),
+        get secondaryNpcName() { return t('Матрёна, жена плотника'); },
         secondaryNpcSprite: 'npc_elder',
         secondaryPortrait: 'portrait_villager_f',
         secondaryDialogueId: 'carpenter_wife',
@@ -206,13 +209,13 @@ export const INTERIORS = {
     // Дом ткачихи — вдова Пелагея с сыном-пастушком (Ивашка при овчарне)
     weaver_house: {
         id: 'weaver_house',
-        name: t('Дом ткачихи'),
+        get name() { return t('Дом ткачихи'); },
         npcId: 'weaver1',
-        npcName: t('Ткачиха Пелагея'),
+        get npcName() { return t('Ткачиха Пелагея'); },
         npcSprite: 'npc_elder',
         portrait: 'portrait_villager_f',
         dialogueId: 'weaver1',
-        description: t('Полутьма, у окна — ткацкий стан, на нём — недотянутый холст. Клубки шерсти, прялка, пучки льна. Хозяйка работает, не поднимая глаз.'),
+        get description() { return t('Полутьма, у окна — ткацкий стан, на нём — недотянутый холст. Клубки шерсти, прялка, пучки льна. Хозяйка работает, не поднимая глаз.'); },
         decor: ['bed', 'loom', 'yarn'],
     },
 
@@ -225,26 +228,26 @@ export const INTERIORS = {
     // Дом Прасковьи — снедница: печёт караваи и пироги в своей печи
     grocer_house: {
         id: 'grocer_house',
-        name: t('Дом Прасковьи'),
+        get name() { return t('Дом Прасковьи'); },
         npcId: 'grocer',
-        npcName: t('Прасковья, снедница'),
+        get npcName() { return t('Прасковья, снедница'); },
         npcSprite: 'npc_elder',
         portrait: 'portrait_villager_f',
         dialogueId: 'grocer',
-        description: t('Тёплая горница с хлебной печью. На полках — караваи, головы сыра и связки сушёных грибов, на столе остывают пироги с репой. Хозяйка присыпает мукой столешницу, не глядя.'),
+        get description() { return t('Тёплая горница с хлебной печью. На полках — караваи, головы сыра и связки сушёных грибов, на столе остывают пироги с репой. Хозяйка присыпает мукой столешницу, не глядя.'); },
         decor: ['bed', 'table', 'shelf'],
     },
 
     // Дом Потапа — мясник: при доме держит столешню и коптильню
     butcher_house: {
         id: 'butcher_house',
-        name: t('Дом Потапа'),
+        get name() { return t('Дом Потапа'); },
         npcId: 'butcher',
-        npcName: t('Потап, мясник'),
+        get npcName() { return t('Потап, мясник'); },
         npcSprite: 'npc_merchant',
         portrait: 'portrait_peasant',
         dialogueId: 'butcher',
-        description: t('Пахнет дымом и свежим мясом: при доме у Потапа своя столешня. Колбасы и окорока подвешены под потолком, на разделочном столе — ряды нарезки, у печи сушится медвежья шкура.'),
+        get description() { return t('Пахнет дымом и свежим мясом: при доме у Потапа своя столешня. Колбасы и окорока подвешены под потолком, на разделочном столе — ряды нарезки, у печи сушится медвежья шкура.'); },
         decor: ['bed', 'table', 'barrel'],
     },
 
@@ -254,13 +257,13 @@ export const INTERIORS = {
     // цены прежние, рынок при доме — как у Прасковьи и Потапа).
     shop_tools: {
         id: 'shop_tools',
-        name: t('Дом ремесленника'),
+        get name() { return t('Дом ремесленника'); },
         npcId: 'peddler',
-        npcName: t('Ремесленник Аверьян'),
+        get npcName() { return t('Ремесленник Аверьян'); },
         npcSprite: 'npc_merchant',
         portrait: 'portrait_tavernkeeper',
         dialogueId: 'peddler',
-        description: t('Дом ремесленника: у стены — верстак со стругами, под потолком — связки ложек, лучины и мочал. На прилавке у окна — ножи, верёвки, кремни, свечи восковые да обереги от сглазу. Хозяин и мастер, и торгаш в одном.'),
+        get description() { return t('Дом ремесленника: у стены — верстак со стругами, под потолком — связки ложек, лучины и мочал. На прилавке у окна — ножи, верёвки, кремни, свечи восковые да обереги от сглазу. Хозяин и мастер, и торгаш в одном.'); },
         decor: ['shelf', 'table'], // раунд 66.10: 'chest' удалён (сундуки не нужны)
         market: {
             title: t('Дом ремесленника — товар'),
@@ -288,16 +291,16 @@ export const INTERIORS = {
     // Дом сапожника — Нефёд шьёт сапоги и кожаные пояса, жена Агафья
     shoemaker_house: {
         id: 'shoemaker_house',
-        name: t('Дом сапожника'),
+        get name() { return t('Дом сапожника'); },
         npcId: 'shoemaker',
-        npcName: t('Сапожник Нефёд'),
+        get npcName() { return t('Сапожник Нефёд'); },
         npcSprite: 'npc_merchant',
         portrait: 'portrait_peasant',
         dialogueId: 'shoemaker',
-        description: t('В горнице пахнет кожей и дёгтем: на лавке — сапоги всех размеров, колодки, шило и суровые нитки. Хозяин сшивает голенище, не отрываясь от дела.'),
+        get description() { return t('В горнице пахнет кожей и дёгтем: на лавке — сапоги всех размеров, колодки, шило и суровые нитки. Хозяин сшивает голенище, не отрываясь от дела.'); },
         decor: ['bed', 'table', 'shelf'],
         secondaryNpcId: 'shoemaker_wife',
-        secondaryNpcName: t('Агафья, жена сапожника'),
+        get secondaryNpcName() { return t('Агафья, жена сапожника'); },
         secondaryNpcSprite: 'npc_elder',
         secondaryPortrait: 'portrait_villager_f',
         secondaryDialogueId: 'shoemaker_wife',
@@ -306,13 +309,13 @@ export const INTERIORS = {
     // Изба дровосека — Горазд рубит лес за околицей, топоры и поленницы
     woodcutter_house: {
         id: 'woodcutter_house',
-        name: t('Изба дровосека'),
+        get name() { return t('Изба дровосека'); },
         npcId: 'woodcutter',
-        npcName: t('Дровосек Горазд'),
+        get npcName() { return t('Дровосек Горазд'); },
         npcSprite: 'npc_soldier',
         portrait: 'portrait_peasant',
         dialogueId: 'woodcutter',
-        description: t('Изба простая и ладная: в углу — поленница до потолка, у двери — топоры и пилы. На бревне у печи вырезаны метки — счёт срубленным деревьям.'),
+        get description() { return t('Изба простая и ладная: в углу — поленница до потолка, у двери — топоры и пилы. На бревне у печи вырезаны метки — счёт срубленным деревьям.'); },
         decor: ['bed', 'table', 'firewood'],
     },
 
@@ -320,16 +323,16 @@ export const INTERIORS = {
     // Дом Степана да Арины — простая крестьянская семья восточной улицы.
     villager_house_3: {
         id: 'villager_house_3',
-        name: t('Дом Степана'),
+        get name() { return t('Дом Степана'); },
         npcId: 'peasant2',
-        npcName: t('Крестьянин Степан'),
+        get npcName() { return t('Крестьянин Степан'); },
         npcSprite: 'npc_merchant',
         portrait: 'portrait_peasant',
         dialogueId: 'peasant2',
-        description: t('Крепкая изба в два окна: на шестке горшки глиняные, у красного угла — образа с рушником, под лавкой — кувадка с прялкой Арины. У крыльца сушатся сбруя и рукавицы, в сенцах пахнет хлебом и скотиной.'),
+        get description() { return t('Крепкая изба в два окна: на шестке горшки глиняные, у красного угла — образа с рушником, под лавкой — кувадка с прялкой Арины. У крыльца сушатся сбруя и рукавицы, в сенцах пахнет хлебом и скотиной.'); },
         decor: ['bed', 'table', 'shelf'],
         secondaryNpcId: 'peasant2_wife',
-        secondaryNpcName: t('Арина, жена Степана'),
+        get secondaryNpcName() { return t('Арина, жена Степана'); },
         secondaryNpcSprite: 'npc_elder',
         secondaryPortrait: 'portrait_villager_f',
         secondaryDialogueId: 'peasant2_wife',
@@ -359,37 +362,37 @@ export const BUILDINGS = [
     // ≥1 тайла, все три ряда пересоблены. Восточный проезд перенесён
     // в колонку 24 (ряды 10–12), западный укорочен до рядов 6–8.
     // Северный ряд (ряды 1–3, двери на 3): постоялый двор, избы, ремёсла
-    { interiorId: 'potter_house', col: 1, row: 1, w: 3, h: 3, label: t('Дом гончара') },
+    { interiorId: 'potter_house', col: 1, row: 1, w: 3, h: 3, get label() { return t('Дом гончара'); } },
     // Постоялый двор w4 (66.35): иначе северный ряд не помещается до колонки 22
     // — а правее фасад лезет под виджет «План деревни» (урок 66.25)
-    { interiorId: 'tavern', col: 5, row: 1, w: 4, h: 3, label: t('Постоялый двор') },
+    { interiorId: 'tavern', col: 5, row: 1, w: 4, h: 3, get label() { return t('Постоялый двор'); } },
     // Плотник — из среднего ряда в северный (его место у церкви занято лавкой ремесленника)
-    { interiorId: 'carpenter_house', col: 10, row: 1, w: 3, h: 3, label: t('Дом плотника') },
-    { interiorId: 'villager_house_1', col: 14, row: 1, w: 3, h: 3, label: t('Дом Авдея') },
-    { interiorId: 'blacksmith', col: 18, row: 1, w: 2, h: 3, label: t('Кузница') },
-    { interiorId: 'healer_house', col: 21, row: 1, w: 2, h: 3, label: t('Дом знахарки') },
+    { interiorId: 'carpenter_house', col: 10, row: 1, w: 3, h: 3, get label() { return t('Дом плотника'); } },
+    { interiorId: 'villager_house_1', col: 14, row: 1, w: 3, h: 3, get label() { return t('Дом Авдея'); } },
+    { interiorId: 'blacksmith', col: 18, row: 1, w: 2, h: 3, get label() { return t('Кузница'); } },
+    { interiorId: 'healer_house', col: 21, row: 1, w: 2, h: 3, get label() { return t('Дом знахарки'); } },
     // Средний ряд (ряды 6–8, двери на 8): ХРАМ И ДОМ СТАРОСТЫ — В ЦЕНТРЕ
     // Ремесленник — из северного ряда к западному проезду
-    { interiorId: 'shop_tools', col: 2, row: 6, w: 2, h: 3, label: t('Дом ремесленника') },
-    { interiorId: 'villager_house_2', col: 5, row: 6, w: 3, h: 3, label: t('Дом Марфы') },
-    { interiorId: 'church', col: 9, row: 6, w: 3, h: 3, label: t('Церковь') },
-    { interiorId: 'elder_house', col: 13, row: 6, w: 4, h: 3, label: t('Староста') },
-    { interiorId: 'beekeeper_house', col: 18, row: 6, w: 3, h: 3, label: t('Дом пахаря') },
+    { interiorId: 'shop_tools', col: 2, row: 6, w: 2, h: 3, get label() { return t('Дом ремесленника'); } },
+    { interiorId: 'villager_house_2', col: 5, row: 6, w: 3, h: 3, get label() { return t('Дом Марфы'); } },
+    { interiorId: 'church', col: 9, row: 6, w: 3, h: 3, get label() { return t('Церковь'); } },
+    { interiorId: 'elder_house', col: 13, row: 6, w: 4, h: 3, get label() { return t('Староста'); } },
+    { interiorId: 'beekeeper_house', col: 18, row: 6, w: 3, h: 3, get label() { return t('Дом пахаря'); } },
     // Мясник Потап — у восточного края, теперь с полным тайлом до частокола
-    { interiorId: 'butcher_house', col: 22, row: 6, w: 2, h: 3, label: t('Дом Потапа') },
+    { interiorId: 'butcher_house', col: 22, row: 6, w: 2, h: 3, get label() { return t('Дом Потапа'); } },
     // Южный ряд (ряды 10–12, двери на 12): ткачиха у западной кромки,
     // Прасковья — у восточной (обе с зазором от частокола)
-    { interiorId: 'weaver_house', col: 1, row: 10, w: 3, h: 3, label: t('Дом ткачихи') },
-    { interiorId: 'villager_house_3', col: 5, row: 10, w: 3, h: 3, label: t('Дом Степана') },
-    { interiorId: 'shoemaker_house', col: 9, row: 10, w: 3, h: 3, label: t('Дом сапожника') },
-    { interiorId: 'woodcutter_house', col: 13, row: 10, w: 3, h: 3, label: t('Изба дровосека') },
-    { interiorId: 'fisher_house', col: 17, row: 10, w: 3, h: 3, label: t('Дом рыбака') },
-    { interiorId: 'grocer_house', col: 21, row: 10, w: 3, h: 3, label: t('Дом Прасковьи') },
+    { interiorId: 'weaver_house', col: 1, row: 10, w: 3, h: 3, get label() { return t('Дом ткачихи'); } },
+    { interiorId: 'villager_house_3', col: 5, row: 10, w: 3, h: 3, get label() { return t('Дом Степана'); } },
+    { interiorId: 'shoemaker_house', col: 9, row: 10, w: 3, h: 3, get label() { return t('Дом сапожника'); } },
+    { interiorId: 'woodcutter_house', col: 13, row: 10, w: 3, h: 3, get label() { return t('Изба дровосека'); } },
+    { interiorId: 'fisher_house', col: 17, row: 10, w: 3, h: 3, get label() { return t('Дом рыбака'); } },
+    { interiorId: 'grocer_house', col: 21, row: 10, w: 3, h: 3, get label() { return t('Дом Прасковьи'); } },
 ];
 
 // Ворота на выходе из деревни (восточный край карты, ряд главной улицы).
 // world.buildMap() ставит 'G' на (MAP_W-1, VILLAGE_GATE.row).
-export const VILLAGE_GATE = { col: 25, row: 5, label: t('Ворота') };
+export const VILLAGE_GATE = { col: 25, row: 5, get label() { return t('Ворота'); } }; // 66.97: лениво
 
 // Локации на развилке (раунд 30: лес — тремя частями; раунд 39 (п.23):
 // лес — единая локация цепочкой, вход только через Опушку; «Лес» = Густой лес).

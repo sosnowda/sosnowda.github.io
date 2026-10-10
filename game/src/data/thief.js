@@ -115,7 +115,7 @@ function tipNames(loc) {
 // Раунд 47 (пп.2,4 заявки): смерть кузнеца не прячет наводку — знание
 // наследует ученик; встречные проверки — по параметрам из базы жителей
 import { isNpcKilled } from './reputation.js';
-import { getNpcOpposition } from './npcStats.js';
+import { getNpcOpposition, oppSkillLabel } from './npcStats.js'; // 66.97: oppSkillLabel (§12.3 п.4)
 // Раунд 66.11 (приказ владельца №2): НПЦ на локации, где пробегал вор,
 // обязателен как свидетель — место берём из системы присутствия жителей
 import { getPresence } from './npcPresence.js';
@@ -1364,7 +1364,7 @@ export function askMoneyForHelp(registry, npcId, npcName) {
         getBlessedSkill(registry, (player.skills && player.skills.persuade) || 20));
     const opp = getNpcOpposition(findNpc(registry, npcId), 'persuade');
     const res = opposedSkillCheck(persuadeSkill, opp.value, 10);
-    const checkLine = formatOpposedCheck(res, 'Убеждение', `${opp.ruNameGen} жителя`);
+    const checkLine = formatOpposedCheck(res, t('Убеждение'), oppSkillLabel(opp, 'жителя'));
 
     let success = false;
     let amount = 0;
@@ -1550,7 +1550,7 @@ export function persuadeThief(registry) {
     const persuadeSkill = chaAdjustedTalkSkill(registry,
         getBlessedSkill(registry, Math.max((player.skills && player.skills.persuade) || 20, MIN_PERSUADE)));
     const res = opposedSkillCheck(persuadeSkill, 50, 10);
-    const checkLine = formatOpposedCheck(res, 'Убеждение', 'Болтовни вора');
+    const checkLine = formatOpposedCheck(res, t('Убеждение'), t('Болтовни вора'));
 
     if (res.result === 'critical' || res.result === 'success') {
         recoverStolenItem(registry, 'convinced', res);
@@ -1590,7 +1590,7 @@ export function stunThief(registry) {
     // ТАКОГО ЖЕ параметра вора (Рукопашная вора = его навык атаки 50).
     const brawlSkill = getBlessedSkill(registry, Math.max((player.skills && player.skills.brawl) || 25, MIN_BRAWL));
     const res = opposedSkillCheck(brawlSkill, 50, 0);
-    const checkLine = formatOpposedCheck(res, 'Рукопашная', 'Рукопашной вора');
+    const checkLine = formatOpposedCheck(res, t('Рукопашная'), t('Рукопашной вора'));
 
     if (res.result === 'critical' || res.result === 'success') {
         recoverStolenItem(registry, 'captured', res);
@@ -1632,7 +1632,7 @@ export function hideFromThief(registry) {
     const player = registry.get('player');
     const stealthSkill = getBlessedSkill(registry, Math.max((player.skills && player.skills.stealth) || 10, 5));
     const res = opposedSkillCheck(stealthSkill, THIEF_ALERTNESS, 0);
-    const checkLine = formatOpposedCheck(res, 'Скрадывание', 'Внимательности вора');
+    const checkLine = formatOpposedCheck(res, t('Скрадывание'), t('Внимательности вора'));
 
     if (res.result === 'critical' || res.result === 'success') {
         // Вор НЕ бежит — прибит к текущей остановке на 2 часа (успел затаиться)

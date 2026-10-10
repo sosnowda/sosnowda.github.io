@@ -14,7 +14,7 @@
 // без Phaser — покрываются юнит-тестом (test_round82).
 
 import { sunTimes } from './AccessHours.js';
-import { tf } from './i18n.js';
+import { t, tf } from './i18n.js'; // 66.97: + t — подпись светового дня (§12.3 п.4)
 
 /**
  * Позиция солнца на дуге 0..1 (0 = встал на востоке, 1 = зашёл на западе)
@@ -178,7 +178,8 @@ export function attachSkyClock(scene, opts = {}) {
         hideTip();
         const dayH = Math.floor(lastInfo.sunset - lastInfo.sunrise);
         const dayM = Math.round((lastInfo.sunset - lastInfo.sunrise - dayH) * 60);
-        const text = tf('Рассвет ~ {0} · Закат ~ {1} · Световой день {2} ч {3} мин',
+        // 66.97 (§12.3 п.4): шаблон обёрнут t() — ключ уже лежал в словаре непокрытым
+        const text = tf(t('Рассвет ~ {0} · Закат ~ {1} · Световой день {2} ч {3} мин'),
             formatHours(lastInfo.sunrise), formatHours(lastInfo.sunset), dayH, dayM);
         const ty = y + H + 9;
         const bgR = scene.add.rectangle(x + W / 2, ty, Math.max(220, text.length * 7 + 30), 24, 0x241B15, 0.92)

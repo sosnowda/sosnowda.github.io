@@ -1,10 +1,12 @@
 // Пошаговый бой по системе BRP. Игрок и враг по очереди совершают действия.
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
-import { WEAPONS } from '../config/GameConfig.js';
+// 66.97 (§12.3 п.4/5): WEAPONS — одна таблица в systems/Character.js (зеркало из GameConfig
+// удалено — оно уже разошлось с каноном); COMBAT_MODS — тактические модификаторы боя
+import { COMBAT_MODS } from '../config/GameConfig.js';
 // Раунд 66.28 (пп.1–12): честные надписи атаки (Удар оружием/Удар кулаком/
 // Стрельба из лука), СМЕНА ОРУЖИЯ за ход, стрелы и колчан
-import { WEAPONS as CR_WEAPONS, equipWeapon } from '../systems/Character.js';
+import { WEAPONS, equipWeapon } from '../systems/Character.js';
 import {
     getQuiver, spendArrow, loadQuiver, countInventoryArrows,
     quiverWord, QUIVER_CAP,
@@ -358,7 +360,7 @@ export class CombatScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-F1', () => {
             if (this.busyDialog) return;
             this.busyDialog = true;
-            createDialog(this, '❓ Информация по игре',
+            createDialog(this, t('❓ Информация по игре'),
                 timeRatioInfoLine() + '\n\n' +
                 t('⚔ Бой пошаговый (BRP d100): атака, уклон, прицел, перехват, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nособый успех — 1/5 (урон: максимум оружия + обычный бросок + бонус),\nкрит — 1/20 (максимум оружия + максимум бонуса, СКВОЗЬ броню).\n🛡 Доспех поглощает урон каждого попадания (крит — насквозь).\n💪 Бонус урона — BRP-канон (СИЛ+РАЗМ): от −1d6 до +2d6 по таблице SRD.\n⚠ Враг, бросивший особый/критический удар, заносит оружие ХОД —\nуклонись (+20% к уклонению), перехвати (сбей замах) или прими удар.\n✚ Успешное уклонение от медленного врага (ЛОВ ниже твоей) даёт\nокно контратаки: следующая атака +10%.\n🧠 Раненый враг (HP < 25%) проверяет МОЩь: сломится — сдаётся или бежит.\nВора можно взять живьём и отвести старосте — премия 20 денег.\n🏹 Лук/самострел тратят стрелу (колчан 10); стрельба в упор −10%,\nвыстрел с прицела +25%; болт самострела уклонением НЕ отбивается;\nперезарядка самострела — каждый второй ход.\n⚔ В ближнем строю бьют не более двоих одновременно (инициатива по ЛОВ).\nПосле первого удара противника видно мастерство его оружия.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.'),
                 [{ text: t('Понятно'), callback: () => { this.busyDialog = false; } }],
@@ -516,8 +518,8 @@ export class CombatScene extends Phaser.Scene {
         const startY = height / 2 - panelH / 2 + 84;
         const step = 40;
         // Оружие: кулаки + всё, что лежит в узле
-        const list = [CR_WEAPONS.fists].concat(
-            Object.values(CR_WEAPONS).filter(w => w.id !== 'fists'
+        const list = [WEAPONS.fists].concat(
+            Object.values(WEAPONS).filter(w => w.id !== 'fists'
                 && (p.inventory || []).some(it => it && it.id === w.id)));
         list.forEach((w, i) => {
             const isEquipped = p.weaponId === w.id;
@@ -593,7 +595,7 @@ export class CombatScene extends Phaser.Scene {
             : null;
 
         if (res.result === 'critical' || res.result === 'success') {
-            this.pushLog(tf('Ты успешно бежал с поля боя (бросок {0})!', res.roll));
+            this.pushLog(tf(t('Ты успешно бежал с поля боя (бросок {0})!'), res.roll));
             if (this.audioManager) this.audioManager.playSwordMiss();
             // Раунд 21: побег занимает время — 2 тика (вор тоже двигается)
             tickTime(this.registry, 30);
@@ -629,7 +631,7 @@ export class CombatScene extends Phaser.Scene {
                 }
             });
         } else {
-            this.pushLog(tf('Не удалось сбежать (бросок {0})! Враг атакует.', res.roll));
+            this.pushLog(tf(t('Не удалось сбежать (бросок {0})! Враг атакует.'), res.roll));
             if (this.audioManager) this.audioManager.playDamageTaken();
             // Раунд 21: неудачный побег занимает 1 тик
             tickTime(this.registry, 15);
@@ -850,29 +852,30 @@ export class CombatScene extends Phaser.Scene {
             - combatExhaustionPenalty(this.registry));
         const mods = [];
         // В-1: окно контратаки — успешное уклонение от медленного врага открыло
-        // брешь: следующая атака героя +10%. Флаг расходуется этим ударом.
+        // брешь: следующая атака героя +COMBAT_MODS.counterWindowBonus%. Флаг расходуется этим ударом.
+        // 66.97 (§12.3 аудита 66.92, п.5): значения модификаторов — в GameConfig.COMBAT_MODS.
         if (this.counterWindow) {
             this.counterWindow = false;
-            skill += 10;
-            mods.push(t('контратака +10%'));
+            skill += COMBAT_MODS.counterWindowBonus;
+            mods.push(tf(t('контратака +{0}%'), COMBAT_MODS.counterWindowBonus));
         }
-        // В-4: лук/самострел — враг в ближнем бою, успеть прицелиться: −10%.
+        // В-4: лук/самострел — враг в ближнем бою, успеть прицелиться: −COMBAT_MODS.pointBlankPenalty%.
         if (weaponKey === 'bow' || weaponKey === 'crossbow') {
-            skill -= 10;
-            mods.push(t('стрельба в упор −10%'));
+            skill -= COMBAT_MODS.pointBlankPenalty;
+            mods.push(tf(t('стрельба в упор −{0}%'), COMBAT_MODS.pointBlankPenalty));
         }
-        // п.9 (приказ владельца): ПРИЦЕЛ — ход прицеливания дал +25% к выстрелу.
+        // п.9 (приказ владельца): ПРИЦЕЛ — ход прицеливания дал +COMBAT_MODS.aimBonus% к выстрелу.
         if ((weaponKey === 'bow' || weaponKey === 'crossbow') && this.aiming) {
             this.aiming = false;
-            skill += 25;
-            mods.push(t('прицел +25%'));
+            skill += COMBAT_MODS.aimBonus;
+            mods.push(tf(t('прицел +{0}%'), COMBAT_MODS.aimBonus));
         }
-        // В-4: копьё — первый удар против врага без доспеха +10% (длинная древковая).
+        // В-4: копьё — первый удар против врага без доспеха +COMBAT_MODS.spearFirstStrikeBonus% (длинная древковая).
         if (weaponKey === 'spear' && this.spearFirstStrike) {
             this.spearFirstStrike = false;   // «первый удар» расходуется первой же пробой
             if (!target.armor || target.armor.def === 0) {
-                skill += 10;
-                mods.push(t('копьё против бездоспешного +10%'));
+                skill += COMBAT_MODS.spearFirstStrikeBonus;
+                mods.push(tf(t('копьё против бездоспешного +{0}%'), COMBAT_MODS.spearFirstStrikeBonus));
             }
         }
         const res = skillCheck(Math.max(1, skill));
@@ -1265,8 +1268,8 @@ export class CombatScene extends Phaser.Scene {
                 if (!this.weaponSkillRevealed) {
                     this.weaponSkillRevealed = true;
                     const skillKey = this.villagerCombatTpl ? this.villagerCombatTpl.weaponSkill : null;
-                    const skillLabel = skillKey ? ruSkillName(skillKey) : t(en.weapon.name);
-                    this.pushLog(tf('⚔ Первый удар открыл мастерство противника: {0} — {1}.', skillLabel, en.attackSkill));
+                    const skillLabel = skillKey ? t(ruSkillName(skillKey)) : t(en.weapon.name);
+                    this.pushLog(tf(t('⚔ Первый удар открыл мастерство противника: {0} — {1}.'), skillLabel, en.attackSkill));
                 }
 
                 // Раунд 23 (п.5/п.3): свист оружия + анимация атаки врага,
@@ -1277,7 +1280,7 @@ export class CombatScene extends Phaser.Scene {
                     this.restoreEnemyIdle(e);
                     const tier = damageTierOf(res);
                     if (tier === 0) {
-                        this.pushLog(tf('{0}: {1} — промах.', t(en.name), res.roll));
+                        this.pushLog(tf(t('{0}: {1} — промах.'), t(en.name), res.roll));
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'dust');
                         if (this.audioManager) this.audioManager.playSwordMiss();
                     } else if (tier >= 2) {
@@ -1303,7 +1306,7 @@ export class CombatScene extends Phaser.Scene {
                                 + (this.playerDodgeBonus || 0);
                             const dr = skillCheck(dodgeSkill);
                             if (dr.result === ROLL_RESULT.SUCCESS || dr.result === ROLL_RESULT.CRITICAL) {
-                                this.pushLog(tf('Ты уклонился от {0} ({1})!', t(en.name), dr.roll));
+                                this.pushLog(tf(t('Ты уклонился от {0} ({1})!'), t(en.name), dr.roll));
                                 // В-1: успешное уклонение от МЕДЛЕННОГО врага открывает
                                 // окно контратаки — следующая атака героя +10%.
                                 if ((en.DEX || 50) < this.player.DEX) {
@@ -1329,7 +1332,7 @@ export class CombatScene extends Phaser.Scene {
                         this.time.delayedCall(80, () => this.playerSprite.clearTint());
 
                         createFloatingText(this, this.playerSprite.x, this.playerSprite.y - 60, `-${actualDmg}`, '#ff6b5a');
-                        this.pushLog(tf('{0} бьёт {1}: урон {2}{3} ({4}).', t(en.name), t(en.weapon.name), actualDmg, absorbed > 0 ? tf(' (бронь {0})', absorbed) : '', res.roll));
+                        this.pushLog(tf(t('{0} бьёт {1}: урон {2}{3} ({4}).'), t(en.name), t(en.weapon.name), actualDmg, absorbed > 0 ? tf(t(' (бронь {0})'), absorbed) : '', res.roll));
                         this.playHitEffect(this.playerSprite.x, this.playerSprite.y, 'blood');
                         // Раунд 23 (п.5): звук по исходу — тело / доспех / щит;
                         // при полном попадании герой вздрагивает (knight_hit)
@@ -1445,8 +1448,9 @@ export class CombatScene extends Phaser.Scene {
     checkMorale(rec) {
         const en = rec.combatant;
         if (en.HP <= 0 || en.__out) return;
-        if (en.HP >= Math.ceil(en.HPmax * 0.25)) return;   // ещё держится
-        const res = skillCheck(Math.max(5, en.POW || 50));
+        // 66.97 (§12.3 п.5): порог морали и минимум МОЩи — в GameConfig.COMBAT_MODS
+        if (en.HP >= Math.ceil(en.HPmax * COMBAT_MODS.moraleHpPct)) return;   // ещё держится
+        const res = skillCheck(Math.max(COMBAT_MODS.moraleMinPow, en.POW || 50));
         if (res.result === ROLL_RESULT.SUCCESS || res.result === ROLL_RESULT.CRITICAL) {
             return;   // пересилил страх — дерётся дальше
         }
@@ -1600,7 +1604,7 @@ export class CombatScene extends Phaser.Scene {
         this.autosave();
         this.busy = true;
         this.pushLog(murderVictimId
-            ? tf('{0} убит! Кровная вина пала на тебя...', t(this.enemies[0].name))
+            ? tf(t('{0} убит! Кровная вина пала на тебя...'), t(this.enemies[0].name))
             : (isThiefFight
                 ? (thiefCaptured
                     ? (getThiefGender(this.registry) === 'female'

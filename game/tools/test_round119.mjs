@@ -84,9 +84,9 @@ for (const w of ['club', 'palitsa', 'mace', 'flail']) {
     const re = new RegExp(`${w}:\\s*\\{ id: '${w}',[^}]*skill: 'blunt'`);
     ok(re.test(character), `WEAPONS: ${w} — навык blunt`);
 }
-ok(/club:.*skill: 'blunt'/.test(gameConfig) && /palitsa:.*skill: 'blunt'/.test(gameConfig) &&
-   /mace:.*skill: 'blunt'/.test(gameConfig) && /flail:.*skill: 'blunt'/.test(gameConfig),
-    'GameConfig: зеркальный реестр — 4 дробящих на blunt');
+// 66.97 (§12.3 п.5): зеркало WEAPONS удалено — ОДНА таблица в systems/Character.js
+ok(!/export const WEAPONS/.test(gameConfig) && /WEAPONS живёт ОДНОЙ копией/.test(gameConfig),
+    'GameConfig: зеркало WEAPONS удалено (одна таблица — Character.js, §12.3 п.5)');
 ok(!/oratory|'ride'|track:|investigate/.test(npcStats.split('RESISTANCE_BY_SKILL')[0].split('NPC_STAT_BLOCKS = {')[1] || ''),
     'npcStats: у жителей нет удалённых навыков');
 ok(/export const WISDOM_SKILLS = \['persuade', 'fast_talk', 'medicine', 'survival', 'spot', 'listen'\];/.test(ageRules),
@@ -95,7 +95,7 @@ ok(/medicine: 'POW', survival: 'POW', spot: 'POW', listen: 'POW'/.test(npcStats)
     'npcStats: сопротивления знаний/восприятия — от МОЩИ (ИНТ изъят)');
 ok(!/oratory/.test(ageRules.split('WISDOM_SKILLS = ')[1].split(';')[0] || ''), 'AgeRules: oratory удалён из WISDOM');
 ok(!/oratory|ride|track|investigate/.test(reputation.split('applyCompliment')[1] || ''), 'reputation: applyCompliment — от fast_talk');
-ok(/'Болтовня', `\$\{opp\.ruNameGen\} жителя`/.test(reputation), 'reputation: подпись проверки — «Болтовня»');
+ok(/t\('Болтовня'\), oppSkillLabel\(opp, 'жителя'\)/.test(reputation), 'reputation: подпись проверки — t(«Болтовня») + oppSkillLabel (66.97 §12.3 п.4)');
 ok(/applyCompliment\(this\.registry, interior\.npcId, fastTalkSkill\)/.test(interiorScene),
     'InteriorScene: похвала от Болтовни');
 ok(!/skills\.fast_talk \|\| 10/ ? false : true, 'InteriorScene: фолбэк Болтовни 10 (база SRD-подобная)');
@@ -244,8 +244,8 @@ for (const f of files) {
 ok(syntaxFail === 0, `node --check ×${files.length} — все зелёные`);
 
 console.log('--- 12. SW v113 / game-assets-v44 / доки ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v128';") && sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"),
-    'sw.js: v128 + game-assets-v45 (66.95 актуализация; ранее — иконки 66.71)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v130';") && sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"),
+    'sw.js: v130 + game-assets-v45 (66.95 актуализация; ранее — иконки 66.71)');
 ok(/66\.71/.test(swlog) && /v113/.test(swlog), 'SW_CHANGELOG: запись 66.71/v113');
 ok(/66\.71/.test(changes), 'CHANGES.md: запись 66.71');
 ok(/66\.71/.test(worklog), 'worklog (репо): запись 66.71');

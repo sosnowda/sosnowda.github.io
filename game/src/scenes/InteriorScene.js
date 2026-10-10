@@ -1,6 +1,8 @@
 // Сцена интерьера здания (таверна, кузница, дома жителей, дом старосты, церковь).
 // Phaser загружен глобально через CDN
 import { RUS } from '../config/RusTheme.js';
+// 66.97 (§12.3 аудита 66.92, п.5): цены панелей и шансы событий сцены — в конфиге
+import { SCENE_PRICES, SCENE_CHANCES } from '../config/GameConfig.js';
 import { INTERIORS } from '../data/interiors.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import AudioManager from '../systems/AudioManager.js';
@@ -162,7 +164,7 @@ export class InteriorScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-F1', () => {
             if (this.busyDialog) return;
             this.busyDialog = true;
-            createDialog(this, '❓ Информация по игре',
+            createDialog(this, t('❓ Информация по игре'),
                 timeRatioInfoLine() + '\n\n' +
                 // Раунд 66.10: строка о сундуках/тайниках удалена (механика вырезана по приказу владельца)
                 t('🏠 Разговор с хозяином дома занимает 1 игровой час —\nвыбирай, с кем и о чём говорить.\n◀ Выход — кнопка внизу.'),
@@ -731,7 +733,7 @@ export class InteriorScene extends Phaser.Scene {
                 // Патч 66.80 (п.11-г): ЕПИТИМЬЯ — «замолить грехи» 50 д. раз в месяц
                 // (снимает до −5 деревенской молвы; видна только при плохой молве)
                 if (getVillageRep(this.registry) < 0 && !absolutionUsedThisMonth(this.registry, getTime(this.registry))) {
-                    buttons.push({ label: t('\u{26EA} Замолить грехи (50 д.)'), bg: 0x5a2a4a, hover: 0x6a3a5a, cb: () => this.absolutionInChurch() });
+                    buttons.push({ label: tf(t('⛪ Замолить грехи ({0} д.)'), ABSOLUTION_COST), bg: 0x5a2a4a, hover: 0x6a3a5a, cb: () => this.absolutionInChurch() });
                 }
                 buttons.push({ label: t('\u{1F50D} Осмотреть киот'), bg: 0x2a4a6a, hover: 0x3a5a7a, cb: () => this.inspectChurchKiot() });
                 // Патч 66.74 (приказ 5): ГРАМОТА — служка при богослужении
@@ -1215,17 +1217,17 @@ export class InteriorScene extends Phaser.Scene {
 
         let y = height / 2 - panelH / 2 + 65;
 
-        // Подарить деньги (10 д.)
-        menu.button( width / 2, y, t('💸 Подарить 10 денег'), () => {
-            if ((player.dengas || 0) < 10) {
+        // Подарить деньги (SCENE_PRICES.giftSmall.cost — 66.97 §12.3: цена панели из конфига)
+        menu.button( width / 2, y, tf(t('💸 Подарить {0} денег'), SCENE_PRICES.giftSmall.cost), () => {
+            if ((player.dengas || 0) < SCENE_PRICES.giftSmall.cost) {
                 createDialog(this, t('Подарок'), t('Не хватает денег!'), [{ text: t('Понятно'), callback: () => {} }],
                     { singleton: false, portraitKey: interior.portrait });
                 return;
             }
-            player.dengas -= 10;
+            player.dengas -= SCENE_PRICES.giftSmall.cost;
             this.registry.set('player', player);
-            // П.6: ценность денег = номинал × 0.5 = 5
-            const result = applyGiftBonus(this.registry, interior.npcId, 5);
+            // П.6: ценность денег = номинал × 0.5 = SCENE_PRICES.giftSmall.value
+            const result = applyGiftBonus(this.registry, interior.npcId, SCENE_PRICES.giftSmall.value);
             const msg = result.success
                 ? tf(t('{0}: «Спасибо тебе! Доброе дело сделал.» (+{1} реп.)'), npcName, result.bonus)
                 : tf(t('{0}: «Не нужно мне твоих подачек!» ({1} реп.)'), npcName, result.bonus);
@@ -1238,17 +1240,17 @@ export class InteriorScene extends Phaser.Scene {
         }).setDepth(202);
         y += 35;
 
-        // Подарить деньги (50 д.)
-        menu.button( width / 2, y, t('💸 Подарить 50 денег'), () => {
-            if ((player.dengas || 0) < 50) {
+        // Подарить деньги (SCENE_PRICES.giftLarge.cost — 66.97 §12.3)
+        menu.button( width / 2, y, tf(t('💸 Подарить {0} денег'), SCENE_PRICES.giftLarge.cost), () => {
+            if ((player.dengas || 0) < SCENE_PRICES.giftLarge.cost) {
                 createDialog(this, t('Подарок'), t('Не хватает денег!'), [{ text: t('Понятно'), callback: () => {} }],
                     { singleton: false, portraitKey: interior.portrait });
                 return;
             }
-            player.dengas -= 50;
+            player.dengas -= SCENE_PRICES.giftLarge.cost;
             this.registry.set('player', player);
-            // П.6: ценность = 50 × 0.5 = 25
-            const result = applyGiftBonus(this.registry, interior.npcId, 25);
+            // П.6: ценность = SCENE_PRICES.giftLarge.value
+            const result = applyGiftBonus(this.registry, interior.npcId, SCENE_PRICES.giftLarge.value);
             const msg = result.success
                 ? tf(t('{0}: «Ох, какая щедрость! Благодарю от сердца!» (+{1} реп.)'), npcName, result.bonus)
                 : tf(t('{0}: «Что-то ты уж слишком щедр... Чего хочешь?» ({1} реп.)'), npcName, result.bonus);
@@ -3552,8 +3554,8 @@ export class InteriorScene extends Phaser.Scene {
         }
         let bonus = 0;
         let bonusMsg = '';
-        if (Math.random() < 0.15) {
-            bonus = Phaser.Math.Between(2, 4);
+        if (Math.random() < SCENE_CHANCES.potterCoinFind) {
+            bonus = Phaser.Math.Between(SCENE_CHANCES.potterCoinMin, SCENE_CHANCES.potterCoinMax);
             bonusMsg = '\n\n' + tf(t('В углу мастерской блеснула чужая монетка — видать, обронил кто-то из заказчиков. Она твоя: +{0} д.'), bonus);
         }
         player.dengas = (player.dengas || 0) + wage + bonus;
@@ -3924,7 +3926,7 @@ export class InteriorScene extends Phaser.Scene {
         let extra = '';
         // Раунд 66.16 (приказы 1–3): сушёные яблоки — тоже еда: +1 HP,
         // кулдаун 4 часа; сытый герой яблок не находит (бонус не выпадает).
-        if (Math.random() < 0.2 && player && canEat(this.registry).ok && (player.HP || 0) < (player.HPmax || 10)) {
+        if (Math.random() < SCENE_CHANCES.driedAppleFind && player && canEat(this.registry).ok && (player.HP || 0) < (player.HPmax || 10)) {
             player.HP = Math.min(player.HPmax || player.HP + MEAL_HEAL_HP, player.HP + MEAL_HEAL_HP);
             registerMeal(this.registry);
             // Приказ 1: перекус — это приём еды, занимает 1 час

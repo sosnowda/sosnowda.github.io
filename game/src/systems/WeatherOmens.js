@@ -171,7 +171,8 @@ const OMEN_LINES = {
     snow: [
         { ru: 'К снегу всё: воробьи распушились, да дым к земле клонится. Снег ближайшим временем падёт.', en: 'It is turning to snow: the sparrows are puffed up, and smoke bends toward the ground. Snow will fall before long.' },
         { ru: 'Приметы снежные: белая радуга зимою, да уголь в кресалах ярко горит. Жди снегопада.', en: 'Snow signs: a white rainbow in winter, and the coals in the hearth burn bright. Wait for snowfall.' },
-        { ru: 'Снег будет, точно говорю: галки с крыш в стаю сбились, да небо низкой сизью затянуло.', en: 'Snow is coming, I tell you truly: the jackdaws have flocking off the roofs, and a low grey veil has covered the sky.' },
+        // 66.97 (§12.3 п.4): EN-грамматика примет — причастие после have исправлено
+        { ru: 'Снег будет, точно говорю: галки с крыш в стаю сбились, да небо низкой сизью затянуло.', en: 'Snow is coming, I tell you truly: the jackdaws have flocked off the roofs, and a low grey veil has covered the sky.' },
     ],
 };
 

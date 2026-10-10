@@ -123,7 +123,7 @@ ok((charSel.match(/resetNpcLookCache\(this\);/g) || []).length === 1, 'Character
 ok(npcLook.includes('if (scene.textures.exists(variantKey)) return true;'), 'NpcLook: ранний return buildNpcLookTextures цел (сброс — снаружи, в WorldLook.resetNpcLookCache)');
 
 console.log('--- 8. SW v127 + game-assets-v45 ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v128';"), 'sw.js: CACHE_NAME v128');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v130';"), 'sw.js: CACHE_NAME v130');
 ok(!sw.includes("chronicles-ruthenia-v126'"), 'sw.js: старого v126 как CACHE_NAME нет');
 ok(sw.includes('66.94 (эшелон 2 аудита игры)'), 'sw.js: коммент-шапка бампа 66.94');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: бакет game-assets-v45 цел (ассеты не тронуты)');

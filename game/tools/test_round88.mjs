@@ -105,7 +105,7 @@ ok(pipe.includes('HUNTRESS_DEAD_FRAMES'), 'смерть Охотницы соб�
 ok(pipe.includes('Huntress_dead.png 128er'), 'манифест помечает спец-сборку смерти');
 
 console.log('--- 6. SW v84 + game-assets-v44 (66.34) ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v128';"), 'SW: site-cache v128 (актуализация 66.95)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v130';"), 'SW: site-cache v130 (актуализация 66.95)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45 (перегенерированные листы + бусты)');
 ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 

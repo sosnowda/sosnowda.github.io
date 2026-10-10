@@ -997,7 +997,7 @@ export class ForestScene extends OutdoorLocationBase {
         const gathered = q.forestGathered || {};
 
         if (gathered[entry.id] === today) {
-            this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, 'Уже собрано', '#b8a88a');
+            this.showFloatingText(entry.col * TS + TS / 2, entry.row * TS - 6, t('Уже собрано'), '#b8a88a');
             return;
         }
 

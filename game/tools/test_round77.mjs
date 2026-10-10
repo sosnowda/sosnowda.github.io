@@ -48,8 +48,8 @@ ok(t('Южный Тракт') === 'Южный Тракт' && t('Северный
 
 // ---------- 2. Легаси-топонимы/орфография в живых источниках ----------
 const stripComments = (src) => src.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
-ok(stripComments(mapSrc).includes("name: t('Южный Тракт')"), 'mapLocations: road_south = «Южный Тракт» (66.24)');
-ok(stripComments(mapSrc).includes("name: t('Северный Тракт')"), 'mapLocations: road_north = «Северный Тракт» (66.24)');
+ok(stripComments(mapSrc).includes("get name() { return t('Южный Тракт'); }"), 'mapLocations: road_south = «Южный Тракт» (66.24)');
+ok(stripComments(mapSrc).includes("get name() { return t('Северный Тракт'); }"), 'mapLocations: road_north = «Северный Тракт» (66.24)');
 ok(!dialogueSrc.includes('Рѣка'), 'dialogue: дореформенной «Рѣка» нет');
 ok(!thiefSrc.includes('Рѣка'), 'thief: дореформенной «Рѣка» нет');
 ok(!dialogueSrc.includes('Тузик'), 'dialogue: «Тузик» нет (заменён на Серко)');

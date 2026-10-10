@@ -98,7 +98,7 @@ const mk = () => ({ minute: 0, hour: 10, day: 1, month: 0, yearFromChrist: 1453,
 }
 
 console.log('--- 8. SW v126 + game-assets-v45 ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v128';"), 'sw.js: CACHE_NAME v128');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v130';"), 'sw.js: CACHE_NAME v130');
 ok(!sw.includes("chronicles-ruthenia-v125'"), 'sw.js: старого v125 как CACHE_NAME нет');
 ok(sw.includes('66.93 (эшелон 1 аудита игры)'), 'sw.js: коммент-шапка бампа 66.93');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: бакет game-assets-v45 цел (ассеты не тронуты)');

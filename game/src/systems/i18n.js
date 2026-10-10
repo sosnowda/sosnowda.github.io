@@ -518,9 +518,8 @@ const EN = {
     'Введите имя персонажа:': 'Enter the character name:',
     'Путник': 'Wanderer',
 
-    // --- Кнопки интерьеров (раунд 20) ---
-    '💸 Подарить 10 денег': '💸 Gift 10 dengas',
-    '💸 Подарить 50 денег': '💸 Gift 50 dengas',
+    // --- Кнопки интерьеров (раунд 20); 66.97 §12.3: цена панели — из SCENE_PRICES (GameConfig) ---
+    '💸 Подарить {0} денег': '💸 Gift {0} dengas',
     'Оружие': 'Weapons',
     'Доспехи': 'Armor',
     'Нападение!': 'Attack!',
@@ -1018,8 +1017,10 @@ const EN = {
         'The slain one\'s kin curse you: their reputation fell to −100.',
     'Староста разводит руками: «На тебя никто больше не в ярости — мирить некого. Спасибо Судебнику!»':
         'The elder spreads his hands: "Nobody rages at you anymore — no one to reconcile. Thank the Law Code!"',
-    'Староста листает Судебник: «Обида смывается серебром. Вира за кровь свободного мужа — 40 гривен (80 д.), за женщину или отрока — полувирье (40 д.), да продажа мне за суд — 20 д. За разбой без всякой свады — всё вдвое. Плати — и обиженный тебя простит (репутация станет +30).»':
-        'The elder leafs through the Law Code: "Grievance is washed away with silver. Wergild for a free man\'s blood — 40 grivnas (80 d.), for a woman or a youth — half-wergild (40 d.), plus 20 d. of the fine to me for the court. For lawless robbery — double. Pay, and the offended will forgive you (reputation becomes +30)."',
+    // 66.97 (§12.3 п.5): «40 гривен» → «40 кун» — согласовано с лором денег (CURRENCY);
+    // ключ словаря = точная русская строка, поэтому обновлены обе половины пары.
+    'Староста листает Судебник: «Обида смывается серебром. Вира за кровь свободного мужа — 40 кун (80 д.), за женщину или отрока — полувирье (40 д.), да продажа мне за суд — 20 д. За разбой без всякой свады — всё вдвое. Плати — и обиженный тебя простит (репутация станет +30).»':
+        'The elder leafs through the Law Code: "Grievance is washed away with silver. Wergild for a free man\'s blood — 40 kunas (80 d.), for a woman or a youth — half-wergild (40 d.), plus 20 d. of the fine to me for the court. For lawless robbery — double. Pay, and the offended will forgive you (reputation becomes +30)."',
     '{0} убит! Кровная вина пала на тебя...': '{0} is slain! Blood-guilt has fallen upon you...',
     'Уходи! Я тебя ненавижу... но староста велел крови сегодня не проливать.':
         'Away with you! I hate you... but the elder bade no blood be shed today.',
@@ -3240,7 +3241,7 @@ const EN_KEYS = {
     'Отец Савватий улыбается: «Худой молвы за тобой не ведут — и замаливать нечего. Иди с миром».': 'Father Savvatiy smiles: "No ill rumor follows you — there is nothing to absolve. Go in peace."',
     '🤝 О слове': '🤝 A word of haggle',
     '🤝 О слове (Убеждение)': '🤝 Haggle the rate (Persuasion)',
-    '⛪ Замолить грехи (50 д.)': '⛪ Absolve sins (50 d.)',
+    '⛪ Замолить грехи ({0} д.)': '⛪ Absolve sins ({0} d.)',
     'Ты заводишь речь с {0} о ставке: мол, работа честная, а цена — как посмотришь…': 'You open talk with {0} about the rate: the work is honest, but the pay — well, that is as it goes…',
     'Ставка на сегодня: ×{0} ко всем подёнкам.': 'Today\'s rate: ×{0} on all day wages.',
     'Договорились': 'Agreed',
@@ -3336,12 +3337,13 @@ const EN_KEYS = {
     'Уклонение не спасло от занесённого удара {0} (бросок {1})...': 'The dodge did not save you from {0}\'s swinging blow (roll {1})...',
     '{0} обрушивает ОСОБЫЙ удар ({1}): урон {2}{3} (бросок {4}){5}.': '{0} brings down a SPECIAL strike ({1}): {2} damage{3} (roll {4}){5}.',
     '✚ Окно контратаки! Следующая атака точнее (+10%).': '✚ Counter-attack window! Your next attack is truer (+10%).',
-    'контратака +10%': 'counter +10%',
+    // 66.97 (§12.3 п.5): метки тактических модификаторов — значения из COMBAT_MODS (GameConfig)
+    'контратака +{0}%': 'counter +{0}%',
 
     // --- Оружейные особенности (В-4) + цена уклонения врага (CB-3) ---
-    'стрельба в упор −10%': 'point-blank shot −10%',
-    'прицел +25%': 'aimed +25%',
-    'копьё против бездоспешного +10%': 'spear vs. unarmored +10%',
+    'стрельба в упор −{0}%': 'point-blank shot −{0}%',
+    'прицел +{0}%': 'aimed +{0}%',
+    'копьё против бездоспешного +{0}%': 'spear vs. unarmored +{0}%',
     'Прицел сбит: оружие в руках сменилось.': 'The aim is broken: the weapon in hand has changed.',
     '{0}: попадание! Урон {1}{2} (бросок {3}){4}{5}{6}.': '{0}: a hit! {1} damage{2} (roll {3}){4}{5}{6}.',
     '{0} теснится в строю — не достать (в ближнем строю бьют двое).': '{0} jostles in the melee line — cannot reach (only two strike in a melee line).',
@@ -3381,6 +3383,39 @@ const EN_KEYS = {
     // --- Справка боя 66.89 (канон SRD) ---
     '⚔ Бой пошаговый (BRP d100): атака, уклон, прицел, перехват, побег.\nПроверки навыков бросают d100: успех — в пределах навыка,\nособый успех — 1/5 (урон: максимум оружия + обычный бросок + бонус),\nкрит — 1/20 (максимум оружия + максимум бонуса, СКВОЗЬ броню).\n🛡 Доспех поглощает урон каждого попадания (крит — насквозь).\n💪 Бонус урона — BRP-канон (СИЛ+РАЗМ): от −1d6 до +2d6 по таблице SRD.\n⚠ Враг, бросивший особый/критический удар, заносит оружие ХОД —\nуклонись (+20% к уклонению), перехвати (сбей замах) или прими удар.\n✚ Успешное уклонение от медленного врага (ЛОВ ниже твоей) даёт\nокно контратаки: следующая атака +10%.\n🧠 Раненый враг (HP < 25%) проверяет МОЩь: сломится — сдаётся или бежит.\nВора можно взять живьём и отвести старосте — премия 20 денег.\n🏹 Лук/самострел тратят стрелу (колчан 10); стрельба в упор −10%,\nвыстрел с прицела +25%; болт самострела уклонением НЕ отбивается;\nперезарядка самострела — каждый второй ход.\n⚔ В ближнем строю бьют не более двоих одновременно (инициатива по ЛОВ).\nПосле первого удара противника видно мастерство его оружия.\n🎒 Смена оружия в руках — один ход; наложение стрел в колчан — тоже.':
         '⚔ Combat is turn-based (BRP d100): attack, dodge, aim, intercept, flee.\nSkill checks roll d100: success is within the skill,\nspecial success — 1/5 (damage: maximum weapon + a normal roll + bonus),\ncritical — 1/20 (maximum weapon + maximum bonus, THROUGH armor).\n🛡 Armor absorbs the damage of every hit (a critical pierces it).\n💪 Damage bonus — BRP canon (STR+SIZ): from −1d6 to +2d6 per the SRD table.\n⚠ An enemy who rolls a special/critical strike raises his weapon for a TURN —\ndodge (+20% to the dodge), intercept (beat the blow aside), or take it.\n✚ A successful dodge against a slower foe (lower DEX) opens\na counter-attack window: your next attack +10%.\n🧠 A wounded enemy (HP < 25%) tests POW: if broken, he surrenders or flees.\nA thief can be taken alive and handed to the starosta — a 20-denga bonus.\n🏹 Bow/crossbow shots spend arrows (quiver 10); point-blank shooting −10%,\nan aimed shot +25%; a crossbow bolt CANNOT be dodged aside;\nthe crossbow is reloaded every other turn.\n⚔ In a melee line no more than two foes strike at once (DEX initiative).\nAfter the enemy\'s first strike the mastery of his weapon is shown.\n🎒 Changing the weapon in hand costs a turn; loading arrows too.',
+
+    // ================================================================
+    // 66.97 — §12.3 аудита 66.92, п.4 «i18n-гигиена»: обёрнуты восемь
+    // найденных промахов (CombatScene/BRPEngine/F1/Forest/Village/
+    // SettingsPanel/Boot/EndScene) + двуязычные подписи встречных проверок.
+    // ================================================================
+    // F1-справка (Interior/Location/Combat — тело справки было локализовано, заголовок — нет)
+    '❓ Информация по игре': '❓ Game Information',
+    // ForestScene: плавающий текст
+    'Уже собрано': 'Already gathered',
+    // VillageScene: изгнание + анонс Новолетия (два шаблона)
+    'Изгнан из деревни за дурную славу.': 'Banished from the village for ill repute.',
+    '✨ Новолетие! Весенний год пошёл: лето {0}-е от Сотворения мира': '✨ New Year! The spring year has begun: the year {0} from the Creation of the world',
+    '✨ Новолетие! Настало лето {0}-е от Сотворения мира': '✨ New Year! The year {0} from the Creation of the world has come',
+    // BootScene: дефолтная цель квеста (имя «Путник» уже было в словаре)
+    'Поговори со старейшиной': 'Talk to the elder',
+    // CombatScene: побег и раскрытие мастерства (реплики боя были «tf без t()»)
+    'Ты успешно бежал с поля боя (бросок {0})!': 'You escaped the battlefield (roll {0})!',
+    'Не удалось сбежать (бросок {0})! Враг атакует.': 'Failed to escape (roll {0})! The enemy strikes.',
+    '⚔ Первый удар открыл мастерство противника: {0} — {1}.': '⚔ The first strike revealed the foe\'s weapon mastery: {0} — {1}.',
+    // BRPEngine.formatOpposedCheck: подписи встречных проверок в диалогах/летописи
+    'ОСОБЫЙ УСПЕХ': 'SPECIAL SUCCESS',
+    'провал (fumble)': 'fumble',
+    ' при сложности {0}': ' at difficulty {0}',
+    'бросок {0}{1}: {2} {3} против {4} {5} (бросок НПЦ {6}) — {7}': 'roll {0}{1}: {2} {3} vs {4} {5} (NPC roll {6}) — {7}',
+    // Вызывающие стороны: имена навыков и «обаяние» (trade/repBalance)
+    ' (+{0} обаяние)': ' (+{0} charm)',
+    ' ({0} обаяние)': ' ({0} charm)',
+    'Скрадывание': 'Sneak',
+    'Упорство': 'Persistence',
+    'Болтовни вора': 'the thief\'s Fast Talk',
+    'Рукопашной вора': 'the thief\'s Brawl',
+    'Внимательности вора': 'the thief\'s Spot',
 };
 
 // ----- Месяцы / дни недели (сентябрьский стиль индексации) -----

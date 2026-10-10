@@ -30,7 +30,7 @@ import { absDay } from '../systems/gameCalendar.js';
 import { opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
 // Раунд 48 (п.4 заявки): встречные проверки «навык против навыка» /
 // «характеристика против характеристики» — параметры из базы жителей
-import { getNpcOpposition } from './npcStats.js';
+import { getNpcOpposition, oppSkillLabel } from './npcStats.js'; // 66.97: oppSkillLabel (§12.3 п.4)
 
 const VILLAGE_REP_MIN = -100;
 const VILLAGE_REP_MAX = 100;
@@ -468,7 +468,7 @@ export function applyQuestRefusalPenalty(registry, npcId) {
 export function applyCompliment(registry, npcId, fastTalkSkill) {
     const opp = getNpcOpposition(findNpc(registry, npcId), 'fast_talk');
     const res = opposedSkillCheck(fastTalkSkill, opp.value, 0);
-    const checkLine = formatOpposedCheck(res, 'Болтовня', `${opp.ruNameGen} жителя`);
+    const checkLine = formatOpposedCheck(res, t('Болтовня'), oppSkillLabel(opp, 'жителя'));
     
     if (res.result === 'critical') {
         changeNpcRep(registry, npcId, 5, 'удачная похвала (крит)');
@@ -553,7 +553,7 @@ export function applyThreat(registry, npcId, intimidateSkill, playerGender) {
     // проверки: она снижает параметр игрока и показывается один раз.
     const opp = getNpcOpposition(findNpc(registry, npcId), 'intimidate');
     const effectiveRes = opposedSkillCheck(intimidateSkill, opp.value, -modifier);
-    const checkLine = formatOpposedCheck(effectiveRes, 'Запугивание', `${opp.ruNameGen} жителя`);
+    const checkLine = formatOpposedCheck(effectiveRes, t('Запугивание'), oppSkillLabel(opp, 'жителя'));
     
     let result = {
         success: false,
@@ -859,12 +859,13 @@ export function getHostileNpcs(registry) {
 /**
  * П.5 заявки: РАСЧЁТ ВИРЫ ПО СУДЕБНИКУ (Русская Правда + Судебник 1497).
  *
- *   • Вира за «обиду кровью» свободному мужу — 40 гривен;
- *     за свободную женщину или отрока (до 18) — полувирье, 20 гривен
- *     (Пространная редакция Русской Правды, ст. ст. 1, 25).
+ *   • Вира за «обиду кровью» свободному мужу — 80 д. = 40 кун;
+ *     за свободную женщину или отрока (до 18) — полувирье, 40 д. = 20 кун
+ *     (Пространная редакция Русской Правды: исторически 40 гривен; в игре суммы
+ *     масштабированы под канон денег Character.CURRENCY — куна = 2 д., гривна = 100 д.
+ *     66.97 §12.3 п.5: прежняя «судебная гривна = 2 д.» создавала вторую гривну — изъята).
  *   • Продажа — судебный штраф старосте-судье за самовольную ссору —
- *     10 гривен (Судебник 1497, ст. о «продаже» за обиду).
- *   • «Судебная гривна» деревни — 2 деньги: вира = 80 д. (муж.) / 40 д. (жен./отрок).
+ *     20 д. = 10 кун (Судебник 1497, ст. о «продаже» за обиду).
  *   • Разбой «без всякие свады» (репутация −100, крайняя вражда) —
  *     двойная вира, как за разбойное дело (ст. о разбое).
  *
@@ -876,7 +877,7 @@ export function calculateVira(registry, npcId) {
     const npcRep = (rep.npcRep[npcId] || 0);
     // Полувирье — за женщину ИЛИ за отрока/отроковицу (до 18 лет)
     const halfWergild = !!npc && (npc.gender === 'female' || (npc.age != null && npc.age < 18));
-    const wergild = halfWergild ? 40 : 80; // вира / полувирье (в судебных гривнах × 2 д.)
+    const wergild = halfWergild ? 40 : 80; // вира / полувирье (40/20 кун × 2 д. — канон CURRENCY)
     const sale = 20;                    // «продажа» старосте за суд
     const doubleWergild = npcRep <= -100; // разбой без всякой свады
     const total = (wergild + sale) * (doubleWergild ? 2 : 1);

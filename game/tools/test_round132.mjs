@@ -82,9 +82,9 @@ ok(/w\.skill === 'crossbow';/.test(combat) && /болт самострела/i.t
     'CombatScene: болт самострела не отбивается уклонением (CB-5а, SRD §5.7)');
 
 console.log('--- 4. ПРИЦЕЛ / В-1 / В-2 / В-5 (приказы 9–11,14) ---');
-ok(/aimAction\(\)/.test(combat) && /this\.aiming = true/.test(combat) && /прицел \+25%/.test(combat),
+ok(/aimAction\(\)/.test(combat) && /this\.aiming = true/.test(combat) && /прицел \+\{0\}%/.test(combat) && /skill \+= COMBAT_MODS\.aimBonus/.test(combat),
     'CombatScene: ПРИЦЕЛ — ход прицеливания, следующий выстрел +25% (приказ 9)');
-ok(/counterWindow = true/.test(combat) && /контратака \+10%/.test(combat) && /\(en\.DEX \|\| 50\) < this\.player\.DEX/.test(combat),
+ok(/counterWindow = true/.test(combat) && /контратака \+\{0\}%/.test(combat) && /skill \+= COMBAT_MODS\.counterWindowBonus/.test(combat) && /\(en\.DEX \|\| 50\) < this\.player\.DEX/.test(combat),
     'CombatScene: В-1 окно контратаки против медленного врага (+10%)');
 ok(/telegraph = \{ res \}/.test(combat) && /заносит \{1\} — готовит ОСОБЫЙ удар/.test(combat),
     'CombatScene: В-2 телеграфия особого удара врага');
@@ -100,7 +100,7 @@ ok(/combatants\.slice\(0, 2\)/.test(combat) && /теснится в строю/.
 console.log('--- 5. В-3 мораль (приказ 12) ---');
 ok(/checkMorale\(rec\)/.test(combat) && /HP < 25%|HPmax \* 0\.25/.test(combat),
     'CombatScene: мораль — враг с HP < 25% проверяет волю');
-ok(/skillCheck\(Math\.max\(5, en\.POW \|\| 50\)\)/.test(combat), 'CombatScene: мораль — проверка МОЩи (POW)');
+ok(/skillCheck\(Math\.max\(COMBAT_MODS\.moraleMinPow, en\.POW \|\| 50\)\)/.test(combat) && /COMBAT_MODS\.moraleHpPct/.test(combat), 'CombatScene: мораль — проверка МОЩи (POW; порог из COMBAT_MODS — 66.97 §12.3 п.5)');
 ok(/isAnimal \|\| Math\.random\(\) < 0\.5/.test(combat), 'CombatScene: зверь бежит, человек сдаётся или бежит');
 ok(/'captured' : 'killed'/.test(combat), 'CombatScene: сдавшийся вор — взят живьём (премия старосты 20 д.)');
 ok(/setNpcTruce\(this\.registry, victimId, 12\)/.test(combat), 'CombatScene: сдавшийся житель — перемирье без вирa');
@@ -108,7 +108,7 @@ ok(/fledWithoutBlood/.test(combat), 'CombatScene: бегство врага — 
 ok(/allOut\(\)/.test(combat) && /__out/.test(combat), 'CombatScene: бой окончен, когда все враги мертвы ИЛИ вышли (сдались/бежали)');
 
 console.log('--- 6. В-4 оружейные особенности (приказ 13) ---');
-ok(/weaponKey === 'spear' && this\.spearFirstStrike/.test(combat) && /копьё против бездоспешного \+10%/.test(combat),
+ok(/weaponKey === 'spear' && this\.spearFirstStrike/.test(combat) && /копьё против бездоспешного \+\{0\}%/.test(combat) && /skill \+= COMBAT_MODS\.spearFirstStrikeBonus/.test(combat),
     'CombatScene: копьё — первый удар против бездоспешного +10%');
 ok(/w\.skill === 'blunt' && target\.armorId === 'chain'/.test(combat) && /targetArmorDef -= 1/.test(combat),
     'CombatScene: дробящее против кольчуги — бронь −1');

@@ -275,7 +275,7 @@ console.log('--- 8. Версия/доки (заполняется при вып�
 {
     const sw = read('sw.js');
     ok(/chronicles-ruthenia-v12[89]/.test(sw) || /chronicles-ruthenia-v13\d/.test(sw),
-        'SW: кешv129+ (бамп под новые модули)');
+        'SW: кешv130+ (бамп под новые модули)');
 }
 
 console.log('====================');

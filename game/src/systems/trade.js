@@ -19,7 +19,7 @@
 import { t, tf } from './i18n.js';
 import { ActionLog } from '../data/actionLog.js';
 import { opposedSkillCheck, formatOpposedCheck } from './BRPEngine.js';
-import { getNpcOpposition } from '../data/npcStats.js';
+import { getNpcOpposition, oppSkillLabel } from '../data/npcStats.js'; // 66.97: oppSkillLabel (§12.3 п.4)
 // §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
 import { absDay } from './gameCalendar.js';
 import { getChaEdgeMod, clearChaEdge } from './charisma.js';
@@ -120,8 +120,8 @@ export function attemptHaggle(registry, npcId, skillValue, opts = {}) {
     const opp = getNpcOpposition({ id: npcId }, 'persuade');
     const edge = getChaEdgeMod(registry);
     const res = opposedSkillCheck((Number(skillValue) || 1) + edge, opp.value, 0);
-    const checkLine = formatOpposedCheck(res, label + (edge ? (edge > 0 ? ` (+${edge} обаяние)` : ` (${edge} обаяние)`) : ''),
-        `${opp.ruNameGen} торговца`);
+    const checkLine = formatOpposedCheck(res, t(label) + (edge ? (edge > 0 ? tf(t(' (+{0} обаяние)'), edge) : tf(t(' ({0} обаяние)'), edge)) : ''),
+        oppSkillLabel(opp, 'торговца'));
 
     let mult = 1;
     let message;
