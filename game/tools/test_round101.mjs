@@ -69,12 +69,17 @@ const ok = (cond, name) => {
 {
     const wired = {
         'VillageScene': 'src/scenes/VillageScene.js',
-        'ForestScene': 'src/scenes/ForestScene.js',
         'LocationScene': 'src/scenes/LocationScene.js',
-        'ApiaryScene': 'src/scenes/ApiaryScene.js',
         'InteriorScene': 'src/scenes/InteriorScene.js',
         'ForkScene': 'src/scenes/ForkScene.js',
     };
+    // 66.96: SunLight леса/пасеки — в базовом классе OutdoorLocationBase
+    {
+        const b = readFileSync(path.join(ROOT, 'src/systems/OutdoorLocationBase.js'), 'utf8');
+        ok(b.includes('attachSunLight'), '3: Forest+Apiary (OutdoorLocationBase) подключают SunLight');
+        ok(b.includes('sunLight.update'), '3: Forest+Apiary (OutdoorLocationBase) обновляют свет');
+        ok(b.includes('sunLight.follow(this.playerObj'), '3: тень героя следует за ним (лес/пасека)');
+    }
     for (const [name, rel] of Object.entries(wired)) {
         const src = readFileSync(path.join(ROOT, rel), 'utf8');
         ok(src.includes('attachSunLight'), `3: ${name} подключает SunLight`);
@@ -87,8 +92,7 @@ const ok = (cond, name) => {
     // Живые тени героя
     ok(readFileSync(path.join(ROOT, 'src/scenes/VillageScene.js'), 'utf8').includes('sunLight.follow(this.playerObj'),
         '3: тень героя следует за ним (деревня)');
-    ok(readFileSync(path.join(ROOT, 'src/scenes/ForestScene.js'), 'utf8').includes('sunLight.follow(this.playerObj'),
-        '3: тень героя следует за ним (лес)');
+    // 66.96: следящая тень леса/пасеки — в OutdoorLocationBase (проверено выше)
     // LocationScene: теперь есть updateHUD (раньше вызывался несуществующий метод)
     ok(readFileSync(path.join(ROOT, 'src/scenes/LocationScene.js'), 'utf8').includes('updateHUD() {'),
         '3: LocationScene определяет updateHUD (фикс латентного падения)');

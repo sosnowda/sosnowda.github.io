@@ -11,35 +11,24 @@ import {
     APIARY_CFG, apiaryHives, smudgePos, hutPos, apiaryTileAt,
     validateApiaryMap, beesActive,
 } from '../data/apiary.js';
-import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
-import { applyWeatherVisuals, getWeather } from '../systems/Weather.js';
-import { checkGameEnd, searchLocation, getHuntState, isChaseActive, isThiefAt, presentThiefEncounter } from '../data/thief.js';
+import { tickTime, getTime } from '../systems/TimeSystem.js';
+import { getWeather } from '../systems/Weather.js';
+import { searchLocation, getHuntState, isChaseActive, isThiefAt, presentThiefEncounter } from '../data/thief.js';
 import { ActionLog } from '../data/actionLog.js';
 // Патч 66.74 (приказ 3): БОРТНИЧЕСТВО на ульях — мёд и воск (loot.js)
 import { bortnikGather, getLootDef } from '../systems/loot.js';
 import { dayKeyOf } from '../data/daily.js';
 import { createDialog, createButtonRow } from '../utils/ui.js';
-// Патч 66.75 (приказы 5–6): кнопка «⚙ Настройки» в статус-баре пасеки
-import { addSettingsGearButton } from '../systems/SettingsPanel.js';
-import AudioManager from '../systems/AudioManager.js';
-import { VirtualControls } from '../systems/VirtualControls.js';
-import { formatMoney } from '../systems/Character.js';
-import { getVillageRep } from '../data/reputation.js';
-// Патч 66.80: статус репутации в HUD (лестница «подозрительный ↔ свой»)
-import { villageRepStatusSuffix } from '../systems/repBalance.js';
+// §12.3 (66.96): базовый класс outdoor-локаций — общий create/движение/HUD
+import { OutdoorLocationBase } from '../systems/OutdoorLocationBase.js';
 import { t, tf, tk } from '../systems/i18n.js';
 import { DialogueRunner } from '../systems/DialogueRunner.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcsAtPlace, NPC_DIALOGUE, pickOutdoorLine } from '../data/npcPresence.js';
 import { getNpcSpriteKey } from '../systems/NpcLpc.js';
 // 66.37: калибровка масштаба мировых листов персонажей 128px (были 64)
-import { WORLD_K, WORLD_BODY_PX } from '../systems/WorldLook.js';
-import { addMorningFog } from '../systems/AmbientFX.js';
-// Патч 66.46 (приказ 2): ход солнца — тени и смена освещения
-import { attachSunLight } from '../systems/SunLight.js';
-// Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
-import { attachChurchBells } from '../systems/ChurchBells.js';
-import { attachWorldClock, timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
+import { WORLD_K } from '../systems/WorldLook.js';
+import { timeRatioInfoLine, TALK_MINUTES } from '../systems/WorldClock.js';
 
 const TS = 48;   // как в деревне/лесу — мир 1248×960, камера скроллится
 const WORLD_W = APIARY_COLS * TS;
@@ -54,75 +43,51 @@ const HIVE_NOTES = [
     '🐝 Две пчелы танцуют на плашке — показывают, где цветы.',
 ];
 
-export class ApiaryScene extends Phaser.Scene {
+export class ApiaryScene extends OutdoorLocationBase {
     constructor() {
-        super('Apiary');
+        // §12.3 (66.96): конфиг пасеки — в базовом классе (шаг 1 мин —
+        // раунд 22 п.5, был в клоне movePlayer; атмосфера — в клоне
+        // buildAtmosphere; общее теперь в OutdoorLocationBase)
+        super('Apiary', {
+            stepTickMinutes: 1,
+            bellsVolume: 0.45,
+            bgColor: 0x16240f,
+            returnPosKey: 'apiaryReturnPos',
+            spawn: APIARY_SPAWN,
+            exit: APIARY_EXIT,
+        });
+        this.worldCols = APIARY_COLS;
+        this.worldRows = APIARY_ROWS;
     }
 
     init(data) {
-        this.from = (data && data.from) || 'Fork';
         // Раунд 20 (слияние Пасек): пасека — ЕДИНАЯ сцена. С режима охоты на вора
         // сюда можно попасть из развилки — поиск следов прямо на ходячей локации.
         this.hunt = !!(data && data.hunt);
-        // Возврат после боя — вернуть игрока туда, где он встал
-        this.returnPos = this.registry.get('apiaryReturnPos') || null;
-        this.registry.set('apiaryReturnPos', null);
+        this.outdoorInit(data);
     }
 
     create() {
-        this.audioManager = new AudioManager(this);
-        // 66.68 (§9.3 аудита 66.66, P3): переиспользуемый вектор движения — каждый
-        // кадр movePlayer() раньше создавал new Phaser.Math.Vector2; и кэш idle-ключа
-        // (без шаблонной строки каждый кадр стоянки).
-        this._moveVec = new Phaser.Math.Vector2(0, 0);
-        this._idleKey = ''; this._idleKeyDir = null;
+        this.createOutdoorCore();
+    }
+
+    // ===== КРЮКИ СОЗДАНИЯ МИРА (общая последовательность — в базе) =====
+
+    validateMap() {
+        return validateApiaryMap();
+    }
+
+    beforeWorld() {
         this.dialogue = new DialogueRunner(this);
-        // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
-        attachWorldClock(this);
-        attachChurchBells(this, { volume: 0.45 });
-        this.audioManager.playSceneMusic('village');
-        // Раунд 24: эмбиент леса — птицы днём, сверчки ночью
-        const fsTime = getTime(this.registry);
-        const fsHour = fsTime ? fsTime.hour : 12; // раунд 31: фикс .hours → .hour
-        this.audioManager.setAmbient((fsHour >= 21 || fsHour < 5)
-            ? 'ambient_forest_night'
-            : 'ambient_forest_day');
-
-        // ----- QA-валидация проходимости (как в лесу/деревне) -----
-        const validation = validateApiaryMap();
-        if (validation.problems.length) {
-            console.warn('[Пасека] Проблемы проходимости:', validation.problems);
-        }
-
-        this.cameras.main.setBackgroundColor(0x16240f);
-        this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
-        this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
-
-        // Раунд 20: бесконечная трава за границами мира (пасека) —
-        // при RESIZE окно бывает шире мира, иначе по краям пустота фона.
-        if (this.textures.exists('tile_grass_0')) {
-            const pad = 2000;
-            const back = this.add.tileSprite(-pad, -pad, WORLD_W + pad * 2, WORLD_H + pad * 2, 'tile_grass_0')
-                .setOrigin(0, 0).setDepth(-10);
-            back.setTileScale(1.5, 1.5);
-        }
-
-        this.solids = this.physics.add.staticGroup();
         this.hiveEntries = [];
         this.hiveByTile = new Map();
         this.ambientBees = [];
         this.smokePuffs = [];
-        this.fireflies = [];
-        this.busyDialog = false;
-        this.lastDir = 'down';
-        this.lastStepTime = 0;
-        this.stepInterval = 350;
-
         this.weather = getWeather(this.registry);
+    }
 
-        this.drawApiary();
-        // Патч 66.46 (приказ 2): солнечный свет пасеки — до спавна героя
-        this.sunLight = attachSunLight(this, { shadowDepth: 0.35, overlayDepth: 92.5 });
+    /** Тени деревьев и ульёв (патч 66.46) — кастеры света пасеки. */
+    attachSunCasters() {
         this.sunLight.addCaster(() => {
             const pts = [];
             for (let y = 0; y < APIARY_ROWS; y++) {
@@ -142,28 +107,29 @@ export class ApiaryScene extends Phaser.Scene {
             });
             return pts;
         });
+    }
+
+    /** Ульи + дымокур с избушкой. */
+    spawnWorldObjects() {
         this.spawnHives();
         this.spawnSmudgeAndHut();
-        this.drawExitMarker();
-        this.spawnPlayer();
+    }
+
+    /** Жители пасеки рядом с точкой входа (раунд 27). */
+    onPlayerSpawned() {
+        this.drawApiaryNpcs();
+    }
+
+    /** Пчёлы-антураж после героя. */
+    afterSpawn() {
         this.spawnAmbientBees();
-        this.buildAtmosphere();
-        this.buildHUD();
+    }
 
-        // ----- Управление -----
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.wasd = this.input.keyboard.addKeys('W,A,S,D');
-        this.input.keyboard.on('keydown-E', () => this.tryInteract());
-        this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
-        this.input.keyboard.on('keydown-F1', () => this.showHelpDialog());
-        this.input.keyboard.on('keydown-ESC', () => this.scene.start('Title'));
-        this.virtualControls = new VirtualControls(this);
-
-        // ----- Режим охоты на вора (раунд 20/21): поиск следов на пасеке -----
+    /** Хвост create: охота на вора + встреча с вором (раунд 20/21). */
+    createTail() {
         if (this.hunt) {
             this.buildHuntUI();
         }
-
         // ----- ВСТРЕЧА С ВОРОМ (раунд 21): вор на пасеке — игрок видит его сразу -----
         if (isThiefAt(this.registry, 'apiary')) {
             this.time.delayedCall(400, () => {
@@ -257,7 +223,7 @@ export class ApiaryScene extends Phaser.Scene {
 
     // ================= ОТРИСОВКА =================
 
-    drawApiary() {
+    drawWorld() {   // крюк базового класса (бывш. drawApiary)
         for (let y = 0; y < APIARY_ROWS; y++) {
             for (let x = 0; x < APIARY_COLS; x++) {
                 const tile = apiaryTileAt(x, y);
@@ -439,55 +405,6 @@ export class ApiaryScene extends Phaser.Scene {
         this.smudgeSmokeOrigin = { x: sx, y: sy };
     }
 
-    drawExitMarker() {
-        const px = APIARY_EXIT.col * TS + TS / 2;
-        const py = APIARY_EXIT.row * TS + TS / 2;
-        const label = this.add.text(px, py - TS * 1.6, t('◀ К ОКОЛИЦЕ'), {
-            fontSize: '13px', color: '#E8DCC4', fontStyle: 'bold',
-            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 3,
-            backgroundColor: '#00000088', padding: { x: 5, y: 2 },
-        }).setOrigin(0.5).setDepth(0.7);
-        this.tweens.add({ targets: label, alpha: { from: 1, to: 0.55 }, duration: 1100, yoyo: true, repeat: -1 });
-    }
-
-    spawnPlayer() {
-        this.player = this.registry.get('player');
-        const pos = this.returnPos || {
-            x: APIARY_SPAWN.col * TS + TS / 2,
-            y: APIARY_SPAWN.row * TS + TS / 2,
-        };
-        const useComposite = this.player && this.player.useComposite && this.textures.exists('player_composite');
-        if (useComposite) {
-            this.playerObj = this.physics.add.sprite(pos.x, pos.y, 'player_composite');
-        } else {
-            this.playerObj = this.physics.add.sprite(pos.x, pos.y, this.player.sprite || 'player');
-            if (this.player.appearance && this.player.appearance.jacket) {
-                this.playerObj.setTint(this.player.appearance.jacket.tint);
-            }
-            this.playerObj.play(`${this.player.sprite || 'player'}_idle_down`);
-        }
-        // 66.37: × WORLD_K — листы персонажей 128px, фигуры прежнего размера;
-        // WORLD_BODY_PX — прежний мировой размер тела (68px кадра 128)
-        this.playerObj.setScale(TS / 32 * 0.75 * WORLD_K);
-        // Честный хитбокс (урок раунда 7): фигура в центре кадра
-        if (this.playerObj.body) this.playerObj.body.setSize(WORLD_BODY_PX, WORLD_BODY_PX, true);
-        this.playerObj.setCollideWorldBounds(true);
-        this.physics.add.collider(this.playerObj, this.solids);
-        this.playerObj.setDepth(this.playerObj.y / TS);
-        this.cameras.main.startFollow(this.playerObj, true, 0.1, 0.1);
-
-        // Тень под ногами — патч 66.46: СЛЕДЯЩАЯ, по солнцу
-        if (this.sunLight) this.sunLight.follow(this.playerObj, 12, 4.2, 1);
-
-        // ----- Раунд 27 (пп.6,8): ЖИТЕЛИ НА ПАСЕКЕ -----
-        // Пасечник Тарас (и иногда Марфа с травами) — по системе присутствия.
-        this.drawApiaryNpcs();
-    }
-
-    /**
-     * Раунд 27: NPC по расписанию (npcPresence.js) — пасечник(и) у избушки.
-     * Клик — разговор (полное дерево диалога или короткая реплика).
-     */
     drawApiaryNpcs() {
         const here = getNpcsAtPlace(this.registry, 'apiary');
         const hut = hutPos();
@@ -586,42 +503,11 @@ export class ApiaryScene extends Phaser.Scene {
         }
     }
 
-    buildAtmosphere() {
+    // ===== КРЮКИ АТМОСФЕРЫ/HUD/ЦИКЛА (общее — в OutdoorLocationBase) =====
+
+    /** Летняя пыльца/мошка — базовый класс зовёт между лучами и туманом. */
+    atmoMid() {
         const { width, height } = this.scale;
-
-        // Поляна светлее леса — лёгкая дымка кромки
-        this.add.rectangle(0, 0, width, height, 0x0a140a, 0.16)
-            .setOrigin(0).setDepth(94).setBlendMode(Phaser.BlendModes.MULTIPLY)
-            .setScrollFactor(0);
-
-        // День/ночь поверх дымки
-        const timeState = getTime(this.registry);
-        if (timeState) {
-            const overlay = getDayNightOverlay(timeState);
-            this.dayNightOverlay = this.add.rectangle(0, 0, width, height, overlay.color, overlay.alpha)
-                .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY).setScrollFactor(0);
-        }
-
-        // Лучи солнца — 3 штуки, мягче лесных
-        this.godRays = [];
-        for (let i = 0; i < 3; i++) {
-            const ray = this.add.rectangle(
-                (i + 0.5) * (width / 3) + (i % 2 === 0 ? -20 : 20),
-                -40 + (i % 2) * 20,
-                26 + (i * 17) % 30, height + 120,
-                0xfff2c0, 0.05,
-            ).setOrigin(0.5, 0).setAngle(i % 2 === 0 ? 10 : -9)
-                .setBlendMode(Phaser.BlendModes.ADD).setScrollFactor(0).setDepth(93);
-            this.godRays.push(ray);
-            this.tweens.add({
-                targets: ray,
-                alpha: { from: 0.03, to: 0.075 },
-                duration: 2800 + i * 500,
-                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            });
-        }
-
-        // Летняя пыльца/мошка — золотые искры медленно плывут
         this.pollenEmitter = this.add.particles(0, 0, 'particle_spark', {
             x: { min: 0, max: width },
             y: { min: height * 0.2, max: height + 10 },
@@ -636,181 +522,45 @@ export class ApiaryScene extends Phaser.Scene {
         });
         this.pollenEmitter.setScrollFactor(0);
         this.pollenEmitter.setDepth(97);
-
-        // Пара клочьев тумана на рассвете (тише лесного)
-        this.fogPuffs = [];
-        for (let i = 0; i < 5; i++) {
-            const puff = this.add.image(
-                Math.random() * WORLD_W, Math.random() * WORLD_H,
-                'fog_puff',
-            ).setScale(1.2 + Math.random() * 1.4)
-                .setAlpha(0.04)
-                .setDepth(96);
-            this.tweens.add({
-                targets: puff,
-                x: puff.x + (Math.random() - 0.5) * 70,
-                duration: 11000 + Math.random() * 6000,
-                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            });
-            this.fogPuffs.push(puff);
-        }
-
-        // ----- Погода (раунд 14): дождь/снег на пасеке. В осадки пчёлы спят -----
-        applyWeatherVisuals(this, { tintDepth: 94, precipDepth: 99 });
-
-        // Раунд 28 (п.4): утренний туман на пасеке (с рассвета до 9 утра)
-        addMorningFog(this, { width: WORLD_W, height: WORLD_H, yMin: 2 * TS, yMax: WORLD_H - 2 * TS, depth: 90 });
-
-        // Светлячки — ночные
-        for (let i = 0; i < 7; i++) {
-            const fx = (24 + Math.random() * (WORLD_W - 48));
-            const fy = (24 + Math.random() * (WORLD_H - 48));
-            const f = this.add.image(fx, fy, 'particle_spark')
-                .setScale(0.45).setTint(0xd8ffa0).setDepth(97).setVisible(false);
-            f.homeX = fx; f.homeY = fy;
-            f.phase = Math.random() * Math.PI * 2;
-            f.pulseSpeed = 0.002 + Math.random() * 0.0022;
-            this.fireflies.push(f);
-        }
     }
 
-    buildHUD() {
-        const { width, height } = this.scale;
+    /** Заголовок локации (иконку погоды добавит базовый класс). */
+    hudTitle() {
+        return { text: t('🐝 Пасека'), color: '#d8c078' };
+    }
 
-        // Название локации (под кнопками — урок раунда 11)
-        this.add.text(12, 34, t('🐝 Пасека') + (this.weather ? `  ${this.weather.icon}` : ''), {
-            fontSize: '15px', color: '#d8c078', fontStyle: 'bold',
-            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 3,
-        }).setScrollFactor(0).setDepth(102);
-
-        // Сводка состояния пчёл/дымокура (обновляется в updateHUD)
+    /** Сводка состояния пчёл/дымокура (текст обновляется в updateHUD). */
+    hudExtras() {
         this.beeHint = this.add.text(12, 54, '', {
             fontSize: '11px', color: '#c8b890',
             fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
         }).setScrollFactor(0).setDepth(102);
-
-        // Единый статус-бар (как в деревне/лесу)
-        this.statusText = this.add.text(12, 10, '', {
-            fontSize: '12px', color: '#E8DCC4',
-            stroke: '#000', strokeThickness: 2,
-        }).setScrollFactor(0).setDepth(102);
-
-        // Кнопки справа вверху: [Персонаж] [Инвентарь]
-        const btnY = 14, btnW = 70, btnH = 20;
-        const charBtnX = width - 220;
-        const charBtn = this.add.rectangle(charBtnX, btnY, btnW, btnH, 0x4a3520, 0.95)
-            .setStrokeStyle(1, 0xC9A961).setInteractive({ useHandCursor: true })
-            .setScrollFactor(0).setDepth(101);
-        this.add.text(charBtnX, btnY, t('📜 Персонаж'), {
-            fontSize: '11px', color: '#E8DCC4', stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
-        charBtn.on('pointerup', () => {
-            this.scene.pause();
-            this.scene.launch('Character', { from: 'Apiary' });
-        });
-
-        const invBtnX = width - 100;
-        const invBtn = this.add.rectangle(invBtnX, btnY, btnW, btnH, 0x4a3520, 0.95)
-            .setStrokeStyle(1, 0xC9A961).setInteractive({ useHandCursor: true })
-            .setScrollFactor(0).setDepth(101);
-        this.add.text(invBtnX, btnY, t('🎒 Инвентарь'), {
-            fontSize: '11px', color: '#E8DCC4', stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
-        invBtn.on('pointerup', () => {
-            this.scene.pause();
-            this.scene.launch('Character', { from: 'Apiary', tab: 'inventory' });
-        });
-
-        // Патч 66.75 (приказы 5–6 владельца): «⚙ Настройки» — панель звука в игре
-        addSettingsGearButton(this, width - 160, btnY);
-
-        // Подсказка взаимодействия внизу по центру
-        this.prompt = this.add.text(width / 2, height - 22, '', {
-            fontSize: '14px', color: '#E8DCC4', fontStyle: 'bold',
-            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 3,
-            backgroundColor: '#00000099', padding: { x: 10, y: 4 },
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setVisible(false);
-
-        this.updateHUD();
     }
 
-    // ================= ИГРОВОЙ ЦИКЛ =================
-
-    update(time) {
-        // Пока открыт диалог — мир ждёт (раунд 21: не даём End перебить
-        // финальный диалог встречи с вором)
-        if (this.busyDialog) {
-            this.playerObj.setVelocity(0, 0);
-            if (this.virtualControls) this.virtualControls.setVisible(false);
-            return;
-        }
-
-        // Патч 66.46 (приказ 2): тень героя следует за ним каждый кадр
-        if (this.sunLight) this.sunLight.updateFollowers();
-
-        const endState = checkGameEnd(this.registry);
-        // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
-        if (endState) {
-            if (!this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
-            return;
-        }
-
-        if (this.virtualControls) this.virtualControls.setVisible(true);
-
-        this.movePlayer();
+    /** Локальные актёры кадра: пчёлы-орбиты + рои-мерцания. */
+    updateActors(time) {
         this.updateAmbientBees(time);
-        this.updateNearestInteractable();
-        this.updateHUD();
     }
 
-    movePlayer() {
-        const speed = 160;
-        let vx = 0, vy = 0;
-        const joyMove = this.virtualControls ? this.virtualControls.getMovement() : null;
-        if (joyMove) {
-            vx = joyMove.x;
-            vy = joyMove.y;
-        } else {
-            if (this.cursors.left.isDown || this.wasd.A.isDown) vx = -1;
-            if (this.cursors.right.isDown || this.wasd.D.isDown) vx = 1;
-            if (this.cursors.up.isDown || this.wasd.W.isDown) vy = -1;
-            if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
+    updateHUD() {
+        // Сводка пасеки — как раньше, вне блока даты (beesActive терпит null)
+        if (this.beeHint) {
+            const active = beesActive(getTime(this.registry), this.weather);
+            this.beeHint.setText(active
+                ? `🐝 ${t('пчёлы кружат над ульями')}`
+                : `💤 ${t('пчёлы спят')}`);
         }
+        // §12.3 (66.96): общее ядро HUD — в OutdoorLocationBase.updateHUDCommon
+        this.updateHUDCommon();
+    }
 
-        // 66.68 (§9.3, P3): вектор переиспользуется — set() вместо new (см. create)
-        const v = this._moveVec.set(vx, vy);
-        if (v.length() > 0) {
-            v.normalize().scale(speed);
-            let dir = this.lastDir;
-            if (Math.abs(vy) >= Math.abs(vx)) dir = vy < 0 ? 'up' : 'down';
-            else dir = vx < 0 ? 'left' : 'right';
-
-            if (dir !== this.lastDir || !this.playerObj.anims.isPlaying) {
-                if (!this.player.useComposite) {
-                    this.playerObj.play(`${this.player.sprite || 'player'}_walk_${dir}`, true);
-                }
-                this.lastDir = dir;
-            }
-            const now = this.time.now;
-            if (now - this.lastStepTime > this.stepInterval) {
-                this.audioManager.playStep();
-                this.lastStepTime = now;
-                // Раунд 22 (п.5): 1 минута за шаг (было 0.25) — время течёт
-                // и во время ходьбы по пасеке (счётчик вора тикает)
-                // Патч 66.73: шаг — перемещение (голод ×1.5)
-                tickTime(this.registry, 1, 'walk');
-            }
-        } else if (!this.player.useComposite) {
-            this.playerObj.anims.pause();
-            // 66.68 (§9.3, P3): idle-ключ кэшируется по направлению
-            if (this.lastDir !== this._idleKeyDir) {
-                this._idleKeyDir = this.lastDir;
-                this._idleKey = `${this.player.sprite || 'player'}_idle_${this.lastDir}`;
-            }
-            this.playerObj.play(this._idleKey, true);
+    /** Пыльца днём ярче; отсвет углей дымокура — ночью ярче. */
+    afterHudCommon(dark, day) {
+        if (this.pollenEmitter) this.pollenEmitter.setAlpha(day > 0.3 ? 1 : 0.25);
+        // Отсвет углей дымокура: тлеет постоянно, ночью светит ярче
+        if (this.smudgeGlow) {
+            this.smudgeGlow.setAlpha(0.08 + dark * 0.2);
         }
-        this.playerObj.setVelocity(v.x, v.y);
-        this.playerObj.setDepth(this.playerObj.y / TS);
     }
 
     updateNearestInteractable() {
@@ -910,79 +660,4 @@ export class ApiaryScene extends Phaser.Scene {
         this.scene.start('Fork');
     }
 
-    showFloatingText(x, y, text, color = '#e8cc7a') {
-        const ft = this.add.text(x, y, text, {
-            fontSize: '13px', color, fontFamily: 'Arial, sans-serif',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5).setDepth(150);
-        this.tweens.add({
-            targets: ft,
-            y: y - 34,
-            alpha: { from: 1, to: 0 },
-            duration: 1600,
-            ease: 'Cubic.easeOut',
-            onComplete: () => ft.destroy(),
-        });
-    }
-
-    updateHUD() {
-        const p = this.player;
-        const timeState = getTime(this.registry);
-        const villageRep = getVillageRep(this.registry);
-        const moneyStr = formatMoney(p.dengas || 0);
-
-        // Раунд 46 (п.8 заявки): из статус-бара удалён «✦MP» (Воля — в свитке персонажа)
-        let statusLine = `❤${p.HP}/${p.HPmax}  💰${moneyStr}`;
-        if (timeState) statusLine += `  📅${formatDateTime(timeState)}`;
-        statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
-        // Патч 66.80 (п.11-в): лестница статусов
-        statusLine += villageRepStatusSuffix(this.registry);
-        this.statusText.setText(statusLine);
-
-        // ----- Сводка состояния пасеки (безопасно: пчёлы — только антураж) -----
-        if (this.beeHint) {
-            const active = beesActive(timeState, this.weather);
-            this.beeHint.setText(active
-                ? `🐝 ${t('пчёлы кружат над ульями')}`
-                : `💤 ${t('пчёлы спят')}`);
-        }
-
-        // ----- День/ночь: светлячки, лучи, дымокур -----
-        if (timeState) {
-            const overlay = getDayNightOverlay(timeState);
-            if (this.dayNightOverlay) {
-                this.dayNightOverlay.setFillStyle(overlay.color, overlay.alpha);
-            }
-            // Патч 66.46 (приказ 2): ход солнца — тени и тёплый свет
-            if (this.sunLight) this.sunLight.update(timeState);
-            const h = timeState.hour;
-            let dark = 0;
-            if (h >= 21 || h < 5) dark = 1;
-            else if (h >= 18) dark = (h - 18) / 3;
-            else if (h < 8) dark = (8 - h) / 3;
-
-            const now = this.time.now;
-            this.fireflies.forEach((f) => {
-                if (dark <= 0.35) {
-                    f.setVisible(false);
-                    return;
-                }
-                f.setVisible(true);
-                const pulse = 0.35 + 0.55 * Math.sin(now * f.pulseSpeed + f.phase);
-                f.setAlpha(dark * Math.max(0, pulse));
-                f.x = f.homeX + Math.sin(now * 0.0011 + f.phase) * 24;
-                f.y = f.homeY + Math.cos(now * 0.0009 + f.phase * 1.7) * 16;
-            });
-
-            const day = 1 - dark;
-            if (this.godRays) this.godRays.forEach(r => r.setAlpha(0.02 + day * 0.05));
-            if (this.fogPuffs) this.fogPuffs.forEach(fg => fg.setAlpha(0.03 + dark * 0.08));
-            if (this.pollenEmitter) this.pollenEmitter.setAlpha(day > 0.3 ? 1 : 0.25);
-
-            // Отсвет углей дымокура: тлеет постоянно, ночью светит ярче
-            if (this.smudgeGlow) {
-                this.smudgeGlow.setAlpha(0.08 + dark * 0.2);
-            }
-        }
-    }
 }

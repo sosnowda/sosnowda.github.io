@@ -9,6 +9,8 @@ import { ActionLog } from './actionLog.js';
 import { ARMORS, WEAPONS } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
 import { applyQuestFailurePenalty } from './reputation.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня/минуты на всю игру
+import { absDay, absMinute } from '../systems/gameCalendar.js';
 // Раунд 66.12 (п.5): сезонная привязка — зимой грибы/травы не выдаются
 import { getSeason } from '../systems/TimeSystem.js';
 // Патч 66.73: штраф голода (>48 ч без еды → −1% навыков) в getBlessedSkill
@@ -33,12 +35,10 @@ export const BLESSING_DURATION_MIN = 720;   // 12 часов действия
 export const BLESSING_COOLDOWN_MIN = 1440;  // 24 часа кулдауна получения
 export const BLESSING_SKILL_MULT = 1.1;     // +10% ко всем навыкам
 
-/** Абсолютная игровая минута (та же формула, что в meal.js/диалогах). */
+/** Абсолютная игровая минута — канон gameCalendar.absMinute (§12.3, 66.96). */
 function absMinutes(registry) {
     const time = registry ? registry.get('gameTime') : null;
-    if (!time) return 0;
-    const day = (time.yearFromChrist * 372) + (time.month * 31) + time.day;
-    return (day * 1440) + ((time.hour || 0) * 60) + (time.minute || 0);
+    return absMinute(time);
 }
 
 function blessingState(registry) {
@@ -985,7 +985,7 @@ export function hasActiveQuestFrom(registry, npcId) {
 /** Предлагал ли этот НПЦ дело сегодня. */
 function offeredToday(registry, npcId) {
     const time = registry.get('gameTime');
-    const day = time ? (time.yearFromChrist * 372 + time.month * 31 + time.day) : 0;
+    const day = time ? absDay(time) : 0;
     const st = registry.get('npcQuestOffered');
     if (!st || st.day !== day) return false;
     return (st.ids || []).includes(npcId);
@@ -1006,7 +1006,7 @@ export function canOfferQuestToday(registry, npcId) {
 /** Отметить: НПЦ предложил дело сегодня (после этого — только завтра). */
 function markOffered(registry, npcId) {
     const time = registry.get('gameTime');
-    const day = time ? (time.yearFromChrist * 372 + time.month * 31 + time.day) : 0;
+    const day = time ? absDay(time) : 0;
     const st = registry.get('npcQuestOffered') || { day, ids: [] };
     if (st.day !== day) { st.day = day; st.ids = []; }
     if (!st.ids.includes(npcId)) st.ids.push(npcId);

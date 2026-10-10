@@ -204,13 +204,13 @@ const location = read('src/scenes/LocationScene.js');
 ok(location.includes('2.5 * WORLD_K'), 'LocationScene: игрок × WORLD_K');
 ok((location.match(/scale \* WORLD_K/g) || []).length === 2,
    'LocationScene: НПЦ локаций и работники поля × WORLD_K [2]');
-const forest = read('src/scenes/ForestScene.js');
-ok(forest.includes('TS / 32 * 0.75 * WORLD_K') && forest.includes('body.setSize(WORLD_BODY_PX, WORLD_BODY_PX, true)'),
-   'ForestScene: игрок × WORLD_K + физтело');
+// 66.96: спавн героя леса/пасеки — в базовом классе OutdoorLocationBase
+const outdoorBase = read('src/systems/OutdoorLocationBase.js');
+ok(outdoorBase.includes('ts / 32 * 0.75 * WORLD_K') && outdoorBase.includes('body.setSize(WORLD_BODY_PX, WORLD_BODY_PX, true)'),
+   'Forest+Apiary (OutdoorLocationBase): игрок × WORLD_K + физтело');
 const apiary = read('src/scenes/ApiaryScene.js');
-ok(apiary.includes('TS / 32 * 0.75 * WORLD_K') && apiary.includes('body.setSize(WORLD_BODY_PX, WORLD_BODY_PX, true)') &&
-   apiary.includes('TS / 32 * 0.85 * WORLD_K'),
-   'ApiaryScene: игрок и жители × WORLD_K + физтело');
+ok(apiary.includes('TS / 32 * 0.85 * WORLD_K'),
+   'ApiaryScene: жители × WORLD_K + физтело');
 
 // ============================================================
 console.log('— 5. SW: site-cache v96, game-assets-v44 —');

@@ -54,6 +54,8 @@ import { skillCheck, opposedSkillCheck, formatOpposedCheck } from '../systems/BR
 import { ActionLog } from './actionLog.js';
 import { applyBeggingPenalty, changeVillageRep } from './reputation.js';
 import { getLocationById } from './mapLocations.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
+import { absDay } from '../systems/gameCalendar.js';
 import { tickTime } from '../systems/TimeSystem.js';
 // Патч 66.73 (приказ 16): обаяние беседы — ±5/±10 к разговорным проверкам
 import { chaAdjustedTalkSkill } from '../systems/charisma.js';
@@ -278,7 +280,7 @@ export function applyForestSequence(route) {
 export function worldMinutesOf(registry) {
     const ts = registry.get('gameTime');
     if (!ts) return 0;
-    return ((ts.yearFromChrist * 372 + ts.month * 31 + ts.day) * 24 + ts.hour) * 60 + (ts.minute || 0);
+    return (absDay(ts) * 24 + ts.hour) * 60 + (ts.minute || 0);
 }
 
 /**
@@ -319,7 +321,7 @@ export function washTracksByWeather(registry) {
     if (!isPrecip(weather)) return false;
     const ts = registry.get('gameTime');
     if (!ts) return false;
-    const dayStart = ((ts.yearFromChrist * 372 + ts.month * 31 + ts.day) * 24) * 60;
+    const dayStart = (absDay(ts) * 24) * 60;
     let washed = false;
     Object.keys(q.chase.traces).forEach((locId) => {
         const tr = q.chase.traces[locId];

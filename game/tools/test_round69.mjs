@@ -140,13 +140,15 @@ console.log('\n[3] ПЛАВНЫЕ ПОГОДНЫЕ ПЕРЕХОДЫ (п.2)');
     ok(src.includes("tI18n('Погода меняется')"), 'тост «Погода меняется» при смене');
     ok(src.includes("get('Погода меняется')") || src.includes('Погода меняется'), 'ключ «Погода меняется» — через i18n');
     ok(!src.includes('delayedCall(Phaser.Math.Between(7000, 16000)'), 'молнии больше не висят вечным delayedCall');
-    // сцены не изменили вызов (5 мест)
-    const scenes = ['ForestScene', 'ApiaryScene', 'LocationScene', 'VillageScene', 'CombatScene'];
+    // сцены не изменили вызов (5 мест; лес/пасека — через базу OutdoorLocationBase, 66.96)
+    const scenes = ['LocationScene', 'VillageScene', 'CombatScene'];
     let allUse = true;
     for (const s of scenes) {
         const code = read(`src/scenes/${s}.js`);
         if (!code.includes('applyWeatherVisuals(this,') && !code.includes('applyWeatherVisuals(')) allUse = false;
     }
+    const outdoorBase69 = read('src/systems/OutdoorLocationBase.js');
+    if (!outdoorBase69.includes('applyWeatherVisuals(this,')) allUse = false;
     ok(allUse, 'все 5 игровых сцен подключают плавную погоду');
 }
 

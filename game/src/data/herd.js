@@ -12,6 +12,8 @@
 // Модуль чистый (без Phaser) — работает в headless-тестах.
 
 import { getTime } from '../systems/TimeSystem.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
+import { absDay } from '../systems/gameCalendar.js';
 
 // Окна водопоя (УТРОМ И ВЕЧЕРОМ — п.2)
 export const HERD_WINDOWS = {
@@ -29,10 +31,8 @@ function hash01(str) {
     return (h >>> 0) / 4294967296;
 }
 
-function dayKeyOf(time) {
-    if (!time) return 0;
-    return time.yearFromChrist * 372 + time.month * 31 + time.day;
-}
+// Ключ дня для посевов/хешей стада — канон gameCalendar.absDay (§12.3, 66.96)
+const dayKeyOf = absDay;
 
 /**
  * Где стадо сейчас.

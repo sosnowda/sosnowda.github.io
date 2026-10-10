@@ -10,11 +10,11 @@
 // quest.chestsOpened — ИСТОРИЧЕСКОЕ имя ключа из раунда 11, оно уже лежит в
 // сейвах игроков. НЕ переименовывать.
 
-// Ключ игрового дня из timeState (та же формула, что в InteriorScene.dayKey)
+// Ключ игрового дня из timeState — канон gameCalendar.dayKey (§12.3, 66.96).
+// Имя dayKeyOf сохранено: пять сцен/систем импортируют его отсюда с раунда 66.10.
+import { dayKey as _canonicalDayKey } from '../systems/gameCalendar.js';
 export function dayKeyOf(timeState) {
-    return timeState
-        ? `${timeState.yearFromChrist}-${timeState.month}-${timeState.day}`
-        : 'unknown';
+    return _canonicalDayKey(timeState);
 }
 
 // Действие уже совершено сегодня? (читает quest.chestsOpened)

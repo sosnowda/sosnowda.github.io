@@ -146,10 +146,11 @@ console.log('— п.5: продажа добычи —');
 // ============================================================
 console.log('— п.6: ставка подёнки (+1 реп/сутки) —');
 {
-    const src = read('game/src/scenes/InteriorScene.js');
-    ok(src.includes("q66.dayworkRepDay !== today66"), 'подёнка: слава +1 не чаще раза в сутки');
-    ok(src.includes("changeVillageRep(this.registry, 1, 'подённая работа')"), 'начисление +1 к славе деревни');
-    ok(src.includes('dayKeyOf(getTime(this.registry))'), 'сутки считаются по игровому дню');
+    // 66.96: ставка подёнки — единый хелпер jobs.claimDayworkRep (было 4 копии)
+    const src = read('game/src/systems/jobs.js');
+    ok(src.includes('q.dayworkRepDay === today'), 'подёнка: слава +1 не чаще раза в сутки');
+    ok(src.includes("changeVillageRep(registry, 1, 'подённая работа')"), 'начисление +1 к славе деревни');
+    ok(src.includes('registry.get(\'gameTime\')') && src.includes('absDay(time)'), 'сутки считаются по игровому дню (канон gameCalendar.absDay)');
 }
 
 // ============================================================

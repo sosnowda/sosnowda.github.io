@@ -92,11 +92,10 @@ ok(typeof panel.addSettingsGearButton === 'function', 'экспорт addSetting
     ok(village.includes("import { addSettingsGearButton } from '../systems/SettingsPanel.js';"), 'VillageScene: импорт панели');
     ok(village.includes('addSettingsGearButton(this, width - 160, btnY);'), 'VillageScene: «⚙» в верхнем меню деревни');
 
-    const forest = read('game/src/scenes/ForestScene.js');
-    ok(forest.includes('addSettingsGearButton(this, width - 160, btnY);'), 'ForestScene: «⚙» в статус-баре леса');
-
-    const apiary = read('game/src/scenes/ApiaryScene.js');
-    ok(apiary.includes('addSettingsGearButton(this, width - 160, btnY);'), 'ApiaryScene: «⚙» в статус-баре пасеки');
+    // 66.96: «⚙» леса/пасеки — в базовом классе OutdoorLocationBase
+    const outdoorBase123 = read('game/src/systems/OutdoorLocationBase.js');
+    ok(outdoorBase123.includes('addSettingsGearButton(this, width - 160, btnY);'),
+        'Forest+Apiary (OutdoorLocationBase): «⚙» в статус-баре');
 
     const title = read('game/src/scenes/TitleScene.js');
     ok(/import \{ openSettingsPanel \} from '\.\.\/systems\/SettingsPanel\.js';/.test(title), 'TitleScene: импорт openSettingsPanel');

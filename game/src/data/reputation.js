@@ -25,6 +25,8 @@ import { ActionLog } from './actionLog.js';
 // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели кузнеца
 import { getNpcs, findNpc, spawnBlacksmithApprentice, BLACKSMITH_APPRENTICE_ID } from './npcNames.js';
 import { getTimeOfDay, getTime } from '../systems/TimeSystem.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
+import { absDay } from '../systems/gameCalendar.js';
 import { opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
 // Раунд 48 (п.4 заявки): встречные проверки «навык против навыка» /
 // «характеристика против характеристики» — параметры из базы жителей
@@ -331,7 +333,7 @@ export function donationRepAmount(amount) {
  */
 export function repActionAllowedToday(registry, npcId, kind) {
     const time = registry.get('gameTime');
-    const day = time ? (time.yearFromChrist * 372 + time.month * 31 + time.day) : 0;
+    const day = absDay(time);
     const st = registry.get('repActionsDay');
     if (!st || st.day !== day) return true;
     const key = `${npcId}:${kind}`;
@@ -340,7 +342,7 @@ export function repActionAllowedToday(registry, npcId, kind) {
 
 export function markRepActionDone(registry, npcId, kind) {
     const time = registry.get('gameTime');
-    const day = time ? (time.yearFromChrist * 372 + time.month * 31 + time.day) : 0;
+    const day = absDay(time);
     const st = registry.get('repActionsDay') || { day, done: {} };
     if (st.day !== day) { st.day = day; st.done = {}; }
     st.done[`${npcId}:${kind}`] = true;

@@ -218,9 +218,12 @@ console.log('— приказ 5: хардендинг очереди перех�
     const latchCore = 'this.__endQueued = true; this.scene.start(\'End\');';
     ok(read('game/src/scenes/VillageScene.js').split(latchCore).length - 1 === 3,
         'гард: VillageScene — 3 End-ветки с защёлкой');
-    for (const [f, n] of [['ForkScene.js', 'Fork'], ['LocationScene.js', 'Location'], ['ForestScene.js', 'Forest'], ['ApiaryScene.js', 'Apiary']]) {
+    for (const [f, n] of [['ForkScene.js', 'Fork'], ['LocationScene.js', 'Location']]) {
         ok(read('game/src/scenes/' + f).includes(latchCore), 'гард: ' + n + 'Scene — End-защёлка');
     }
+    // 66.96: защёлка Forest/Apiary — в базовом классе OutdoorLocationBase
+    ok(read('game/src/systems/OutdoorLocationBase.js').includes(latchCore),
+        'гард: Forest/Apiary (OutdoorLocationBase) — End-защёлка');
 }
 
 // ============================================================

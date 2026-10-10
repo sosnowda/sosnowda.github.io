@@ -25,6 +25,8 @@ import { getViraCandidates, payViraToElder, applyQuestRefusalPenalty } from './r
 import { craftDaywork } from '../systems/jobs.js';
 import { spendFatigue } from '../systems/fatigue.js';
 import { addItem } from '../systems/loot.js';
+// §12.3 (66.96): единый игровой календарь — один строковый ключ дня на всю игру
+import { dayKey as gameCalendarDayKey } from '../systems/gameCalendar.js';
 
 /**
  * Раунд 22 (п.3): повторный расспрос того же NPC НЕВОЗМОЖЕН.
@@ -3074,7 +3076,7 @@ function buildWeatherTalk(dialogId, startNode) {
             if (!node) return;
             const reg = scene.registry;
             const ts = getTime(reg);
-            const dayKey = ts ? `${ts.yearFromChrist}-${ts.month}-${ts.day}` : 'unknown';
+            const dayKey = gameCalendarDayKey(ts);
 
             // один ответ о погоде от одного НПЦ в день (без накрутки счётчика)
             const prev = reg.get('weatherAsked');

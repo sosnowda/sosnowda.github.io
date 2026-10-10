@@ -36,6 +36,8 @@ import { t, tf } from './i18n.js';
 import { ActionLog } from '../data/actionLog.js';
 import { getReputation, getVillageRep, changeVillageRepExact } from '../data/reputation.js';
 import { opposedSkillCheck, formatOpposedCheck } from './BRPEngine.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
+import { absDay } from './gameCalendar.js';
 import { getNpcOpposition } from '../data/npcStats.js';
 import { getChaEdgeMod, clearChaEdge } from './charisma.js';
 import { getSeason } from './TimeSystem.js';
@@ -49,10 +51,9 @@ export const WEEK_FORGET_STEP = 1;
 /** Сколько недель можно «наверстать» за один тик (защита от скачков времени). */
 export const WEEK_FORGET_MAX_CATCHUP = 4;
 
-/** Ключ игровой недели (неделя = 7 игровых дней; та же формула, что в crime.js). */
+/** Ключ игровой недели (неделя = 7 игровых дней; канон gameCalendar, §12.3). */
 export function repWeekKeyOf(timeState) {
-    if (!timeState) return 0;
-    return Math.floor(((timeState.yearFromChrist * 372) + (timeState.month * 31) + timeState.day) / 7);
+    return Math.floor(absDay(timeState) / 7);
 }
 
 /**
@@ -210,11 +211,10 @@ export const WAGE_DEAL_SUCCESS_MULT = 1.25;
 /** Торг о ставке: крит (+50%). */
 export const WAGE_DEAL_CRITICAL_MULT = 1.5;
 
-/** Ключ игрового дня (та же формула, что в trade.js/meal.js). */
+/** Ключ игрового дня — канон gameCalendar.absDay (§12.3, 66.96). */
 function wageDealDayKey(registry) {
     const time = registry ? registry.get('gameTime') : null;
-    if (!time) return 0;
-    return (time.yearFromChrist * 372) + (time.month * 31) + time.day;
+    return absDay(time);
 }
 
 function wageDealStateOf(registry) {

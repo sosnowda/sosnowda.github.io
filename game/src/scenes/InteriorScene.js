@@ -8,6 +8,8 @@ import AudioManager from '../systems/AudioManager.js';
 import { attachCraftAudio } from '../systems/CraftAudio.js';
 import SaveManager from '../systems/SaveManager.js';
 import { createButton, createDialog, bindRestartOnResize, addSceneMenuButtons, closeAllSingletonDialogs } from '../utils/ui.js';
+// §12.3 (66.96): панели меню с трекингом объектов массивом (вместо сноса по depth)
+import { MenuPanel } from '../utils/MenuPanel.js';
 import { ActionLog } from '../data/actionLog.js';
 import { checkGameEnd, askMoneyForHelp, isChaseActive } from '../data/thief.js';
 import { ARMORS, WEAPONS, formatMoney, equipWeapon, equipArmor } from '../systems/Character.js';
@@ -71,7 +73,9 @@ import { restFatigueFull, fatigueStatusLine, spendFatigue } from '../systems/fat
 // Патч 66.73 (приказ 5): ТОРГ — продажа через меню торговли с торгом за цену
 import { attemptHaggle, haggleMultFor, canHaggleToday, haggleHintLine } from '../systems/trade.js';
 // Патч 66.74 (приказы 4, 5, 7, 12): РЕМЕСЛО/КУЗНЕЧНОЕ ДЕЛО/ГРАМОТА/СКОМОРОШЕСТВО
-import { craftDaywork, smithyDaywork, acolyteServe, tavernPerformance, carpenterDaywork, millDaywork, weaveDaywork } from '../systems/jobs.js';
+import { craftDaywork, smithyDaywork, acolyteServe, tavernPerformance, carpenterDaywork, millDaywork, weaveDaywork, claimDayworkRep } from '../systems/jobs.js';
+// §12.3 (66.96): канон строкового ключа дня — gameCalendar.dayKey
+import { dayKey as gameCalendarDayKey } from '../systems/gameCalendar.js';
 // Патч 66.76 (приказы 8–9): заказные товары кузнеца (сабля/кольчуга) —
 // цены и порог личной репутации у кузнеца
 import { SABRE_SMITH_PRICE, CHAIN_SMITH_PRICE, SMITH_TRUST_REP, canBuySmithSpecial } from '../systems/shopRules.js';
@@ -1197,13 +1201,13 @@ export class InteriorScene extends Phaser.Scene {
         const npcName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : interior.npcName;
         const { width, height } = this.scale;
         
-        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
-            .setOrigin(0).setInteractive().setDepth(200);
-        const panelW = 500, panelH = 450;
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
-            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+        // §12.3 (66.96): панель с трекингом объектов массивом (MenuPanel);
+        // алиасы overlay/panel оставлены для ссылок внутри метода
+        const menu = this._menu = this._giftMenu = new MenuPanel(this, { panelW: 500, panelH: 450 });
+        const overlay = menu.overlay, panel = menu.panel;
+        const panelW = menu.panelW, panelH = menu.panelH;
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 25, tf(t('Подарить {0}'), npcName), {
+        menu.text(width / 2, height / 2 - panelH / 2 + 25, tf(t('Подарить {0}'), npcName), {
             fontSize: '18px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
@@ -1212,7 +1216,7 @@ export class InteriorScene extends Phaser.Scene {
         let y = height / 2 - panelH / 2 + 65;
 
         // Подарить деньги (10 д.)
-        createButton(this, width / 2, y, t('💸 Подарить 10 денег'), () => {
+        menu.button( width / 2, y, t('💸 Подарить 10 денег'), () => {
             if ((player.dengas || 0) < 10) {
                 createDialog(this, t('Подарок'), t('Не хватает денег!'), [{ text: t('Понятно'), callback: () => {} }],
                     { singleton: false, portraitKey: interior.portrait });
@@ -1235,7 +1239,7 @@ export class InteriorScene extends Phaser.Scene {
         y += 35;
 
         // Подарить деньги (50 д.)
-        createButton(this, width / 2, y, t('💸 Подарить 50 денег'), () => {
+        menu.button( width / 2, y, t('💸 Подарить 50 денег'), () => {
             if ((player.dengas || 0) < 50) {
                 createDialog(this, t('Подарок'), t('Не хватает денег!'), [{ text: t('Понятно'), callback: () => {} }],
                     { singleton: false, portraitKey: interior.portrait });
@@ -1264,7 +1268,7 @@ export class InteriorScene extends Phaser.Scene {
         // кузницей и боевой системой.
 
         if (player.inventory && player.inventory.length > 0) {
-            this.add.text(width / 2, y, t('Предметы из инвентаря:'), {
+            menu.text(width / 2, y, t('Предметы из инвентаря:'), {
                 fontSize: '13px', color: RUS.textDim,
             }).setOrigin(0.5).setDepth(202);
             y += 25;
@@ -1284,7 +1288,7 @@ export class InteriorScene extends Phaser.Scene {
                 const giftValue = Math.round(itemPrice * 0.5); // п.6: ценность = цена × 0.5
                 const itemLabel = `${item.name}${item.count > 1 ? ' ×' + item.count : ''} (${t('ценность')} ${giftValue})`;
 
-                createButton(this, width / 2, y, `📦 ${itemLabel}`, () => {
+                menu.button( width / 2, y, `📦 ${itemLabel}`, () => {
                     // Удаляем один предмет
                     item.count--;
                     if (item.count <= 0) {
@@ -1307,7 +1311,7 @@ export class InteriorScene extends Phaser.Scene {
         }
 
         // Закрыть
-        createButton(this, width / 2, height / 2 + panelH / 2 - 25, t('Закрыть'), () => {
+        menu.button( width / 2, height / 2 + panelH / 2 - 25, t('Закрыть'), () => {
             this._closeGiftMenu(overlay, panel);
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
@@ -1315,10 +1319,10 @@ export class InteriorScene extends Phaser.Scene {
         }).setDepth(202);
     }
 
-    _closeGiftMenu(overlay, panel) {
-        overlay.destroy();
-        panel.destroy();
-        this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+    _closeGiftMenu() {
+        // §12.3 (66.96): точечное закрытие по массиву трекинга (был снос по depth)
+        this._giftMenu?.close();
+        this._giftMenu = null;
     }
 
     // === Пункт 11: Похвалить NPC ===
@@ -1574,27 +1578,26 @@ export class InteriorScene extends Phaser.Scene {
         const modNote = priceMod < 1 ? t(' (скидка за добрую славу)') : (priceMod > 1 ? t(' (наценка за дурную славу)') : '');
 
         // Подложка
-        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
-            .setOrigin(0).setInteractive().setDepth(200);
-        const panelW = 560, panelH = 440;
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
-            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+        // §12.3 (66.96): панель с трекингом объектов массивом (MenuPanel)
+        const menu = this._menu = new MenuPanel(this, {
+            panelW: 560, panelH: 440,
+            onClose: () => {
+                // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
+                resumeWorldClock(this.registry);
+            },
+        });
+        const overlay = menu.overlay, panel = menu.panel;
+        const panelW = menu.panelW, panelH = menu.panelH;
 
-        const closeMenu = () => {
-            overlay.destroy();
-            panel.destroy();
-            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
-            // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
-            resumeWorldClock(this.registry);
-        };
+        const closeMenu = () => menu.close();
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 30, market.title || interior.name, {
+        menu.text(width / 2, height / 2 - panelH / 2 + 30, market.title || interior.name, {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 62,
+        menu.text(width / 2, height / 2 - panelH / 2 + 62,
             `${t('Денег:')} ${formatMoney(player.dengas || 0)}${modNote}`, {
             fontSize: '15px', color: '#c9a14a',
             stroke: '#000', strokeThickness: 1,
@@ -1616,7 +1619,7 @@ export class InteriorScene extends Phaser.Scene {
             } else if (item.note) {
                 desc += ` (${t(item.note)})`;
             }
-            createButton(this, width / 2, y, desc, () => {
+            menu.button( width / 2, y, desc, () => {
                 if (!canAfford) {
                     createDialog(this, interior.name, t('Не хватает денег!'), [
                         { text: t('Понятно'), callback: () => {} },
@@ -1678,7 +1681,7 @@ export class InteriorScene extends Phaser.Scene {
         });
 
         // Кнопка закрытия
-        createButton(this, width / 2, height / 2 + panelH / 2 - 34, t('Закрыть'), closeMenu, {
+        menu.button( width / 2, height / 2 + panelH / 2 - 34, t('Закрыть'), closeMenu, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
             fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
         }).setDepth(202);
@@ -1722,19 +1725,18 @@ export class InteriorScene extends Phaser.Scene {
 
         const { width, height } = this.scale;
         // Подложка
-        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
-            .setOrigin(0).setInteractive().setDepth(200);
-        const panelW = 500, panelH = 420;
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
-            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+        // §12.3 (66.96): панель с трекингом объектов массивом (MenuPanel)
+        const menu = this._menu = new MenuPanel(this, { panelW: 500, panelH: 420 });
+        const overlay = menu.overlay, panel = menu.panel;
+        const panelW = menu.panelW, panelH = menu.panelH;
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 30, t('Постоялый двор «У дороги» — меню'), {
+        menu.text(width / 2, height / 2 - panelH / 2 + 30, t('Постоялый двор «У дороги» — меню'), {
             fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 65,
+        menu.text(width / 2, height / 2 - panelH / 2 + 65,
             `${t('Денег:')} ${formatMoney(player.dengas || 0)}${modNote}`, {
             fontSize: '17px', color: '#c9a14a',
             stroke: '#000', strokeThickness: 1,
@@ -1749,7 +1751,7 @@ export class InteriorScene extends Phaser.Scene {
             const btnLabel = creditFood && !canAfford
                 ? `${t(item.name)} — ${item.price} ${t('д.')} (${item.effect}) · ${t('в долг')}`
                 : `${t(item.name)} — ${item.price} ${t('д.')} (${item.effect})`;
-            createButton(this, width / 2, y, btnLabel, () => {
+            menu.button( width / 2, y, btnLabel, () => {
                 if (!canAfford) {
                     // Патч 66.82 (пп.2,4): денег нет — еда в ДОЛГ у трактирщика
                     // (только хлеб и каша; хмельного в долг не дают)
@@ -1773,9 +1775,9 @@ export class InteriorScene extends Phaser.Scene {
                 ActionLog.add(this.registry, tf(t('Купил и съел «{0}» на постоялом дворе за {1} д. (+{2} HP, час времени).'), t(item.name), item.price, item.heal));
                 this.updateHUD();
                 // Закрыть меню и открыть заново с обновлённым балансом
-                overlay.destroy();
-                panel.destroy();
-                this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+                // (§12.3: точечное закрытие по массиву трекинга; время остаётся
+                // на паузе — панель тут же открывается заново)
+                menu.close();
                 this.showTavernShop();
             }, {
                 backgroundColor: canAfford ? 0x3a5a3a : 0x3a3a3a,
@@ -1786,11 +1788,10 @@ export class InteriorScene extends Phaser.Scene {
         });
 
         // Кнопка закрытия
-        createButton(this, width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), () => {
-            overlay.destroy();
-            panel.destroy();
-            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+        menu.button( width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), () => {
+            // §12.3 (66.96): точечное закрытие по массиву трекинга;
             // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
+            menu.close();
             resumeWorldClock(this.registry);
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
@@ -1837,11 +1838,10 @@ export class InteriorScene extends Phaser.Scene {
                     this.registry.set('player', player);
                     ActionLog.add(this.registry, tf(t('Взял «{0}» в долг и съел сразу (+{1} HP, час времени).'), t(item.name), item.heal));
                     this.updateHUD();
-                    // ПАТЧ 66.82 (QA-фикс): убрать панель лавки ПОЛНОСТЬЮ —
-                    // подложка (d200), пергамент (d201) и кнопки (d202); раньше
-                    // уничтожались только кнопки — невидимая подложка оставалась
-                    // и блокировала ВСЕ клики по нижней панели интерьеров.
-                    this.children.list.filter(c => c.depth >= 200 && c.depth <= 205).forEach(c => c.destroy());
+                    // ПАТЧ 66.82 (QA-фикс, §12.3): панель лавки убирается
+                    // ПОЛНОСТЬЮ — точечным закрытием по массиву трекинга MenuPanel
+                    // (подложка + пергамент + кнопки; раньше — снос по depth 200..205)
+                    this._menu?.close();
                     this.showTavernShop(); // обновлённая лавка (баланс и долг)
                 } },
                 { text: t('Отказаться'), callback: () => {} },
@@ -2032,29 +2032,27 @@ export class InteriorScene extends Phaser.Scene {
         // строки краденого отсюда убраны (только Скупщик по ночам).
         const rows = sellableLoot(player).filter(r => !r.stolen);
         const hasStolen = sellableLoot(player).some(r => r.stolen);
-        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
-            .setOrigin(0).setInteractive().setDepth(200);
         // Патч 66.73 (п.2, аудит размеров): высота панели РАСТЁТ по числу
         // товаров — раньше фиксированные 420px при 8+ видах добычи выталкивали
         // нижние строки и кнопку «Закрыть» за пергамент. Потолок — 88% экрана.
         const panelW = 560;
         const panelH = Math.min(Math.round(height * 0.88), 160 + rows.length * 52 + 78);
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
-            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+        // §12.3 (66.96): панель с трекингом объектов массивом (MenuPanel)
+        const menu = this._menu = new MenuPanel(this, { panelW, panelH });
+        const overlay = menu.overlay, panel = menu.panel;
         const closeMenu = () => {
-            overlay.destroy(); panel.destroy();
-            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+            menu.close();
             this.__sellLootOpen = false;
             // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
             resumeWorldClock(this.registry);
         };
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 30,
+        menu.text(width / 2, height / 2 - panelH / 2 + 30,
             isButcher ? t('Столешня Потапа — скупка добычи') : t('Кухня Фёдора — скупка добычи'), {
                 fontSize: '24px', color: '#C9A961', fontStyle: 'bold',
                 fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(202);
-        this.add.text(width / 2, height / 2 - panelH / 2 + 62,
+        menu.text(width / 2, height / 2 - panelH / 2 + 62,
             `${t('Денег:')} ${formatMoney(player.dengas || 0)}`, {
                 fontSize: '17px', color: '#c9a14a', stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5).setDepth(202);
@@ -2062,7 +2060,7 @@ export class InteriorScene extends Phaser.Scene {
         // дублировалась в каждой строке списка и вынуждала держать мелкий кегль)
         // Патч 66.73 (приказ 5): рядом — строка состояния торга
         // Патч 66.78 (пп.4–5): краденое здесь НЕ СДАЮТ — только Скупщику по ночам
-        this.add.text(width / 2, height / 2 - panelH / 2 + 88,
+        menu.text(width / 2, height / 2 - panelH / 2 + 88,
             t('Печёное и жаркое дороже сырого') + '  ·  ' + haggleHintLine(this.registry, buyerNpcId)
             + '  ·  ' + (hasStolen
                 ? t('Краденое честным скупщикам не сбыть — только Скупщику по ночам')
@@ -2072,7 +2070,7 @@ export class InteriorScene extends Phaser.Scene {
             }).setOrigin(0.5).setDepth(202);
 
         if (rows.length === 0) {
-            this.add.text(width / 2, height / 2 - 10,
+            menu.text(width / 2, height / 2 - 10,
                 t('В узле нет добычи. Настреляй дичи из лука, налови рыбы на броду — или раздери волка.'), {
                     fontSize: '16px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
                     align: 'center',
@@ -2084,11 +2082,11 @@ export class InteriorScene extends Phaser.Scene {
             const y = startY + i * 52;
             const def = row.def;
             const unitPrice = priceOf(row.price); // патч 66.73: цена с учётом торга (краденое отсюда убрано — 66.78)
-            this.add.text(width / 2 - panelW / 2 + 30, y - 22,
+            menu.text(width / 2 - panelW / 2 + 30, y - 22,
                 `${def.emoji} ${t(def.name)} ×${row.count} — ${unitPrice} ${t('д.')}`, {
                     fontSize: '15px', color: RUS.text, stroke: '#000', strokeThickness: 1,
                 }).setOrigin(0, 0.5).setDepth(202);
-            createButton(this, width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), unitPrice), () => {
+            menu.button( width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), unitPrice), () => {
                 removeFromEntry(player, row.entry, 1); // патч 66.77: из конкретной кучки
                 player.dengas = (player.dengas || 0) + unitPrice;
                 this.registry.set('player', player);
@@ -2104,7 +2102,7 @@ export class InteriorScene extends Phaser.Scene {
                 fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 },
             }).setDepth(202);
             if (row.count > 1) {
-                createButton(this, width / 2 + 205, y + 4, tf(t('Всё ({0} д.)'), unitPrice * row.count), () => {
+                menu.button( width / 2 + 205, y + 4, tf(t('Всё ({0} д.)'), unitPrice * row.count), () => {
                     const n = row.count;
                     removeFromEntry(player, row.entry, n); // патч 66.77: из конкретной кучки
                     player.dengas = (player.dengas || 0) + unitPrice * n;
@@ -2139,20 +2137,20 @@ export class InteriorScene extends Phaser.Scene {
                 { singleton: false, portraitKey });
         };
         if (canHaggleToday(this.registry, buyerNpcId)) {
-            createButton(this, width / 2 - 180, haggleY, t('⚖ Сметить (Сметка)'), () => {
+            menu.button( width / 2 - 180, haggleY, t('⚖ Сметить (Сметка)'), () => {
                 const res = attemptHaggle(this.registry, buyerNpcId, (player.skills && player.skills.commerce) || 10, { skillLabel: 'Сметка' });
                 haggleResult(res, interior, isButcher ? 'portrait_peasant' : 'portrait_tavernkeeper');
             }, haggleOpts).setDepth(202);
-            createButton(this, width / 2 - 20, haggleY, t('🤝 Поторговаться'), () => {
+            menu.button( width / 2 - 20, haggleY, t('🤝 Поторговаться'), () => {
                 const res = attemptHaggle(this.registry, buyerNpcId, player.skills.persuade);
                 haggleResult(res, interior, isButcher ? 'portrait_peasant' : 'portrait_tavernkeeper');
             }, haggleOpts).setDepth(202);
-            createButton(this, width / 2 + 140, haggleY, t('Закрыть'), closeMenu, {
+            menu.button( width / 2 + 140, haggleY, t('Закрыть'), closeMenu, {
                 backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
                 fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
             }).setDepth(202);
         } else {
-            createButton(this, width / 2, haggleY, t('Закрыть'), closeMenu, {
+            menu.button( width / 2, haggleY, t('Закрыть'), closeMenu, {
                 backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
                 fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
             }).setDepth(202);
@@ -2178,36 +2176,37 @@ export class InteriorScene extends Phaser.Scene {
         pauseWorldClock(this.registry);
         const { width, height } = this.scale;
         const rows = sellableLoot(player).filter(r => r.stolen);
-        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
-            .setOrigin(0).setInteractive().setDepth(200);
         const panelW = 560;
         const panelH = Math.min(Math.round(height * 0.88), 190 + rows.length * 52 + 78);
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x161420, 1)
-            .setStrokeStyle(3, 0x4a3a5a).setDepth(201);
+        // §12.3 (66.96): панель с трекингом объектов массивом (MenuPanel);
+        // тёмная тема Скупщика — те же цвета, что были у самодельной панели
+        const menu = this._menu = new MenuPanel(this, {
+            panelW, panelH, veilAlpha: 0.85, panelColor: 0x161420, panelStroke: 0x4a3a5a,
+        });
+        const overlay = menu.overlay, panel = menu.panel;
         const closeMenu = () => {
-            overlay.destroy(); panel.destroy();
-            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
+            menu.close();
             // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
             resumeWorldClock(this.registry);
         };
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 30,
+        menu.text(width / 2, height / 2 - panelH / 2 + 30,
             t('Тёмный угол постоялого двора — Скупщик'), {
                 fontSize: '22px', color: '#b09ad0', fontStyle: 'bold',
                 fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(202);
-        this.add.text(width / 2, height / 2 - panelH / 2 + 62,
+        menu.text(width / 2, height / 2 - panelH / 2 + 62,
             `${t('Денег:')} ${formatMoney(player.dengas || 0)}`, {
                 fontSize: '16px', color: '#c9a14a', stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5).setDepth(202);
-        this.add.text(width / 2, height / 2 - panelH / 2 + 88,
+        menu.text(width / 2, height / 2 - panelH / 2 + 88,
             t('Краденое уходит без торга · каждая продажа — молва хуже (репутация −1)'), {
                 fontSize: '13px', color: RUS.textDim, fontStyle: 'italic',
                 stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5).setDepth(202);
 
         if (rows.length === 0) {
-            this.add.text(width / 2, height / 2,
+            menu.text(width / 2, height / 2,
                 t('«Пусто, что ли принёс? Мне честное не надо — только краденое.»'), {
                     fontSize: '15px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
                     align: 'center',
@@ -2240,11 +2239,11 @@ export class InteriorScene extends Phaser.Scene {
             const y = startY + i * 52;
             const def = row.def;
             const unitPrice = row.price; // fencePriceOf уже в row.price (20% скупки)
-            this.add.text(width / 2 - panelW / 2 + 30, y - 22,
+            menu.text(width / 2 - panelW / 2 + 30, y - 22,
                 `${def.emoji} ${t(def.name)} ×${row.count} — ${unitPrice} ${t('д.')}${t(' — краденое')}`, {
                     fontSize: '15px', color: '#d8c8a8', stroke: '#000', strokeThickness: 1,
                 }).setOrigin(0, 0.5).setDepth(202);
-            createButton(this, width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), unitPrice), () => {
+            menu.button( width / 2 + 60, y + 4, tf(t('Продать 1 ({0} д.)'), unitPrice), () => {
                 // ПАТЧ 66.78 (приказ 6): ПЕРВАЯ продажа — красный поп-ап
                 if (!fenceWarnedOnce(this.registry)) {
                     markFenceWarned(this.registry);
@@ -2264,7 +2263,7 @@ export class InteriorScene extends Phaser.Scene {
                 fontSize: 14, padding: { left: 10, right: 10, top: 6, bottom: 6 },
             }).setDepth(202);
             if (row.count > 1) {
-                createButton(this, width / 2 + 205, y + 4, tf(t('Всё ({0} д.)'), unitPrice * row.count), () => {
+                menu.button( width / 2 + 205, y + 4, tf(t('Всё ({0} д.)'), unitPrice * row.count), () => {
                     if (!fenceWarnedOnce(this.registry)) {
                         markFenceWarned(this.registry);
                         closeMenu();
@@ -2285,7 +2284,7 @@ export class InteriorScene extends Phaser.Scene {
             }
         });
 
-        createButton(this, width / 2, height / 2 + panelH / 2 - 34, t('Закрыть'), closeMenu, {
+        menu.button( width / 2, height / 2 + panelH / 2 - 34, t('Закрыть'), closeMenu, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
             fontSize: 15, padding: { left: 24, right: 24, top: 7, bottom: 7 },
         }).setDepth(202);
@@ -2788,29 +2787,27 @@ export class InteriorScene extends Phaser.Scene {
             return;
         }
 
-        // Подложка
-        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
-            .setOrigin(0).setInteractive().setDepth(200);
+        // §12.3 (66.96): панель с трекингом объектов массивом (MenuPanel)
         const panelW = 600, panelH = 560;  // 66.71: 560 — 9 строк ассортимента (4 дробящих + нож/копьё/топор/лук/стрелы)
-        const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x241B15, 1)
-            .setStrokeStyle(3, 0xC9A961).setDepth(201);
+        const menu = this._menu = new MenuPanel(this, {
+            panelW, panelH,
+            onClose: () => {
+                // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
+                resumeWorldClock(this.registry);
+            },
+        });
+        const overlay = menu.overlay, panel = menu.panel;
 
-        const closeMenu = () => {
-            overlay.destroy();
-            panel.destroy();
-            this.children.list.filter(c => c.depth === 202).forEach(c => c.destroy());
-            // Патч 66.78 (приказ 9): панель закрыта — реальное время снова идёт
-            resumeWorldClock(this.registry);
-        };
+        const closeMenu = () => menu.close();
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 30,
+        menu.text(width / 2, height / 2 - panelH / 2 + 30,
             smithId === 'blacksmith' ? t('Кузница Данилы') : tf(t('Кузница — {0}'), smithName), {
             fontSize: '22px', color: '#C9A961', fontStyle: 'bold',
             fontFamily: 'Georgia, serif',
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(202);
 
-        this.add.text(width / 2, height / 2 - panelH / 2 + 65,
+        menu.text(width / 2, height / 2 - panelH / 2 + 65,
             `${t('Денег:')} ${formatMoney(player.dengas || 0)}`, {
             fontSize: '16px', color: '#c9a14a',
             stroke: '#000', strokeThickness: 1,
@@ -2820,7 +2817,7 @@ export class InteriorScene extends Phaser.Scene {
         // удалена. ПАТЧ 66.76 (приказ 8) ВОЗВРАЩАЕТ её с ОДНИМ заказным
         // товаром — КОЛЬЧУГОЙ (задорого и при высокой репутации у кузнеца);
         // кожаная броня и тегиляй продаются у Аверьяна (приказ 7).
-        const mkTab = (x, label, key) => createButton(this, x, height / 2 - panelH / 2 + 100, t(label), () => {
+        const mkTab = (x, label, key) => menu.button( x, height / 2 - panelH / 2 + 100, t(label), () => {
             closeMenu();
             this.showBlacksmithShop(key);
         }, {
@@ -2848,11 +2845,11 @@ export class InteriorScene extends Phaser.Scene {
                 it && (it.type === 'weapon' || it.type === 'armor') && (it.count || 0) > 0
                 && it.id !== player.weaponId && it.id !== player.armorId
                 && !it.uniqueFromElder);
-            this.add.text(width / 2, startY - 20, t('Продать можно лишь то, что не надето на тебя (полцены):'), {
+            menu.text(width / 2, startY - 20, t('Продать можно лишь то, что не надето на тебя (полцены):'), {
                 fontSize: '12px', color: RUS.textDim,
             }).setOrigin(0.5).setDepth(202);
             if (sellables.length === 0) {
-                this.add.text(width / 2, startY + 40, t('В узле нечего продать — всё надето или пусто.'), {
+                menu.text(width / 2, startY + 40, t('В узле нечего продать — всё надето или пусто.'), {
                     fontSize: '14px', color: RUS.textDim,
                 }).setOrigin(0.5).setDepth(202);
             }
@@ -2862,7 +2859,7 @@ export class InteriorScene extends Phaser.Scene {
                     || (ARMORS[item.id] && ARMORS[item.id].price) || 10;
                 const sellPrice = Math.max(1, Math.floor(base / 2));
                 const label = `💰 ${t(item.name)} — ${sellPrice} ${t('д.')} (${t('полцены')})`;
-                createButton(this, width / 2, y, label, () => {
+                menu.button( width / 2, y, label, () => {
                     item.count -= 1;
                     if (item.count <= 0) {
                         player.inventory = player.inventory.filter(x => x !== item);
@@ -2897,12 +2894,12 @@ export class InteriorScene extends Phaser.Scene {
                 : [];
 
             if (tab === 'weapon') {
-                this.add.text(width / 2, height / 2 + panelH / 2 - 44,
+                menu.text(width / 2, height / 2 + panelH / 2 - 44,
                     t('Меч — награда старосты. Сабля и кольчуга — заказные: задорого и только своим людям кузнецу. Стрелы — пачками по 10.'), {
                     fontSize: '11px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
                 }).setOrigin(0.5).setDepth(202);
             } else if (tab === 'armor') {
-                this.add.text(width / 2, height / 2 + panelH / 2 - 44,
+                menu.text(width / 2, height / 2 + panelH / 2 - 44,
                     t('Тегиляй и кожаную броню шьёт ремесленник Аверьян. Кольчуга — кузнец куёт на заказ: 150 д. и только при высокой репутации у кузнеца.'), {
                     fontSize: '11px', color: RUS.textDim, wordWrap: { width: panelW - 60 },
                 }).setOrigin(0.5).setDepth(202);
@@ -2920,7 +2917,7 @@ export class InteriorScene extends Phaser.Scene {
                 const desc = tab === 'weapon'
                     ? `${t(item.name)} — ${price} ${t('д.')}${modNote} (${t('урон')} ${item.dice.min}-${item.dice.max}+${item.bonus || 0})${lockNote}`
                     : `${t(item.name)} — ${price} ${t('д.')}${modNote} (${t('защита')} ${item.def})${lockNote}`;
-                createButton(this, width / 2, y, desc, () => {
+                menu.button( width / 2, y, desc, () => {
                     if (isMilitary && !gearCheck.ok) {
                         createDialog(this, t('Кузница'), tf(t('{0} качает головой: «{1}.»'), smithName, t(gearCheck.reason)), [
                             { text: t('Понятно'), callback: () => {} },
@@ -2990,7 +2987,7 @@ export class InteriorScene extends Phaser.Scene {
                 const invNow = countInventoryArrows(player);
                 const packDesc = tf(t('🪶 Пачка стрел ({0} шт.) — {1} {2}   ·   {3}: {4}/{5}, {6}: {7}'),
                     ARROW_PACK_SIZE, packPrice, t('д.'), t('колчан'), qNow, QUIVER_CAP, t('в узле'), invNow);
-                createButton(this, width / 2, startY + items.length * 36, packDesc, () => {
+                menu.button( width / 2, startY + items.length * 36, packDesc, () => {
                     if (!canAffordPack) {
                         createDialog(this, t('Кузница'), t('Не хватает денег!'), [
                             { text: t('Понятно'), callback: () => {} },
@@ -3032,7 +3029,7 @@ export class InteriorScene extends Phaser.Scene {
                     : `(${t('защита')} ${specialDef.def})`;
                 const spDesc = tf(t('🔒 {0} — {1} {2} {3}   ·   репутация у кузнеца: {4}/{5}'),
                     t(specialDef.name), specialPrice, t('д.'), statSp, Math.round(repNow), SMITH_TRUST_REP);
-                createButton(this, width / 2, startY + items.length * 36 + (tab === 'weapon' ? 72 : 0), spDesc, () => {
+                menu.button( width / 2, startY + items.length * 36 + (tab === 'weapon' ? 72 : 0), spDesc, () => {
                     if (!gateSp.ok) {
                         createDialog(this, t('Кузница'), gateSp.reason, [
                             { text: t('Понятно'), callback: () => {} },
@@ -3090,7 +3087,7 @@ export class InteriorScene extends Phaser.Scene {
         }
 
         // Кнопка закрытия
-        createButton(this, width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), () => {
+        menu.button( width / 2, height / 2 + panelH / 2 - 30, t('Закрыть'), () => {
             closeMenu();
         }, {
             backgroundColor: 0x8B2C1A, hoverColor: 0xB53925, textColor: RUS.text,
@@ -3103,10 +3100,9 @@ export class InteriorScene extends Phaser.Scene {
     // осмотр места кражи. Часовня удалена из деревни — всё живёт здесь.
     // ================================================================
 
-    // Ключ игрового дня (для «раз в день»-ограничений)
+    // Ключ игрового дня (для «раз в день»-ограничений) — канон gameCalendar (§12.3)
     dayKey() {
-        const t = getTime(this.registry);
-        return t ? `${t.yearFromChrist}-${t.month}-${t.day}` : 'unknown';
+        return gameCalendarDayKey(getTime(this.registry));
     }
 
     /**
@@ -3571,16 +3567,8 @@ export class InteriorScene extends Phaser.Scene {
         // РАУНД 66.17 (п.6): СТАВКА ПОДЁНКИ — за отработанный день герою
         // начисляется МИНИМУМ 1 очко репутации в деревне (раз в сутки;
         // хоть десять часов в день — приработка и так честная, а репутация +1/день).
-        let repMsg = '';
-        const today66 = dayKeyOf(getTime(this.registry));
-        const q66 = this.registry.get('quest') || {};
-        if (q66.dayworkRepDay !== today66) {
-            q66.dayworkRepDay = today66;
-            this.registry.set('quest', q66);
-            changeVillageRep(this.registry, 1, 'подённая работа');
-            repMsg = '\n' + t('Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).');
-            ActionLog.add(this.registry, t('Ставка подёнки: +1 к репутации в деревне за отработанный день.'));
-        }
+        // §12.3 (66.96): ставка подёнки — единый хелпер jobs.claimDayworkRep
+        const repMsg = claimDayworkRep(this.registry);
 
         createDialog(this, jobRes.crit ? t('🏺 Шедевр на круге!') : t('Помощь в мастерской'),
             (jobRes.crit
@@ -3626,15 +3614,8 @@ export class InteriorScene extends Phaser.Scene {
             ? tf(t('(Ткачество {0}%: бросок {1} — КРИТ!)'), jobRes.skill, jobRes.roll)
             : tf(t('(Ткачество {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.ok ? t('успех') : t('нить порвалась'));
         ActionLog.add(this.registry, tf(t('Отработал час за станком ткачихи: +{0} д.{1} усталость −3 HP.'), jobRes.wage, jobRes.cloth ? (jobRes.crit ? t(' сукно в узел,') : t(' полотно в узел,')) : ''));
-        let repMsgW = '';
-        const todayW = dayKeyOf(getTime(this.registry));
-        const qW = this.registry.get('quest') || {};
-        if (qW.dayworkRepDay !== todayW) {
-            qW.dayworkRepDay = todayW;
-            this.registry.set('quest', qW);
-            changeVillageRep(this.registry, 1, 'подённая работа');
-            repMsgW = '\n' + t('Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).');
-        }
+        // §12.3 (66.96): ставка подёнки — единый хелпер jobs.claimDayworkRep
+        const repMsgW = claimDayworkRep(this.registry);
         createDialog(this, jobRes.crit ? t('🧶 Узор вышел ровен!') : t('Помощь за станком'),
             (jobRes.crit
                 ? t('Час за станком — и нити легли ровно, узор стянулся без единой петли. Ткачиха гладит отрез: «Такое и на торгу не стыдно показать!»\n\n')
@@ -3672,15 +3653,8 @@ export class InteriorScene extends Phaser.Scene {
             ? tf(t('(Плотницкое дело {0}%: бросок {1} — КРИТ!)'), jobRes.skill, jobRes.roll)
             : tf(t('(Плотницкое дело {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.ok ? t('успех') : t('доска запорота'));
         ActionLog.add(this.registry, tf(t('Отработал час у плотника на срубе: +{0} д., усталость −3 HP.'), jobRes.wage));
-        let repMsgC = '';
-        const todayC = dayKeyOf(getTime(this.registry));
-        const qC = this.registry.get('quest') || {};
-        if (qC.dayworkRepDay !== todayC) {
-            qC.dayworkRepDay = todayC;
-            this.registry.set('quest', qC);
-            changeVillageRep(this.registry, 1, 'подённая работа');
-            repMsgC = '\n' + t('Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).');
-        }
+        // §12.3 (66.96): ставка подёнки — единый хелпер jobs.claimDayworkRep
+        const repMsgC = claimDayworkRep(this.registry);
         createDialog(this, jobRes.crit ? t('🪓 Ладная зарубка!') : t('Помощь плотнику'),
             (jobRes.crit
                 ? t('Топор в руках ходил сам: зарубка легла ровно, шов плотён, топорище не скрипит. Плотник хлопает по плечу: «Рубить тебе, не путешествовать!»\n\n')
@@ -3688,7 +3662,7 @@ export class InteriorScene extends Phaser.Scene {
                     ? t('Час у сруба: тесал доски, вколачивал нагели, подавал брёвна. Работа спорится — плотник доволен.\n\n')
                     : t('Час у сруба — а доска то криво, то щепа в глаз. Плотник качает головой: «Доску запорол, платить буду по малой части».\n\n'))
             + tf(t('Заработано: +{0} д. Усталость: −3 здоровья.'), jobRes.wage)
-            + '\n' + checkNote,
+            + '\n' + checkNote + repMsgC,
             [{ text: t('Спасибо'), callback: () => {} }]);
     }
 
@@ -3726,15 +3700,8 @@ export class InteriorScene extends Phaser.Scene {
         const smithName = this.npcData ? getNpcDisplayName(this.registry, interior.npcId) : t('кузнец');
         // ФИКС 66.80 (был ReferenceError repMsgC — копипаст из плотника):
         // в кузнице ставка репутации подёнки теперь работает как у остальных
-        let repMsgS = '';
-        const todayS = dayKeyOf(getTime(this.registry));
-        const qS = this.registry.get('quest') || {};
-        if (qS.dayworkRepDay !== todayS) {
-            qS.dayworkRepDay = todayS;
-            this.registry.set('quest', qS);
-            changeVillageRep(this.registry, 1, 'подённая работа');
-            repMsgS = '\n' + t('Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).');
-        }
+        // §12.3 (66.96): ставка подёнки — единый хелпер jobs.claimDayworkRep
+        const repMsgS = claimDayworkRep(this.registry);
         const checkNote = jobRes.crit
             ? tf(t('(Кузнечное дело {0}%: бросок {1} — КРИТ!)'), jobRes.skill, jobRes.roll)
             : tf(t('(Кузнечное дело {0}%: бросок {1} — {2}.)'), jobRes.skill, jobRes.roll, jobRes.ok ? t('успех') : t('черновая работа'));
@@ -4093,27 +4060,33 @@ export class InteriorScene extends Phaser.Scene {
         }
 
         // === Тайлы пола (если загружены) — поверх подложки (раунд 50: пропускается при тайловом фоне) ===
+        // §12.3 (66.96): поштучные тайлы (40×19 ≈ 760 объектов на интерьер)
+        // заменены ОДНИМ TileSprite. Чекборд int_floor_0/int_floor_1
+        // (v = (col+row) % 2 — ФИКС «зелёной сетки» раунда 50 сохранён)
+        // запекается в общую текстуру 64×64 (2×2 клетки) один раз на игру.
+        // tilePosition(0, 32) воспроизводит исходную ФАЗУ узора: первая строка
+        // пола лежала на y=100 → floor(100/32)=3 (нечётная) — так же сдвинута.
         if (!painted && !hasBg && this.textures.exists('int_floor_0')) {
-            for (let x = 0; x < width; x += ts) {
-                for (let y = 100; y < height; y += ts) {
-                    // ФИКС «зелёной сетки» (была дробь 100/32 → int_floor_1.125 → __MISSING):
-                    // вариант вычисляем по ЦЕЛОЧИСЛЕННЫМ индексам тайла, а не по пикселям.
-                    const v = (Math.floor(x / ts) + Math.floor(y / ts)) % 2;
-                    const key = `int_floor_${v}`;
-                    if (!this.textures.exists(key)) continue;
-                    this.add.image(x + ts / 2, y + ts / 2, key)
-                        .setOrigin(0.5).setDepth(-4);
-                }
+            if (!this.textures.exists('int_floor_checker')) {
+                const ct = this.textures.createCanvas('int_floor_checker', 64, 64);
+                const f0 = this.textures.get('int_floor_0').getSourceImage();
+                const f1 = this.textures.exists('int_floor_1')
+                    ? this.textures.get('int_floor_1').getSourceImage() : f0;
+                ct.context.drawImage(f0, 0, 0, 32, 32);
+                ct.context.drawImage(f1, 32, 0, 32, 32);
+                ct.context.drawImage(f1, 0, 32, 32, 32);
+                ct.context.drawImage(f0, 32, 32, 32, 32);
+                ct.refresh();
             }
+            this.add.tileSprite(0, 100, width, height - 100, 'int_floor_checker')
+                .setOrigin(0, 0).setTilePosition(0, 32).setDepth(-4);
         }
         // === Тайлы стен (если загружены; раунд 50: пропускается при тайловом фоне) ===
+        // §12.3 (66.96): 3 ряда поштучных тайлов → один TileSprite (0..96,
+        // ниже — светлая подложка стены, как прежде)
         if (!painted && !hasBg && this.textures.exists('int_wall')) {
-            for (let x = 0; x < width; x += ts) {
-                for (let y = 0; y < 100; y += ts) {
-                    this.add.image(x + ts / 2, y + ts / 2, 'int_wall')
-                        .setOrigin(0.5).setDepth(-4);
-                }
-            }
+            this.add.tileSprite(0, 0, width, 96, 'int_wall')
+                .setOrigin(0, 0).setDepth(-4);
         }
         // === Окна (2 шт) с дневным светом и ночным синим стеклом ===
         // x = 62% и 84% — свободная зона стены (левее описание, в центре дата)

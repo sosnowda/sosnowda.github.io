@@ -24,6 +24,33 @@ import { skillCheck } from './BRPEngine.js';
 import { getBlessedSkill } from '../data/questGenerator.js';
 // Патч 66.80: ставки × репутация × сезон × торг «О слове»
 import { applyWageBalance } from './repBalance.js';
+// §12.3 (66.96): ставка подёнки — единый хелпер (день — из gameCalendar)
+import { absDay } from './gameCalendar.js';
+import { changeVillageRep } from '../data/reputation.js';
+import { ActionLog } from '../data/actionLog.js';
+import { t } from './i18n.js';
+
+// ------------------------------------------------------------
+// §12.3 (66.96): СТАВКА ПОДЁНКИ — единый хелпер аудита.
+// Раунд 66.17 (п.6): за отработанный день герою начисляется МИНИМУМ
+// +1 к репутации в деревне, РАЗ В СУТКИ (общий ключ quest.dayworkRepDay:
+// гончар/ткачиха/плотник/кузница — раньше блок был скопирован в 4 метода
+// InteriorScene, и в плотницкой ветке результат терялся — копипаст-дрейф).
+// Ключ дня — канон gameCalendar.absDay (числовой, как и прежде).
+// @param {Phaser.Data.DataManager} registry
+// @returns {string} строка для диалога ('' — ставка за сегодня уже взята)
+// ------------------------------------------------------------
+export function claimDayworkRep(registry) {
+    const time = registry.get('gameTime');
+    const today = time ? absDay(time) : 0;
+    const q = registry.get('quest') || {};
+    if (q.dayworkRepDay === today) return '';
+    q.dayworkRepDay = today;
+    registry.set('quest', q);
+    changeVillageRep(registry, 1, 'подённая работа');
+    ActionLog.add(registry, t('Ставка подёнки: +1 к репутации в деревне за отработанный день.'));
+    return '\n' + t('Добрая молва о работнике идёт по деревне: +1 к репутации (ставка подёнки — раз в сутки).');
+}
 
 /** Одна проверка навыка со всеми модификаторами. */
 function jobCheck(registry, skillValue) {

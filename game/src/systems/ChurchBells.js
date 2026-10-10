@@ -22,6 +22,8 @@
 // за день: ключиPlayed хранятся в registry (переживают смену сцены).
 
 import { t } from './i18n.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
+import { absDay } from './gameCalendar.js';
 
 // Службы прихода (игровые часы; 1 игровой час = 2 реальные минуты)
 export const SERVICES = [
@@ -36,10 +38,9 @@ export const SERVICES = [
 const BLAGO_BELL = 164; // «редкий» большой колокол (ми малой октавы)
 const TREZVON_BELLS = [262, 330, 392]; // зазвонные: до-соль-соль верхней октавы
 
-function dayKeyOf(time) {
-    if (!time) return 0;
-    return time.yearFromChrist * 372 + time.month * 31 + time.day;
-}
+// Ключ дня для расписаний звона — канон gameCalendar.absDay (§12.3, 66.96).
+// (день/час для хешей колоколов берутся отдельно, прежние значения не меняются)
+const dayKeyOf = absDay;
 
 /**
  * Подключить колокольный звон к сцене.

@@ -166,7 +166,9 @@ function finish() {
     ok((i18n.split("'🌲 Лес — единая локация цепочкой").length - 1) === 1, 'SAME-пара «🌲 Лес — единая локация» схлопнута в одно вхождение');
 
     console.log('--- 4. P3-2: игровой цикл трёх сцен без покадровых аллокаций ---');
-    for (const [src, name] of [[village, 'VillageScene'], [apiary, 'ApiaryScene'], [forest, 'ForestScene']]) {
+    // 66.96: movePlayer/idle-кэш леса и пасеки — в OutdoorLocationBase
+    const outdoorBase116 = read('game/src/systems/OutdoorLocationBase.js');
+    for (const [src, name] of [[village, 'VillageScene'], [outdoorBase116, 'Forest+Apiary (OutdoorLocationBase)']]) {
         ok(!src.includes('new Phaser.Math.Vector2(vx, vy)'), `${name}: в movePlayer/update больше нет new Vector2(vx, vy)`);
         ok(src.includes('this._moveVec = new Phaser.Math.Vector2(0, 0);') && src.includes('this._moveVec.set(vx, vy)'),
             `${name}: переиспользуемый this._moveVec (create + set в цикле)`);
@@ -180,7 +182,7 @@ function finish() {
         'VillageScene: шаблон walk-ключа ровно один — внутри кэша по dir (выполняется только при смене направления)');
     ok((village.match(/\$\{this\.playerTexKey\}_idle_\$\{this\.lastDir\}/g) || []).length === 1,
         'VillageScene: шаблон idle-ключа ровно один — внутри кэша по dir');
-    for (const [src, name] of [[apiary, 'ApiaryScene'], [forest, 'ForestScene']]) {
+    for (const [src, name] of [[outdoorBase116, 'Forest+Apiary (OutdoorLocationBase)']]) {
         ok(src.includes('if (this.lastDir !== this._idleKeyDir)') && src.includes('this.playerObj.play(this._idleKey, true);'),
             `${name}: idle-ключ кэшируется по направлению (walk уже был под гардом dir)`);
         ok((src.match(/\$\{this\.player\.sprite \|\| 'player'\}_idle_\$\{this\.lastDir\}/g) || []).length === 1,

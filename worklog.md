@@ -1,4 +1,18 @@
 ---
+Task ID: 66.96
+Agent: Z.ai Code (main)
+Task: §12.3 аудита 66.92 — стратегические рефакторинги (gameCalendar, OutdoorLocationBase, декомпозиция InteriorScene) — приказ владельца; попутно повторно подтверждён /en/manifest.json (HTTP 200, закрыт в эшелоне 1).
+
+Work Log:
+- gameCalendar (НОВЫЙ systems/gameCalendar.js): единая таблица MONTH_DAYS + absDay/absMinute/dayKey; вытеснены 11 числовых копий (y·372+m·31+d) и 7 строковых копий ключа дня; AccessHours импортирует MONTH_DAYS, TimeSystem.MONTHS[].days выводится из неё; сейв-форматы бит в бит (доказано ×1200 дат в r138).
+- OutdoorLocationBase (НОВЫЙ systems/OutdoorLocationBase.js): ForestScene 1415→1115, ApiaryScene 989→663; в базу вынесены spawnPlayer/movePlayer/update/buildAtmosphere/buildHUD/drawExitMarker/showFloatingText/префикс create()/ядро updateHUD; баланс в конфиге (шаг 0.25/1 мин, мгла, лучи, туман, светлячки); специфика — через 15 крюков; порядок создания мира сохранён; Phaser не импортируется (глобальный CDN).
+- InteriorScene: НОВЫЙ utils/MenuPanel.js — 6 меню трекают объекты массивом, ВСЕ 8 depth-scan'ов удалены (close() точечный/идемпотентный; resume-семантика 66.78 сохранена, таверна без onClose — resume в кнопке); подёнка — jobs.claimDayworkRep (4 копии → 1, лог унифицирован); ФИКС дрейфа: repMsgC плотника теперь показывается; пол (~760 объектов) → TileSprite int_floor_checker 64×64 (фаза сохранена tilePosition 0,32), стены (~120) → один TileSprite 0..96; dayKey() → канон.
+- sw.js v128→v129 (game/src мимо SW; game-assets-v45 цел); НОВЫЙ test_round138 (56✓: функциональные gameCalendar ×1200 + claimDayworkRep на моке); пины 9 тестов × 12 якорей актуализированы (r69/78/79/93/101/116/123/126/128); регресс 64–138 = 74/74; доки CHANGES/SW_CHANGELOG/worklog; bump_lastmod --check.
+
+Stage Summary:
+- §12.3 (первые три пункта аудита) ЗАКРЫТА: один календарь (формула дня живёт ровно в одном месте), одна база outdoor-локаций (правило «баг правится один раз»), InteriorScene без depth-scan'ов и поштучного пола. Класс рассинхронов кулдаунов устранён конструктивно; ~880 GameObject'ов экономится на интерьер; −626 строк дублей в сценах. Остаток §12.3 (i18n-гигиена, баланс в конфиг, комментарии=коду на модуле времени) — отдельные итерации по мере развития.
+
+---
 Task ID: 66.95
 Agent: Z.ai Code (main)
 Task: Эшелон 3 плана аудита игры — боевой хвост (P2-4/P2-5) + гигиена (P2-11…14) + обвязка (P2-16…19) — приказ владельца; реестр P2×21 закрыт целиком.

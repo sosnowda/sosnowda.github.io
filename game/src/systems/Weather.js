@@ -17,6 +17,8 @@ import { getTime, getSeason } from './TimeSystem.js';
 import { t as tI18n } from './i18n.js';
 // Раунд 66.7: погодные звуки — дождь/гром синтезируются к новой погоде
 import { startRainSound, stopRainSound, playThunder } from './WeatherAudio.js';
+// §12.3 (66.96): единый игровой календарь — один строковый ключ дня на всю игру
+import { dayKey as gameCalendarDayKey } from './gameCalendar.js';
 
 export const WEATHER_TYPES = {
     clear:  { id: 'clear',  name: 'Ясно',     icon: '☀️' },
@@ -48,12 +50,12 @@ export function getWeather(registry) {
         if (registry && typeof registry.get === 'function') {
             const fc = registry.get('weatherForecast');
             if (fc && fc.type && WEATHER_TYPES[fc.type] &&
-                fc.dayKey === `${t.yearFromChrist}-${t.month}-${t.day}`) {
+                fc.dayKey === gameCalendarDayKey(t)) {
                 return localize(WEATHER_TYPES[fc.type]);
             }
         }
     } catch (e) { /* реестр недоступен — обычный хеш */ }
-    const roll = hashDateKey(`${t.yearFromChrist}-${t.month}-${t.day}`) % 100;
+    const roll = hashDateKey(gameCalendarDayKey(t)) % 100;
     if (getSeason(t.month) === 'winter') {
         if (roll < 42) return localize(WEATHER_TYPES.snow);
         if (roll < 72) return localize(WEATHER_TYPES.cloudy);
@@ -83,11 +85,10 @@ export function isPrecip(w) {
 //  РАУНД 66.6: ПЛАВНЫЕ ПОГОДНЫЕ ПЕРЕХОДЫ
 // ============================================================
 
-/** День-ключ погоды: «год-месяц-день» (смена → crossfade). */
+/** День-ключ погоды: «год-месяц-день» (смена → crossfade), канон gameCalendar. */
 function weatherDayKey(registry) {
     const t = getTime(registry);
-    if (!t) return null;
-    return `${t.yearFromChrist}-${t.month}-${t.day}`;
+    return t ? gameCalendarDayKey(t) : null;
 }
 
 /** Безопасно установить alpha частицам (ParticleEmitter — GameObject в 3.60+). */

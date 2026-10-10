@@ -20,6 +20,8 @@ import { t, tf } from './i18n.js';
 import { ActionLog } from '../data/actionLog.js';
 import { opposedSkillCheck, formatOpposedCheck } from './BRPEngine.js';
 import { getNpcOpposition } from '../data/npcStats.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
+import { absDay } from './gameCalendar.js';
 import { getChaEdgeMod, clearChaEdge } from './charisma.js';
 // Патч 66.78 (приказ 9): торговля списывает фиксированные 30 минут
 import { tickTime } from './TimeSystem.js';
@@ -57,11 +59,10 @@ export function chargeTradeTime(registry, units = 1) {
 // Патч 66.74 (приказ 6): подсказка в меню продажи упоминает ОБА пути торга
 export const HAGGLE_HINT_COMMERCE = t('Сметка знает цену — торговаться можно и ею.');
 
-/** Ключ игрового дня (та же формула, что в hunger.js/meal.js). */
+/** Ключ игрового дня — канон gameCalendar.absDay (§12.3, 66.96). */
 function haggleDayKey(registry) {
     const time = registry ? registry.get('gameTime') : null;
-    if (!time) return 0;
-    return (time.yearFromChrist * 372) + (time.month * 31) + time.day;
+    return absDay(time);
 }
 
 function haggleStateOf(registry) {

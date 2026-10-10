@@ -10,15 +10,17 @@ import { createDialog, closeAllSingletonDialogs } from '../utils/ui.js';
 import { changeNpcRepExact, changeVillageRepExact, donationRepAmount } from '../data/reputation.js';
 import { ActionLog } from '../data/actionLog.js';
 import { tickTime } from './TimeSystem.js';
+// §12.3 (66.96): единый игровой календарь — один строковый ключ дня на всю игру
+import { dayKey as gameCalendarDayKey } from './gameCalendar.js';
 import { t, tf } from './i18n.js';
 
 /** Суммы, которые принимает блюдо для пожертвований. */
 export const DONATION_AMOUNTS = [5, 10, 25, 50];
 
-/** Ключ дня последнего пожертвования в реестре 'quest'. */
+/** Ключ дня последнего пожертвования в реестре 'quest' (канон gameCalendar). */
 function todayKey(registry) {
     const time = registry.get('gameTime');
-    return time ? `${time.yearFromChrist}-${time.month}-${time.day}` : '0';
+    return time ? gameCalendarDayKey(time) : '0';
 }
 
 /**

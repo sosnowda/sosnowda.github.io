@@ -15,24 +15,30 @@ import { sunTimes } from './AccessHours.js';
 // Патч 66.73 (приказы 3,4,6,7): каждый тик копит ЧАСЫ ГОЛОДА с весом
 // активности (сон ×0.4, бой ×2.5…); голод > 24 ч — бьёт по Здоровью.
 import { hungerRolloverCheck, noteHungerTick } from './hunger.js';
+// §12.3 (66.96): длины месяцев — из ЕДИНСТВЕННОЙ таблицы gameCalendar
+// (раньше здесь была своя копия в поле days — два источника правды)
+import { MONTH_DAYS } from './gameCalendar.js';
 // Патч 66.73: у fatigue.js нет зависимостей от TimeSystem — импорт не нужен
 // здесь; траты/восстановления ОУ вызывают сцены точечно.
 
-// Месяцы церковного календаря Руси XV века (сентябрьский стиль)
-export const MONTHS = [
-    { name: 'сентября', nameNominative: 'Сентябрь', season: 'autumn', days: 30 },
-    { name: 'октября', nameNominative: 'Октябрь', season: 'autumn', days: 31 },
-    { name: 'ноября', nameNominative: 'Ноябрь', season: 'autumn', days: 30 },
-    { name: 'декабря', nameNominative: 'Декабрь', season: 'winter', days: 31 },
-    { name: 'января', nameNominative: 'Январь', season: 'winter', days: 31 },
-    { name: 'февраля', nameNominative: 'Февраль', season: 'winter', days: 28 },
-    { name: 'марта', nameNominative: 'Март', season: 'spring', days: 31 },
-    { name: 'апреля', nameNominative: 'Апрель', season: 'spring', days: 30 },
-    { name: 'мая', nameNominative: 'Май', season: 'spring', days: 31 },
-    { name: 'июня', nameNominative: 'Июнь', season: 'summer', days: 30 },
-    { name: 'июля', nameNominative: 'Июль', season: 'summer', days: 31 },
-    { name: 'августа', nameNominative: 'Август', season: 'summer', days: 31 },
+// Месяцы церковного календаря Руси XV века (сентябрьский стиль).
+// §12.3 (66.96): дни в месяце берутся из ЕДИНСТВЕННОЙ таблицы
+// gameCalendar.MONTH_DAYS (та же, что в AccessHours.dayOfYear).
+const MONTH_META = [
+    { name: 'сентября', nameNominative: 'Сентябрь', season: 'autumn' },
+    { name: 'октября', nameNominative: 'Октябрь', season: 'autumn' },
+    { name: 'ноября', nameNominative: 'Ноябрь', season: 'autumn' },
+    { name: 'декабря', nameNominative: 'Декабрь', season: 'winter' },
+    { name: 'января', nameNominative: 'Январь', season: 'winter' },
+    { name: 'февраля', nameNominative: 'Февраль', season: 'winter' },
+    { name: 'марта', nameNominative: 'Март', season: 'spring' },
+    { name: 'апреля', nameNominative: 'Апрель', season: 'spring' },
+    { name: 'мая', nameNominative: 'Май', season: 'spring' },
+    { name: 'июня', nameNominative: 'Июнь', season: 'summer' },
+    { name: 'июля', nameNominative: 'Июль', season: 'summer' },
+    { name: 'августа', nameNominative: 'Август', season: 'summer' },
 ];
+export const MONTHS = MONTH_META.map((m, i) => ({ ...m, days: MONTH_DAYS[i] }));
 
 // Дни недели (по-славянски)
 export const WEEKDAYS = [

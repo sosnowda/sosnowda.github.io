@@ -30,6 +30,8 @@
 
 import { t } from './i18n.js';
 import { ActionLog } from '../data/actionLog.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
+import { absDay } from './gameCalendar.js';
 
 /** Норма приёмов пищи за игровые сутки (приказ 2). */
 export const MEALS_REQUIRED_PER_DAY = 2;
@@ -60,11 +62,9 @@ export function hungerRateOf(activity) {
 export const HUNGER_HP_AFTER_H = 24;   // п.6: −1 HP за очередные 24 ч
 export const HUNGER_SKILL_AFTER_H = 48; // п.7: −1% навыков за 24 ч
 
-/** Ключ игрового дня по state времени (та же формула, что в meal.js). */
+/** Ключ игрового дня по state времени — канон gameCalendar.absDay (§12.3). */
 export function hungerDayKey(timeState) {
-    if (!timeState) return 0;
-    const day = (timeState.yearFromChrist * 372) + (timeState.month * 31) + timeState.day;
-    return day;
+    return absDay(timeState);
 }
 
 function hungerRaw(registry) {

@@ -61,7 +61,13 @@
 // 66.95 (эшелон 3 аудита игры): бамп v127→v128 — game/src (боевой хвост
 // P2-4/5, гигиена P2-11…14, обвязка P2-16…19 — полный список в CHANGES.md
 // 66.95); game-assets-v45 цел, код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v128';
+// 66.96 (§12.3 аудита — стратегические рефакторинги): бамп v128→v129 —
+// game/src (НОВЫЕ модули systems/gameCalendar.js, systems/OutdoorLocationBase.js,
+// utils/MenuPanel.js; правки 20 модулей календаря + Forest/Apiary/InteriorScene/
+// jobs/Weather/TimeSystem/AccessHours — полный список в CHANGES.md 66.96);
+// /game/src/ идёт мимо SW (network direct) — прекеш-список не нужен;
+// game-assets-v45 цел (ассеты не тронуты), код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v129';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {

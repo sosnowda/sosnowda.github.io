@@ -19,6 +19,8 @@
 
 import { getTime, getSeason, MONTHS } from './TimeSystem.js';
 import { getWeather } from './Weather.js';
+// §12.3 (66.96): единый игровой календарь — один строковый ключ дня на всю игру
+import { dayKey as gameCalendarDayKey } from './gameCalendar.js';
 
 // Сколько слухов о погоде нужно, чтобы примета сбылась (п.6: «более 3 раз»).
 export const OMEN_THRESHOLD = 3;
@@ -33,9 +35,9 @@ export function hashStr(s) {
     return h;
 }
 
-/** Ключ дня из timeState — тот же формат, что в Weather.js. */
+/** Ключ дня из timeState — канон gameCalendar.dayKey (§12.3, 66.96). */
 export function dayKeyOfTime(t) {
-    return t ? `${t.yearFromChrist}-${t.month}-${t.day}` : null;
+    return t ? gameCalendarDayKey(t) : null;
 }
 
 /** Следующий день по календарю MONTHS (28–31 день, месяц 0 = сентябрь). */

@@ -33,6 +33,8 @@ import { ActionLog } from '../data/actionLog.js';
 import { changeVillageRepExact, changeNpcRepExact } from '../data/reputation.js';
 // Патч 66.79 (п.5): застукали — стражник у ворот вправе осмотреть узел
 import { markCaughtRedhanded } from './justice.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
+import { absDay } from './gameCalendar.js';
 
 // ---------------- п.1: ГЕОМЕТРИЧЕСКАЯ МОЛВА ----------------
 
@@ -184,10 +186,9 @@ export function isNightHour(hour) {
     return h >= 21 || h < 4;
 }
 
-/** Абсолютный игровой день (та же формула, что в meal.js/haggle). */
+/** Абсолютный игровой день — единый канон gameCalendar (§12.3, 66.96). */
 export function absDayOf(timeState) {
-    if (!timeState) return 0;
-    return (timeState.yearFromChrist * 372) + (timeState.month * 31) + timeState.day;
+    return absDay(timeState);
 }
 
 /** Ключ недели (неделя = 7 игровых дней от старта мира). */

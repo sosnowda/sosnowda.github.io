@@ -10,12 +10,8 @@ import {
     forestGatherSpots, campfirePos, forestTileAt,
     validateForestMap, rollForestTracking,
 } from '../data/forest.js';
-import { tickTime, getTime, formatDateTime, getDayNightOverlay } from '../systems/TimeSystem.js';
-import { applyWeatherVisuals, isRainy } from '../systems/Weather.js';
-import { addMorningFog } from '../systems/AmbientFX.js';
-// Патч 66.46 (приказ 2): ход солнца — тени и смена освещения
-import { attachSunLight } from '../systems/SunLight.js';
-import { checkGameEnd } from '../data/thief.js';
+import { tickTime, getTime } from '../systems/TimeSystem.js';
+import { isRainy } from '../systems/Weather.js';
 import { onLocationVisited, getBlessedSkill } from '../data/questGenerator.js';
 import { ActionLog } from '../data/actionLog.js';
 import { dayKeyOf, isActionDoneToday, markActionDone } from '../data/daily.js'; // раунд 66.10: daily вместо удалённого chests.js
@@ -33,21 +29,11 @@ import { hungerStatusLine, hungerHours } from '../systems/hunger.js';
 import { spendFatigue, restFatigueFull, exhaustedGuardPopup, fatigueStatusLine } from '../systems/fatigue.js';
 // Раунд 66.28 (пп.5–8): стрелы и колчан — стрельба тратит стрелу
 import { getQuiver, spendArrow } from '../systems/ammo.js';
-// Патч 66.75 (приказы 5–6): кнопка «⚙ Настройки» в статус-баре леса
-import { addSettingsGearButton } from '../systems/SettingsPanel.js';
 import { createDialog } from '../utils/ui.js';
-import AudioManager from '../systems/AudioManager.js';
-// 66.37: калибровка масштаба мировых листов персонажей 128px (были 64)
-import { WORLD_K, WORLD_BODY_PX } from '../systems/WorldLook.js';
-import { VirtualControls } from '../systems/VirtualControls.js';
-import { formatMoney } from '../systems/Character.js';
-import { getVillageRep } from '../data/reputation.js';
-// Патч 66.80: статус репутации в HUD (лестница «подозрительный ↔ свой»)
-import { villageRepStatusSuffix } from '../systems/repBalance.js';
 import { t, tf, tk } from '../systems/i18n.js';
-// Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
-import { attachChurchBells } from '../systems/ChurchBells.js';
-import { attachWorldClock, timeRatioInfoLine } from '../systems/WorldClock.js';
+// §12.3 (66.96): базовый класс outdoor-локаций — общий create/движение/HUD
+import { OutdoorLocationBase } from '../systems/OutdoorLocationBase.js';
+import { timeRatioInfoLine } from '../systems/WorldClock.js';
 
 const TS = 48;   // как в деревне — мир 1440×1056, камера скроллится
 const WORLD_W = FOREST_COLS * TS;
@@ -56,73 +42,64 @@ const WORLD_H = FOREST_ROWS * TS;
 // Тёплое золото искр у точек сбора
 const SPARK_TINT = 0xffd970;
 
-export class ForestScene extends Phaser.Scene {
+export class ForestScene extends OutdoorLocationBase {
     constructor() {
-        super('Forest');
+        // §12.3 (66.96): баланс и атмосфера леса — конфиг базового класса
+        // (шаг 0.25 мин был в клоне movePlayer; мгла/лучи/туман — в клоне
+        // buildAtmosphere; общее теперь живёт в OutdoorLocationBase)
+        super('Forest', {
+            stepTickMinutes: 0.25,
+            bellsVolume: 0.3,
+            bgColor: 0x0e1a0e,
+            returnPosKey: 'forestReturnPos',
+            spawn: FOREST_SPAWN,
+            exit: FOREST_EXIT,
+            veilColor: 0x081408, veilAlpha: 0.30,
+            raysCount: 6,
+            raysWidth: i => 22 + (i * 13) % 34,
+            raysOffsetX: i => (i % 2 === 0 ? -30 : 30),
+            raysOffsetY: i => -40 + (i % 3) * 30,
+            raysAngle: i => (i % 2 === 0 ? 14 : -12),
+            raysAlphaTo: 0.08,
+            raysDuration: i => 2600 + i * 430,
+            fogCount: 12,
+            fogScale: () => 1.4 + Math.random() * 1.8,
+            fogAlpha: () => 0.05 + Math.random() * 0.05,
+            fogDriftX: 90,
+            fogYDrift: () => -14 - Math.random() * 22,
+            fogDuration: () => 9000 + Math.random() * 7000,
+            fireflies: 9,
+            fogDayAlpha: 0.04, fogNightAlpha: 0.09,
+        });
+        this.worldCols = FOREST_COLS;
+        this.worldRows = FOREST_ROWS;
     }
 
     init(data) {
-        this.from = (data && data.from) || 'Fork';
-        // Возврат после боя — вернуть игрока туда, где он встал
-        this.returnPos = this.registry.get('forestReturnPos') || null;
-        this.registry.set('forestReturnPos', null);
+        this.outdoorInit(data);
     }
 
     create() {
-        this.audioManager = new AudioManager(this);
-        // 66.68 (§9.3 аудита 66.66, P3): переиспользуемый вектор движения — каждый
-        // кадр movePlayer() раньше создавал new Phaser.Math.Vector2; и кэш idle-ключа
-        // (без шаблонной строки каждый кадр стоянки).
-        this._moveVec = new Phaser.Math.Vector2(0, 0);
-        this._idleKey = ''; this._idleKeyDir = null;
-        // Раунд 31 (пп.11,12): мировые часы идут реальным временем (в диалогах стоят)
-        attachWorldClock(this);
-        attachChurchBells(this, { volume: 0.3 });
-        this.audioManager.playSceneMusic('village');
-        // Раунд 24: эмбиент леса — птицы днём, сверчки ночью
-        const fsTime = getTime(this.registry);
-        const fsHour = fsTime ? fsTime.hour : 12; // раунд 31: фикс .hours → .hour
-        this.audioManager.setAmbient((fsHour >= 21 || fsHour < 5)
-            ? 'ambient_forest_night'
-            : 'ambient_forest_day');
+        this.createOutdoorCore();
+    }
 
-        // ----- QA-валидация проходимости (как в деревне) -----
-        const validation = validateForestMap();
-        if (validation.problems.length) {
-            console.warn('[Лес] Проблемы проходимости:', validation.problems);
-        }
+    // ===== КРЮКИ СОЗДАНИЯ МИРА (общая последовательность — в базе) =====
 
-        this.cameras.main.setBackgroundColor(0x0e1a0e);
-        this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
-        this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
+    validateMap() {
+        return validateForestMap();
+    }
 
-        // Раунд 20: бесконечная трава за границами мира (лес) —
-        // при RESIZE окно бывает шире мира, иначе по краям пустота фона.
-        if (this.textures.exists('tile_grass_0')) {
-            const pad = 2000;
-            const back = this.add.tileSprite(-pad, -pad, WORLD_W + pad * 2, WORLD_H + pad * 2, 'tile_grass_0')
-                .setOrigin(0, 0).setDepth(-10);
-            back.setTileScale(1.5, 1.5);
-        }
-
-        this.solids = this.physics.add.staticGroup();
+    beforeWorld() {
         this.gatherEntries = [];
         this.gatherByTile = new Map();
         this.wolves = [];
         this.animals = [];   // раунд 66.17: живая дичь (зайцы/глухари/косули)
         this.corpses = [];   // раунд 66.17: туши, которые можно обобрать
-        this.fireflies = [];
-        this.busyDialog = false;
         this.sneakBonus = false;   // патч 66.74: +10 к выстрелу после удачного Скрадывания
-        this.lastDir = 'down';
-        this.lastStepTime = 0;
-        this.stepInterval = 350;
+    }
 
-        this.drawForest();
-        // Патч 66.46 (приказ 2): солнечный свет — ДО спавна героя (он станет
-        // «следящей» тенью). Тени лежат на земле (0.35): выше тайлов/кустов (0.1),
-        // ниже деревьев (y+0.55); тёплый слой — под вечной мглой (94).
-        this.sunLight = attachSunLight(this, { shadowDepth: 0.35, overlayDepth: 92.5 });
+    /** Тени деревьев (патч 66.46) — кастеры солнечного света леса. */
+    attachSunCasters() {
         this.sunLight.addCaster(() => {
             const pts = [];
             for (let y = 0; y < FOREST_ROWS; y++) {
@@ -139,27 +116,21 @@ export class ForestScene extends Phaser.Scene {
             }
             return pts;
         });
+    }
+
+    /** Точки сбора и старое кострище. */
+    spawnWorldObjects() {
         this.spawnGatherSpots();
         this.spawnCampfire();
-        this.drawExitMarker();
-        this.spawnPlayer();
+    }
+
+    /** После героя: стая, проверка Следопытства, дичь. */
+    afterSpawn() {
         this.spawnWolves();
         // Патч 66.74 (приказ 8): проверка Следопытства при входе в лес —
         // удача увеличивает шанс появления дичи (до спавна зверя)
         this.rollTrackingOnEntry();
         this.spawnGameAnimals();   // раунд 66.17 (п.9): дичь в лесу
-        this.buildAtmosphere();
-        this.buildHUD();
-
-        // ----- Управление -----
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.wasd = this.input.keyboard.addKeys('W,A,S,D');
-        this.input.keyboard.on('keydown-E', () => this.tryInteract());
-        this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
-        // F1 — окно помощи (в сборке нет сцены 'Help' — показываем диалог; фикс латентного бага)
-        this.input.keyboard.on('keydown-F1', () => this.showHelpDialog());
-        this.input.keyboard.on('keydown-ESC', () => this.scene.start('Title'));
-        this.virtualControls = new VirtualControls(this);
     }
 
     showHelpDialog() {
@@ -180,7 +151,7 @@ export class ForestScene extends Phaser.Scene {
 
     // ================= ОТРИСОВКА =================
 
-    drawForest() {
+    drawWorld() {   // крюк базового класса (бывш. drawForest)
         for (let y = 0; y < FOREST_ROWS; y++) {
             for (let x = 0; x < FOREST_COLS; x++) {
                 const t = forestTileAt(x, y);
@@ -363,48 +334,6 @@ export class ForestScene extends Phaser.Scene {
         // Угли тлеют, тёплый отсвет качается
         this.campGlow = this.add.ellipse(cx, cy + 8, 64, 26, 0xff7a30, 0.22)
             .setBlendMode(Phaser.BlendModes.ADD).setDepth(0.26);
-    }
-
-    drawExitMarker() {
-        const px = FOREST_EXIT.col * TS + TS / 2;
-        const py = FOREST_EXIT.row * TS + TS / 2;
-        const label = this.add.text(px, py - TS * 1.6, t('◀ К ОКОЛИЦЕ'), {
-            fontSize: '13px', color: '#E8DCC4', fontStyle: 'bold',
-            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 3,
-            backgroundColor: '#00000088', padding: { x: 5, y: 2 },
-        }).setOrigin(0.5).setDepth(0.7);
-        this.tweens.add({ targets: label, alpha: { from: 1, to: 0.55 }, duration: 1100, yoyo: true, repeat: -1 });
-    }
-
-    spawnPlayer() {
-        this.player = this.registry.get('player');
-        const pos = this.returnPos || {
-            x: FOREST_SPAWN.col * TS + TS / 2,
-            y: FOREST_SPAWN.row * TS + TS / 2,
-        };
-        const useComposite = this.player && this.player.useComposite && this.textures.exists('player_composite');
-        if (useComposite) {
-            this.playerObj = this.physics.add.sprite(pos.x, pos.y, 'player_composite');
-        } else {
-            this.playerObj = this.physics.add.sprite(pos.x, pos.y, this.player.sprite || 'player');
-            if (this.player.appearance && this.player.appearance.jacket) {
-                this.playerObj.setTint(this.player.appearance.jacket.tint);
-            }
-            this.playerObj.play(`${this.player.sprite || 'player'}_idle_down`);
-        }
-        // 66.37: × WORLD_K — листы персонажей 128px, фигуры прежнего размера;
-        // WORLD_BODY_PX — прежний мировой размер тела (68px кадра 128)
-        this.playerObj.setScale(TS / 32 * 0.75 * WORLD_K);
-        // Честный хитбокс (урок раунда 7): фигура в центре кадра
-        if (this.playerObj.body) this.playerObj.body.setSize(WORLD_BODY_PX, WORLD_BODY_PX, true);
-        this.playerObj.setCollideWorldBounds(true);
-        this.physics.add.collider(this.playerObj, this.solids);
-        this.playerObj.setDepth(this.playerObj.y / TS);
-        this.cameras.main.startFollow(this.playerObj, true, 0.1, 0.1);
-
-        // Тень под ногами — патч 66.46: СЛЕДЯЩАЯ, по солнцу (раньше —
-        // статичный овал на точке спавна, герой «выходил» из неё)
-        if (this.sunLight) this.sunLight.follow(this.playerObj, 12, 4.2, 1);
     }
 
     spawnWolves() {
@@ -679,61 +608,11 @@ export class ForestScene extends Phaser.Scene {
         this.updateHUD();
     }
 
-    buildAtmosphere() {
-        const { width, height } = this.scale;
+    // ===== КРЮКИ АТМОСФЕРЫ/HUD/ЦИКЛА (общее — в OutdoorLocationBase) =====
 
-        // Вечная лесная мгла (день тут темнее, чем в деревне)
-        this.add.rectangle(0, 0, width, height, 0x081408, 0.30)
-            .setOrigin(0).setDepth(94).setBlendMode(Phaser.BlendModes.MULTIPLY)
-            .setScrollFactor(0);
-
-        // День/ночь поверх мглы
-        const timeState = getTime(this.registry);
-        if (timeState) {
-            const overlay = getDayNightOverlay(timeState);
-            this.dayNightOverlay = this.add.rectangle(0, 0, width, height, overlay.color, overlay.alpha)
-                .setOrigin(0).setDepth(95).setBlendMode(Phaser.BlendModes.MULTIPLY).setScrollFactor(0);
-        }
-
-        // Световые столбы (лучи сквозь кроны) — только днём управляется альфой
-        this.godRays = [];
-        for (let i = 0; i < 6; i++) {
-            const ray = this.add.rectangle(
-                (i + 0.5) * (width / 6) + (i % 2 === 0 ? -30 : 30),
-                -40 + (i % 3) * 30,
-                22 + (i * 13) % 34, height + 120,
-                0xfff2c0, 0.05,
-            ).setOrigin(0.5, 0).setAngle(i % 2 === 0 ? 14 : -12)
-                .setBlendMode(Phaser.BlendModes.ADD).setScrollFactor(0).setDepth(93);
-            this.godRays.push(ray);
-            this.tweens.add({
-                targets: ray,
-                alpha: { from: 0.03, to: 0.08 },
-                duration: 2600 + i * 430,
-                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            });
-        }
-
-        // Клочья тумана — в мировых координатах, медленно дрейфуют
-        this.fogPuffs = [];
-        for (let i = 0; i < 12; i++) {
-            const puff = this.add.image(
-                Math.random() * WORLD_W, Math.random() * WORLD_H,
-                'fog_puff',
-            ).setScale(1.4 + Math.random() * 1.8)
-                .setAlpha(0.05 + Math.random() * 0.05)
-                .setDepth(96);
-            this.tweens.add({
-                targets: puff,
-                x: puff.x + (Math.random() - 0.5) * 90,
-                y: puff.y - 14 - Math.random() * 22,
-                duration: 9000 + Math.random() * 7000,
-                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            });
-            this.fogPuffs.push(puff);
-        }
-
-        // Падающая листва — в экранных координатах
+    /** Падающая листва — базовый класс зовёт между лучами и туманом. */
+    atmoMid() {
+        const { width } = this.scale;
         this.leavesEmitter = this.add.particles(0, 0, 'forest_leaf', {
             x: { min: 0, max: width },
             y: -12,
@@ -748,80 +627,21 @@ export class ForestScene extends Phaser.Scene {
         });
         this.leavesEmitter.setScrollFactor(0);
         this.leavesEmitter.setDepth(98);
-
-        // ----- Погода (раунд 14): дождь/снег в лесу. Осадки поверх листвы (99).
-        // В дождь волки хуже слышат — радиус агро срезается (см. wolfAggroRadius).
-        applyWeatherVisuals(this, { tintDepth: 94, precipDepth: 99 });
-
-        // Раунд 28 (п.4): утренний туман в лесу (с рассвета до 9 утра)
-        addMorningFog(this, { width: WORLD_W, height: WORLD_H, yMin: 2 * TS, yMax: WORLD_H - 2 * TS, depth: 90 });
-        this.wolfAggroRadius = WOLF_CFG.aggroRadius * (isRainy(this.weather) ? 0.65 : 1);
-
-        // Светлячки — проявляются ночью (как в деревне)
-        for (let i = 0; i < 9; i++) {
-            const fx = (24 + Math.random() * (WORLD_W - 48));
-            const fy = (24 + Math.random() * (WORLD_H - 48));
-            const f = this.add.image(fx, fy, 'particle_spark')
-                .setScale(0.45).setTint(0xd8ffa0).setDepth(97).setVisible(false);
-            f.homeX = fx; f.homeY = fy;
-            f.phase = Math.random() * Math.PI * 2;
-            f.pulseSpeed = 0.002 + Math.random() * 0.0022;
-            this.fireflies.push(f);
-        }
     }
 
-    buildHUD() {
-        const { width, height } = this.scale;
+    /** В дождь волки хуже слышат — радиус агро срезается (см. updateWolves). */
+    atmoExtras() {
+        this.wolfAggroRadius = WOLF_CFG.aggroRadius * (isRainy(this.weather) ? 0.65 : 1);
+    }
 
-        // Название локации (под кнопками — урок раунда 11)
-        this.add.text(12, 34, t('🌲 Тёмный лес') + (this.weather ? `  ${this.weather.icon}` : ''), {
-            fontSize: '15px', color: '#9fc08a', fontStyle: 'bold',
-            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 3,
-        }).setScrollFactor(0).setDepth(102);
+    /** Заголовок локации (иконку погоды добавит базовый класс). */
+    hudTitle() {
+        return { text: t('🌲 Тёмный лес'), color: '#9fc08a' };
+    }
 
-        // Единый статус-бар (как в деревне)
-        this.statusText = this.add.text(12, 10, '', {
-            fontSize: '12px', color: '#E8DCC4',
-            stroke: '#000', strokeThickness: 2,
-        }).setScrollFactor(0).setDepth(102);
-
-        // Кнопки справа вверху: [Персонаж] [Инвентарь]
-        const btnY = 14, btnW = 70, btnH = 20;
-        const charBtnX = width - 220;
-        const charBtn = this.add.rectangle(charBtnX, btnY, btnW, btnH, 0x4a3520, 0.95)
-            .setStrokeStyle(1, 0xC9A961).setInteractive({ useHandCursor: true })
-            .setScrollFactor(0).setDepth(101);
-        this.add.text(charBtnX, btnY, t('📜 Персонаж'), {
-            fontSize: '11px', color: '#E8DCC4', stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
-        charBtn.on('pointerup', () => {
-            this.scene.pause();
-            this.scene.launch('Character', { from: 'Forest' });
-        });
-
-        const invBtnX = width - 100;
-        const invBtn = this.add.rectangle(invBtnX, btnY, btnW, btnH, 0x4a3520, 0.95)
-            .setStrokeStyle(1, 0xC9A961).setInteractive({ useHandCursor: true })
-            .setScrollFactor(0).setDepth(101);
-        this.add.text(invBtnX, btnY, t('🎒 Инвентарь'), {
-            fontSize: '11px', color: '#E8DCC4', stroke: '#000', strokeThickness: 1,
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
-        invBtn.on('pointerup', () => {
-            this.scene.pause();
-            this.scene.launch('Character', { from: 'Forest', tab: 'inventory' });
-        });
-
-        // Патч 66.75 (приказы 5–6 владельца): «⚙ Настройки» — панель звука в игре
-        addSettingsGearButton(this, width - 160, btnY);
-
-        // Подсказка взаимодействия внизу по центру
-        this.prompt = this.add.text(width / 2, height - 22, '', {
-            fontSize: '14px', color: '#E8DCC4', fontStyle: 'bold',
-            fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 3,
-            backgroundColor: '#00000099', padding: { x: 10, y: 4 },
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setVisible(false);
-
-        // Предупреждение о напуганной стае
+    /** Предупреждение о напуганной стае (после спавна волков). */
+    hudExtras() {
+        const { width } = this.scale;
         if (this.wolvesScared) {
             this.add.text(width / 2, 60, t('🐺 Стая напугана — волки держатся подальше'), {
                 fontSize: '12px', color: '#9fc08a',
@@ -829,89 +649,32 @@ export class ForestScene extends Phaser.Scene {
                 backgroundColor: '#00000088', padding: { x: 8, y: 3 },
             }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
         }
+    }
 
-        this.updateHUD();
+    /** Голод и усталость в статус-баре (между датой и репутацией — как было). */
+    hudStatusExtra() {
+        return `  ${hungerStatusLine(this.registry)}  ${fatigueStatusLine(this.registry)}`;
+    }
 
-        // Раунд 21: прогулка в лес может закрыть поручение «Заготовить дрова» и т.п.
+    /** Отсвет кострища ночью (специфика леса). */
+    afterHudCommon(dark) {
+        if (this.campGlow) this.campGlow.setAlpha(0.10 + dark * 0.22);
+    }
+
+    /** Раунд 21: прогулка может закрыть поручение «Заготовить дрова» и т.п. */
+    onHudBuilt() {
         onLocationVisited(this.registry, 'forest');
     }
 
-    // ================= ИГРОВОЙ ЦИКЛ =================
-
-    update(time) {
-        // Пока открыт диалог — мир ждёт (раунд 21)
-        if (this.busyDialog) {
-            this.playerObj.setVelocity(0, 0);
-            this.wolves.forEach(w => w.sprite.setVelocity(0, 0));
-            if (this.virtualControls) this.virtualControls.setVisible(false);
-            return;
-        }
-
-        // Патч 66.46 (приказ 2): тень героя следует за ним каждый кадр
-        if (this.sunLight) this.sunLight.updateFollowers();
-
-        const endState = checkGameEnd(this.registry);
-        // Раунд 66.16 (гард р.41): защёлка против per-frame шторма переходов
-        if (endState) {
-            if (!this.__endQueued) { this.__endQueued = true; this.scene.start('End'); }
-            return;
-        }
-
-        if (this.virtualControls) this.virtualControls.setVisible(true);
-
-        this.movePlayer();
-        this.updateWolves(time);
-        this.updateAnimals(time);
-        this.updateNearestInteractable();
-        this.updateHUD();
+    /** Открытый диалог: волки замирают (мир ждёт, раунд 21). */
+    pauseActors() {
+        this.wolves.forEach(w => w.sprite.setVelocity(0, 0));
     }
 
-    movePlayer() {
-        const speed = 160;
-        let vx = 0, vy = 0;
-        const joyMove = this.virtualControls ? this.virtualControls.getMovement() : null;
-        if (joyMove) {
-            vx = joyMove.x;
-            vy = joyMove.y;
-        } else {
-            if (this.cursors.left.isDown || this.wasd.A.isDown) vx = -1;
-            if (this.cursors.right.isDown || this.wasd.D.isDown) vx = 1;
-            if (this.cursors.up.isDown || this.wasd.W.isDown) vy = -1;
-            if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
-        }
-
-        // 66.68 (§9.3, P3): вектор переиспользуется — set() вместо new (см. create)
-        const v = this._moveVec.set(vx, vy);
-        if (v.length() > 0) {
-            v.normalize().scale(speed);
-            let dir = this.lastDir;
-            if (Math.abs(vy) >= Math.abs(vx)) dir = vy < 0 ? 'up' : 'down';
-            else dir = vx < 0 ? 'left' : 'right';
-
-            if (dir !== this.lastDir || !this.playerObj.anims.isPlaying) {
-                if (!this.player.useComposite) {
-                    this.playerObj.play(`${this.player.sprite || 'player'}_walk_${dir}`, true);
-                }
-                this.lastDir = dir;
-            }
-            const now = this.time.now;
-            if (now - this.lastStepTime > this.stepInterval) {
-                this.audioManager.playStep();
-                this.lastStepTime = now;
-                // Патч 66.73: шаг по лесу — перемещение (голод ×1.5)
-                tickTime(this.registry, 0.25, 'walk');
-            }
-        } else if (!this.player.useComposite) {
-            this.playerObj.anims.pause();
-            // 66.68 (§9.3, P3): idle-ключ кэшируется по направлению
-            if (this.lastDir !== this._idleKeyDir) {
-                this._idleKeyDir = this.lastDir;
-                this._idleKey = `${this.player.sprite || 'player'}_idle_${this.lastDir}`;
-            }
-            this.playerObj.play(this._idleKey, true);
-        }
-        this.playerObj.setVelocity(v.x, v.y);
-        this.playerObj.setDepth(this.playerObj.y / TS);
+    /** Локальные актёры кадра: волки и дичь. */
+    updateActors(time) {
+        this.updateWolves(time);
+        this.updateAnimals(time);
     }
 
     updateWolves(time) {
@@ -1344,71 +1107,9 @@ export class ForestScene extends Phaser.Scene {
         this.scene.start('Fork');
     }
 
-    showFloatingText(x, y, text, color = '#e8cc7a') {
-        const t = this.add.text(x, y, text, {
-            fontSize: '13px', color, fontFamily: 'Arial, sans-serif',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5).setDepth(150);
-        this.tweens.add({
-            targets: t,
-            y: y - 34,
-            alpha: { from: 1, to: 0 },
-            duration: 1600,
-            ease: 'Cubic.easeOut',
-            onComplete: () => t.destroy(),
-        });
-    }
-
     updateHUD() {
-        const p = this.player;
-        const timeState = getTime(this.registry);
-        const villageRep = getVillageRep(this.registry);
-        const moneyStr = formatMoney(p.dengas || 0);
-
-        let statusLine = `❤${p.HP}/${p.HPmax}  💰${moneyStr}`;  // 66.71: МР удалён (приказ 7)
-        if (timeState) statusLine += `  📅${formatDateTime(timeState)}`;
-        // Раунд 66.70 (приказы 1–2): норма еды — 2 трапезы в сутки
-        statusLine += `  ${hungerStatusLine(this.registry)}`;
-        // Патч 66.73 (приказ 14): усталость в HUD (ОУ = СИЛ+ТЕЛ, BRP SRD)
-        statusLine += `  ${fatigueStatusLine(this.registry)}`;
-        statusLine += `  ⭐${villageRep > 0 ? '+' : ''}${villageRep}`;
-        // Патч 66.80 (п.11-в): лестница статусов — «(подозрительный)» / «(свой)»
-        statusLine += villageRepStatusSuffix(this.registry);
-        this.statusText.setText(statusLine);
-
-        // День/ночь + светлячки + лучи + кострище
-        if (timeState) {
-            const overlay = getDayNightOverlay(timeState);
-            if (this.dayNightOverlay) {
-                this.dayNightOverlay.setFillStyle(overlay.color, overlay.alpha);
-            }
-            // Патч 66.46 (приказ 2): ход солнца — тени и тёплый свет
-            if (this.sunLight) this.sunLight.update(timeState);
-            const h = timeState.hour;
-            let dark = 0;
-            if (h >= 21 || h < 5) dark = 1;
-            else if (h >= 18) dark = (h - 18) / 3;
-            else if (h < 8) dark = (8 - h) / 3;
-
-            // Светлячки — ночные, как в деревне
-            const now = this.time.now;
-            this.fireflies.forEach((f) => {
-                if (dark <= 0.35) {
-                    f.setVisible(false);
-                    return;
-                }
-                f.setVisible(true);
-                const pulse = 0.35 + 0.55 * Math.sin(now * f.pulseSpeed + f.phase);
-                f.setAlpha(dark * Math.max(0, pulse));
-                f.x = f.homeX + Math.sin(now * 0.0011 + f.phase) * 24;
-                f.y = f.homeY + Math.cos(now * 0.0009 + f.phase * 1.7) * 16;
-            });
-
-            // Днём лучи ярче, ночью почти гаснут; светлячки и мгла усиливаются
-            const day = 1 - dark;
-            if (this.godRays) this.godRays.forEach(r => r.setAlpha(0.02 + day * 0.05));
-            if (this.fogPuffs) this.fogPuffs.forEach(fg => fg.setAlpha(0.04 + dark * 0.09));
-            if (this.campGlow) this.campGlow.setAlpha(0.10 + dark * 0.22);
-        }
+        // §12.3 (66.96): общее ядро HUD — в OutdoorLocationBase.updateHUDCommon
+        // (статус-бар через hooks hudStatusExtra/afterHudCommon)
+        this.updateHUDCommon();
     }
 }

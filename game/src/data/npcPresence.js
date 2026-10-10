@@ -24,6 +24,8 @@
 
 import { getTime, getTimeOfDay } from '../systems/TimeSystem.js';
 import { getHerdState } from './herd.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
+import { absDay } from '../systems/gameCalendar.js';
 
 // Профессия/роль по ID — не зависит от registry (старые сейвы тоже работают)
 const NPC_ROLE = {
@@ -484,10 +486,8 @@ function hash01(str) {
     return (h >>> 0) / 4294967296;
 }
 
-function dayKeyOf(time) {
-    if (!time) return 0;
-    return time.yearFromChrist * 372 + time.month * 31 + time.day;
-}
+// Ключ дня для расписаний присутствия — канон gameCalendar.absDay (§12.3, 66.96)
+const dayKeyOf = absDay;
 
 // Окно посещения таверны на день (п.11): { start, len } | null.
 // 55% взрослых ходят каждый день, окно 2-4 часа между 11 и 22.

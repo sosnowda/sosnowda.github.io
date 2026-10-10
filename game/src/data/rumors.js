@@ -22,6 +22,8 @@ import { getTime } from '../systems/TimeSystem.js';
 // Раунд 66.7: приметы — слухи о погоде влияют на неё (пп.6,7)
 import { omenTypeForDay, omenLine, recordWeatherRumor, OMEN_FULFILLED_NOTE } from '../systems/WeatherOmens.js';
 import { getSeasonalWork } from '../systems/SeasonalWork.js';
+// §12.3 (66.96): единый игровой календарь — один строковый ключ дня на всю игру
+import { dayKey as gameCalendarDayKey } from '../systems/gameCalendar.js';
 import { getHerdState } from './herd.js';
 import { isThiefAt } from './thief.js';
 import { getHuntState } from './thief.js';
@@ -150,7 +152,7 @@ export function collectRumors(registry) {
  */
 export function tavernRumorLine(registry) {
     const time = getTime(registry);
-    const dayKey = time ? `${time.yearFromChrist}-${time.month}-${time.day}` : 'unknown';
+    const dayKey = gameCalendarDayKey(time);
     const state = registry.get('rumorsDay') || null;
     const used = state && state.day === dayKey ? state.used : [];
 
@@ -198,7 +200,7 @@ export function tavernRumorLine(registry) {
 // ============================================================
 export function overheardRumorLine(registry) {
     const time = getTime(registry);
-    const dayKey = time ? `${time.yearFromChrist}-${time.month}-${time.day}` : 'unknown';
+    const dayKey = gameCalendarDayKey(time);
     const state = registry.get('rumorsDay') || null;
     const used = state && state.day === dayKey ? state.used : [];
 

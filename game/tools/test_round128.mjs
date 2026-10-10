@@ -391,14 +391,18 @@ console.log('\n=== проводки сцен (source-пины) ===');
     ok(is.includes('absolutionInChurch()') && is.includes("getVillageRep(this.registry) < 0"), 'InteriorScene: кнопка епитимьи при плохой молве');
     ok((is.match(/wageDealDialog\(/g) || []).length >= 4, 'InteriorScene: «О слове» у 4 хозяев (гончар/ткачиха/плотник/кузнец)');
     ok(is.includes('repMsgS'), 'InteriorScene: ФИКС repMsgC → repMsgS в кузнице');
-    ok(!is.includes('+ repMsgC,'), 'InteriorScene: баг-ссылка repMsgC удалена');
+    // 66.96: реп-строка плотника (+repMsgC) теперь ДОБАВЛЯЕТСЯ в диалог
+    // (раньше вычислялась и терялась — копипаст-дрейф из 66.80)
+    ok(is.includes('+ repMsgC,'), 'InteriorScene: слава подёнщика плотника показывается в диалоге');
     ok(is.includes('tickWeeklyRepForget(this.registry'), 'InteriorScene: недельный тик');
     const ls = read('game/src/scenes/LocationScene.js');
     ok(ls.includes('wageDealAtMill()') && ls.includes("attemptWageDeal(this.registry, 'peasant1'"), 'LocationScene: «О слове» у мельника (Авдей)');
     ok(ls.includes('tickWeeklyRepForget(this.registry'), 'LocationScene: недельный тик');
     const fs = read('game/src/scenes/ForestScene.js');
     const asx = read('game/src/scenes/ApiaryScene.js');
-    ok(fs.includes('villageRepStatusSuffix') && asx.includes('villageRepStatusSuffix'), 'Forest/Apiary: статус в HUD');
+    // 66.96: HUD-статус леса/пасеки — в базовом классе OutdoorLocationBase
+    ok(read('game/src/systems/OutdoorLocationBase.js').includes('villageRepStatusSuffix'),
+        'Forest/Apiary (OutdoorLocationBase): статус в HUD');
     const jb = read('game/src/systems/jobs.js');
     ok(jb.includes("applyWageBalance(registry, base, 'potter')") && jb.includes("applyWageBalance(registry, base, 'carpenter')") && jb.includes("applyWageBalance(registry, base, 'mill')"), 'jobs.js: множители во всех подёнках');
     ok(jb.includes("{ noSeason: true, noDeal: true })"), 'jobs.js: служка — без сезона и торга');

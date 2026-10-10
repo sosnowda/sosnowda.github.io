@@ -32,6 +32,8 @@ import { createDialog } from '../utils/ui.js';
 // Раунд 66.70 (приказы 1–2): еда считается в СИСТЕМЕ ГОЛОДА
 // (норма — не менее 2 трапез за сутки, полдень и вечер).
 import { noteHungerMeal } from './hunger.js';
+// §12.3 (66.96): единый игровой календарь — одна формула дня/минуты на всю игру
+import { absMinute } from './gameCalendar.js';
 
 /** Сколько лечит ПРОСТАЯ еда (очков Здоровья) — яблоко, мёд, грибы, рацион. */
 export const MEAL_HEAL_HP = 1;
@@ -64,9 +66,7 @@ export function restHealPct(minutes) {
  */
 export function worldAbsMinutes(registry) {
     const time = registry ? registry.get('gameTime') : null;
-    if (!time) return 0;
-    const day = (time.yearFromChrist * 372) + (time.month * 31) + time.day;
-    return (day * 1440) + ((time.hour || 0) * 60) + (time.minute || 0);
+    return absMinute(time);
 }
 
 // ---------------- ЕДА ----------------
