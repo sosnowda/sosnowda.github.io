@@ -122,6 +122,11 @@ export class CombatScene extends Phaser.Scene {
         this.enemies = villagerNpc
             ? [spawnVillagerEnemy(villagerNpc)]
             : this.enemyKeys.map(k => spawnEnemy(k));
+        // 66.95 (P2-5 аудита игры): сброс ДО блока restoreThiefHp ниже.
+        // Флаг раненого вора не должен переживать партию — иначе предупреждение
+        // «Вор ещё не залечил раны…» печатается во ВСЕХ последующих боях сессии
+        // (разбойники, волки, жители). Позиционный инвариант закреплён r137.
+        this.woundedThief = false;
         // Раунд 32 (п.11): вор НЕ лечится между боями — если прошлый бой был
         // прерван побегом игрока, у вора остаётся прежний запас HP
         const isThiefFightNow = this.enemyKeys.includes('thief') || this.npcId === 'thief';
@@ -1558,14 +1563,19 @@ export class CombatScene extends Phaser.Scene {
             if (this.enemyKeys && this.enemyKeys.includes('wolf')) {
                 // Патч 66.73 (приказ 13): у волка ценный лут — крит разделки
                 // даёт волчьи клыки (трофей на продажу).
-                const deadWolves = Math.max(1, this.enemies.filter(e => e.HP <= 0).length);
+                // 66.95 (P2-4 аудита игры): было Math.max(1, …) — при бегстве
+                // ВСЕЙ стаи (мораль) игрок разделывал несуществующего волка и
+                // получал мясо/шкуры из воздуха. Разделываем только реально
+                // убитые туши; 0 убитых — блок разделки не даёт ничего.
+                const deadWolves = this.enemies.filter(e => e.HP <= 0).length;
                 let meat = 0, skins = 0, trophies = 0, lastRoll = null, lastSkill = null;
                 for (let i = 0; i < deadWolves; i++) {
                     const res = survivalButcher(this.registry, this.player, [5, 9], true, { trophy: 'wolf_fangs' });
                     meat += res.meat; skins += (res.skin > 0 ? 1 : 0); trophies += (res.trophy > 0 ? 1 : 0);
                     lastRoll = res.roll; lastSkill = res.skill;
                 }
-                ActionLog.add(this.registry, (deadWolves > 1
+                // 66.95 (P2-4): при 0 убитых (вся стая бежала) — ни лога, ни лута
+                if (deadWolves > 0) ActionLog.add(this.registry, (deadWolves > 1
                     ? tf(t('Освежевал {0} туш убитых волков (Выживание {1}%): +{2} сырое мясо{3}{4}.'),
                         deadWolves, lastSkill, meat,
                         skins > 0 ? tf(t(', шкуры ×{0}'), skins) : '',

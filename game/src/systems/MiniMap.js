@@ -238,19 +238,23 @@ export class MiniMap {
         const s = this.scene;
         const p = s.playerObj;
         if (!p) return;
-        // мировые пиксели → клетки плана (мировой тайл 32px)
+        // мировые пиксели → клетки плана
+        // 66.95 (P2-16 аудита игры): нормировка по ФАКТИЧЕСКОМУ тайлу сцены —
+        // деревня на тайле 48 (VillageScene.tileSize), а не легаси-32; при 32
+        // метка «Ты» упиралась в край на ~40% карты. Фолбэк 32 — прежнее поведение.
+        const mmTile = (s && s.tileSize) || 32;
         if (this._widgetMarker && this._widgetBox) {
             const b = this._widgetBox;
-            const mx = b.x + (p.x / (MAP_W * 32)) * b.w;
-            const my = b.y + (p.y / (MAP_H * 32)) * b.h;
+            const mx = b.x + (p.x / (MAP_W * mmTile)) * b.w;
+            const my = b.y + (p.y / (MAP_H * mmTile)) * b.h;
             this._widgetMarker.setPosition(
                 Phaser.Math.Clamp(mx, b.x + 2, b.x + b.w - 2),
                 Phaser.Math.Clamp(my, b.y + 2, b.y + b.h - 2));
         }
         if (this._panelMarker && this._panelMapBox) {
             const b = this._panelMapBox;
-            const mx = b.x + (p.x / (MAP_W * 32)) * b.w;
-            const my = b.y + (p.y / (MAP_H * 32)) * b.h;
+            const mx = b.x + (p.x / (MAP_W * mmTile)) * b.w;
+            const my = b.y + (p.y / (MAP_H * mmTile)) * b.h;
             this._panelMarker.setPosition(
                 Phaser.Math.Clamp(mx, b.x + 3, b.x + b.w - 3),
                 Phaser.Math.Clamp(my, b.y + 3, b.y + b.h - 3));

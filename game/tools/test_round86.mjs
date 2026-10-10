@@ -3,7 +3,8 @@
 // аналой-пюпитр, иконостас 0.165H, тавернщик у окошка, деревья погоста
 // (minDist 95 + зона часовни), pixelArt: true, bob вместо желе, конвейер
 // walk-листов героев, SW v82 / game-assets-v44. 66.30: pixelArt проверяется
-// в РЕАЛЬНОЙ точке входа (game/index.html), а не только в зеркале src/main.js.
+// в РЕАЛЬНОЙ точке входа (game/index.html). 66.95 (P2-13 аудита игры):
+// мёртвое зеркало src/main.js удалено — пин закрепляет удаление.
 import { readFileSync, existsSync, statSync } from 'fs';
 
 let pass = 0, fail = 0;
@@ -13,17 +14,16 @@ const ok = (cond, msg) => {
 };
 const read = (p) => readFileSync(p, 'utf8');
 
-const main = read('../src/main.js');
 const is = read('../src/scenes/InteriorScene.js');
 const loc = read('../src/scenes/LocationScene.js');
 const sw = read('../../sw.js');
 const swlog = read('../../docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
 
 console.log('--- 1. Пиксель-арт и анимация (п.6) ---');
-ok(main.includes('pixelArt: true'), 'main.js: pixelArt: true — спрайты без «мыла» при масштабах 1.5–2.5');
-ok(!/pixelArt:\s*false/.test(main.replace(/^\s*\/\/.*$/gm, '')), 'main.js: в конфиге pixelArt: false больше нет');
-// 66.30 (хотфикс): pixelArt обязан быть в РЕАЛЬНОЙ точке входа — index.html
-// импортирует сцены напрямую, минуя src/main.js (см. комментарий BootScene).
+// 66.95 (P2-13): зеркало src/main.js удалено насовсем (гарды живут в
+// BootScene — улучшенная версия с дренажом processQueue; pixelArt — в index.html).
+ok(!existsSync('../src/main.js'), 'мёртвое зеркало src/main.js удалено (66.95, P2-13 аудита игры)');
+// 66.95: зеркала больше нет — pixelArt живёт ТОЛЬКО в реальной точке входа.
 const entry = read('../index.html');
 ok(entry.includes('pixelArt: true'), 'game/index.html: pixelArt: true в РЕАЛЬНОЙ точке входа (хотфикс 66.30)');
 ok(!/pixelArt:\s*false/.test(entry.replace(/^\s*\/\/.*$/gm, '')), 'game/index.html: pixelArt: false в точке входа больше нет');
@@ -72,7 +72,7 @@ for (const h of ['hero_baenor', 'hero_huntress']) {
 ok(existsSync('../docs/PACK_ANALYSIS_6629.md'), 'анализ пака Medieval - Heroes I задокументирован (game/docs/PACK_ANALYSIS_6629.md)');
 
 console.log('--- 7. SW и кеши ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v127';"), 'SW: site-cache v127 (актуализация 66.94)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v128';"), 'SW: site-cache v128 (актуализация 66.95)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45 (листы 66.33 + бусты)');
 ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 

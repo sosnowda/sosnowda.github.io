@@ -136,7 +136,7 @@ i18n.setLang('ru');
 
 console.log('--- 10. SW: бамп v117→v118 (§4 — менялись исходники src/**) ---');
 const sw = read('sw.js');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v127';"), 'sw.js: CACHE_NAME v127 (66.94 актуализация)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v128';"), 'sw.js: CACHE_NAME v128 (66.95 актуализация)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 (66.86 актуализация)');
 const swlog = read('docs/SW_CHANGELOG.md');
 ok(swlog.includes('- v118 — итерация 66.77'), 'SW_CHANGELOG: запись v118 добавлена');

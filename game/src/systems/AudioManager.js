@@ -182,8 +182,11 @@ export default class AudioManager {
 
     _applyMusicVolume() {
         Object.values(this.music).forEach((music) => {
+            // 66.95 (P2-17 аудита игры): множитель 0.5 — как во ВСЕХ местах
+            // запуска (loadMusic/playSceneMusic); без него смена настроек
+            // внезапно делала музыку вдвое громче.
             if (music?.isPlaying) {
-                music.setVolume(this.musicMuted ? 0 : this.musicVolume);
+                music.setVolume(this.musicMuted ? 0 : this.musicVolume * 0.5);
             }
         });
         // Раунд 24: эмбиент привязан к настройкам музыки (это атмосфера, не SFX)
@@ -206,19 +209,24 @@ export default class AudioManager {
         if (!this.scene?.sound) return;
         if (key === this.ambientKey) return;
         if (this.ambient) {
+            // 66.95 (P2-18 аудита игры): захватываем ССЫЛКУ на старый эмбиент.
+            // Было: onComplete читал this.ambient — а он уже заменён/обнулён
+            // (this.ambient = null исполняется синхронно ниже), старый трек
+            // не останавливался (тихо играл вечно), новый мог быть уничтожен.
+            const prevAmbient = this.ambient;
             try {
                 this.scene.tweens.add({
-                    targets: this.ambient,
+                    targets: prevAmbient,
                     volume: 0,
                     duration: 600,
                     onComplete: () => {
-                        this.ambient?.stop();
-                        this.ambient?.destroy();
+                        prevAmbient?.stop();
+                        prevAmbient?.destroy();
                     },
                 });
             } catch (e) {
-                this.ambient.stop();
-                this.ambient.destroy();
+                prevAmbient.stop();
+                prevAmbient.destroy();
             }
             this.ambient = null;
             this.ambientKey = null;

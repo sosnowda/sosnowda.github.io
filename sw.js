@@ -58,7 +58,10 @@
 // живой HP в HUD P2-9, BootScene — loaderror + сторож прелоада P2-10,
 // WorldLook/CharacterSelectionScene — сброс npc-кэша новой партии P2-15);
 // game-assets-v45 цел (ассеты не тронуты), код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v127';
+// 66.95 (эшелон 3 аудита игры): бамп v127→v128 — game/src (боевой хвост
+// P2-4/5, гигиена P2-11…14, обвязка P2-16…19 — полный список в CHANGES.md
+// 66.95); game-assets-v45 цел, код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v128';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {

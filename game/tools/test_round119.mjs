@@ -244,8 +244,8 @@ for (const f of files) {
 ok(syntaxFail === 0, `node --check ×${files.length} — все зелёные`);
 
 console.log('--- 12. SW v113 / game-assets-v44 / доки ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v127';") && sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"),
-    'sw.js: v127 + game-assets-v45 (66.94 актуализация; ранее — иконки 66.71)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v128';") && sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"),
+    'sw.js: v128 + game-assets-v45 (66.95 актуализация; ранее — иконки 66.71)');
 ok(/66\.71/.test(swlog) && /v113/.test(swlog), 'SW_CHANGELOG: запись 66.71/v113');
 ok(/66\.71/.test(changes), 'CHANGES.md: запись 66.71');
 ok(/66\.71/.test(worklog), 'worklog (репо): запись 66.71');

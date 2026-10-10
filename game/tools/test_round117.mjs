@@ -61,7 +61,7 @@ ok(styles.indexOf('clip-path: inset(50%)') > styles.indexOf('.sr-only {') &&
 
 console.log('--- 2. P4-2: sw.js — var→const ×5, v112, механика не тронута ---');
 ok((sw.match(/\bvar\s+[A-Za-z_$]/gm) || []).length === 0, 'sw.js: объявлений var — ноль (no-var §9.2)');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v127';"), 'sw.js: const CACHE_NAME v127 (HTML/CSS менялись → бамп §4)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v128';"), 'sw.js: const CACHE_NAME v128 (HTML/CSS менялись → бамп §4)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: const GAME_ASSETS_CACHE v45 (ассеты/vendor не тронуты)');
 ok(sw.includes("const url = new URL(event.request.url);") &&
    sw.includes("const clone = response.clone();") &&
@@ -85,23 +85,27 @@ ok(!read('game/src/scenes/InteriorScene.js').includes('npcSchedules.js') &&
 ok(read('game/src/systems/WeatherOmens.js').includes("import { getTime, getSeason, MONTHS } from './TimeSystem.js';") &&
    !read('game/src/systems/WeatherOmens.js').includes("from './i18n.js'"),
     'WeatherOmens.js: мёртвый импорт i18n (t, tf) удалён, остальные импорты целы');
-const EDITED_19 = [
+const EDITED_18 = [
     'game/src/data/characters.js', 'game/src/data/dialogue.js', 'game/src/data/npcSchedules.js',
     'game/src/data/reputation.js', 'game/src/scenes/LocationScene.js', 'game/src/scenes/InteriorScene.js',
     'game/src/scenes/VillageScene.js', 'game/src/systems/DialogueRunner.js', 'game/src/systems/WeatherOmens.js',
-    'game/src/scenes/EndScene.js', 'game/src/main.js', 'game/src/scenes/CharacterScene.js',
+    'game/src/scenes/EndScene.js', 'game/src/scenes/CharacterScene.js',
     'game/src/scenes/CombatScene.js', 'game/src/scenes/ForestScene.js', 'game/src/scenes/ApiaryScene.js',
     'game/src/systems/CharacterAppearance.js', 'game/src/utils/ui.js', 'game/src/systems/MiniMap.js',
     'game/src/scenes/TitleScene.js',
 ];
 let synOk = true;
-for (const f of [...EDITED_19, 'sw.js']) {
+for (const f of [...EDITED_18, 'sw.js']) {
     try { execSync('node --check ' + f, { stdio: 'pipe' }); } catch { synOk = false; console.log('    node --check FAIL: ' + f); }
 }
-ok(synOk, 'node --check: 19 правленых файлов P4-3 + sw.js — синтаксис цел');
-ok(read('game/src/main.js').includes('DL.prototype.shutdown = function () {') &&
-   !read('game/src/main.js').includes('const origShutdown'),
-    'main.js: перехват DisplayList.shutdown работает как прежде (мёртвый origShutdown убран — вызов так и не осуществлялся)');
+ok(synOk, 'node --check: 18 правленых файлов P4-3 + sw.js — синтаксис цел');
+// 66.95 (P2-13): зеркало удалено — гард DisplayList.shutdown пинуем в BootScene,
+// где он РЕАЛЬНО исполняется (улучшенная версия, с дренажом processQueue).
+ok(read('game/src/scenes/BootScene.js').includes('DL.prototype.shutdown = function () {') &&
+   !read('game/src/scenes/BootScene.js').includes('const origShutdown'),
+    'BootScene: перехват DisplayList.shutdown работает как прежде (мёртвый origShutdown убран — вызов так и не осуществлялся)');
+ok(!fs.existsSync('game/src/main.js') && !fs.existsSync('game/src/scenes/Loading.js'),
+    'мёртвые файлы удалены: src/main.js (P2-13) и scenes/Loading.js (P2-14) — 66.95');
 
 console.log('--- 4. P4-4: aria-label логотипа содержит видимый текст (обе локали) ---');
 ok((indexRu.match(/<a href="#" class="logo" aria-label="([^"]+)">/) || [])[1] === 'Летописи Руси XV века — на главную',
@@ -117,7 +121,7 @@ ok(!gameHtml.includes('<div id="game-container">'), 'game/index.html: прежн
 ok(gameHtml.trimEnd().includes('</main>'), 'game/index.html: закрывающий </main> на месте');
 const iH1 = gameHtml.indexOf('<h1 class="sr-only">'), iMain = gameHtml.indexOf('<main id="game-container">'), iBody = gameHtml.indexOf('<body>');
 ok(iBody > -1 && iH1 > iBody && iH1 < iMain, 'игра: H1 — первый элемент body, до #game-container (инвариант r113 цел)');
-ok(read('game/src/main.js').includes("parent: 'game-container'"), "Phaser parent: 'game-container' не менялся (id-пин)");
+ok(read('game/index.html').includes("parent: 'game-container'"), "Phaser parent: 'game-container' не менялся (id-пин, реальная точка входа — 66.95 P2-13)");
 
 console.log('--- 6. P4-6/P4-8: vendor без sourcemap-ссылок; r98 без зашитого пути ---');
 ok(!read('game/vendor/phaser.min.js').includes('sourceMappingURL'), 'vendor/phaser.min.js: ссылок на sourcemap нет (решение P4-6 «принято» закреплено)');

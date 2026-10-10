@@ -1293,13 +1293,15 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
 
     // ----- Закрытие диалога -----
     let isClosing = false;
-    const closeDialog = () => {
-        if (isClosing) return;
-        isClosing = true;
-        if (typeTimer) typeTimer.remove();
-        // Раунд 32: убрать колесо прокрутки и маску длинного текста
+    // 66.95 (P2-19 аудита игры): снятие wheel/drag-слушателей — единый
+    // идемпотентный хелпер. Раньше они снимались только в closeDialog,
+    // но DialogueRunner делает и ПРЯМОЙ destroy() диалога (навигация по
+    // узлам, DialogueRunner.js:242) — до 5 висячих слушателей на каждый
+    // такой диалог. dialog.once('destroy', …) закрывает оба пути (и заодно
+    // снятие при остановке сцены); повторный вызов безопасен.
+    const removeScrollListeners = () => {
+        // Раунд 32: убрать колесо прокрутки; Раунд 66.12: и тач-обработчики
         if (wheelHandler) { scene.input.removeListener('wheel', wheelHandler); wheelHandler = null; }
-        // Раунд 66.12: снять и тач-обработчики прокрутки
         if (dragHandlers.down) {
             scene.input.removeListener('pointerdown', dragHandlers.down);
             scene.input.removeListener('pointermove', dragHandlers.move);
@@ -1307,6 +1309,13 @@ export function createDialog(scene, title, content, buttons = [], options = {}) 
             scene.input.removeListener('pointerupoutside', dragHandlers.up);
             dragHandlers.down = null; dragHandlers.move = null; dragHandlers.up = null;
         }
+    };
+    dialog.once('destroy', removeScrollListeners);
+    const closeDialog = () => {
+        if (isClosing) return;
+        isClosing = true;
+        if (typeTimer) typeTimer.remove();
+        removeScrollListeners();
         if (contentMaskGfx) { contentMaskGfx.destroy(); contentMaskGfx = null; }
 
         actionButtons.forEach((btn) => {
