@@ -190,7 +190,7 @@ ok((ui.match(/removeListener\('pointerdown'/g) || []).length === 1,
 ok(ui.includes("scene.input.removeListener('pointerupoutside'"), 'P2-19: pointerupoutside снимается (все 4 drag-слушателя)');
 
 console.log('--- 10. SW v130 + game-assets-v45 ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v130';"), 'sw.js: CACHE_NAME v130');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v131';"), 'sw.js: CACHE_NAME v130');
 ok(!sw.includes("chronicles-ruthenia-v127'"), 'sw.js: старого v127 как CACHE_NAME нет');
 ok(sw.includes('66.95 (эшелон 3 аудита игры)'), 'sw.js: коммент-шапка бампа 66.95');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: бакет game-assets-v45 цел (ассеты не тронуты)');

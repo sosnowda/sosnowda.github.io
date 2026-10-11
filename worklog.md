@@ -3051,3 +3051,17 @@ Stage Summary:
 - Аудит 66.92 официально закрыт: реестр пуст, P2-21 подтверждён как безобидное наблюдение, регресс 76/76.
 - Прод после 66.97 здоров: деплой built, прод=репо бит-в-бит, SW v130/v45, смоук игры 19/19 с 0 ошибок, лендинги 42/42, Lighthouse mobile 88 (было 67) — прогресс PF-2/PF-4/мёртвых ассетов подтверждён живыми замерами.
 - Коммит 66.98 только с документами (docs/PROD_CHECK_R6698.md + CHANGES + worklog), деплой не требуется.
+
+---
+Task ID: 66.99
+Agent: Super Z (GLM)
+Task: Приказ владельца (выделение P2-21 из отчёта 66.98): «P2-21 (циклический импорт TimeSystem↔questGenerator) верифицирован разбором кода… — статус "наблюдение" подтверждён» → перевести последний остаток реестра аудита 66.92 из наблюдения в закрытые.
+
+Work Log:
+- РАЗБОРКА ЦИКЛА: TimeSystem.js:9 ← tickQuestTime (вызов в tickTime:266), questGenerator.js:15 ← getSeason (зимний фильтр 66.12 п.5, ленивая IIFE :720). Кольцо режется по любому ребру; выбрано ОБРАТНОЕ (questGenerator→TimeSystem): tickQuestTime-ребро трогать нельзя (это runtime-вызов в горячем тике, hook-инъекция — лишний код).
+- ВЫБОР МЕСТА КАНОНА: новый лист-файл season.js ОТВЕРГНУТ — дублирование с MONTH_META; канон поселён в gameCalendar.js (уже лист без импортов, §12.3-канон календаря, ОБА конца цикла уже импортируют его): + SEASON_OF (12 месяцев, сентябрьский стиль) + getSeason.
+- ПРАВКИ: questGenerator — getSeason из gameCalendar (строкой с absDay/absMinute); TimeSystem — MONTH_META без поля season, MONTHS={...m, season:SEASON_OF[i], days:MONTH_DAYS[i]} (форма прежняя), getSeason — ре-экспорт того же имени (export { getSeason }); 8 потребителей (Location/Village/repBalance/WeatherOmens/Weather/AmbientFX/apiary/questGenerator) НЕ тронуты — пин строки WeatherOmens в r117 цел.
+- ЭКВИВАЛЕНТНОСТЬ: r140 сверил getSeason ×12 со старой таблицей из git-истории — бит-в-бит; repBalance.seasonWageMultiplier ×3 функционально (potter/декабрь 0.8, mill/сентябрь 1.2, smithy/май 1); tickTime(30) на registry-моке — полный тик (hunger+chase-hook+tickQuestTime) без кольца; questGenerator вычисляется в Node.
+- НАЙДЕН И ПОЧИНЕН В ХОДЕ: r138 §1 пин «import { MONTH_DAYS }» дословный — строка расширена до { MONTH_DAYS, SEASON_OF, getSeason }, семантика «один источник правды» целая — актуализация пина с меткой 66.99 (прецедент 66.87/66.90). Ложная тревога «MONTHS]» в выводе — ANSI-артефакт захвата («[m» = esc-последовательность), код на диске цел (проверено od -c).
+- НУМЕРАЦИЯ: предыдущий коммит — 66.98 (прод-проверка), патч = 66.99; все метки/журналы приведены (sw.js-комментарий, SW_CHANGELOG, r138/r140, комментарии модулей).
+- СЛУЖЕБНОЕ: SW v130→v131 (game/src, §4); game-assets-v45 цел; SW_CHANGELOG v131; НОВЫЙ test_round140 (24✓); пины 43 файла × 44 замены (scripts/update_pins_6699.py — вне репо); node --check 3 модулей + sw.js; регресс 64–140 = 77/77 (r86–89 из game/tools).

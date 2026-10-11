@@ -73,3 +73,33 @@ export function dayKey(timeState) {
         ? `${timeState.yearFromChrist}-${timeState.month}-${timeState.day}`
         : 'unknown';
 }
+
+// ============================================================
+// СЕЗОНЫ «месяц → сезон» (P2-21 аудита 66.92, 66.99).
+// ============================================================
+// Единственная таблица соответствия месяца сезону: раньше сезон жил
+// полем в TimeSystem.MONTH_META, и questGenerator импортировал getSeason
+// из TimeSystem — при вызове tickQuestTime из TimeSystem.tickTime это
+// давало ЦИКЛИЧЕСКИЙ импорт TimeSystem↔questGenerator (P2-21, «наблюдение»).
+// Теперь оба конца цикла читают этот лист-модуль: questGenerator — напрямую,
+// TimeSystem — ре-экспортом getSeason (точки импорта 8 потребителей
+// не изменились). Сентябрьский стиль: месяц 0 = сентябрь = осень.
+export const SEASON_OF = [
+    'autumn', 'autumn', 'autumn',   // сентябрь, октябрь, ноябрь
+    'winter', 'winter', 'winter',   // декабрь, январь, февраль
+    'spring', 'spring', 'spring',   // март, апрель, май
+    'summer', 'summer', 'summer',   // июнь, июль, август
+];
+
+/**
+ * Время года по индексу месяца (0 = сентябрь, сентябрьский стиль).
+ * Канон прежнего TimeSystem.getSeason (MONTHS[month].season) — значения
+ * бит-в-бит те же; зимний фильтр поручений (questGenerator, раунд 66.12 п.5)
+ * и сезонные множители подёнки (repBalance.seasonWageMultiplier)
+ * читают его через прежние точки импорта.
+ * @param {number} month индекс месяца 0–11
+ * @returns {string} 'spring'|'summer'|'autumn'|'winter'
+ */
+export function getSeason(month) {
+    return SEASON_OF[month];
+}

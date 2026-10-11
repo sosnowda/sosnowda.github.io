@@ -89,8 +89,9 @@ console.log('--- 2. Единая таблица длин месяцев ---');
         && !access.includes('const MONTH_DAYS = ['),
         'AccessHours: MONTH_DAYS импортируется, своей копии НЕТ');
     const ts = read('game/src/systems/TimeSystem.js');
-    ok(ts.includes('import { MONTH_DAYS }') && ts.includes('days: MONTH_DAYS[i]'),
-        'TimeSystem: MONTHS[].days выводится из MONTH_DAYS (один источник правды)');
+    // актуализация 66.99 (P2-21): импорт расширен SEASON_OF/getSeason — канон дней прежний
+    ok(ts.includes('import { MONTH_DAYS, SEASON_OF, getSeason }') && ts.includes('days: MONTH_DAYS[i]'),
+        'TimeSystem: MONTHS[].days выводится из MONTH_DAYS (один источник правды; актуализация 66.99)');
     ok(!ts.includes("days: 30 },") && !ts.includes("days: 31 },"),
         'TimeSystem: захардкоженных длин месяцев БОЛЬШЕ НЕТ');
 }

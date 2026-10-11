@@ -67,7 +67,10 @@
 // jobs/Weather/TimeSystem/AccessHours — полный список в CHANGES.md 66.96);
 // /game/src/ идёт мимо SW (network direct) — прекеш-список не нужен;
 // game-assets-v45 цел (ассеты не тронуты), код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v130';
+// 66.99 (P2-21 аудита 66.92 — разрыв цикла): бамп v130→v131 — game/src
+// (systems/gameCalendar.js + SEASON_OF/getSeason, systems/TimeSystem.js,
+// data/questGenerator.js); game-assets-v45 цел, код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v131';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {

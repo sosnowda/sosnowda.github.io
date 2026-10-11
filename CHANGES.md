@@ -1,3 +1,23 @@
+## Патч 66.99 — P2-21 аудита 66.92: ЦИКЛ TimeSystem↔questGenerator РАЗОРВАН (наблюдение → закрыто)
+
+**ПО ПРИКАЗУ ВЛАДЕЛЬЦА** (выделение P2-21 из отчёта 66.98): «P2-21 (циклический импорт TimeSystem↔questGenerator) верифицирован разбором кода: оба вызова внутри функций, ES-биндинги не читаются на вычислении модулей — статус "наблюдение" подтверждён». Последний формальный остаток реестра аудита 66.92 переведён из «наблюдения» в ЗАКРЫТЫЕ: реестр аудита исчерпан ВООБЩЕ без исключений.
+
+### Суть дефекта
+`TimeSystem.js` импортировал `tickQuestTime` из `../data/questGenerator.js` (вызов в `tickTime`), а `questGenerator.js` — `getSeason` из `TimeSystem` (зимний фильтр поручений, раунд 66.12 п.5): кольцо системный↔данные. Безопасно только при ленивом использовании биндингов (что и было доказано в 66.98) — любое future-использование на этапе вычисления модуля (константа, таблица, side-effect при импорте) дало бы TDZ/undefined в порядке, зависящем от точки входа; плюс архитектурный запах «система знает про данные, данные про систему».
+
+### Решение — канон сезона в листе gameCalendar (без нового файла, без дублирования)
+- `systems/gameCalendar.js` (чистый лист без импортов, §12.3-канон календаря): НОВЫЕ экспорты `SEASON_OF` (единственная таблица «месяц → сезон», сентябрьский стиль: 0–2 autumn, 3–5 winter, 6–8 spring, 9–11 summer) + `getSeason(month)`.
+- `data/questGenerator.js`: `getSeason` теперь из gameCalendar (одной строкой с absDay/absMinute — импорт уже был); ребро questGenerator→TimeSystem СРЕЗАНО.
+- `systems/TimeSystem.js`: `MONTH_META` без поля season; `MONTHS = MONTH_META.map((m,i) => ({...m, season: SEASON_OF[i], days: MONTH_DAYS[i]}))` — форма записи `{ name, nameNominative, season, days }` прежняя; `getSeason` — РЕ-ЭКСПОРТ того же имени функции из gameCalendar (`export { getSeason }`) — точки импорта всех 8 потребителей (LocationScene, VillageScene, repBalance, WeatherOmens, Weather, AmbientFX, apiary, questGenerator) НЕ менялись.
+- Значения сезона бит-в-бит прежние — доказано r140 против старой таблицы из git-истории; сезонные эффекты (фильтр зимних поручений, seasonWageMultiplier) работают через прежние API.
+
+### Служебное
+- НОВЫЙ `game/tools/test_round140.mjs` (24✓): канон ×12 бит-в-бит, статика разрыва (в questGenerator нет импорта TimeSystem; в gameCalendar нет ни одного import; ребро TimeSystem→questGenerator односторонне), MONTHS-форма и ре-экспорт того же имени, repBalance ×3 функционально через новый путь, `tickTime` на registry-моке — полный тик (hunger + chase-hook + tickQuestTime) без кольца, SW v131.
+- Пины: 43 файла × 44 замены v130→v131 (scripts/update_pins_6699.py — вне репо); r138 §1 пин актуализирован (`import { MONTH_DAYS, SEASON_OF, getSeason }` — семантика «один источник правды» целая, метка «актуализация 66.99»).
+- SW v130→v131 (game/src менялись, §4 АГЕНТ.md); game-assets-v45 цел; код sw.js не менялся. SW_CHANGELOG v131.
+- Регресс 64–140 = **77/77** (r86–89 — cwd game/tools); node --check 3 модулей + sw.js.
+- Sitemap lastmod /game/ — bump_lastmod.py после коммита + amend (§5).
+
 ## Итерация 66.98 — закрытие аудита 66.92 + прод-проверка после 66.97 (отчёт docs/PROD_CHECK_R6698.md)
 
 **ПО ПРИКАЗУ ВЛАДЕЛЬЦА: «1) Продолжение аудита 66.92 — если остались пункты или нужен следующий эшелон; 2) Прод-проверка — живой прогон https://sosnowda.github.io и /game/ после 66.97 (Lighthouse, консоль, SW-версии)»**. Кода и ассетов НЕ тронуто — SW не бампился, sitemap без изменений.

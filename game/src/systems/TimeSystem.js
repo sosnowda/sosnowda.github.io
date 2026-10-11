@@ -17,28 +17,34 @@ import { sunTimes } from './AccessHours.js';
 import { hungerRolloverCheck, noteHungerTick } from './hunger.js';
 // §12.3 (66.96): длины месяцев — из ЕДИНСТВЕННОЙ таблицы gameCalendar
 // (раньше здесь была своя копия в поле days — два источника правды)
-import { MONTH_DAYS } from './gameCalendar.js';
+// P2-21 (66.99): и СЕЗОНЫ «месяц → сезон» — тоже оттуда же (SEASON_OF);
+// getSeason РЕ-ЭКСПОРТИРУЕТСЯ отсюда для 8 потребителей — цикл
+// TimeSystem↔questGenerator разорван (questGenerator импортирует
+// gameCalendar — лист без зависимостей, обратного ребра больше нет).
+import { MONTH_DAYS, SEASON_OF, getSeason } from './gameCalendar.js';
 // Патч 66.73: у fatigue.js нет зависимостей от TimeSystem — импорт не нужен
 // здесь; траты/восстановления ОУ вызывают сцены точечно.
 
 // Месяцы церковного календаря Руси XV века (сентябрьский стиль).
 // §12.3 (66.96): дни в месяце берутся из ЕДИНСТВЕННОЙ таблицы
 // gameCalendar.MONTH_DAYS (та же, что в AccessHours.dayOfYear).
+// P2-21 (66.99): сезон — тоже из gameCalendar.SEASON_OF (форма MONTHS
+// прежняя: { name, nameNominative, season, days } — потребители не менялись).
 const MONTH_META = [
-    { name: 'сентября', nameNominative: 'Сентябрь', season: 'autumn' },
-    { name: 'октября', nameNominative: 'Октябрь', season: 'autumn' },
-    { name: 'ноября', nameNominative: 'Ноябрь', season: 'autumn' },
-    { name: 'декабря', nameNominative: 'Декабрь', season: 'winter' },
-    { name: 'января', nameNominative: 'Январь', season: 'winter' },
-    { name: 'февраля', nameNominative: 'Февраль', season: 'winter' },
-    { name: 'марта', nameNominative: 'Март', season: 'spring' },
-    { name: 'апреля', nameNominative: 'Апрель', season: 'spring' },
-    { name: 'мая', nameNominative: 'Май', season: 'spring' },
-    { name: 'июня', nameNominative: 'Июнь', season: 'summer' },
-    { name: 'июля', nameNominative: 'Июль', season: 'summer' },
-    { name: 'августа', nameNominative: 'Август', season: 'summer' },
+    { name: 'сентября', nameNominative: 'Сентябрь' },
+    { name: 'октября', nameNominative: 'Октябрь' },
+    { name: 'ноября', nameNominative: 'Ноябрь' },
+    { name: 'декабря', nameNominative: 'Декабрь' },
+    { name: 'января', nameNominative: 'Январь' },
+    { name: 'февраля', nameNominative: 'Февраль' },
+    { name: 'марта', nameNominative: 'Март' },
+    { name: 'апреля', nameNominative: 'Апрель' },
+    { name: 'мая', nameNominative: 'Май' },
+    { name: 'июня', nameNominative: 'Июнь' },
+    { name: 'июля', nameNominative: 'Июль' },
+    { name: 'августа', nameNominative: 'Август' },
 ];
-export const MONTHS = MONTH_META.map((m, i) => ({ ...m, days: MONTH_DAYS[i] }));
+export const MONTHS = MONTH_META.map((m, i) => ({ ...m, season: SEASON_OF[i], days: MONTH_DAYS[i] }));
 
 // Дни недели (по-славянски)
 export const WEEKDAYS = [
@@ -131,10 +137,9 @@ export function getTimeOfDay(hour) {
     return TIME_OF_DAY.NIGHT;
 }
 
-// Получить время года по месяцу
-export function getSeason(month) {
-    return MONTHS[month].season;
-}
+// Получить время года по месяцу — P2-21 (66.99): канон в gameCalendar,
+// здесь ре-экспорт прежней точки импорта (8 потребителей без изменений).
+export { getSeason };
 
 // Продвинуть время на указанное количество минут
 export function advanceTime(timeState, minutes) {

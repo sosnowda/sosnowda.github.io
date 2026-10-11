@@ -10,9 +10,11 @@ import { ARMORS, WEAPONS } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
 import { applyQuestFailurePenalty } from './reputation.js';
 // §12.3 (66.96): единый игровой календарь — одна формула дня/минуты на всю игру
-import { absDay, absMinute } from '../systems/gameCalendar.js';
-// Раунд 66.12 (п.5): сезонная привязка — зимой грибы/травы не выдаются
-import { getSeason } from '../systems/TimeSystem.js';
+import { absDay, absMinute, getSeason } from '../systems/gameCalendar.js';
+// Раунд 66.12 (п.5): сезонная привязка — зимой грибы/травы не выдаются.
+// P2-21 (66.99): getSeason — из ЛИСТА gameCalendar (канон «месяц → сезон»
+// SEASON_OF); прежний импорт из TimeSystem создавал цикл
+// TimeSystem↔questGenerator (TimeSystem вызывает tickQuestTime отсюда).
 // Патч 66.73: штраф голода (>48 ч без еды → −1% навыков) в getBlessedSkill
 import { hungerSkillPenalty } from '../systems/hunger.js';
 // Патч 66.73: усталость (BRP SRD «Очки усталости») — −1% за отрицательный ОУ
