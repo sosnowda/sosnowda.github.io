@@ -22,6 +22,15 @@
 //   C — старое кострище лесников (НЕПРОХОДИМО, декор; отдых 1 час)
 //   E — выход к околице (проходимо, южная кромка)
 
+// 66.101 (F-5 аудита 66.100): mid-file импорты подняты в шапку модуля —
+// hoisting ES-модулей делал их легальными, унифицирован стиль (все import сверху)
+import { t, tf } from '../systems/i18n.js'; // Раунд 15: подписи сбора локализованы (i18n)
+// Патч 66.74 (приказ 8): проверка Следопытства при входе в лес
+import { skillCheck } from '../systems/BRPEngine.js';
+import { getBlessedSkill } from '../data/questGenerator.js';
+import { dayKeyOf, isActionDoneToday, markActionDone } from '../data/daily.js';
+import { ActionLog } from '../data/actionLog.js';
+
 export const FOREST_COLS = 30;
 export const FOREST_ROWS = 22;
 
@@ -85,12 +94,7 @@ export const WOLF_CFG = {
 // { id, kind: 'mushroom'|'berry'|'herb'|'bort', col, row, hp, prompt, label }
 // Раунд 15: подписи сбора локализованы (i18n).
 // Раунд 66.70: сбор — проверка Выживания, добыча идёт в узел (не съедается на месте).
-import { t, tf } from '../systems/i18n.js';
-// Патч 66.74 (приказ 8): проверка Следопытства при входе в лес
-import { skillCheck } from '../systems/BRPEngine.js';
-import { getBlessedSkill } from '../data/questGenerator.js';
-import { dayKeyOf, isActionDoneToday, markActionDone } from '../data/daily.js';
-import { ActionLog } from '../data/actionLog.js';
+// 66.101 (F-5): импорты i18n/BRPEngine/questGenerator/daily/actionLog подняты в шапку.
 
 export function forestGatherSpots() {
     const spots = [];

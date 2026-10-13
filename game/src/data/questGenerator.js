@@ -6,7 +6,7 @@
 // - реалистичного времени на выполнение (подготовка + дорога + выполнение)
 
 import { ActionLog } from './actionLog.js';
-import { ARMORS, WEAPONS } from '../systems/Character.js';
+import { ARMORS, WEAPONS, formatMoney } from '../systems/Character.js';
 import { t, tf } from '../systems/i18n.js';
 import { applyQuestFailurePenalty } from './reputation.js';
 // §12.3 (66.96): единый игровой календарь — одна формула дня/минуты на всю игру
@@ -1051,6 +1051,5 @@ export function getCompletedQuests(registry) {
     const q = registry.get('quest') || {};
     return (q.activeQuests || []).filter(q => q.completed);
 }
-
-// Импортируем formatMoney из Character.js
-import { formatMoney } from '../systems/Character.js';
+// 66.101 (F-5): import formatMoney поднят в шапку модуля (влит в строку
+// импорта Character.js).

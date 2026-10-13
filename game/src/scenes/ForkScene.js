@@ -20,14 +20,16 @@ import { getTime, formatDateTime, getDayNightOverlay, tickTime } from '../system
 import { spendFatigue } from '../systems/fatigue.js';
 // Патч 66.46 (приказ 2): тёплый свет зари/заката на карте местности
 import { attachSunLight } from '../systems/SunLight.js';
-// Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
-export const MAP_TRAVEL_MINUTES = 60;
+// 66.101 (F-5 аудита 66.100): mid-file импорты подняты в шапку модуля —
+// hoisting ES-модулей делал их легальными, унифицирован стиль (все import сверху)
 import { getWeather } from '../systems/Weather.js';
 import { t, tf } from '../systems/i18n.js';
 import { onLocationVisited } from '../data/questGenerator.js';
 // Раунд 31 (пп.11,12): мировые часы — реальный ход, пауза в разговорах
 import { attachChurchBells } from '../systems/ChurchBells.js';
 import { attachWorldClock } from '../systems/WorldClock.js';
+// Раунд 32 (п.5): ЛЮБОЕ перемещение между локациями по карте = ровно 1 час
+export const MAP_TRAVEL_MINUTES = 60;
 
 // 66.34: подсказка при клике на глубину леса (вход только через Опушку, р.39)
 const FOREST_CHAIN_HINT = '🌲 Лес цепочкой: Опушка леса → Лесная поляна → Густой лес. Вход — только через Опушку, выход — последовательно.';

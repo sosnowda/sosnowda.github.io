@@ -27,6 +27,12 @@ import { spendFatigue } from '../systems/fatigue.js';
 import { addItem } from '../systems/loot.js';
 // §12.3 (66.96): единый игровой календарь — один строковый ключ дня на всю игру
 import { dayKey as gameCalendarDayKey } from '../systems/gameCalendar.js';
+// 66.101 (F-5 аудита 66.100): mid-file импорты подняты в шапку модуля —
+// hoisting ES-модулей делал их легальными, унифицирован стиль (все import сверху)
+import { omenTypeForDay, omenLine, recordWeatherRumor, OMEN_FULFILLED_NOTE, hashStr } from '../systems/WeatherOmens.js'; // 66.7: приметы дня о погоде
+import { NPC_DIALOGUE } from './npcPresence.js';
+import { NPC_QUEST_POOLS, makeQuestOffer, acceptQuest, isBlessingActive, blessingCooldownLeftMin, blessPlayer } from './questGenerator.js';
+import { showDonationMenu } from '../systems/ChurchDonation.js'; // 66.21: пожертвование в диалоге священника
 
 /**
  * Раунд 22 (п.3): повторный расспрос того же NPC НЕВОЗМОЖЕН.
@@ -3052,8 +3058,7 @@ export const DIALOGUES = {
 // (DialogueRunner → appendWeatherChoice) — так он не теряется у тех НПЦ,
 // чьи узлы перестраивают choices при каждом разговоре (староста и др.).
 // ============================================================
-
-import { omenTypeForDay, omenLine, recordWeatherRumor, OMEN_FULFILLED_NOTE, hashStr } from '../systems/WeatherOmens.js';
+// 66.101 (F-5): импорт WeatherOmens поднят в шапку модуля.
 
 // Диалоги ДЕТЕЙ (и пастушка) — о погоде не спрашивают по возрасту.
 export const KID_DIALOG_IDS = new Set([
@@ -3061,7 +3066,11 @@ export const KID_DIALOG_IDS = new Set([
     'shepherd_boy',
 ]);
 
-const WEATHER_ASK_TEXT = t('☁ Что погода сулит?');
+// 66.101 (F-4 аудита 66.100): загрузочная t()-константа переведена на ленивый
+// геттер — t() вызывается в момент чтения текста узла, а не при вычислении
+// модуля (setLang делает location.reload, SettingsPanel:181, но канон класса —
+// ленивые геттеры, остатки вычищены в 66.96/66.97/66.101).
+const WEATHER_ASK_TEXT = () => t('☁ Что погода сулит?');
 
 /**
  * Узел «о погоде» конкретного диалога. Реплика — по примете дня, вариация
@@ -3139,7 +3148,7 @@ export function appendWeatherChoice(dialogId, choices) {
     if (list.some(c => c && c.__weatherAsk)) return list;
     const out = list.slice();
     out.splice(Math.max(0, out.length - 1), 0, {
-        text: WEATHER_ASK_TEXT,
+        text: WEATHER_ASK_TEXT(),
         __weatherAsk: true,
         next: 'weather_talk',
     });
@@ -3157,11 +3166,12 @@ export function appendWeatherChoice(dialogId, choices) {
 // поручение от одного НПЦ) ведёт makeQuestOffer в questGenerator.
 // ============================================================
 
-import { NPC_DIALOGUE } from './npcPresence.js';
-import { NPC_QUEST_POOLS, makeQuestOffer, acceptQuest, isBlessingActive, blessingCooldownLeftMin, blessPlayer } from './questGenerator.js';
-import { showDonationMenu } from '../systems/ChurchDonation.js';
+// 66.101 (F-5): импорты NPC_DIALOGUE / questGenerator / ChurchDonation
+// подняты в шапку модуля.
 
-const QUEST_ASK_TEXT = t('📜 Есть ли дело?');
+// 66.101 (F-4 аудита 66.100): загрузочная t()-константа переведена на ленивый
+// геттер (канон класса — вычищен остаток 66.96/66.97; t() при чтении узла).
+const QUEST_ASK_TEXT = () => t('📜 Есть ли дело?');
 
 /** dialogId → npcId (обратная карта NPC_DIALOGUE). */
 function npcIdForDialog(dialogId) {
@@ -3260,7 +3270,7 @@ export function appendQuestChoice(dialogId, choices) {
     if (list.some(c => c && c.__questAsk)) return list;
     const out = list.slice();
     out.splice(Math.max(0, out.length - 1), 0, {
-        text: QUEST_ASK_TEXT,
+        text: QUEST_ASK_TEXT(),
         __questAsk: true,
         next: 'quest_talk',
     });
@@ -3273,7 +3283,9 @@ export function appendQuestChoice(dialogId, choices) {
 // церкви»: меню сумм 5/10/25/50 д. (systems/ChurchDonation.js).
 // ============================================================
 
-const DONATION_ASK_TEXT = t('🕯 Пожертвовать церкви');
+// 66.101 (F-4 аудита 66.100): загрузочная t()-константа переведена на ленивый
+// геттер (канон класса — вычищен остаток 66.96/66.97; t() при чтении узла).
+const DONATION_ASK_TEXT = () => t('🕯 Пожертвовать церкви');
 
 // Узел «пожертвование» — только у священника (dialogId 'priest').
 // Выбор «🕯 Положить на блюдо» открывает меню сумм ПОСЛЕ закрытия беседы
@@ -3306,7 +3318,7 @@ export function appendDonationChoice(dialogId, choices) {
     if (list.some(c => c && c.__donationAsk)) return list;
     const out = list.slice();
     out.splice(Math.max(0, out.length - 1), 0, {
-        text: DONATION_ASK_TEXT,
+        text: DONATION_ASK_TEXT(),
         __donationAsk: true,
         next: 'donate_talk',
     });

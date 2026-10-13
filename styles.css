@@ -13,7 +13,8 @@ html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель 
                #a8862a — 5.30:1 PASS на всех фонах переменной */
             --gold-dim: #a8862a;
             --red-deep: #6b1f1f;
-            --red-bright: #a83232;
+            /* 66.101 (F-6 аудита 66.100): мёртвая custom-property --red-bright
+               (#a83232) удалена — не использовалась ни в CSS, ни в JS/HTML. */
             --blood: #7a1f1f;
             --text-main: #e8dcc8;
             --text-dim: #b8a88a;

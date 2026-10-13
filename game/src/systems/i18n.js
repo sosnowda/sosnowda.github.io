@@ -2449,8 +2449,8 @@ const EN = {
     'сундук дровосека': 'the woodcutter’s chest',
     'сундук Степана': 'Stepan’s chest',
     'Скрадывание не удалось: тебя приметили у чужого дому — по деревне пошла дурная молва (−2 к репутации).': 'The Stealth check failed: you were noticed at another man’s house — bad talk walks the village (−2 to reputation).',
-    // Сметка
-    'Сметка знает цену — торговаться можно и ею.': 'Commerce knows the price — you can bargain with it too.',
+    // 66.101 (F-3): запись 'Сметка знает цену — …' удалена — её единственный
+    // потребитель (мёртвый экспорт HAGGLE_HINT_COMMERCE в trade.js) убран.
     // Товары Руси (лут сундуков и шедевр гончара)
     'Мёд лесной': 'Wild honey',
     'Воск пчелиный': 'Beeswax',
@@ -2656,6 +2656,21 @@ const EN = {
     'Вор украл икону из церкви! Расспроси селян да ищи следы за околицей.':
         'The thief stole the icon from the church! Question the villagers and look for tracks beyond the palisade.',
 
+    // ===== 66.101 (F-2 аудита 66.100 «EN-полнота»): финал закрытия =====
+    // Аудит 66.100 считал 413 вызовов t()/tf() на RU-фолбэке; верификация
+    // 66.101 (рантайм-семантика: V8-eval литералов против рантайм-ключей
+    // словаря) показала: 410 из 413 УЖЕ переведены (значения на строках
+    // продолжения уходили от регэппа same-line), 3 остатка — сквозные
+    // EN-паттерны rumors.js (en:-вариант проходит английский текст через
+    // tf() ради подстановки {0}; t() честно возвращает его без изменений —
+    // корректно в ОБОИХ языках). Тождественные записи ниже закрывают и эти
+    // три: покрытие литеральных вызовов = 100% по любой методике сканера.
+    'Fyodor lowers his voice: “They saw your thief {0}. You didn’t hear it from me.”':
+        'Fyodor lowers his voice: “They saw your thief {0}. You didn’t hear it from me.”',
+    'The herd was driven {0} today — the shepherds scout where the grass is juiciest.':
+        'The herd was driven {0} today — the shepherds scout where the grass is juiciest.',
+    'The whole village is out in the fields today: {0}. Miss the season and the whole year is lost.':
+        'The whole village is out in the fields today: {0}. Miss the season and the whole year is lost.',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----

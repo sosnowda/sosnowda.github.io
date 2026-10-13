@@ -74,7 +74,13 @@
 // (валидность HTML5: удалён лишний закрывающий </div> галереи — сирота
 // удаления 10-й карточки в 66.86; браузеры игнорировали, W3C-валидность
 // восстановлена); game-assets-v45 цел, код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v132';
+// 66.101 (F-2…F-6 аудита 66.100): бамп v132→v133 — game/src (i18n.js:
+// +3 тождественных сквозных паттерна rumors/«EN-полнота», −1 осиротевшая
+// запись «Сметка знает цену»; trade.js: удалён мёртвый экспорт
+// HAGGLE_HINT_COMMERCE; dialogue.js: 3 загрузочные t()-константы → ленивые
+// геттеры; 7 модулей: mid-file импорты подняты в шапки); game-assets-v45
+// цел, код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v133';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {

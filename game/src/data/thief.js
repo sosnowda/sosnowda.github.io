@@ -52,7 +52,7 @@
 
 import { skillCheck, opposedSkillCheck, formatOpposedCheck } from '../systems/BRPEngine.js';
 import { ActionLog } from './actionLog.js';
-import { applyBeggingPenalty, changeVillageRep } from './reputation.js';
+import { applyBeggingPenalty, changeVillageRep, isNpcKilled } from './reputation.js'; // 66.101 (F-5): isNpcKilled поднят из середины файла (раунд 47)
 import { getLocationById } from './mapLocations.js';
 // §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
 import { absDay } from '../systems/gameCalendar.js';
@@ -68,6 +68,12 @@ import { formatMoney } from '../systems/Character.js';
 import { t, tf, isEn } from '../systems/i18n.js';
 import { createDialog } from '../utils/ui.js';
 import { getNpcShortName, findNpc } from './npcNames.js';
+// 66.101 (F-5 аудита 66.100): mid-file импорты подняты в шапку модуля —
+// hoisting ES-модулей делал их легальными, унифицирован стиль (все import сверху)
+import { getNpcOpposition, oppSkillLabel } from './npcStats.js'; // 66.97: oppSkillLabel (§12.3 п.4)
+// Раунд 66.11 (приказ владельца №2): НПЦ на локации, где пробегал вор,
+// обязателен как свидетель — место берём из системы присутствия жителей
+import { getPresence } from './npcPresence.js';
 
 // Раунд 66.21 (грамматика наводок и следов): склонение названий локаций.
 // Дательный — «бежит к {0}», родительный — «у {0}»/«в сторону {0}».
@@ -114,11 +120,7 @@ function tipNames(loc) {
 }
 // Раунд 47 (пп.2,4 заявки): смерть кузнеца не прячет наводку — знание
 // наследует ученик; встречные проверки — по параметрам из базы жителей
-import { isNpcKilled } from './reputation.js';
-import { getNpcOpposition, oppSkillLabel } from './npcStats.js'; // 66.97: oppSkillLabel (§12.3 п.4)
-// Раунд 66.11 (приказ владельца №2): НПЦ на локации, где пробегал вор,
-// обязателен как свидетель — место берём из системы присутствия жителей
-import { getPresence } from './npcPresence.js';
+// 66.101 (F-5): импорты isNpcKilled / npcStats / npcPresence подняты в шапку.
 
 /**
  * Раунд 41 (QA): говорящий в репликах о воре — ДИНАМИЧЕСКОЕ имя NPC

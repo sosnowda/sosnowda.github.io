@@ -56,8 +56,9 @@ export function chargeTradeTime(registry, units = 1) {
     return minutes;
 }
 
-// Патч 66.74 (приказ 6): подсказка в меню продажи упоминает ОБА пути торга
-export const HAGGLE_HINT_COMMERCE = t('Сметка знает цену — торговаться можно и ею.');
+// 66.101 (F-3 аудита 66.100): мёртвый экспорт HAGGLE_HINT_COMMERCE удалён —
+// импортёров по репозиторию не было (0), load-time t() больше не выполняется.
+// Осиротевшая запись словаря 'Сметка знает цену — …' удалена из i18n.js.
 
 /** Ключ игрового дня — канон gameCalendar.absDay (§12.3, 66.96). */
 function haggleDayKey(registry) {

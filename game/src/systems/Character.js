@@ -48,6 +48,9 @@ import { rollCharacteristic, damageBonus } from './BRPEngine.js';
 import { AGE_DEFAULT, AGE_MIN, AGE_MAX, applyAgeModifiers, applyAgeSkillModifiers } from './AgeRules.js';
 // Раунд 66.28 (пп.5,10): стартовый колчан стрел у героев с луком
 import { QUIVER_CAP } from './ammo.js';
+// 66.101 (F-5 аудита 66.100): mid-file импорт поднят в шапку модуля —
+// hoisting ES-модулей делал его легальным, унифицирован стиль (все import сверху)
+import { t } from './i18n.js';
 
 // === ХАРАКТЕРИСТИКИ BRP ===
 // Итерация 66.89 (приказ владельца 3/8): SIZ («Размер») ВОЗВРАЩЁН —
@@ -184,7 +187,7 @@ export const CURRENCY = {
 
 // Форматирование суммы денег (в денгах) в читаемую форму
 // Раунд 15: короткие обозначения номиналов локализованы (д./гр./руб.)
-import { t } from './i18n.js';
+// 66.101 (F-5): импорт i18n поднят в шапку модуля.
 export function formatMoney(dengas) {
     if (dengas <= 0) return t('0 д.');
     const rubles = Math.floor(dengas / 200);

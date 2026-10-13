@@ -6,6 +6,9 @@
 // значения: бой честный, но напряжённый для любого архетипа героя.
 import { createCharacter } from '../systems/Character.js';
 import { ARMORS } from '../systems/Character.js';
+// 66.101 (F-5 аудита 66.100): mid-file импорт поднят в шапку модуля —
+// hoisting ES-модулей делал его легальным, унифицирован стиль (все import сверху)
+import { createNpcCharacter, getNpcSkillResistance } from './npcStats.js';
 
 export const ENEMY_TEMPLATES = {
     bandit: {
@@ -139,7 +142,7 @@ export function spawnEnemy(key) {
 // Навык атаки = навык владельца оружия из той же базы (Рукопашная
 // кузнеца 45 → его attackSkill 45 — сверено аудитом).
 // ============================================================
-import { createNpcCharacter, getNpcSkillResistance } from './npcStats.js';
+// 66.101 (F-5): импорт npcStats поднят в шапку модуля.
 
 export const VILLAGER_COMBAT = {
     blacksmith: {
