@@ -70,7 +70,11 @@
 // 66.99 (P2-21 аудита 66.92 — разрыв цикла): бамп v130→v131 — game/src
 // (systems/gameCalendar.js + SEASON_OF/getSeason, systems/TimeSystem.js,
 // data/questGenerator.js); game-assets-v45 цел, код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v131';
+// 66.100 (полный аудит кода/синтаксиса): бамп v131→v132 — en/index.html
+// (валидность HTML5: удалён лишний закрывающий </div> галереи — сирота
+// удаления 10-й карточки в 66.86; браузеры игнорировали, W3C-валидность
+// восстановлена); game-assets-v45 цел, код sw.js не менялся.
+const CACHE_NAME = 'chronicles-ruthenia-v132';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {

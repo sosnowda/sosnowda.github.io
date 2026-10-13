@@ -108,12 +108,12 @@ console.log('--- 4. Потребители: repBalance + tickTime (ребро ti
 }
 
 // ============================================================
-// 5. СЛУЖЕБНОЕ: SW v131
+// 5. СЛУЖЕБНОЕ: SW v132
 // ============================================================
 console.log('--- 5. SW-версии ---');
 {
     const sw = read('sw.js');
-    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v131';"), 'sw.js: CACHE_NAME v131 (game/src менялись → бамп §4)');
+    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v132';"), 'sw.js: CACHE_NAME v132 (en/index.html менялся → бамп §4, аудит 66.100)');
     ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 цел (ассеты не тронуты)');
 }
 
