@@ -50,9 +50,9 @@ export const PROFESSION_SCHEDULES = {
         morning:   { activity: 'служит обедню', location: 'church', available: true },
         // Раунд 66.21 (приказ 12): обед — 1 час (12:00–13:00) в корчме
         // (точный час ведёт npcPresence; здесь — сегмент целиком)
-        noon:      { activity: 'обедает в корчме', location: 'tavern', available: false },
+        noon:      { activity: 'обедает на постоялом дворе', location: 'tavern', available: false },
         evening:   { activity: 'совершает вечерню', location: 'church', available: true },
-        dusk:      { activity: 'ужинает в корчме да возвращается в церковь', location: 'church', available: true },
+        dusk:      { activity: 'ужинает на постоялом дворе да возвращается в церковь', location: 'church', available: true },
         night:     { activity: 'спит в келье', location: 'church', available: false },
     },
     [PROFESSIONS.TAVERNKEEPER]: {
@@ -253,7 +253,7 @@ export const VILLAGE_NPCS = [
     },
     {
         id: 'tavernkeeper',
-        name: 'Тавернщик Фёдор',
+        name: 'Кабатчик Фёдор',
         profession: PROFESSIONS.TAVERNKEEPER,
         gender: 'male',
         sprite: 'npc_merchant',

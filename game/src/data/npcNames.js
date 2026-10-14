@@ -108,7 +108,7 @@ export const PROFESSIONS_BY_GENDER = {
         { id: 'hunter',     name: 'охотник',    femaleName: null },
         { id: 'healer_m',   name: 'травник',    femaleName: 'травница' },
         { id: 'shepherd',   name: 'пастух',     femaleName: 'пастушка' },
-        { id: 'tavernkeeper', name: 'тавернщик', femaleName: 'тавернщица' },
+        { id: 'tavernkeeper', name: 'кабатчик', femaleName: 'кабатчица' },
         { id: 'fisherman',  name: 'рыбак',      femaleName: null },
         { id: 'miller',     name: 'мельник',    femaleName: null },
         { id: 'ploughman',  name: 'пахарь',     femaleName: null },  // раунд 28 (п.1): Тарас
@@ -129,7 +129,7 @@ export const PROFESSIONS_BY_GENDER = {
         { id: 'peasant',    name: 'селянка',    maleName: 'селянин' },
         { id: 'healer_f',   name: 'травница',   maleName: 'травник' },
         { id: 'shepherd',   name: 'пастушка',   maleName: 'пастух' },
-        { id: 'tavernkeeper', name: 'тавернщица', maleName: 'тавернщик' },
+        { id: 'tavernkeeper', name: 'кабатчица', maleName: 'кабатчик' },
         { id: 'weaver',     name: 'ткачиха',    maleName: null },
         { id: 'merchant',   name: 'торгарка',   maleName: 'торгарь' },
         { id: 'midwife',    name: 'повитуха',   maleName: null },

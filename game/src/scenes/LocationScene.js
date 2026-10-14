@@ -58,7 +58,7 @@ import { fishingSeason } from '../systems/FishingSeasons.js';
 // Раунд 36: рыбалка переехала из деревни (пруд удалён) на Реку
 // Раунд 66.10: дневные лимиты — из data/daily.js (сундуки/тайники удалены по приказу владельца)
 import { dayKeyOf, isActionDoneToday, markActionDone } from '../data/daily.js';
-import { t, tf } from '../systems/i18n.js';
+import { t, tf, plural } from '../systems/i18n.js';
 import { findNpc, getNpcDisplayName } from '../data/npcNames.js';
 import { getNpcsAtPlace, NPC_DIALOGUE, pickOutdoorLine } from '../data/npcPresence.js';
 import { npcPortraitVariantKey } from '../systems/NpcLook.js';
@@ -2905,7 +2905,11 @@ export class LocationScene extends Phaser.Scene {
                 if (graveEntries.length > 0 && this.pogostMurderGraves && this.pogostMurderGraves.length > 0) {
                     // Тихая подсказка при входе на погост со свежими могилами
                     this.add.text(width / 2, height - 130,
-                        tf(t('⚰ На погосте {0} свежих могил — тех, кого не досчиталась деревня. Кликни по холмику.'), this.pogostMurderGraves.length), {
+                        tf(t(plural(this.pogostMurderGraves.length, [
+                            '⚰ На погосте {0} свежая могила — тот, кого не досчиталась деревня. Кликни по холмику.',
+                            '⚰ На погосте {0} свежие могилы — те, кого не досчиталась деревня. Кликни по холмику.',
+                            '⚰ На погосте {0} свежих могил — тех, кого не досчиталась деревня. Кликни по холмику.',
+                        ])), this.pogostMurderGraves.length), {
                         fontSize: '12px', color: '#c9b98a', align: 'center',
                         fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
                         backgroundColor: '#00000088', padding: { x: 8, y: 4 },

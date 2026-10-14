@@ -156,26 +156,26 @@ console.log('===== §1. ДИАЛОГИ И ТОРГОВЛЯ (9:00) =====');
 
     // --- Таверна: диалог + меню еды + скупка + печь ---
     await h.enterInterior('tavern');
-    ok(await h.clickText('Поговорить'), 'таверна: кнопка «💬 Поговорить»');
+    ok(await h.clickText('Поговорить'), 'постоялый двор: кнопка «💬 Поговорить»');
     await sleep(1200);
     let tx = await h.texts('Interior');
-    ok(tx && (tx.some(t2 => t2.includes('Фёдор')) || tx.some(t2 => t2.length > 40)), 'таверна: диалог Фёдора открыт');
+    ok(tx && (tx.some(t2 => t2.includes('Фёдор')) || tx.some(t2 => t2.length > 40)), 'постоялый двор: диалог Фёдора открыт');
     await h.shot('tour_01_dialog_tavern.png');
     await page.keyboard.press('Escape'); await sleep(900);   // выход из интерьера (диалог закрывается со сценой)
     await h.enterInterior('tavern');
-    ok(await h.clickText('Купить еды'), 'таверна: «🛒 Купить еды»');
+    ok(await h.clickText('Купить еды'), 'постоялый двор: «🛒 Купить еды»');
     await sleep(900);
     tx = await h.texts('Interior');
-    ok(tx && tx.some(t2 => t2.includes('Каша')), 'таверна: меню еды (хлеб/каша/медовуха/квас)');
+    ok(tx && tx.some(t2 => t2.includes('Каша')), 'постоялый двор: меню еды (хлеб/каша/медовуха/квас)');
     await h.shot('tour_02_tavern_food.png');
     await h.clickText('Закрыть', true); await sleep(500);
-    ok(await h.clickText('Продать добычу'), 'таверна: «💰 Продать добычу»');
+    ok(await h.clickText('Продать добычу'), 'постоялый двор: «💰 Продать добычу»');
     await sleep(900);
     tx = await h.texts('Interior');
-    ok(tx && tx.some(t2 => t2.includes('скупка добычи')), 'таверна: панель скупки открыта');
+    ok(tx && tx.some(t2 => t2.includes('скупка добычи')), 'постоялый двор: панель скупки открыта');
     await h.shot('tour_03_sell_loot.png');
     await h.clickText('Закрыть', true); await sleep(500);
-    ok(await h.clickText('Печь (Готовка)'), 'таверна: «🔥 Печь (Готовка)»');
+    ok(await h.clickText('Печь (Готовка)'), 'постоялый двор: «🔥 Печь (Готовка)»');
     await sleep(900);
     await h.shot('tour_04_stove.png');
     await h.clickText('Закрыть', true); await sleep(500);
@@ -320,7 +320,7 @@ console.log('===== §2. РАБОТЫ И НАВЫКИ (полдень 12:00) ====
     // в корчме) — кликаем по левой трети кнопки (dx=-70)
     const perfClicked = await h.clickText('Скоморошить (Скоморошество)', false, 7000, -70)
         || await h.clickText('Скоморошить (Скоморошество)', false, 7000, -90);
-    ok(perfClicked, 'таверна: «🪕 Скоморошить (Скоморошество)»');
+    ok(perfClicked, 'постоялый двор: «🪕 Скоморошить (Скоморошество)»');
     await sleep(1500);
     tx = await h.texts('Interior');
     ok(tx && (tx.some(t2 => t2.includes('Струны')) || tx.some(t2 => t2.includes('Собрано со стола')) || tx.some(t2 => t2.includes('пляшет')) || tx.some(t2 => t2.includes('отдохнули'))), 'скоморошество: исход выступления');

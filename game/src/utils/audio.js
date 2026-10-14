@@ -1,6 +1,10 @@
 /**
- * Утилитарный класс звуковых эффектов — Pro Version
- * Оптимизировано по CPU (кэширование шума), планированию времени (игровые часы) и управлению жизненным циклом
+ * Утилитарный класс процедурных звуковых эффектов (WebAudio):
+ * тоны, свипы и шум синтезируются на лету, без аудио-ассетов.
+ * Используется AudioManager как процедурный фолбэк реальных SFX
+ * (_playRealSfx передаёт имя метода сюда, если ассет не загружен).
+ * Оптимизировано по CPU (кэширование шума), планированию времени (игровые часы)
+ * и управлению жизненным циклом (авто-очистка при уничтожении сцены)
  */
 export class AudioEffects {
     constructor(scene) {
@@ -33,13 +37,13 @@ export class AudioEffects {
         this.cooldownTime.set('typewriter', 30);       // задержка печатной машинки 30мс
     }
 
-    _ensureNoiseBuffer() {
+    _ensureNoiseBuffer(seconds = 2) {
         // Если кэш уже есть — пропускаем
         if (this.sharedNoiseBuffer) return;
         if (!this.context) return;
 
-        // Создаём 0.5-секундный моно-буфер белого шума (этого достаточно, реально играет несколько десятков мс)
-        const bufferSize = this.context.sampleRate * 0.5;
+        // Моно-буфер белого шума (длины с запасом для зацикливания длинных эффектов)
+        const bufferSize = Math.floor(this.context.sampleRate * seconds);
         const buffer = this.context.createBuffer(1, bufferSize, this.context.sampleRate);
         const data = buffer.getChannelData(0);
 
@@ -51,7 +55,6 @@ export class AudioEffects {
 
         this.sharedNoiseBuffer = buffer;
     }
-
 
     destroy() {
         // Очищаем кэш (опционально; если нужно переиспользовать между сценами — сохраните в глобальной области)
@@ -94,14 +97,9 @@ export class AudioEffects {
      */
     playButtonClick() {
         if (!this.canPlayEffect('buttonClick')) return;
-        
-        // Основной тон: 400Гц треугольная волна, мягче и нежнее
-        // this.generateTone(400, 0.08, 0.25, 'triangle');
-        this.generateTone(600, 0.05, 0.2, 'sine');
 
-        
-        // // Низкочастотная составляющая: 200Гц синусоида, добавляет тёплый низ для насыщенности
-        // this.delay(5, () => this.generateTone(200, 0.08, 0.25, 'sine'));
+        // Основной тон: 600Гц синус, короткий и мягкий
+        this.generateTone(600, 0.05, 0.2, 'sine');
     }
 
     /**
@@ -261,74 +259,69 @@ export class AudioEffects {
         });
     }
 
-    /**
-     * 10. Звук поражения
-     * Сценарии: конец игры, провал задания, истощение здоровья
-     */
-    playGameOver() {
-        const melody = [440, 415, 392, 349]; // нисходящая гамма A-G#-G-F
-        melody.forEach((freq, index) => {
-            this.delay(index * 200, () => this.generateTone(freq, 0.3, 0.5, 'triangle'));
-        });
-    }
 
-    /**
-     * 11. Звук разблокировки достижения
-     * Сценарии: получение достижения, открытие нового контента, особая награда
-     */
-    playAchievement() {
-        const fanfare = [523, 659, 784, 1047, 784, 1047]; // фанфары победы
-        fanfare.forEach((freq, index) => {
-            this.delay(index * 120, () => this.generateTone(freq, 0.15, 0.6, 'square'));
-        });
-    }
 
-    /**
-     * 12. Звук открытия двери
-     */
-    playDoorOpen() {
-        this.generateSweep(100, 300, 0.4, 0.4, 'sine');
-        this.delay(200, () => this.generateTone(400, 0.1, 0.3, 'triangle'));
-    }
 
-    /**
-     * 13. Звук закрытия двери
-     */
-    playDoorClose() {
-        this.generateSweep(300, 100, 0.3, 0.4, 'sine');
-        this.delay(150, () => this.generateTone(80, 0.2, 0.5, 'square'));
-    }
 
-    /**
-     * 14. Звук предупреждения
-     */
-    playWarning() {
-        for (let i = 0; i < 3; i++) {
-            this.delay(i * 300, () => {
-                this.generateTone(800, 0.1, 0.6, 'square');
-                this.delay(100, () => this.generateTone(600, 0.1, 0.6, 'square'));
-            });
-        }
-    }
 
-    /**
-     * 15. Звук магии
-     */
-    playMagic() {
-        // Звук магических частиц
-        for (let i = 0; i < 5; i++) {
-            this.delay(i * 30, () => {
-                const freq = 800 + Math.random() * 400;
-                this.generateTone(freq, 0.05, 0.3, 'sine');
-            });
-        }
-        // Основной магический тон
-        this.delay(100, () => this.generateSweep(400, 1200, 0.3, 0.4, 'triangle'));
-    }
 
     // ==========================================
     //  Базовые генераторы (Core Generators)
     // ==========================================
+
+    /**
+     * Общее ядро тона/свипа: осциллятор + огибающая громкости на мастер-шине Phaser.
+     * generateTone/generateSweep — два фасада одного конвейера (снизит дублирование).
+     * @param {number} startFreq - начальная частота (Гц)
+     * @param {number|null} endFreq - конечная частота свипа (null — без свипа)
+     * @param {number} duration - длительность (сек)
+     * @param {number} volume - громкость (0-1)
+     * @param {string} waveType - тип волны ('sine', 'square', 'sawtooth', 'triangle')
+     * @param {number} detune - подстройка тона (центы), по умолчанию 0
+     */
+    _oscTone({ startFreq, endFreq = null, duration, volume, waveType, detune = 0 }) {
+        // Если аудиосистема Phaser заблокирована (нет взаимодействия) или отключена — не воспроизводим
+        if (this.scene.sound.locked || !this.context) return;
+
+        const oscillator = this.context.createOscillator();
+        const gainNode = this.context.createGain();
+
+        oscillator.connect(gainNode);
+
+        // Подключаем к узлу Master Volume от Phaser, а не к destination:
+        // общая громкость музыки/SFX применяется Phaser'ом
+        gainNode.connect(this.scene.sound.masterVolumeNode);
+
+        oscillator.type = waveType;
+
+        // Применяем подстройку тона
+        if (detune !== 0) {
+            oscillator.detune.setValueAtTime(detune, this.context.currentTime);
+        }
+
+        const now = this.context.currentTime;
+        oscillator.frequency.setValueAtTime(startFreq, now);
+        if (endFreq !== null) {
+            oscillator.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
+        }
+
+        // volume умножается только на sfxVolume: masterVolume применит Phaser
+        const finalVolume = volume * this.sfxVolume;
+
+        // Защита от хлопка: быстрое нарастание (0.005с) вместо прямой установки в 0
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(finalVolume, now + 0.005);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        oscillator.start(now);
+        oscillator.stop(now + duration);
+
+        // Отключаем соединение после воспроизведения — помогает сборщику мусора
+        oscillator.onended = () => {
+            oscillator.disconnect();
+            gainNode.disconnect();
+        };
+    }
 
     /**
      * Сгенерировать базовый тон
@@ -339,48 +332,7 @@ export class AudioEffects {
      * @param {number} detune - подстройка тона (центы), по умолчанию 0
      */
     generateTone(frequency, duration, volume = 0.5, waveType = 'sine', detune = 0) {
-        // Если аудиосистема Phaser заблокирована (нет взаимодействия) или отключена — не воспроизводим
-        if (this.scene.sound.locked || !this.context) return;
-
-        const oscillator = this.context.createOscillator();
-        const gainNode = this.context.createGain();
-
-        oscillator.connect(gainNode);
-
-        // ====================================================
-        // Ключевой момент: подключаем к узлу Master Volume от Phaser
-        // вместо прямого connect(this.context.destination)
-        // ====================================================
-        gainNode.connect(this.scene.sound.masterVolumeNode);
-
-        oscillator.frequency.setValueAtTime(frequency, this.context.currentTime);
-        oscillator.type = waveType;
-        
-        // Применяем подстройку тона
-        if (detune !== 0) {
-            oscillator.detune.setValueAtTime(detune, this.context.currentTime);
-        }
-
-        // Огибающая громкости
-        const now = this.context.currentTime;
-        
-        // Здесь volume нужно умножить только на заданный sfxVolume
-        // masterVolume умножать не нужно, так как connect идёт к masterVolumeNode, и Phaser сам обработает общую громкость
-        const finalVolume = volume * this.sfxVolume;
-
-        // Защита от хлопка: быстрое нарастание (0.005с) вместо прямой установки в 0
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(finalVolume, now + 0.005);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-        oscillator.start(now);
-        oscillator.stop(now + duration);
-        
-        // Хорошая привычка: отключаем соединение после воспроизведения, помогает сборщику мусора
-        oscillator.onended = () => {
-            oscillator.disconnect();
-            gainNode.disconnect();
-        };
+        this._oscTone({ startFreq: frequency, duration, volume, waveType, detune });
     }
 
     /**
@@ -393,39 +345,7 @@ export class AudioEffects {
      * @param {number} detune - подстройка тона (центы), по умолчанию 0
      */
     generateSweep(startFreq, endFreq, duration, volume = 0.5, waveType = 'sine', detune = 0) {
-        if (this.scene.sound.locked || !this.context) return;
-
-        const oscillator = this.context.createOscillator();
-        const gainNode = this.context.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(this.scene.sound.masterVolumeNode);
-
-        oscillator.type = waveType;
-        
-        // Применяем подстройку тона
-        if (detune !== 0) {
-            oscillator.detune.setValueAtTime(detune, this.context.currentTime);
-        }
-        
-        const now = this.context.currentTime;
-        oscillator.frequency.setValueAtTime(startFreq, now);
-        oscillator.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
-
-        const finalVolume = volume * this.sfxVolume;
-        
-        // Защита от хлопка: быстрое нарастание
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(finalVolume, now + 0.005);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-        oscillator.start(now);
-        oscillator.stop(now + duration);
-
-        oscillator.onended = () => {
-            oscillator.disconnect();
-            gainNode.disconnect();
-        };
+        this._oscTone({ startFreq, endFreq, duration, volume, waveType, detune });
     }
 
     /**
@@ -438,16 +358,9 @@ export class AudioEffects {
     generateNoise(duration, volume = 0.5, filterFreq = 1000, highpass = false) {
         if (this.scene.sound.locked || !this.context) return;
 
-        // Реализация оптимизации 1: ленивая загрузка синглтона — если буфер шума уже создан, используем его
-        if (!this.sharedNoiseBuffer) {
-            // Буфера шума на 2 секунды достаточно, при воспроизведении зацикливаем или обрезаем
-            const bufferSize = this.context.sampleRate * 2;
-            this.sharedNoiseBuffer = this.context.createBuffer(1, bufferSize, this.context.sampleRate);
-            const data = this.sharedNoiseBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1;
-            }
-        }
+        // Единый кэш шума с _ensureNoiseBuffer — дублирующая генерация убрана
+        this._ensureNoiseBuffer();
+        if (!this.sharedNoiseBuffer) return;
 
         const bufferSource = this.context.createBufferSource();
         bufferSource.buffer = this.sharedNoiseBuffer;
@@ -509,72 +422,4 @@ export class AudioEffects {
     getAudioContextState() {
         return this.context ? this.context.state : 'unavailable';
     }
-
-    /**
-     * Воспроизвести случайный звук (для тестов)
-     */
-    playRandomEffect() {
-        const effects = [
-            'playButtonClick', 'playButtonHover', 'playCollectItem', 'playJump', 'playLanding',
-            'playShoot', 'playExplosion', 'playVictory', 'playLevelUp', 'playGameOver'
-        ];
-        
-        const randomEffect = effects[Math.floor(Math.random() * effects.length)];
-        if (this[randomEffect] && typeof this[randomEffect] === 'function') {
-            this[randomEffect]();
-        }
-    }
-}
-
-/**
- * Тестовая функция — можно вызвать в консоли
- */
-export function testAudioEffects(scene) {
-    const audioEffects = new AudioEffects(scene);
-    
-    console.log('🎵 Тест звуковой системы начат...');
-    console.log('Состояние AudioContext:', audioEffects.getAudioContextState());
-    console.log('Состояние блокировки Phaser Sound:', scene.sound.locked);
-    
-    // Тест звука кнопки
-    console.log('Тест звука кнопки...');
-    audioEffects.playButtonClick();        // клик кнопки
-    
-    audioEffects.delay(500, () => {
-        audioEffects.playButtonHover();    // наведение на кнопку
-    });
-    
-    // Тест игровых звуков
-    audioEffects.delay(1000, () => {
-        console.log('Тест игровых звуков...');
-        audioEffects.playCollectItem();   // сбор предмета
-    });
-    
-    audioEffects.delay(1500, () => {
-        audioEffects.playJump();          // прыжок
-    });
-    
-    audioEffects.delay(2000, () => {
-        audioEffects.playLanding();       // приземление
-    });
-    
-    // Тест боевых звуков
-    audioEffects.delay(2500, () => {
-        console.log('Тест боевых звуков...');
-        audioEffects.playShoot();         // выстрел
-    });
-    
-    audioEffects.delay(3000, () => {
-        audioEffects.playExplosion();     // взрыв
-    });
-    
-    // Тест звуков обратной связи
-    audioEffects.delay(3500, () => {
-        console.log('Тест звуков обратной связи...');
-        audioEffects.playVictory();       // победа
-    });
-    
-    audioEffects.delay(4500, () => {
-        console.log('🎵 Тест звуковой системы завершён!');
-    });
 }

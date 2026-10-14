@@ -71,11 +71,11 @@ const mob = styles.indexOf('@media (max-width: 480px){\n  .fund-bar{');
 ok(mob > hoverIdx, 'media-блок 66.59 по-прежнему ПОСЛЕ hover (мобильный override жив)');
 ok(styles.includes('/* (66.59) .fund-bar переехал'), 'комментарий-указатель 66.59 на месте');
 ok(styles.includes('button.fund-bar{display:block;width:100%;border:none;appearance:none;-webkit-appearance:none}'), 'button.fund-bar — сброс браузерного оформления не тронут');
-ok(styles.includes('.fund-bar:focus-visible{outline:2px solid #C9A961;outline-offset:2px}'), '.fund-bar:focus-visible не тронут (outline — не текст полоски, вне находки P3-1)');
+ok(styles.includes('.fund-bar:focus-visible{outline:2px solid var(--gold);outline-offset:2px}'), '.fund-bar:focus-visible цел (66.106 В10: #C9A961→var(--gold))');
 ok(block.includes('text-shadow:0 1px 1px rgba(0,0,0,0.5) !important;'), 'text-shadow полоски сохранён (поддержка читаемости)');
 
 console.log('--- 5. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (правка цвета не трогала SW-логику)');
 ok(swlog.includes('- v106 — итерация 66.62'), 'SW_CHANGELOG: запись v106 добавлена');

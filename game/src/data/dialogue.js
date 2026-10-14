@@ -118,7 +118,7 @@ export const DIALOGUES = {
                 action: (scene) => {
                     const node = DIALOGUES.elder_intro.nodes.settle;
                     introNodeText(node,
-                        'Остаться — дело нехитрое: приживайся. У нас всякий труд в чести: пашня да скот, ремесло да служба при церкви. Заведи знакомство, покажи себя в работе и держись правды — деревня чужака примечает, а своего человека уважает. Делай добро — и тебя примут как своего.',
+                        'Остаться — дело нехитрое: приживайся. У нас всякий труд в чести: пашня да скот, ремесло да служба при церкви. Заведи знакомство, покажи себя в работе и держись правды — деревня чужака примечает, а своего человека уважает.',
                         'Staying is no great trick: settle in. Every honest labour is honoured here: ploughing and cattle, craft and service at the church. Make acquaintances, show yourself in the work and hold to the truth — a village marks a stranger, and respects its own. Do good, and you will be accepted as one of us.');
                     node.choices = [
                         { text: t('◄ Вернуться к разговору'), next: 'a' },
@@ -134,7 +134,7 @@ export const DIALOGUES = {
                     const node = DIALOGUES.elder_intro.nodes.life;
                     introNodeText(node,
                         'Пашня, лес да река кормят. Кузнец куёт, гончар лепит горшки, ткачиха ткёт, плотник строит. На постоялом дворе Фёдор путникам еду и ночлег предлагает, у мельницы Авдея зерно мелют. За подёнку мастеровым платят честно, а за воровство у нас Судебник: штраф да позор.',
-                        'The ploughland, the forest and the river feed us. The smith forges, the potter makes vessels, the weaver weaves, the carpenter builds. At the roadside inn Fyodor offers travellers food and a bed; Avdey\'s mill grinds the grain. Day labour is honestly paid, and for theft we have the Law Code: a fine and shame.');
+                        'The ploughland, the forest and the river feed us. The smith forges, the potter makes vessels, the weaver weaves, the carpenter builds. At the roadside inn Fyodor offers travellers food and a bed; Avdey\'s mill grinds the grain. Day labour is honestly paid, and for theft we have the Sudebnik: a fine and shame.');
                     node.choices = [
                         { text: t('◄ Вернуться к разговору'), next: 'a' },
                         { text: t('Договорили. Пойду осмотрюсь.'), end: true },
@@ -333,7 +333,7 @@ export const DIALOGUES = {
                         node.choices = [{ text: t('Слава Богу.'), end: true }];
                         return;
                     }
-                    node.text = t('Староста листает Судебник: «Обида смывается серебром. Вира за кровь свободного мужа — 40 кун (80 д.), за женщину или отрока — полувирье (40 д.), да продажа мне за суд — 20 д. За разбой без всякой свады — всё вдвое. Плати — и обиженный тебя простит (репутация станет +30).»') +
+                    node.text = t('Староста листает Судебник: «Обида смывается серебром. Вира за кровь свободного мужа — 40 кун (80 д.), за женщину или отрока — полувирье (40 д.), да продажа мне за суд — 20 д. За разбой без всякой свады — всё вдвое. Плати виру — и обиженный простит.»') +
                         '\n\n' + hostiles.map(h => tf(
                             h.isElder
                                 ? t('• {0} — обида на тебя (репутация {1}), вира {2} д.')
@@ -382,8 +382,8 @@ export const DIALOGUES = {
             },
             c: {
                 speaker: 'Староста Мирослав',
-                text: 'Иконе более ста лет. Её написал монах-иконописец. Без неё деревня потеряла благословение. Вор был в тёмном плаще, среднего роста. Больше ничего не известно.',
-                en: 'The icon is more than a hundred years old. A monk-icon-painter wrote it. Without it the village loses God\'s blessing. The thief wore a dark cloak and was of middling height. Nothing else is known.',
+                text: 'Икона — душа деревни, а вор её из церкви унёс. Был он в тёмном плаще, среднего роста. Больше ничего не известно.',
+                en: 'The icon is the village\'s soul, and the thief carried it out of the church. He wore a dark cloak and was of middling height. Nothing else is known.',
                 choices: [
                     { text: t('Я берусь за поиски.'), next: 'b' },
                     { text: t('Подумаю.'), end: true },
@@ -493,11 +493,11 @@ export const DIALOGUES = {
         start: 'a',
         nodes: {
             a: {
-                speaker: 'Тавернщик Фёдор',
+                speaker: 'Кабатчик Фёдор',
                 text: 'Здравствуй, путник! Заходи, присаживайся. Хочешь поесть, попить или переночевать?',
                 en: 'Welcome, traveller! Come in and sit yourself down. Will you eat, drink, or lodge for the night?',
                 variants: [
-                    { text: 'Опять ты, путник? Ну, добро пожаловать — табурет свободен, щи еще теплые.', en: 'You again, traveller? Well, welcome — the stool is free and the shchi is still warm.' },
+                    { text: 'Чай, не заблудился, путник. Заходи — табурет свободен, щи ещё теплые.', en: 'Well now, you did not lose your way, traveller. Come in — the stool is free and the shchi is still warm.' },
                     { text: 'Заходи-заходи! Медовуха нынче густая, как сметана. Обсудим дела?', en: 'Come in, come in! The mead is thick as sour cream today. Shall we discuss business?' },
                 ],
                 // Раунд 22: расспрос о воре — один раз за игру
@@ -529,7 +529,7 @@ export const DIALOGUES = {
             // Раунд 66.16 (приказы 1–3): ЛЮБАЯ еда — РОВНО +1 HP, РОВНО 1 час
             // игрового времени и общий кулдаун еды 4 часа (герой сытый).
             meal: {
-                speaker: 'Тавернщик Фёдор',
+                speaker: 'Кабатчик Фёдор',
                 text: '...',
                 action: (scene) => {
                     const player = scene.registry.get('player');
@@ -553,7 +553,7 @@ export const DIALOGUES = {
                     // (сверх часа беседы — разговор и трапеза теперь отдельные дела)
                     tickTime(scene.registry, MEAL_DURATION_MIN);
                     scene.registry.set('player', player);
-                    if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
+                    scene.audioManager.playGoldSpend(); // audioManager есть у всех сцен с диалогами (базовые create)
                     ActionLog.add(scene.registry, t('Заказал еду у хозяина постоялого двора (2 д.): +1 HP, час времени.'));
                     scene._lastAskResult = {
                         message: t('Фёдор ставит перед тобой миску горячих щей, краюху ржаного хлеба и кружку кваса. Ешь не спеша — силы понемногу возвращаются.') +
@@ -569,7 +569,7 @@ export const DIALOGUES = {
             // Цена 2 деньги — точно по каталогу харчей ChroniclesRuthenia
             // (FoodCatalog.PROVISIONS): хлеб ржаной 1 д. + вода (бурдюк) 1 д.
             ration: {
-                speaker: 'Тавернщик Фёдор',
+                speaker: 'Кабатчик Фёдор',
                 text: '...',
                 action: (scene) => {
                     const player = scene.registry.get('player');
@@ -582,7 +582,7 @@ export const DIALOGUES = {
                     player.inventory = player.inventory || [];
                     player.inventory.push({ id: 'ration', name: t('Рацион (хлеб да вода на день дороги)') });
                     scene.registry.set('player', player);
-                    if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
+                    scene.audioManager.playGoldSpend(); // audioManager есть у всех сцен с диалогами (базовые create)
                     ActionLog.add(scene.registry, t('Купил рацион у хозяина постоялого двора (2 д.): хлеб и вода на день дороги.'));
                     scene._lastAskResult = {
                         message: t('Фёдор заворачивает в тряпицу тёплый каравай ржаного хлеба и наливает бурдюк чистой воды — еды и питья на день дороги.') +
@@ -595,7 +595,7 @@ export const DIALOGUES = {
                 ],
             },
             b: {
-                speaker: 'Тавернщик Фёдор',
+                speaker: 'Кабатчик Фёдор',
                 text: 'Слыхал, вор украл икону из церкви! Староста в отчаянии. А ещё говорят, что кто-то видел подозрительного человека в тёмном плаще у околицы. Но куда он побежал — никто толком не знает.',
                 en: 'Have you heard? A thief stole the icon from the church! The village elder is in despair. And they say someone saw a suspicious fellow in a dark cloak by the outskirts. But where he ran off to — nobody rightly knows.',
                 action: (scene) => {
@@ -609,7 +609,7 @@ export const DIALOGUES = {
             // слух; наводки собираются по состоянию мира (вор, стадо, погода,
             // сезонная работа), плюс вести хроники XV века.
             rumor: {
-                speaker: 'Тавернщик Фёдор',
+                speaker: 'Кабатчик Фёдор',
                 text: '...',
                 action: (scene) => {
                     const line = tavernRumorLine(scene.registry);
@@ -621,10 +621,10 @@ export const DIALOGUES = {
                 ],
             },
             ask_thief: {
-                speaker: 'Тавернщик Фёдор',
+                speaker: 'Кабатчик Фёдор',
                 text: '...',
                 action: (scene) => {
-                    const r = askNPC(scene.registry, 'tavernkeeper', 'Тавернщик Фёдор');
+                    const r = askNPC(scene.registry, 'tavernkeeper', 'Кабатчик Фёдор');
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -632,10 +632,10 @@ export const DIALOGUES = {
                 ],
             },
             ask_money: {
-                speaker: 'Тавернщик Фёдор',
+                speaker: 'Кабатчик Фёдор',
                 text: '...',
                 action: (scene) => {
-                    const r = askMoneyForHelp(scene.registry, 'tavernkeeper', 'Тавернщик Фёдор');
+                    const r = askMoneyForHelp(scene.registry, 'tavernkeeper', 'Кабатчик Фёдор');
                     scene._lastAskResult = r;
                 },
                 choices: [
@@ -643,7 +643,7 @@ export const DIALOGUES = {
                 ],
             },
             ask_result: {
-                speaker: 'Тавернщик Фёдор',
+                speaker: 'Кабатчик Фёдор',
                 text: '...',
                 choices: [
                     { text: t('Понятно, спасибо.'), end: true },
@@ -766,7 +766,7 @@ export const DIALOGUES = {
                 en: 'Good day, traveller. From sunrise to sunset I am at the mill — the millstones wait for no one, and grain will not grind itself. And now the icon stolen on top of it — there is no deliverance from wicked men!',
                 variants: [
                     { text: 'Мельница, брат, кормит, но не балует: зерно и ночь, и день в работе. Что ищешь?', en: 'The mill feeds a man, but does not pamper him: grain grills me night and day. What are you after?' },
-                    { text: 'Мука вон белым облаком... Опять ты? Ну, говори, что пришло.', en: 'The flour hangs like a white cloud... You again? Well then, speak your errand.' },
+                    { text: 'Мука вон белым облаком... Чего пришло — говори сразу, не мни.', en: 'The flour hangs like a white cloud... Speak your errand straight away, do not hem and haw.' },
                 ],
                 action: (scene) => {
                     DIALOGUES.peasant1.nodes.a.choices = withAskThief(scene, 'peasant1', [
@@ -843,7 +843,7 @@ export const DIALOGUES = {
                 text: 'Здравствуйте, путник. Пчёлы мои нынче добрые — взяток славный. А ещё травы собираю — у озера, на реке, где найду. Нужен мёд — это ко мне.',
                 en: 'Good day, traveller. My bees are kind this year — a fine haul of honey. I gather herbs too — by the lake, along the river, wherever I find them. If you need honey, I am the one to see.',
                 variants: [
-                    { text: 'Опять ты, добрый человек? Пчелы жужжат — значит, жить можно. Надо чего?', en: 'You again, good soul? The bees are humming — so life goes on. Do you need something?' },
+                    { text: 'А, это ты, добрый человек. Пчелы жужжат — значит, жить можно. Надо чего?', en: 'Ah, it is you, good soul. The bees are humming — so life goes on. Do you need something?' },
                     { text: 'Медку хочешь? Свежий сот с воском — забирай. А травы у озера нынче знатные.', en: 'Want some honey? Fresh comb with wax — take it. And the herbs by the lake are fine this year.' },
                 ],
                 action: (scene) => {
@@ -883,7 +883,7 @@ export const DIALOGUES = {
                     // Приказ 1: еда занимает ровно 1 час игрового времени
                     tickTime(scene.registry, MEAL_DURATION_MIN);
                     scene.registry.set('player', player);
-                    if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
+                    scene.audioManager.playGoldSpend(); // audioManager есть у всех сцен с диалогами (базовые create)
                     ActionLog.add(scene.registry, t('Купил мёд у Марфы (8 д.): +1 HP, час времени.'));
                     scene._lastAskResult = { message: t('Марфа наливает полную ложку янтарного мёда. Тепло разливается по телу, силы возвращаются.') +
                         `\n\n✚ Здоровье: +${player.HP - before} HP (${before} → ${player.HP})\n⏳ ${t('Трапеза заняла ровно один час игрового времени.')}` };
@@ -944,7 +944,7 @@ export const DIALOGUES = {
                 text: 'Мир тебе, путник! Ты в доме, где семеро детей — шумно, как ярмарка в торговый день. Сам-то я с сохой вожусь с рассвета: поле само себя не вспашет.',
                 en: 'Peace be with you, traveller! You stand in a house of seven children — as loud as a fair on market day. As for me, I have wrestled the plough since dawn: a field will not plough itself.',
                 variants: [
-                    { text: 'Опять ты? Постой в сторонке, сапоги вытри — у нас тут и сороконожек больше, чем тишины.', en: 'You again? Stand aside and wipe your boots — there are more centipedes here than quiet.' },
+                    { text: 'Тише тут, чем в лесу зимой. Постой в сторонке, сапоги вытри — у нас и сороконожек больше, чем тишины.', en: 'It is quieter here than the winter forest. Stand aside and wipe your boots — there are more centipedes here than quiet.' },
                     { text: 'Семеро детей, путник, — тише, а то разбудишь. Поле ждет, а они поют! Поют!..', en: 'Seven children, traveller — hush, you will wake them. The field waits, and they sing! They sing!..' },
                 ],
                 action: (scene) => {
@@ -1204,7 +1204,7 @@ export const DIALOGUES = {
                     if (scene.audioManager) {
                         scene.audioManager.playPrayerChant();
                     }
-                    scene._lastAskResult = { message: t('Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ Благословение: ВСЕ твои навыки усилены на 10% на двенадцать часов!') };
+                    scene._lastAskResult = { message: t('Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ На двенадцать часов благодать с тобой: всякое дело спорится на десятую долю легче.') };
                 },
                 choices: [
                     { text: t('Аминь.'), next: 'ask_result' },
@@ -1255,7 +1255,7 @@ export const DIALOGUES = {
             },
             about_icon: {
                 speaker: 'Отец Савватий',
-                text: 'Ох, горе нам, {address}! Ночью вор забрался в церковь и украл чудотворную икону Богородицы Одигитрии. Ей более ста лет, её написал монах-иконописец Печерского монастыря. Без неё деревня потеряла благословение Божье. Найди вора и верни святыню! Возьми задание у меня, если хочешь помочь.',
+                text: 'Ох, горе нам, {address}! Ночью вор забрался в церковь и украл чудотворную икону Богородицы Одигитрии — ту самую, что столетие молится за деревню. Найди вора и верни святыню! Возьми задание у меня, если хочешь помочь.',
                 en: 'Oh, woe to us, {address}! In the night a thief broke into the church and stole the wonderworking icon of the Mother of God Hodegetria. It is more than a hundred years old; a monk-icon-painter of the Pechersky Monastery wrote it. Without it the village has lost God\'s blessing. Find the thief and bring back the holy treasure! Take the task from me, if you would help.',
                 action: (scene) => {
                     const q = scene.registry.get('quest');
@@ -1806,7 +1806,7 @@ export const DIALOGUES = {
                 text: 'Микула я, плотник. Изба, клеть, сенник — всё моими руками сложено. Топор да скобель — вот и всё богатство, да зато какое: без них и деревня не деревня. Гляди-ка, у тебя плечи крепкие — не надобен ли тебе честный труд?',
                 en: 'I am Mikula, the carpenter. House, storeroom, hay-barn — all built with these two hands. An axe and a saw are all the riches I own — yet what riches: without them a village is no village at all. You have broad shoulders, friend — might you be after honest work?',
                 variants: [
-                    { text: 'Опять ты? Ну, заходи. Полати скрипят — так я знаю: к гостям.', en: 'You again? Well, step in. The sleeping planks creak — so I know: guests are coming.' },
+                    { text: 'Ну, заходи, чего в дверях стоять. Полати скрипят — так я знаю: к гостям.', en: 'Well, step in — do not stand in the doorway. The sleeping planks creak — so I know: guests are coming.' },
                     { text: 'Ежели по делу — говори прямо: стругать мне до темноты, время дорого.', en: 'If it is business — speak straight: I plane wood till dark, and time is dear.' },
                 ],
                 action: (scene) => {
@@ -1885,7 +1885,7 @@ export const DIALOGUES = {
                 text: 'Муж весь день по дворам, а я пряду да варево варю. Дерево он слышит, а меня — не всегда. Уж что-что, а дым в трубе держать — это ко мне.',
                 en: 'My husband is out at other people\'s yards all day, while I spin and cook. He can hear the wood, but not always me. Yet keeping the hearth alive — that is my craft.',
                 variants: [
-                    { text: 'Опять ты, путник? Садись на лавку, я как раз хлеб сажать собралась.', en: 'You again, traveller? Sit on the bench, I am just about to set the bread to rise.' },
+                    { text: 'Гость дважды в один день — к достатку. Садись на лавку, путник, я как раз хлеб сажать собралась.', en: 'A guest twice in one day means plenty to come. Sit on the bench, traveller, I am just about to set the bread to rise.' },
                     { text: 'Микула вон у амбара стучит, а я одна. Скажешь — передам, не развею.', en: 'Mikula is hammering by the barn, and I am alone. Say your word — I will pass it on, it will not scatter.' }, // раунд 66.10: ориентир реплики — амбар (постройка снесена приказом владельца)
                 ],
                 action: (scene) => {
@@ -1925,7 +1925,7 @@ export const DIALOGUES = {
                 text: 'Здравствуй, добрый человек! Я Игнат, гончар. Мои горшки — в каждой избе, а иные и в церкви: кутью в них носят Обжиг сегодня — загляни, как огонь да глина творят чудо.',
                 en: 'Good day, kind soul! I am Ignat, the potter. My pots sit in every house — and in the church too: after all, what would they carry the funeral wheat in? The kiln fires today — come and see what fire and clay can do together.',
                 variants: [
-                    { text: 'Опять ты, добрый человек? Глина под ногами, дым в небе — заходи смело.', en: 'You again, good soul? Clay underfoot, smoke in the sky — come right in.' },
+                    { text: 'Глина под ногами, дым в небе — значит, дома все живы. Заходи смело, добрый человек.', en: 'Clay underfoot, smoke in the sky — everyone at home is alive and well. Come right in, good soul.' },
                     { text: 'Руки в глине, а сердце в печи. Что ищешь: горшок, кувшин или просто тепла?', en: 'My hands are in the clay, my heart in the kiln. What do you seek: a pot, a jug, or just warmth?' },
                 ],
                 action: (scene) => {
@@ -1957,7 +1957,7 @@ export const DIALOGUES = {
                     if (jobRes.masterpiece) addItem(player, 'master_pot', 1);
                     player.dengas = (player.dengas || 0) + jobRes.wage;
                     scene.registry.set('player', player);
-                    if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
+                    scene.audioManager.playGoldSpend(); // audioManager есть у всех сцен с диалогами (базовые create)
                     ActionLog.add(scene.registry, tf(t('Отработал час в гончарной мастерской: +{0} д., усталость −3 HP (Ремесло {1}%: бросок {2}).'), jobRes.wage, jobRes.skill, jobRes.roll));
                     scene._lastAskResult = { message: t('Час у круга и печи: носил дрова, мешал глину, ставил горшки на обжиг.') + ' '
                         + (jobRes.crit
@@ -2222,7 +2222,7 @@ export const DIALOGUES = {
                 text: 'Ерёма я, рыбак. От зари до зари на броду стою — и вот весь мой сказ. Рыба нынче идёт: лещи да окуни. Дом мой — вон он, на новой улице; заходи — Домна ухи нальёт.',
                 en: 'I am Yeryoma, a fisherman. From dawn to dusk I stand at the ford — and that is my whole tale. The fish are running: bream and perch. My house is over there on the new street; come by — Domna will pour you some fish stew.',
                 variants: [
-                    { text: 'Опять ты? Клюет, скажу я тебе, — вон ведро. Гляди и завидуй.', en: 'You again? They are biting, I tell you — there is the bucket. Look and envy.' },
+                    { text: 'Тише, рыбу спугнешь. Клюет, скажу я тебе, — вон ведро. Гляди и завидуй.', en: 'Hush, you will scare the fish away. They are biting, I tell you — there is the bucket. Look and envy.' },
                     { text: 'С зарею на броду, в темноте домой. Пора мне, путник, — говори, ежели что.', en: 'At dawn to the ford, home in the dark. It is time for me, traveller — speak, if you have business.' },
                 ],
                 action: (scene) => {
@@ -2258,7 +2258,7 @@ export const DIALOGUES = {
                     // Приказ 1: еда занимает ровно 1 час игрового времени
                     tickTime(scene.registry, MEAL_DURATION_MIN);
                     scene.registry.set('player', player);
-                    if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
+                    scene.audioManager.playGoldSpend(); // audioManager есть у всех сцен с диалогами (базовые create)
                     // Патч 66.105 (К1 аудита 66.104): реплики были сырыми
                     // template-литералами мимо t() — в EN-режиме просачивался RU.
                     ActionLog.add(scene.registry, t('Купил копчёной рыбы у Ерёмы: −2 д., +1 HP, час времени.'));
@@ -2345,7 +2345,7 @@ export const DIALOGUES = {
                     const heal = 3 + Math.floor(Math.random() * 3); // 3..5 HP — сильнее трапезы
                     player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
                     scene.registry.set('player', player);
-                    if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
+                    scene.audioManager.playGoldSpend(); // audioManager есть у всех сцен с диалогами (базовые create)
                     // Патч 66.105 (К1): tf(t-шаблон, heal) — было raw-интерполяцией
                     ActionLog.add(scene.registry, tf(t('Февронья полечила раны: −3 д., +{0} HP.'), heal));
                     scene._lastAskResult = { message: tf(t('Приложила подорожник, напоила отваром — кровь остановить, боль унять. К утру затянется.\n\n−3 д. · +{0} здоровья.'), heal) };
@@ -2523,7 +2523,7 @@ export const DIALOGUES = {
                 text: 'Здравствуй, дорогой гость! Прасковья я, снедница: пеку дома. Караваи с утра горячие, сыр — из-за Реки, молоко — от своих коровок. Заходи на двор, каждому гостю — угощение да ласковое слово!',
                 en: 'Greetings, dear guest! I am Praskovya, the victualer: I bake at home. Loaves are hot since morning, cheese comes from beyond the River, milk from my own cows. Step into my yard — a treat and a kind word for every guest!',
                 variants: [
-                    { text: 'Опять ты, дорогой! Караваи как раз поспели — горячие, румяные, бери!', en: 'You again, dear one! The loaves have just come out — hot, rosy, take one!' },
+                    { text: 'Как раз поспели, дорогой! Караваи горячие, румяные — бери, не обожгись!', en: 'Just out of the oven, dear one! The loaves are hot and rosy — take one, mind your fingers!' },
                     { text: 'Печь не остыла, мукой вся перемазана... Ну, что тебе надобно, гостек?', en: 'The oven is not yet cold, and I am covered in flour... Well, what do you need, dear guest?' },
                 ],
                 action: (scene) => {
@@ -2733,7 +2733,7 @@ export const DIALOGUES = {
                 text: 'Нефёд я, сапожник. Сапог на Руси — не обуза, а гордость: у доброго сапога голенище в обтяжку, подошва — что дубовая кора. Дай сюда ногу... э, да ты не в очередь — садись, погутарим, пока Агафья сбитню ставит.',
                 en: 'I am Nefyod, the shoemaker. A boot in Rus is not a burden but a pride: a good boot fits the calf snugly, and its sole is like oak bark. Let me see your foot... ah, no queue today — sit down and let us talk while Agafya pours the sbiten.',
                 variants: [
-                    { text: 'Опять ты? Агафья, квасу! .. А, ты ненадолго. Ну говори.', en: 'You again? Agafya, kvass! .. Ah, you are not staying long. Well, speak.' },
+                    { text: 'Агафья, квасу гостю! .. А, ты ненадолго. Ну говори.', en: 'Agafya, kvass for our guest! .. Ah, you are not staying long. Well, speak.' },
                     { text: 'Шило вон, нитку тяну... путник! Садись, только не на готовые сапоги.', en: 'Awl out, pulling the thread... traveller! Sit down, only not on the finished boots.' },
                 ],
                 action: (scene) => {
@@ -2873,7 +2873,7 @@ export const DIALOGUES = {
                 text: 'Горазд. Просто Горазд — прозвище за дело дали: всё горазд делать. Дрова — горазд, избу — горазд, волка топором — тоже горазд. Ты не пугайся: волков не трогаю, если они меня не трогают. Дров надобно? Всегда есть — поленница за плечом.',
                 en: 'Gorazd. Just Gorazd — they gave the nickname for the deed: I am "good at" everything. Firewood — good at it, a house — good at it, a wolf with an axe — also good at it. Do not fear: I touch no wolves unless they touch me. Need firewood? Always have some — the woodpile is over my shoulder.',
                 variants: [
-                    { text: 'Опять ты, путник? Топор как раз наточил — гляди, острый: бумага режет!', en: 'You again, traveller? I have just sharpened the axe — look, it is sharp: it cuts paper!' },
+                    { text: 'Стоишь в дверях, путник? Топор как раз наточил — гляди, острый: бумага режет!', en: 'Standing in the doorway, traveller? I have just sharpened the axe — look, it is sharp: it cuts paper!' },
                     { text: 'Со леса вернулся, лапти сушу. Говори, чего надо: дрова есть всегда.', en: 'Back from the forest, drying my bark shoes. Speak your need: there is always firewood.' },
                 ],
                 action: (scene) => {
@@ -3311,19 +3311,25 @@ const DONATION_ASK_TEXT = () => t('🕯 Пожертвовать церкви');
 (function installDonationTalk() {
     const d = DIALOGUES['priest'];
     if (!d || !d.nodes || d.nodes.donate_talk) return;
+    // Ленивые геттеры: t() вычисляется при ЧТЕНИИ узла диалогом, а не при
+    // загрузке модуля (канон F-4) — иначе EN-режим получает RU-фолбэк
     d.nodes.donate_talk = {
-        speaker: d.nodes[d.start] ? d.nodes[d.start].speaker : '...',
-        text: t('Отец Савватий кивает на блюдо у иконостаса: «Кто много имя́ет, от того много и требует. А кто мало — тому и малое вменится».'),
-        choices: [
-            {
-                text: t('🕯 Положить на блюдо'),
-                action: (scene) => {
-                    try { showDonationMenu(scene); } catch (e) { console.error('Ошибка меню пожертвования', e); }
+        get speaker() { return d.nodes[d.start] ? d.nodes[d.start].speaker : '...'; },
+        get text() {
+            return t('Отец Савватий кивает на блюдо у иконостаса: «Кто много имя́ет, от того много и требует. А кто мало — тому и малое вменится».');
+        },
+        get choices() {
+            return [
+                {
+                    text: t('🕯 Положить на блюдо'),
+                    action: (scene) => {
+                        try { showDonationMenu(scene); } catch (e) { console.error('Ошибка меню пожертвования', e); }
+                    },
+                    end: true,
                 },
-                end: true,
-            },
-            { text: t('В другой раз'), end: true },
-        ],
+                { text: t('В другой раз'), end: true },
+            ];
+        },
     };
 })();
 

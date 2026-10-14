@@ -126,7 +126,7 @@ ok(boot.includes('DL.prototype.shutdown = function () {'), 'BootScene: гард 
 ok(boot.includes('processQueue'), 'BootScene: дренаж processQueue цел (улучшенная версия гардов)');
 ok(boot.includes('мёртвое зеркало src/main.js удалено в 66.95'), 'BootScene: коммент-ссылка на main.js обновлена (66.95)');
 ok(motionFx.includes('мёртвое зеркало src/main.js удалено в 66.95'), 'MotionFX: коммент-ссылка обновлена');
-ok(gameHtml.includes('зеркало удалено в 66.95 — P2-13 аудита игры'), 'game/index.html: коммент 66.30 актуализирован');
+ok(gameHtml.includes('зеркало удалено при чистке мёртвого кода'), 'game/index.html: 66.106 В22 — нейтральная формулировка вместо процессной');
 ok(gameHtml.includes("parent: 'game-container'") && gameHtml.includes('pixelArt: true'),
    'game/index.html: конфиг реальной точки входа цел (pixelArt + parent)');
 ok(r86.includes("!existsSync('../src/main.js')"), 'r86: пин переведён на проверку удаления зеркала');
@@ -190,7 +190,7 @@ ok((ui.match(/removeListener\('pointerdown'/g) || []).length === 1,
 ok(ui.includes("scene.input.removeListener('pointerupoutside'"), 'P2-19: pointerupoutside снимается (все 4 drag-слушателя)');
 
 console.log('--- 10. SW v130 + game-assets-v45 ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: CACHE_NAME v130');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: CACHE_NAME v130');
 ok(!sw.includes("chronicles-ruthenia-v127'"), 'sw.js: старого v127 как CACHE_NAME нет');
 ok(sw.includes('66.95 (эшелон 3 аудита игры)'), 'sw.js: коммент-шапка бампа 66.95');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: бакет game-assets-v45 цел (ассеты не тронуты)');

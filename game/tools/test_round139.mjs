@@ -146,8 +146,8 @@ console.log('--- 5. oppSkillLabel и локализация вызывающих
     ok(th.includes("t('Скрадывание')") && th.includes("t('Рукопашная')") && th.includes("t('Убеждение')"),
         'thief: имена навыков t(…)');
     ok((rp.match(/oppSkillLabel\(opp, 'жителя'\)/g) || []).length === 2, 'reputation: oppSkillLabel ×2');
-    ok(tr.includes("oppSkillLabel(opp, 'торговца')") && tr.includes("tf(t(' (+{0} обаяние)'), edge)"),
-        'trade: торговец + обаяние');
+    ok(tr.includes("oppSkillLabel(opp, 'торговца')") && tr.includes("tf(t('{0} ({1} обаяние)'), t(label)"),
+        "trade: торговец + обаяние (66.106 Н12: единый шаблон с порядком слов в ключе)");
     ok(rb.includes("oppSkillLabel(opp, 'хозяина')") && rb.includes("tf(t(' ({0} обаяние)'), edge)"),
         'repBalance: хозяин + обаяние');
     ok(!/`\(\+\$\{edge\} обаяние\)`/.test(tr) && !/обаяние\)`/.test(rb), 'тамбл-обаяние: сырых шаблонов нет');

@@ -80,7 +80,7 @@
 // HAGGLE_HINT_COMMERCE; dialogue.js: 3 загрузочные t()-константы → ленивые
 // геттеры; 7 модулей: mid-file импорты подняты в шапки); game-assets-v45
 // цел, код sw.js не менялся.
-const CACHE_NAME = 'chronicles-ruthenia-v134';
+const CACHE_NAME = 'chronicles-ruthenia-v135';
 const GAME_ASSETS_CACHE = 'game-assets-v45';
 
 self.addEventListener('install', function (event) {

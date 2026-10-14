@@ -32,7 +32,7 @@ export const INTERIORS = {
         id: 'tavern',
         get name() { return t('Постоялый двор «У дороги»'); },
         npcId: 'tavernkeeper',
-        get npcName() { return t('Тавернщик Фёдор'); },
+        get npcName() { return t('Кабатчик Фёдор'); },
         npcSprite: 'npc_merchant',
         portrait: 'portrait_tavernkeeper',
         dialogueId: 'tavernkeeper',

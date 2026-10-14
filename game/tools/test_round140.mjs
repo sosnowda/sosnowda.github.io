@@ -113,7 +113,7 @@ console.log('--- 4. Потребители: repBalance + tickTime (ребро ti
 console.log('--- 5. SW-версии ---');
 {
     const sw = read('sw.js');
-    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: CACHE_NAME v133 (66.100: en/index.html; 66.101: game/src → бамп §4)');
+    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: CACHE_NAME v133 (66.100: en/index.html; 66.101: game/src → бамп §4)');
     ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 цел (ассеты не тронуты)');
 }
 

@@ -121,7 +121,9 @@ export function attemptHaggle(registry, npcId, skillValue, opts = {}) {
     const opp = getNpcOpposition({ id: npcId }, 'persuade');
     const edge = getChaEdgeMod(registry);
     const res = opposedSkillCheck((Number(skillValue) || 1) + edge, opp.value, 0);
-    const checkLine = formatOpposedCheck(res, t(label) + (edge ? (edge > 0 ? tf(t(' (+{0} обаяние)'), edge) : tf(t(' ({0} обаяние)'), edge)) : ''),
+    // 66.106 (Н12): одна tf-склейка с полным шаблоном — порядок слов EN задан в ключе
+    const checkLine = formatOpposedCheck(res,
+        (edge ? tf(t('{0} ({1} обаяние)'), t(label), (edge > 0 ? '+' + edge : String(edge))) : t(label)),
         oppSkillLabel(opp, 'торговца'));
 
     let mult = 1;

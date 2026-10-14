@@ -187,7 +187,7 @@ await sleep(600);
 
 // ===== B) НОЧЛЕГ В ДОЛГ (п.3) =====
 console.log('— B) Ночлег в долг —');
-ok(await clickUntil('Отдых', hasText('Отдых в таверне')), 'меню «Отдых» открыто');
+ok(await clickUntil('Отдых', hasText('Отдых на постоялом дворе')), 'меню «Отдых» открыто');
 await shot('b1_rest_menu.webp');
 ok(await clickUntil('Отдохнуть 2 ч', async () => (await texts()).some(x => x.includes('Ночлег в долг'))), '«Отдохнуть 2 ч» → денег нет → предложение долга');
 await shot('b2_lodging_credit.webp');

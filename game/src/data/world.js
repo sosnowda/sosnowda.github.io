@@ -411,4 +411,3 @@ export function resetVillageName() {
     _currentVillageName = null;
 }
 
-export const LOCATION_NAME = '';

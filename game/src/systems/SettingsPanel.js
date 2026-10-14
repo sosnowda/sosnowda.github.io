@@ -59,7 +59,7 @@ export function writeAudioSettingsLocal(scene, s) {
     try {
         const scenes = (scene && scene.game && scene.game.scene) ? scene.game.scene.scenes : [];
         scenes.forEach((sc) => {
-            try { if (sc && sc.audioManager && typeof sc.audioManager.syncFromRegistry === 'function') sc.audioManager.syncFromRegistry(); } catch (e) { /* noop */ }
+            try { sc.audioManager.syncFromRegistry(); } catch (e) { /* сцена без аудио — пропускаем */ }
         });
     } catch (e) { /* noop */ }
 }

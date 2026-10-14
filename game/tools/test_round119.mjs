@@ -69,7 +69,7 @@ ok(!/MPmax/.test(npcStats), 'npcStats: у жителей нет MP');
 ok(!/MP: |MPmax/.test(charScene), 'CharacterScene: строка MP из свитка снята');
 ok(!/MP: \$\{hero\.MPmax\}/.test(selScene), 'CharacterSelectionScene: MP из производных снят');
 ok(!/✦\$\{p\.MP\}|p\.MPmax/.test(forestScene), 'ForestScene: статус-бар без Воли');
-ok(!/mpHeal/.test(interiorScene), 'InteriorScene: mpHeal-эффекты сняты (таверна/рынок)');
+ok(!/mpHeal/.test(interiorScene), 'InteriorScene: mpHeal-эффекты сняты (постоялый двор/рынок)');
 ok(!/mpHeal/.test(questGen) && !/player\.MP\b/.test(questGen), 'questGenerator: награды без МР');
 ok(!/p\.MP|MPmax/.test(dialogue), 'dialogue.js: молитва батюшки без МР');
 ok(!/player\.MP\b|\.MPmax/.test(thief), 'thief.js: без МР');
@@ -247,7 +247,7 @@ for (const f of files) {
 ok(syntaxFail === 0, `node --check ×${files.length} — все зелёные`);
 
 console.log('--- 12. SW v113 / game-assets-v44 / доки ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';") && sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"),
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';") && sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"),
     'sw.js: v130 + game-assets-v45 (66.95 актуализация; ранее — иконки 66.71)');
 ok(/66\.71/.test(swlog) && /v113/.test(swlog), 'SW_CHANGELOG: запись 66.71/v113');
 ok(/66\.71/.test(changes), 'CHANGES.md: запись 66.71');

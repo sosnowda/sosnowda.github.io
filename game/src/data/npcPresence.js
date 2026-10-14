@@ -166,7 +166,7 @@ const ACTIVITY = {
         tavern: 'заглянул на постоялом дворе', village: 'обходит деревню',
     },
     // Раунд 66.21 (приказ 12): у батюшки — келья при церкви; обед/ужин в корчме
-    priest: { church: 'при службе в церкви', tavern: 'трапезничает в корчме', night: 'спит в келье' },
+    priest: { church: 'при службе в церкви', tavern: 'трапезничает на постоялом дворе', night: 'спит в келье' },
     tavernkeeper: { tavern: 'работает на постоялом дворе' },
     blacksmith: {
         home: 'куёт в кузнице', tavern: 'отдыхает на постоялом дворе',
@@ -563,8 +563,8 @@ export function getPresence(registry, npcId) {
     // церковь и спит в келье. Остальное время — при службе.
     if (role === 'priest') {
         if (segId === 'night') return { place: 'church', activity: 'спит в келье' };
-        if (hour >= 12 && hour < 13) return { place: 'tavern', activity: 'обедает в корчме' };
-        if (hour >= 19 && hour < 20) return { place: 'tavern', activity: 'ужинает в корчме' };
+        if (hour >= 12 && hour < 13) return { place: 'tavern', activity: 'обедает на постоялом дворе' };
+        if (hour >= 19 && hour < 20) return { place: 'tavern', activity: 'ужинает на постоялом дворе' };
     }
 
     // --- Раунд 66.22 (приказ владельца): СТРАЖНИК ИЛЬЯ ---

@@ -61,12 +61,12 @@ ok(styles.includes('/* (66.59) .fund-bar переехал'), 'старое ме�
 ok(styles.includes('/* Однострочная полоса сбора средств на узких экранах (66.59): правило'), 'новое место: док-комментарий 66.59 (причина переезда) присутствует');
 ok(styles.includes('Однострочная полоса сбора средств на узких экранах'), 'историческое имя правила сохранено в комментарии');
 ok(styles.includes('button.fund-bar{display:block;width:100%;border:none;appearance:none;-webkit-appearance:none}'), 'button.fund-bar — сброс браузерного оформления не тронут (аудит №20)');
-ok(styles.includes('.fund-bar:focus-visible{outline:2px solid #C9A961;outline-offset:2px}'), '.fund-bar:focus-visible не тронут');
+ok(styles.includes('.fund-bar:focus-visible{outline:2px solid var(--gold);outline-offset:2px}'), '.fund-bar:focus-visible цел (66.106 В10: #C9A961→var(--gold), семантика та же)');
 // актуализация 66.62: hover-стоп #B53925→#A23417 (контраст полоски, P3-1 аудита 66.61 — детали в r112)
 ok(styles.includes('.fund-bar:hover{\n  background:linear-gradient(90deg,#A23417,#8B2C1A) !important;'), 'working-hover с !important не тронут (66.56/66.58, значение 66.62)');
 
 console.log('--- 4. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (переезд CSS-правила не трогал SW-логику)');
 ok(swlog.includes('- v104 — итерация 66.59'), 'SW_CHANGELOG: запись v104 добавлена');

@@ -3,46 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- 66.63 (аудит 66.61, P3-2): canonical страницы игры — SEO-мета была
-     только у лендингов; og:url уже указывал на этот адрес -->
+<!-- canonical страницы игры — SEO-мета была
+ только у лендингов; og:url уже указывал на этот адрес -->
 <link rel="canonical" href="https://sosnowda.github.io/game/">
+<!-- Явная политика реферера; hreflang-пара у страницы игры
+     (язык демо выбирается параметром ?lang=en — обе версии одной страницы) -->
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="alternate" hreflang="ru" href="https://sosnowda.github.io/game/">
+<link rel="alternate" hreflang="en" href="https://sosnowda.github.io/game/?lang=en">
+<link rel="alternate" hreflang="x-default" href="https://sosnowda.github.io/game/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Ctext%20y='.9em'%20font-size='90'%3E%E2%9A%94%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <title>Летописи Руси — Браузерное демо</title>
-<!-- 66.48 (аудит №18): CSP страницы игры. 'unsafe-inline' в script-src —
-     инлайн-лоадер сцен и глушитель F1 ниже по коду; import() сцен — 'self';
-     66.64 (аудит 66.61, P3-4): Phaser 3.88.2 самохостится в
-     /game/vendor/phaser.min.js — внешний CDN из script-src УБРАН,
-     внешних скриптов у игры больше нет;
-     style 'unsafe-inline' — инлайн-блок разметки и errorEl.innerHTML.
-     66.50: img-src + blob: — Phaser 3.88 грузит ВСЕ картинки через
-     XHR→createObjectURL→<img> (внутренний конвейер лоадера), без blob:
-     каждая текстура «Failed to process file» и игра стартует без спрайтов
-     (TypeError setCurrentFrame в цикле). Лендинги уже защищены с 66.47;
-     frame-ancestors в meta не работает по спецификации и потому не указан -->
+<!-- CSP страницы игры. 'unsafe-inline' в script-src —
+ инлайн-лоадер сцен и глушитель F1 ниже по коду; import сцен — 'self';
+ Phaser 3.88.2 самохостится в
+ /game/vendor/phaser.min.js — внешний CDN из script-src УБРАН,
+ внешних скриптов у игры больше нет;
+ style 'unsafe-inline' — инлайн-блок <style> разметки (стили страницы игры).
+ img-src + blob: — Phaser 3.88 грузит ВСЕ картинки через
+ XHR→createObjectURL→<img> (внутренний конвейер лоадера), без blob:
+ каждая текстура «Failed to process file» и игра стартует без спрайтов
+ (TypeError setCurrentFrame в цикле). Лендинги защищены той же политикой;
+ frame-ancestors в meta не работает по спецификации и потому не указан -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
-<!-- Раунд 66.6: G-теги (Open Graph / Twitter / JSON-LD) — корректные
-     превью при шеринге ссылки на браузерное демо.
-     Раунд 66.8: ОТДЕЛЬНЫЙ og:image для демо (og-demo.jpg 1200×630:
-     кадр деревни + заголовок) — больше не делит титульную картинку с лендингом -->
-<meta name="description" content="Браузерное демо «Летописи Руси XV века»: деревня Холм Великий, BRP d100, поход за утраченной иконой. Играется прямо в браузере.">
+<!-- G-теги (Open Graph / Twitter / JSON-LD) — корректные
+ превью при шеринге ссылки на браузерное демо.
+ ОТДЕЛЬНЫЙ og:image для демо (og-demo.jpg 1200×630:
+ кадр деревни + заголовок) — больше не делит титульную картинку с лендингом -->
+<meta name="description" content="Браузерное демо «Летописи Руси XV века»: деревня Великий Холм, BRP d100, поход за утраченной иконой. Играется прямо в браузере.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Летописи Руси XV века">
 <meta property="og:title" content="Летописи Руси XV века — Браузерное демо">
-<meta property="og:description" content="Деревня Холм Великий на живой карте Руси XV века: работа по сезону, слухи на постоялом дворе, колокольный звон, охота на вора. BRP d100.">
+<meta property="og:description" content="Деревня Великий Холм на живой карте Руси XV века: работа по сезону, слухи на постоялом дворе, колокольный звон, охота на вора. BRP d100.">
 <meta property="og:url" content="https://sosnowda.github.io/game/">
 <meta property="og:image" content="https://sosnowda.github.io/assets/images/og-demo.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Летописи Руси XV века — деревня Холм Великий, браузерное демо">
+<meta property="og:image:alt" content="Летописи Руси XV века — деревня Великий Холм, браузерное демо">
 <meta property="og:locale" content="ru_RU">
 <meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Летописи Руси XV века — Браузерное демо">
 <meta name="twitter:description" content="Браузерное демо на Phaser 3: деревня, сезонные работы, слухи, охота на вора. BRP d100.">
 <meta name="twitter:image" content="https://sosnowda.github.io/assets/images/og-demo.jpg">
-<meta name="twitter:image:alt" content="Летописи Руси XV века — деревня Холм Великий, браузерное демо">
+<meta name="twitter:image:alt" content="Летописи Руси XV века — деревня Великий Холм, браузерное демо">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"VideoGame","name":"Летописи Руси XV века — Браузерное демо","description":"Браузерное демо на Phaser 3: деревня Холм Великий, сезонные работы, слухи на постоялом дворе, охота на вора. Ролевая система BRP d100.","genre":["RPG","Historical"],"applicationCategory":"Game","operatingSystem":"Web Browser","url":"https://sosnowda.github.io/game/","image":"https://sosnowda.github.io/assets/images/og-demo.jpg","playMode":"SinglePlayer","inLanguage":["ru","en"],"author":{"@type":"Person","name":"sosnowda"},"offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"}}
+{"@context":"https://schema.org","@type":"VideoGame","name":"Летописи Руси XV века — Браузерное демо","description":"Браузерное демо на Phaser 3: деревня Великий Холм, сезонные работы, слухи на постоялом дворе, охота на вора. Ролевая система BRP d100.","genre":["RPG","Historical"],"applicationCategory":"Game","operatingSystem":"Web Browser","url":"https://sosnowda.github.io/game/","image":"https://sosnowda.github.io/assets/images/og-demo.jpg","playMode":"SinglePlayer","inLanguage":["ru","en"],"author":{"@type":"Person","name":"sosnowda"},"offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"}}
 </script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -50,7 +56,7 @@ html,body{width:100%;height:100%;overflow:hidden}
 body{background:#2e2118;font-family:Arial,sans-serif}
 #game-container{width:100vw;height:100vh;position:relative}
 #loading-text{color:#c9a961;font-size:1.2rem;text-align:center;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
-#error-text{color:#c44;font-size:1rem;text-align:center;max-width:600px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:none}
+#error-text{color:#e06666;font-size:1rem;text-align:center;max-width:600px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:none}
 /* 66.63 (аудит 66.61, P3-2): sr-only — скрытый H1 страницы. Канвас занимает
    весь вьюпорт, видимый заголовок перекрывал бы игру; определение —
    бит-в-бит из styles.css (тот же паттерн, что у лендингов) */
@@ -67,33 +73,33 @@ body{background:#2e2118;font-family:Arial,sans-serif}
 </style>
 </head>
 <body>
-<!-- 66.63 (аудит 66.61, P3-2): H1 страницы игры — sr-only (см. комментарий в
-     <style>); первый заголовок документа — h2 ошибки загрузки идёт после него -->
+<!-- H1 страницы игры — sr-only (см. комментарий в
+ <style>); первый заголовок документа — h2 ошибки загрузки идёт после него -->
 <h1 class="sr-only">Летописи Руси XV века — Браузерное демо</h1>
 <main id="game-container">
     <div id="loading-text">Загрузка игры…</div>
     <div id="error-text"></div>
 </main>
 
-<!-- Phaser 3.88.2 — САМОХОСТИНГ с 66.64 (аудит 66.61, P3-4): единственная
-     внешняя зависимость игры устранена; файл бит-в-бит с jsdelivr и npm
-     (sha256 397fc65bb751b2549b59c64647edf70300d604b742cd6be03d8298b8f35ca9d6);
-     SW обслуживает /game/vendor/ той же cache-first веткой, что и ассеты -->
+<!-- Phaser 3.88.2 — САМОХОСТИНГ с единственная
+ внешняя зависимость игры устранена; файл бит-в-бит с jsdelivr и npm
+ (sha256 397fc65bb751b2549b59c64647edf70300d604b742cd6be03d8298b8f35ca9d6);
+ SW обслуживает /game/vendor/ той же cache-first веткой, что и ассеты -->
 <script src="vendor/phaser.min.js"></script>
 <!-- RexUI полностью убран — кнопки на чистом Phaser -->
 
 <script>
-// 66.92 (PF-1 аудита 66.88, P2): прямые посетители игры получают Service Worker.
+// прямые посетители игры получают Service Worker.
 // Раньше регистрация жила только в js/main.js (лендинг) — игрок, вошедший по
 // прямой ссылке /game/, повторно качал ~21–38 МиБ. Маршруты /game/assets/ +
-// /game/vendor/ в sw.js готовы с 66.64 (cache-first, бакет game-assets-v45),
-// офлайн-фолбэк /game/ — с 66.53/66.56. Регистрация асинхронна и не блокирует
+// /game/vendor/ в sw.js обслуживаются cache-first; офлайн-фолбэк /game/ готов.
+// Регистрация асинхронна и не блокирует
 // загрузку Phaser; скоуп SW — «/» (sw.js в корне).
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(function () { });
 }
 
-// Раунд 56 (приказ владельца): F1 открывает СПРАВКУ ИГРЫ, а не браузера!
+// F1 открывает СПРАВКУ ИГРЫ, а не браузера!
 // Браузерное поведение клавиши F1 (справка браузера поверх игры) глушится
 // на уровне документа ДО старта загрузки сцен. Игровые окна «❓ Помощь»
 // открывают обработчики сцен keydown-F1 (Title, Village, Interior, Forest,
@@ -114,7 +120,16 @@ window.addEventListener('load', function() {
 
     function showError(msg) {
         loadingEl.style.display = 'none';
-        errorEl.innerHTML = '<h2 style="color:#c9a961;margin-bottom:1rem;">Игра не загрузилась</h2><p>' + msg + '</p>';
+        // (Н1): текст ошибки — через createElement/textContent, а не innerHTML:
+        // msg собирается из err.message внешних отказов — injecting разметки убран,
+        // заголовок и текст строятся элементами
+        var h = document.createElement('h2');
+        h.style.color = '#c9a961';
+        h.style.marginBottom = '1rem';
+        h.textContent = 'Игра не загрузилась';
+        var p = document.createElement('p');
+        p.textContent = msg;
+        errorEl.replaceChildren(h, p);
         errorEl.style.display = 'block';
     }
 
@@ -124,13 +139,13 @@ window.addEventListener('load', function() {
     }
 
     Promise.all([
-        // 66.31 (п.1): PreloadScene — ПЕРВАЯ сцена (золотой прогресс-бар),
+ // PreloadScene — ПЕРВАЯ сцена (золотой прогресс-бар),
         // она сама запускает BootScene; порядок импортов важен.
         import('./src/scenes/PreloadScene.js'),
         import('./src/scenes/BootScene.js'),
         import('./src/scenes/TitleScene.js'),
         import('./src/scenes/CharacterSelectionScene.js'),
-        // Раунды 60-61: CharacterAppearanceScene и CharacterGeneratorScene удалены
+ // CharacterAppearanceScene и CharacterGeneratorScene удалены
         // (старая модель героя, без кастомизации внешности)
         import('./src/scenes/VillageScene.js'),
         import('./src/scenes/InteriorScene.js'),
@@ -143,7 +158,7 @@ window.addEventListener('load', function() {
         import('./src/scenes/CharacterScene.js'),
         import('./src/tools/ScreenshotDirector.js'),
     ]).then(function(modules) {
-        // Раунд 32: последний модуль — директор скриншотов (?shot=...), не сцена
+ // последний модуль — директор скриншотов (?shot=...), не сцена
         var directorMod = modules[modules.length - 1];
         var sceneModules = modules.slice(0, -1);
         var scenes = sceneModules.map(function(m) {
@@ -152,26 +167,26 @@ window.addEventListener('load', function() {
         });
 
         var config = {
-            // Раунд 32: ?renderer=canvas — принудительный Canvas-рендер (для
+ // ?renderer=canvas — принудительный Canvas-рендер (для
             // детерминированных скриншотов через agent-browser: WebGL в headless
             // теряет контекст и снимки выходят пустыми). По умолчанию — AUTO.
             type: (new URLSearchParams(window.location.search).get('renderer') === 'canvas')
                 ? Phaser.CANVAS : Phaser.AUTO,
             title: 'Летописи Руси',
             parent: 'game-container',
-            // Раунд 20: ЛЮБОЕ разрешение пользователя — канвас = всё окно.
+ // ЛЮБОЕ разрешение пользователя — канвас = всё окно.
             // Scale.RESIZE: буфер = CSS-пиксели окна, сцены читают актуальные
             // размеры через this.scale, UI переезжает по анкорам (utils/ui.js).
             width: window.innerWidth,
             height: window.innerHeight,
             backgroundColor: '#2e2118',
-            // 66.30 (хотфикс аудита): пиксель-арт БЕЗ сглаживания — ПРЯМО В РЕАЛЬНОЙ
+ // пиксель-арт БЕЗ сглаживания — ПРЯМО В РЕАЛЬНОЙ
             // ТОЧКЕ ВХОДА. Прежде pixelArt: true жил только в зеркале src/main.js,
-            // который НЕ исполнялся, поэтому фикс «мыла» 66.29 п.6 не работал в
-            // рантайме (зеркало удалено в 66.95 — P2-13 аудита игры).
+ // который НЕ исполнялся, поэтому фикс «мыла» пиксель-арта не работал в
+ // рантайме (зеркало удалено при чистке мёртвого кода).
             // Спрайты при масштабах 1.5–2.5 — чёткие.
             pixelArt: true,
-            // 66.93 (P1-3 аудита игры): ДВА активных поинтера. Дефолт Phaser
+ // ДВА активных поинтера. Дефолт Phaser
             // (activePointers = 1) давал мышь + ровно один тач-слот: зажатый
             // джойстик занимал его целиком, и тап по кнопке действия молча
             // терялся — на мобильных было невозможно двигаться и одновременно
@@ -193,7 +208,7 @@ window.addEventListener('load', function() {
         loadingEl.style.display = 'none';
         // Экспорт в window — для отладки и автоматизированного QA
         window.game = new Phaser.Game(config);
-        // Раунд 32: отладочные сценарии скриншотов (?shot=menu|select|custom|
+ // отладочные сценарии скриншотов (?shot=menu|select|custom|
         // village|map|interior|priest|thief|combat) — без параметра ничего не делает
         if (directorMod && typeof directorMod.bootScreenshotDirector === 'function') {
             directorMod.bootScreenshotDirector();

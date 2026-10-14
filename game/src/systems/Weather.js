@@ -309,10 +309,17 @@ function showWeatherToast(scene, text) {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(152);
     [bg, txt].forEach(o => o.setAlpha(0));
     scene.tweens.add({ targets: [bg, txt], alpha: 1, duration: 400 });
-    scene.tweens.add({
-        targets: [bg, txt], alpha: 0, delay: 3400, duration: 600,
-        onComplete: () => { try { bg.destroy(); txt.destroy(); } catch (e) { /* ок */ } },
-    });
+    // Модульный кэш не должен удерживать уничтоженные объекты сцены:
+    // после затухания плашки ссылка сбрасывается (до следующего тоста);
+    // при закрытии сцены плашка гасится и кэш чистится немедленно
+    const retire = () => {
+        try { bg.destroy(); txt.destroy(); } catch (e) { /* ок */ }
+        if (_weatherToast && _weatherToast[0] === bg) _weatherToast = null;
+    };
+    scene.tweens.add({ targets: [bg, txt], alpha: 0, delay: 3400, duration: 600, onComplete: retire });
+    if (scene.events && typeof scene.events.once === 'function') {
+        scene.events.once('shutdown', () => { try { bg.destroy(); txt.destroy(); } catch (e) { /* ок */ } if (_weatherToast && _weatherToast[0] === bg) _weatherToast = null; });
+    }
     _weatherToast = [bg, txt];
 }
 

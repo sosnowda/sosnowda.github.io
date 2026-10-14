@@ -1524,7 +1524,7 @@ export class InteriorScene extends Phaser.Scene {
         const player = this.registry.get('player');
         const cost = 20;
         if ((player.dengas || 0) < cost) {
-            createDialog(this, t('Таверна'), t('Не хватает денег на выпивку для всех!'), [
+            createDialog(this, t('Постоялый двор'), t('Не хватает денег на выпивку для всех!'), [
                 { text: t('Понятно'), callback: () => {} },
             ], { singleton: false, portraitKey: interior.portrait });
             return;
@@ -1532,7 +1532,7 @@ export class InteriorScene extends Phaser.Scene {
         player.dengas -= cost;
         this.registry.set('player', player);
         const totalBonus = applyTreatEveryoneBonus(this.registry);
-        ActionLog.add(this.registry, tf(t('Угостил всех выпивкой в таверне за {0} д. (+{1} к репутации).'), cost, totalBonus));
+        ActionLog.add(this.registry, tf(t('Угостил всех выпивкой на постоялом дворе за {0} д. (+{1} к репутации).'), cost, totalBonus));
         createDialog(this, t('🎉 Выпивка для всех'),
             t('Ты заказал бочку медовухи на всех! Гости радостно поднимают кубки. «За гостеприимного гостя!» — раздаётся по залу. (Репутация у всех NPC +3, в деревне +5)'), [
             { text: t('🎉 За нас!'), callback: () => {} },
@@ -2420,7 +2420,7 @@ export class InteriorScene extends Phaser.Scene {
         // открытые диалоги — вместо нагромождения панелей остаётся одна.
         closeAllSingletonDialogs(this);
         this.busyDialog = true;
-        createDialog(this, t('🛏 Отдых в таверне'),
+        createDialog(this, t('🛏 Отдых на постоялом дворе'),
             t('Фёдор вытирает стойку: «Комнатка чистая, сено свежее. Сколько будешь отдыхать?»')
             + warning,
             [
@@ -2512,8 +2512,8 @@ export class InteriorScene extends Phaser.Scene {
             this.updateHUD();
             if (this.audioManager) this.audioManager.playSound('sfx_heal');
             ActionLog.add(this.registry, onCredit
-                ? tf(t('Отдохнул в таверне ({0} ч) В ДОЛГ ({1} д. — записаны в столбец). {2}'), hours, cost, effectText)
-                : tf(t('Отдохнул в таверне ({0} ч) за {1} д. {2}'), hours, cost, effectText));
+                ? tf(t('Отдохнул на постоялом дворе ({0} ч) В ДОЛГ ({1} д. — записаны в столбец). {2}'), hours, cost, effectText)
+                : tf(t('Отдохнул на постоялом дворе ({0} ч) за {1} д. {2}'), hours, cost, effectText));
             this.cameras.main.fadeIn(600, 0, 0, 0);
 
             const end = checkGameEnd(this.registry);

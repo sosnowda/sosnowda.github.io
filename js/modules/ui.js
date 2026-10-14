@@ -236,7 +236,7 @@ function rollD100() {
         else { deg = D100_I18N.fail; cls = 'fail'; }
         result.textContent = roll;
         degree.textContent = deg + D100_I18N.tail.replace('{r}', roll);
-        degree.style.color = (cls === 'crit' || cls === 'special') ? '#e0c078' : (cls === 'fail' ? '#c44' : '');
+        degree.style.color = (cls === 'crit' || cls === 'special') ? '#e0c078' : (cls === 'fail' ? '#e06666' : '');
         sphere.classList.remove('rolling');
         d100IsRolling = false;
     }, 700);

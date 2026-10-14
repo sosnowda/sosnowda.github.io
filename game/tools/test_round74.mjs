@@ -110,8 +110,8 @@ r = askNPC(reg, 'fisherman', 'Рыбак Елисей');
 ok(r.gotClue === false, 'НПЦ на локации, куда вор ещё НЕ добежал, наводки не даёт');
 // Контроль: тавернщик (место 'tavern' — вне погони), не свидетель → без наводки
 reg = chaseRegistry();
-r = askNPC(reg, 'tavernkeeper', 'Тавернщик');
-ok(r.gotClue === false, 'НПЦ вне локаций погони (таверна) работает по старым правилам');
+r = askNPC(reg, 'tavernkeeper', 'Кабатчик');
+ok(r.gotClue === false, 'НПЦ вне локаций погони (постоялый двор) работает по старым правилам');
 // Хелпер напрямую
 reg = chaseRegistry();
 ok(isThiefEyewitnessPlace(reg, 'fisherman') === true, 'isThiefEyewitnessPlace: пройденная локация → очевидец');

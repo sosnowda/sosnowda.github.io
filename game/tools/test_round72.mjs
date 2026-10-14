@@ -25,12 +25,12 @@ ok(typeof CRAFT_VOLUME_BY_INTERIOR === 'object' && CRAFT_VOLUME_BY_INTERIOR !== 
     'CRAFT_VOLUME_BY_INTERIOR — таблица');
 const KEYS = ['blacksmith', 'weaver_house', 'villager_house_2', 'tavern'];
 ok(KEYS.every(k => k in CRAFT_VOLUME_BY_INTERIOR),
-    'кузница + дом ткачихи + дом вдовы Марфы + таверна — 4 интерьера');
+    'кузница + дом ткачихи + дом вдовы Марфы + постоялый двор — 4 интерьера');
 ok(KEYS.every(k => CRAFT_VOLUME_BY_INTERIOR[k] > 0 && CRAFT_VOLUME_BY_INTERIOR[k] < 1),
-    'все громкости в (0..1): кузница 0.5 громче прялки 0.35 и таверны 0.3');
+    'все громкости в (0..1): кузница 0.5 громче прялки 0.35 и постоялого двора 0.3');
 ok(CRAFT_VOLUME_BY_INTERIOR.blacksmith > CRAFT_VOLUME_BY_INTERIOR.weaver_house
    && CRAFT_VOLUME_BY_INTERIOR.weaver_house > CRAFT_VOLUME_BY_INTERIOR.tavern,
-    'баланс: молот > прялка > таверна (фон поверх трека)');
+    'баланс: молот > прялка > постоялый двор (фон поверх трека)');
 ok(attachCraftAudio({ sound: null }, 'blacksmith') === null,
     'нет sound.context → null (без ошибки, как RiverAmbience)');
 ok(attachCraftAudio({ sound: { locked: true } }, 'tavern') === null,
@@ -79,7 +79,7 @@ function mockScene(ctx, timers = []) {
     const scene3 = mockScene(fakeCtx());
     const craft3 = attachCraftAudio(scene3, 'tavern');
     ok(craft3 && craft3.layers.length === 2,
-        'таверна: гул голосов — два band-слоя (420/750 Гц)');
+        'постоялый двор: гул голосов — два band-слоя (420/750 Гц)');
 
     const scene4 = mockScene(fakeCtx());
     ok(attachCraftAudio(scene4, 'church') === null,
@@ -103,7 +103,7 @@ ok(src.includes('playAnvilBlow') && src.includes('playQuenchHiss'),
     'молот: удар по наковальне + шип закалки');
 ok(src.includes('playWheelTick') && src.includes('1900'),
     'прялка-копыл: щелчок-подскок веретена (~1.9 с, нерегулярный; актуализация 66.86/66.87)');
-ok(src.includes('playMugClink'), 'таверна: редкий стук деревянной кружки о стол');
+ok(src.includes('playMugClink'), 'постоялый двор: редкий стук деревянной кружки о стол');
 ok(!/[а-яА-Я]/.test(src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')), 'CraftAudio: без видимых строк вне комментариев (звук без UI)');
 ok(/раунд 66\.9/i.test(src), 'CraftAudio: комментарий с номером раунда (стилистика кода)');
 
@@ -179,7 +179,7 @@ setLang('ru');
 }
 
 console.log('\n— Регрессия: SW на актуальной версии (66.19 — чистка ассетов, бамп v22) —');
-ok(read('../sw.js').includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"),
+ok(read('../sw.js').includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"),
     'SW актуален (v130, 66.95 актуализация)');
 
 console.log(`\nИТОГО: ${pass} зелёных, ${fail} красных`);

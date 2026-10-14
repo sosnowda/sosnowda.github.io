@@ -38,9 +38,9 @@ ok(is.includes('fillRect(ax - 5, ay + 4, 10, 62)'), 'аналой: передн�
 ok(is.includes("setDisplaySize(44, 50).setRotation(-0.04)"), 'аналой: икона ЛЕЖИТ на наклонной доске');
 ok(!is.includes("height * 0.62, 'int_deco_analogion'"), 'аналой: старый невидимый спрайт 48×56 больше не используется');
 
-console.log('--- 3. Таверна (п.2/п.3) ---');
-ok(is.includes('width * 0.293, height * 0.435'), 'тавернщик: позиция у окошка выдачи (0.293W, 0.435H)');
-ok(is.includes("{ x: 0.60, y: 0.42 }"), '3-й гость таверны выведен из зоны окошка');
+console.log('--- 3. Постоялый двор (п.2/п.3) ---');
+ok(is.includes('width * 0.293, height * 0.435'), 'кабатчик: позиция у окошка выдачи (0.293W, 0.435H)');
+ok(is.includes("{ x: 0.60, y: 0.42 }"), '3-й гость постоялого двора выведен из зоны окошка');
 
 console.log('--- 4. Деревья погоста (п.5) ---');
 ok(loc.includes('minDist = 95'), 'погост: minDist деревьев 95px (крона ~83px — не слипаются)');
@@ -72,7 +72,7 @@ for (const h of ['hero_baenor', 'hero_huntress']) {
 ok(existsSync('../docs/PACK_ANALYSIS_6629.md'), 'анализ пака Medieval - Heroes I задокументирован (game/docs/PACK_ANALYSIS_6629.md)');
 
 console.log('--- 7. SW и кеши ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'SW: site-cache v130 (актуализация 66.95)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'SW: site-cache v130 (актуализация 66.95)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45 (листы 66.33 + бусты)');
 ok(swlog.includes('v84 — итерация 66.34'), 'SW: журнал содержит запись v84');
 

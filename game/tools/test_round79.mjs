@@ -80,7 +80,7 @@ console.log('— пп.2-3: пропорциональный отдых, сон �
     ok(src.includes('[2, 3, 4, 6, 8, 12]'), 'меню отдыха: пункт «1 час» снят (минимум 2 ч)');
     ok(src.includes("if (mins < SLEEP_MIN_MIN) return null;"), '«до X» с сном < 2 ч не предлагается');
     ok(src.includes('sleepMinutes < SLEEP_MIN_MIN'), 'restInTavern: страховка — сон < 2 ч отменяется');
-    ok(src.includes('restHealPct(sleepMinutes)'), 'лечение в таверне — по доле restHealPct');
+    ok(src.includes('restHealPct(sleepMinutes)'), 'лечение на постоялом дворе — по доле restHealPct');
     ok(!src.includes('(player.HPmax || 10) * 0.34'), 'старое «~1/3 лечения» (коэффициент 0.34) удалено');
 }
 

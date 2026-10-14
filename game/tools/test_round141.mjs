@@ -3,7 +3,7 @@
 //      в тесте — литералы вызовов t()/tf()/tk() по game/src вычисляются V8
 //      и сравниваются с рантайм-ключами EN ∪ EN_KEYS (границы объектов
 //      находятся динамически) — ПОКРЫТИЕ 100% (0 непереведённых); пин:
-//      EN 2182 ключей (2075 + 107 патча 66.105 К1/К5), 0 дублей; 3 тождественных сквозных паттерна
+//      EN 2189 ключей (2075 + 107 патча 66.105 К1/К5 + 8 волны 66.106 − 1 дубль), 0 дублей; 3 тождественных сквозных паттерна
 //      rumors.js присутствуют, осиротевшая «Сметка знает цену» удалена;
 //   2) F-3: мёртвый экспорт HAGGLE_HINT_COMMERCE удалён из trade.js
 //      (0 импортёров), функция/константа модуля живы, t() у торговца цел;
@@ -15,7 +15,7 @@
 //      13–16 — намеренный патч-порядок, не проверяется;
 //   5) F-6: мёртвая custom-property --red-bright удалена из styles.css
 //      (ни определения, ни var(--red-bright) в репо); соседи целы;
-//   6) SW v134 (§4: game/src + лендинги менялись), game-assets-v45 цел, SW_CHANGELOG v134,
+//   6) SW v135 (§4: game/src + лендинги менялись), game-assets-v45 цел, SW_CHANGELOG v135,
 //      CHANGES «Патч 66.101», отчёт docs/EN_I18N_R66101.md существует.
 // Запуск из корня репозитория: node game/tools/test_round141.mjs
 import fs from 'fs';
@@ -44,8 +44,8 @@ console.log('--- 1. F-2 «EN-полнота»: рантайм-сканер — 0
     const { EN, EN_KEYS } = await import(dictUrl);
     fs.unlinkSync(dictUrl);
     const COV = new Set([...Object.keys(EN), ...Object.keys(EN_KEYS)]);
-    ok(Object.keys(EN).length === 2182, `EN: 2182 рантайм-ключей (факт: ${Object.keys(EN).length}) — 66.105 (К1/К5): +107; 66.101: +3 тождественных (F-2), −1 осиротевшая (F-3)`);
-    ok(Object.keys(EN_KEYS).length === 541, `EN_KEYS: 541 рантайм-ключей (факт: ${Object.keys(EN_KEYS).length})`);
+    ok(Object.keys(EN).length === 2189, `EN: 2189 рантайм-ключей (факт: ${Object.keys(EN).length}) — 66.105 (К1/К5): +107; 66.101: +3 тождественных (F-2), −1 осиротевшая (F-3)`);
+    ok(Object.keys(EN_KEYS).length === 542, `EN_KEYS: 542 рантайм-ключей (факт: ${Object.keys(EN_KEYS).length})`);
     const forId = 'Fyodor lowers his voice: “They saw your thief {0}. You didn’t hear it from me.”';
     const herdId = 'The herd was driven {0} today — the shepherds scout where the grass is juiciest.';
     const fieldId = 'The whole village is out in the fields today: {0}. Miss the season and the whole year is lost.';
@@ -177,15 +177,15 @@ console.log('--- 5. F-6: styles.css без --red-bright ---');
 }
 
 // ============================================================
-// 6. SW v134 + документация патча
+// 6. SW v135 + документация патча
 // ============================================================
-console.log('--- 6. SW v134 и документация ---');
+console.log('--- 6. SW v135 и документация ---');
 {
     const sw = read('sw.js');
-    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: CACHE_NAME v134 (§4: game/src + лендинги менялись)');
+    ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: CACHE_NAME v135 (§4: game/src + лендинги менялись)');
     ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 цел (ассеты не тронуты)');
     ok(sw.includes('navigate') || sw.includes("request.mode === 'navigate'"), 'sw.js: navigate-гейт 66.57 цел');
-    ok(read('docs/SW_CHANGELOG.md').includes('- v133 — итерация 66.101') && read('docs/SW_CHANGELOG.md').includes('- v134 — итерация 66.105'), 'SW_CHANGELOG: записи v133 и v134 на месте');
+    ok(read('docs/SW_CHANGELOG.md').includes('- v133 — итерация 66.101') && read('docs/SW_CHANGELOG.md').includes('- v135 — итерация 66.106'), 'SW_CHANGELOG: записи v133 и v135 на месте');
     ok(read('CHANGES.md').includes('Патч 66.101'), 'CHANGES.md: секция «Патч 66.101»');
     ok(fs.existsSync(path.join(ROOT, 'docs/EN_I18N_R66101.md')), 'docs/EN_I18N_R66101.md: отчёт F-2 «EN-полнота» существует');
     ok(read('game/src/systems/i18n.js').includes('66.101 (F-2 аудита 66.100'), 'i18n.js: док-комментарий 66.101 о закрытии F-2');

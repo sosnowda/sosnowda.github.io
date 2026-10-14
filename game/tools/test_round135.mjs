@@ -53,7 +53,7 @@ ok(vc.includes("actionBase.on('pointerdown'"), 'VirtualControls: обработ�
 
 console.log('--- 3. P1-3: мультитач — input.activePointers = 2 ---');
 ok(gameHtml.includes('input: { activePointers: 2 },'), 'game/index.html: input: { activePointers: 2 } в конфиге Phaser');
-ok(gameHtml.includes('66.93 (P1-3'), 'game/index.html: коммент-шапка фикса на месте');
+ok(gameHtml.includes('ДВА активных поинтера'), 'game/index.html: 66.106 В22 — метка снята, содержательная формулировка на месте');
 ok(gameHtml.includes('pixelArt: true') && gameHtml.includes('Phaser.Scale.RESIZE'), 'game/index.html: конфиг цел (pixelArt/RESIZE не тронуты)');
 
 console.log('--- 4. P2-1: уклонение врагов по skills.dodge ---');
@@ -98,7 +98,7 @@ const mk = () => ({ minute: 0, hour: 10, day: 1, month: 0, yearFromChrist: 1453,
 }
 
 console.log('--- 8. SW v126 + game-assets-v45 ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: CACHE_NAME v130');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: CACHE_NAME v130');
 ok(!sw.includes("chronicles-ruthenia-v125'"), 'sw.js: старого v125 как CACHE_NAME нет');
 ok(sw.includes('66.93 (эшелон 1 аудита игры)'), 'sw.js: коммент-шапка бампа 66.93');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: бакет game-assets-v45 цел (ассеты не тронуты)');

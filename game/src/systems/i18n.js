@@ -169,7 +169,7 @@ const EN = {
 
     // --- Здания (интерьеры) ---
     'Староста': 'Elder',
-    'Таверна': 'Tavern',
+    'Постоялый двор': 'Tavern',
     // Раунд 27 (п.12): таверна переименована владельцем в «Постоялый двор»
     'Постоялый двор «У дороги»': 'The Wayside Inn',
     'Кузница': 'Smithy',
@@ -186,7 +186,6 @@ const EN = {
     'Церковь': 'Church',
     'Ворота': 'Gate',
     'Дом старосты': 'Elder\'s house',
-    'Таверна «У дороги»': 'The Wayfarer\'s Tavern',
     'Дом крестьянина': 'Peasant\'s house',
     'Дом вдовы': 'Widow\'s house',
     'Любава, жена старосты': 'Lyubava, the elder\'s wife',
@@ -324,7 +323,7 @@ const EN = {
     // --- Деньги (Character.formatMoney) ---
     'д.': 'd.',
     'пол.': 'pol.',
-    'гр.': 'hrv.',
+    'гр.': 'grivna',
     'руб.': 'rub.',
     '0 д.': '0 d.',
 
@@ -363,11 +362,11 @@ const EN = {
 
     // --- NPC (интерьеры) ---
     'Староста Мирослав': 'Elder Miroslav',
-    'Тавернщик Фёдор': 'Taverner Fyodor',
+    'Кабатчик Фёдор': 'Taverner Fyodor',
     'Кузнец Данила': 'Blacksmith Danila',
     'Крестьянин Авдей': 'Peasant Avdey',
     'Вдова Марфа': 'Widow Marfa',
-    'Отец Савватий': 'Father Savvatiy',
+    'Отец Савватий': 'Father Savvaty',
     'Работник не показывается': 'Nobody is around',
 
     // РАУНД 66.10: секция «Лут» удалена (лут сундуков вырезан по приказу владельца)
@@ -479,8 +478,8 @@ const EN = {
         'The priest shakes his head: "You are already under God\'s protection, my child. The blessing lasts another twelve hours — do not anger the Lord with greed."',
     'Батюшка качает головой: «Благословение даруется не чаще раза в сутки. Приходи через {0} ч, чадо.»':
         'The priest shakes his head: "A blessing is given no more than once a day. Come back in {0} h, my child."',
-    'Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ Благословение: ВСЕ твои навыки усилены на 10% на двенадцать часов!':
-        'The priest lays his hand on your head and whispers a prayer. Warmth spreads over your shoulders.\n\n✨ Blessing: ALL your skills are enhanced by 10% for twelve hours!',
+    'Батюшка кладёт руку тебе на голову и шепчет молитву. Тепло разливается по плечам.\n\n✨ На двенадцать часов благодать с тобой: всякое дело спорится на десятую долю легче.':
+        'The priest lays his hand on your head and whispers a prayer. Warmth spreads over your shoulders.\n\n✨ For twelve hours the blessing stays with you: every task goes a tenth part easier.',
     '🌿 Организм ещё не принял прошлую траву': '🌿 Your body has not yet taken in the previous herb',
     'Целебные травы можно принимать не чаще раза в 12 часов. Следующая трава подействует примерно через {0} ч.':
         'Healing herbs can be taken no more than once every 12 hours. The next herb will work in about {0} h.',
@@ -698,7 +697,7 @@ const EN = {
     'Не сейчас': 'Not now',
 
     // ----- Раунд 22: отдых в таверне (п.10/12) -----
-    '🛏 Отдых в таверне': '🛏 Rest at the tavern',
+    '🛏 Отдых на постоялом дворе': '🛏 Rest at the tavern',
     '⚠ ВНИМАНИЕ: погоня за вором продолжается! Пока ты спишь, вор уйдёт далеко. Отдых лучше отложить до победы.':
         '⚠ WARNING: the chase for the thief is still on! While you sleep, the thief will get far away. Better postpone your rest until after the victory.',
     'Не хватает денег: нужно {0} д., а у тебя {1}.': 'Not enough money: {0} d. is needed, but you have {1}.',
@@ -710,7 +709,7 @@ const EN = {
     'Здоровье и Воля восстановлены ПОЛНОСТЬЮ.': 'Health and Will have been FULLY restored.',
     'Здоровье +{0}, Воля +{1}.': 'Health +{0}, Will +{1}.',
     'Ты полон сил!': 'You are full of strength!',
-    'Отдохнул в таверне ({0} ч) за {1} д. {2}': 'Rested at the inn ({0} h) for {1} d. {2}',
+    'Отдохнул на постоялом дворе ({0} ч) за {1} д. {2}': 'Rested at the inn ({0} h) for {1} d. {2}',
 
     // ----- Раунд 40: «⏳ Провести время» на постоялом дворе -----
     '⏳ Время': '⏳ Time',
@@ -863,6 +862,20 @@ const EN = {
     'Видел я его, темного человека! Он сейчас прячется у {0} — поспеши!':
         'I saw him, the dark man! He is hiding at {0} right now — hurry!',
     'Видел я вора, да куда он подался — не ведаю.': 'I saw the thief, but where he went — I cannot say.',
+    'Сам своими глазами видел: мчал через нашу сторону! Говорят, к {0} подался — беги, пока след не остыл!':
+        'I saw it with my own eyes: he raced across our side! They say he made for {0} — run before the trail goes cold!',
+    'Ах, я его запомнил — дух захватил! Несётся, будто от пожара! Теперь его следы к {0} ведут.':
+        'Ah, I remember him — it took my breath away! He galloped as if fleeing a fire! His tracks now lead toward {0}.',
+    'Тут он юркнул, черт! Вроде к {0} присматривался — рыщи там!':
+        'He darted in there, the devil! He seemed to be eyeing {0} — search there!',
+    'Пробегал тут, страшила какой, — а куда ушёл, не приметил. Спрашивай ещё у людей.':
+        'He ran past here, a fearsome sight — but where he went off, I did not mark. Ask the others too.',
+    'Тёмного человека встречал — торопится к {0}, не оглядывается.':
+        'I met a dark man — hurrying toward {0}, never looking back.',
+    'Лихой какой-то у {0} ошивается — больно похож на твоего вора.':
+        'Some villain is lurking about {0} — much like your thief.',
+    'Слыхал, что тут вор бегает, да сам не видывал. Спрашивай у других.':
+        'I have heard a thief is about, but I did not see him myself. Ask the others.',
     'Вор? Здесь не пробегал. Я бы заметил — весь день на виду был.':
         'The thief? No one ran past here. I would have noticed — I was in plain sight all day.',
     'Темных людей не видал, батюшко упаси. Может, в другой стороне ищешь?':
@@ -931,7 +944,7 @@ const EN = {
     'кузнец': 'blacksmith', 'священник': 'priest', 'староста': 'village elder',
     'охотник': 'hunter', 'травник': 'herbalist', 'травница': 'herbal woman',
     'пастух': 'shepherd', 'пастушка': 'shepherd girl',
-    'тавернщик': 'innkeeper', 'тавернщица': 'innkeeper\'s wife',
+    'кабатчик': 'innkeeper', 'кабатчица': 'innkeeper\'s wife',
     'рыбак': 'fisherman', 'мельник': 'miller', 'пахарь': 'ploughman',
     'пасечник': 'beekeeper', 'пасечница': 'beekeeper woman',
     'плотник': 'carpenter', 'стражник': 'guard', 'инок': 'monk',
@@ -985,7 +998,7 @@ const EN = {
 
     // --- Раунд 45: вира по Судебнику, убийство НПЦ, перемирье, кузница ---
     '🤝 Просить мира (вира по Судебнику)':
-        '🤝 Ask for peace (wergild, by the Law Code)',
+        '🤝 Ask for peace (wergild, by the Sudebnik)',
     '🤝 Просить мира ещё': '🤝 Ask for peace with another',
     'Пока не помирюсь.': 'I will not make peace yet.',
     'Спасибо, староста.': 'Thank you, elder.',
@@ -1002,13 +1015,13 @@ const EN = {
         'Nothing to sell — everything is worn or the bag is empty.',
     '💰 {0} — {1} д. (полцены)': '💰 {0} — {1} d. (half price)',
     'Кузнец Данила откладывает молот и крестит руки на груди:\n«Не стану я ни продавать, ни покупать у тебя, человек дурной славы. Иди!»':
-        'Smith Danila lays down the hammer and folds his arms:\n"I will neither sell to you nor buy from you, man of ill repute. Begone!"',
+        'Blacksmith Danila lays down the hammer and folds his arms:\n"I will neither sell to you nor buy from you, man of ill repute. Begone!"',
     'Кузнец Данила качает головой: «{0}.»':
-        'Smith Danila shakes his head: "{0}."',
+        'Blacksmith Danila shakes his head: "{0}."',
     'По уложению Судебника воинское снаряжение не продаётся несовершеннолетним (с 18 лет)':
-        'By the Law Code, warrior-grade gear is not sold to minors (from age 18)',
+        'By the Sudebnik, warrior-grade gear is not sold to minors (from age 18)',
     ' (воинское снаряжение, по уложению Судебника)':
-        ' (warrior-grade gear, by the Law Code)',
+        ' (warrior-grade gear, by the Sudebnik)',
     '🕯 Здесь стоит тишина...': '🕯 Silence fills this place...',
     'Староста может смыть эту вину вирой — если заплатишь.':
         'The elder can wash away this guilt with wergild — if you pay.',
@@ -1016,18 +1029,18 @@ const EN = {
     'Родня убитого проклинает тебя: их репутация упала до −100.':
         'The slain one\'s kin curse you: their reputation fell to −100.',
     'Староста разводит руками: «На тебя никто больше не в ярости — мирить некого. Спасибо Судебнику!»':
-        'The elder spreads his hands: "Nobody rages at you anymore — no one to reconcile. Thank the Law Code!"',
+        'The elder spreads his hands: "Nobody rages at you anymore — no one to reconcile. Thank the Sudebnik!"',
     // 66.97 (§12.3 п.5): «40 гривен» → «40 кун» — согласовано с лором денег (CURRENCY);
     // ключ словаря = точная русская строка, поэтому обновлены обе половины пары.
-    'Староста листает Судебник: «Обида смывается серебром. Вира за кровь свободного мужа — 40 кун (80 д.), за женщину или отрока — полувирье (40 д.), да продажа мне за суд — 20 д. За разбой без всякой свады — всё вдвое. Плати — и обиженный тебя простит (репутация станет +30).»':
-        'The elder leafs through the Law Code: "Grievance is washed away with silver. Wergild for a free man\'s blood — 40 kunas (80 d.), for a woman or a youth — half-wergild (40 d.), plus 20 d. of the fine to me for the court. For lawless robbery — double. Pay, and the offended will forgive you (reputation becomes +30)."',
+    'Староста листает Судебник: «Обида смывается серебром. Вира за кровь свободного мужа — 40 кун (80 д.), за женщину или отрока — полувирье (40 д.), да продажа мне за суд — 20 д. За разбой без всякой свады — всё вдвое. Плати виру — и обиженный простит.»':
+        'The elder leafs through the Sudebnik: "Grievance is washed away with silver. Wergild for a free man\'s blood — 40 kunas (80 d.), for a woman or a youth — half-wergild (40 d.), plus 20 d. of the fine to me for the court. For lawless robbery — double. Pay the wergild, and the offended will forgive you."',
     '{0} убит! Кровная вина пала на тебя...': '{0} is slain! Blood-guilt has fallen upon you...',
     'Уходи! Я тебя ненавижу... но староста велел крови сегодня не проливать.':
         'Away with you! I hate you... but the elder bade no blood be shed today.',
     'Побег из боя с разгневанным жителем (бросок {0}, успех). Он не нападёт снова сразу — перемирье на 12 часов.':
         'Escaped the fight with the enraged villager (roll {0}, success). He will not attack again at once — a truce for 12 hours.',
     'Кузнец Данила отказался торговаться с героем дурной славы (репутация ≤ −50).':
-        'Smith Danila refused to trade with a hero of ill repute (reputation ≤ −50).',
+        'Blacksmith Danila refused to trade with a hero of ill repute (reputation ≤ −50).',
     '🚪 ИЗГНАН ИЗ ДЕРЕВНИ': '🚪 EXILED FROM THE VILLAGE',
 
     // --- Раунд 36: репутационная победа (отдельная ветка финала) ---
@@ -1346,11 +1359,11 @@ const EN = {
         'The elder crosses himself: "{0} is dead. The Law judges not the dead. Blood guilt is upon you to the end of your days."',
     'Ошибка: игрок не найден.': 'Error: player not found.',
     'Староста листает Судебник: «Вира за твою обиду — {0} д. ({1}). А в мошне у тебя лишь {2} д. Не будет мира — будет суд.»':
-        'The elder leafs through the Law: "The wergild for your offence is {0} d. ({1}). And in your purse there is only {2} d. No peace — then judgement."',
+        'The elder leafs through the Sudebnik: "The wergild for your offence is {0} d. ({1}). And in your purse there is only {2} d. No peace — then judgement."',
     '🤝 Примирение у старосты: выплачена вира {0} д. за {1} ({2}). Репутация {3} теперь +30.':
         '🤝 Peace made before the elder: wergild of {0} d. paid for {1} ({2}). Reputation of {3} is now +30.',
-    'Староста принимает виру — {0} д. ({1}) — и жмёт руку {2}: «Обида смыта серебром, по Судебнику быть миру!»\n\nРепутация {3} к тебе теперь +30.':
-        'The elder accepts the wergild — {0} d. ({1}) — and clasps {2}\'s hand: "The offence is washed away with silver; by the Law there shall be peace!"\n\nReputation of {3} with you is now +30.',
+    'Староста принимает виру — {0} д. ({1}) — и жмёт руку {2}: «Обида смыта серебром, по Судебнику быть миру!»\n\n{3} прячет серебро за пазуху и кивает: обида снята, он больше не враждует с тобой.':
+        'The elder accepts the wergild — {0} d. ({1}) — and clasps {2}\'s hand: "The offence is washed away with silver; by the Sudebnik there shall be peace!"\n\n{3} tucks the silver away and nods: the offence is washed away, and he holds no grudge against you.',
     'СВАДЬБА: {0} {1} {2} ({3}). Свадебное торжество обошлось в {4} д. Деревенская репутация выросла.': 'WEDDING: {0} {1} {2} ({3}). The wedding feast cost {4} d. Village reputation has grown.',
     'Обследовал след в «{0}» — след прочитан (бросок {1}, успех{2}): вор у {3}.':
         'Examined a footprint in "{0}" — trail read (roll {1}, success{2}): the thief is near {3}.',
@@ -1578,7 +1591,7 @@ const EN = {
     'Решила пока не выходить замуж за {0}.': 'Resolved for now not to marry {0}.',
     'Решил пока не жениться на {0}.': 'Resolved for now not to take {0} in marriage.',
     'Не хватает денег на выпивку для всех!': 'Not enough money for a drink for everyone!',
-    'Угостил всех выпивкой в таверне за {0} д. (+{1} к репутации).': 'Treated everyone to drink at the tavern for {0} d. (+{1} to reputation).',
+    'Угостил всех выпивкой на постоялом дворе за {0} д. (+{1} к репутации).': 'Treated everyone to drink at the tavern for {0} d. (+{1} to reputation).',
     '🎉 Выпивка для всех': '🎉 A drink for everyone',
     'Ты заказал бочку медовухи на всех! Гости радостно поднимают кубки. «За гостеприимного гостя!» — раздаётся по залу. (Репутация у всех NPC +3, в деревне +5)':
         'You ordered a barrel of mead for all! The guests raise their cups with joy. "To the generous guest!" rings through the hall. (Reputation of all NPCs +3, in the village +5)',
@@ -1663,9 +1676,9 @@ const EN = {
     '{0} ещё несовершеннолетний(няя) — венчают только с {1} лет': '{0} is still under age — weddings are performed only from {1} years',
     'Ты ещё несовершеннолетний(яя) — венчают только с {0} лет': 'You are still under age — weddings are performed only from {0} years',
     'Ты уже венчан(а) с {0} — Церковь второго брака не благословит': 'You are already wed to {0} — the Church does not bless a second marriage',
-    'Недостаточно личной репутации (нужно +{0}, у вас {1})': 'Not enough personal reputation (need +{0}, you have {1})',
-    'Недостаточно деревенской репутации (нужно +{0}, у вас {1})': 'Not enough village reputation (need +{0}, you have {1})',
-    'Недостаточно денег на свадебное торжество (нужно {0} д., у вас {1} д.)': 'Not enough money for the wedding feast (need {0} d., you have {1} d.)',
+    'Недостаточно личной репутации (нужно +{0}, у тебя {1})': 'Not enough personal reputation (need +{0}, you have {1})',
+    'Недостаточно деревенской репутации (нужно +{0}, у тебя {1})': 'Not enough village reputation (need +{0}, you have {1})',
+    'Недостаточно денег на свадебное торжество (нужно {0} д., у тебя {1} д.)': 'Not enough money for the wedding feast (need {0} d., you have {1} d.)',
     '{0} уже состоит в браке': '{0} is already married',
     '{0} покинул(а) мир живых — над ним(ей) уже отпели': '{0} has left the world of the living — the funeral rites have been read',
     '🍺 Угостить (20д)': '🍺 Treat everyone (20 d.)',
@@ -1687,6 +1700,10 @@ const EN = {
     ' (': ' (',
     ')': ')',
     'Помянуть (печально)': 'Mourn (sorrowfully)',
+    '⚰ На погосте {0} свежая могила — тот, кого не досчиталась деревня. Кликни по холмику.':
+        'At the churchyard {0} fresh grave — the one the village misses. Click the mound.',
+    '⚰ На погосте {0} свежие могилы — те, кого не досчиталась деревня. Кликни по холмику.':
+        'At the churchyard {0} fresh graves — those the village misses. Click the mound.',
     '⚰ На погосте {0} свежих могил — тех, кого не досчиталась деревня. Кликни по холмику.': '⚰ At the churchyard {0} fresh graves — those the village misses. Click the mound.',
     'ВЫХОД ▶': 'EXIT ▶',
     'Обзор': 'Overview',
@@ -1860,7 +1877,7 @@ const EN = {
     'попрошайничество': 'begging',
     'выполнено задание': 'task done',
     'угостил выпивкой': 'treated to a drink',
-    'угостил всех в таверне': 'bought drinks for all at the tavern',
+    'угостил всех на постоялом дворе': 'bought drinks for all at the tavern',
     'подарок принят': 'gift accepted',
     'подарок отвергнут': 'gift refused',
     'удачная похвала (крит)': 'a flattering word (critical)',
@@ -1931,7 +1948,6 @@ const EN = {
     'У тебя уже есть поручение от {0}. Сперва закончи его!': 'You already have a task from {0}. Finish it first!',
     'Такая вещь у тебя уже есть — не по-торговому дважды платить за одну.': 'You already own that — paying twice for one thing is not honest trade.',
     'Травный отвар (полное восстановление)': 'Herbal potion (full recovery)',
-    'Постоялый двор': 'Lodging-house',
     'содержатель постоялого двора': 'lodging-house keeper',
     'На большой дороге тебе преградили путь лихие люди!': 'On the great road, highwaymen bar your way!',
     // Раунд 66.24: засада лихих людей — на обоих трактах (Южном и Северном)
@@ -2028,9 +2044,9 @@ const EN = {
     '{0} рядом — нужен экипированный лук': '{0} nearby — an equipped bow is needed',
     '🏹 Без лука': '🏹 Without a bow',
     'Стрелять можно только из лука — и он должен быть экипирован (Персонаж → Оружие). Кузнец Данила кует луки.':
-        'You can only shoot with a bow — and it must be equipped (Character → Weapons). Smith Danila forges bows.',
+        'You can only shoot with a bow — and it must be equipped (Character → Weapons). Blacksmith Danila forges bows.',
     'Дичь так просто не догнать — нужна стрельба. Лук должен лежать в узле и быть экипирован (Персонаж → Оружие). Луки куёт кузнец Данила.':
-        'There is no catching up with game — you need archery. The bow must be in your sack and equipped (Character → Weapons). Smith Danila forges bows.',
+        'There is no catching up with game — you need archery. The bow must be in your sack and equipped (Character → Weapons). Blacksmith Danila forges bows.',
     'Попал!': 'A hit!',
     'Мимо!': 'A miss!',
     'Подстрелил {0} из лука — туша осталась лежать, можно обобрать.':
@@ -2047,7 +2063,7 @@ const EN = {
     'Заметил {0} на поляне, но стрелять нечем — нужен экипированный лук.':
         'Spotted {0} in the glade, but have nothing to shoot with — an equipped bow is needed.',
     '{0} щиплет траву в стороне. Стрелять можно только из лука — и он должен быть экипирован (Персонаж → Оружие). Луки куёт кузнец Данила.':
-        '{0} is grazing at a distance. You can only shoot with a bow — and it must be equipped (Character → Weapons). Smith Danila forges bows.',
+        '{0} is grazing at a distance. You can only shoot with a bow — and it must be equipped (Character → Weapons). Blacksmith Danila forges bows.',
     '{0} близко, но настороже. Тянуть тетиву? (шанс зависит от твоего навыка стрельбы)\nВыстрел — 5 минут времени.':
         '{0} is close but wary. Draw the string? (the chance depends on your archery skill)\nA shot takes 5 minutes.',
     '🎯 Есть!': '🎯 Got it!',
@@ -2500,7 +2516,7 @@ const EN = {
     '• компенсировать сбытое деньгами по полной стоимости: {0} д.':
         '• compensate the sold goods in money at full value: {0} d.',
     '• выплатить виру за кражу: {0} д. (Судебник 1497, о татбе).':
-        '• pay the wergild for the theft: {0} d. (Law Code of 1497, on theft).',
+        '• pay the wergild for the theft: {0} d. (Sudebnik of 1497, on theft).',
     'Итого: {0} д. (В узле сейчас {1} д.)': 'Total: {0} d. (Your pack now holds {1} d.)',
     'После мира хозяин простит: подозрение снимется, обида смоется серебром (репутация хозяина станет не ниже 0).':
         'After the peace the host will forgive: the suspicion lifts, the offence is washed away with silver (the host\'s reputation will be at least 0).',
@@ -2509,13 +2525,13 @@ const EN = {
     'Пока нет': 'Not yet',
     '🤝 Мир не вышел': '🤝 No peace was struck',
     'Не хватает серебра: надобно {0} д., а в узле лишь {1} д. Примиришься, когда достанешь денег — или Стражник у ворот рассудит по Судебнику.':
-        'Not enough silver: you need {0} d. while your pack holds only {1} d. Make peace when you can get the money — or the guard at the gate will judge you by the Law Code.',
+        'Not enough silver: you need {0} d. while your pack holds only {1} d. Make peace when you can get the money — or the guard at the gate will judge you by the Sudebnik.',
     '🤝 Обида смыта': '🤝 The offence is washed away',
     'Вещи легли на место, серебро перешло в руки хозяина — мир по Судебнику свершен! Репутация хозяина теперь {0}, и у ворот деревни за этот дом тебя не тронут.':
-        'The goods are back in place and the silver is in the host\'s hands — peace is sealed by the Law Code! The host\'s reputation is now {0}, and the guard at the gate will not touch you over this house.',
+        'The goods are back in place and the silver is in the host\'s hands — peace is sealed by the Sudebnik! The host\'s reputation is now {0}, and the guard at the gate will not touch you over this house.',
     'Мир-дружба': 'Peace and friendship',
     'Мир с {0} свершён: украденное возвращено ({1} шт.), за сбытое уплачено {2} д., вира {3} д. (Судебник). Обида смыта.':
-        'Peace with {0} is made: the stolen goods returned ({1} pcs.), {2} d. paid for the sold ones, wergild {3} d. (Law Code). The offence is washed away.',
+        'Peace with {0} is made: the stolen goods returned ({1} pcs.), {2} d. paid for the sold ones, wergild {3} d. (Sudebnik). The offence is washed away.',
     'Примирился с обкраденным в «{0}»: возвращено {1} шт., уплачено {2} д. (в т.ч. вира {3} д.).':
         'Made peace with the robbed host at "{0}": {1} pcs. returned, {2} d. paid (incl. wergild {3} d.).',
 
@@ -2555,29 +2571,29 @@ const EN = {
     // --- пп.5,7,8: стражник у ворот, вира, изгнание ---
     '🛡 Стражник у ворот': '🛡 The guard at the gate',
     '«Стой, путник! Молва бежит впереди тебя: у людей пропало добро, а след ведёт к тебе. Судебник велит осмотреть узел — предъявляй!»':
-        '"Stand, wayfarer! Rumour runs ahead of you: goods have gone missing, and the trail leads to you. The Law Code bids me search your pack — show it!"',
+        '"Stand, wayfarer! Rumour runs ahead of you: goods have gone missing, and the trail leads to you. The Sudebnik bids me search your pack — show it!"',
     'В узле опознаётся чужое:': 'Another\'s goods are recognized in the pack:',
     'Украденного в узле не осталось — всё сбыто, но хозяева указали на тебя.':
         'No stolen goods remain in the pack — all was sold, but the owners have pointed at you.',
     'Ты уже был уличён {0} раз(а): по Судебнику повторная татьба карается втрое строже (множитель ×{1}).':
-        'You have been caught {0} time(s) before: by the Law Code a repeated theft is punished three times as harshly (multiplier ×{1}).',
+        'You have been caught {0} time(s) before: by the Sudebnik a repeated theft is punished three times as harshly (multiplier ×{1}).',
     'Вира: продажа за татьбу {0} д. + урок за сбытое {1} д. = {2} д. Изыманное краденое вернётся хозяевам, репутация в деревне {3}.':
         'Wergild: the fine for theft {0} d. + restitution for the sold goods {1} d. = {2} d. The confiscated stolen goods return to their owners, village reputation {3}.',
     'Предъявить узел и уплатить': 'Hand over the pack and pay',
     '🚪 ИЗГНАНИЕ ИЗ ДЕРЕВНИ': '🚪 BANISHED FROM THE VILLAGE',
     '«Не один, так другой, так третий раз!» — староста гремит Судебником. «Быть по писаному: поток и разграбление! Всё имущество — в казну, самому — за околицу, и чтоб духу твоего здесь не было!»\n\nВсё имущество отобрано. Ты изгнан из деревни. ЭТО ПРОВАЛ И ОКОНЧАНИЕ ИГРЫ.':
-        '"Once, twice — and now a third time!" the village elder thunders from the Law Code. "As it is written: pillory and plunder! All property to the treasury, and you — beyond the stockade, and let me not see your face again!"\n\nAll property is taken. You are banished from the village. THIS IS DEFEAT AND THE END OF THE GAME.',
+        '"Once, twice — and now a third time!" the village elder thunders from the Sudebnik. "As it is written: pillory and plunder! All property to the treasury, and you — beyond the stockade, and let me not see your face again!"\n\nAll property is taken. You are banished from the village. THIS IS DEFEAT AND THE END OF THE GAME.',
     'Уйти за околицу': 'Walk beyond the stockade',
-    '🛡 Судебник свершен': '🛡 The Law Code is satisfied',
+    '🛡 Судебник свершен': '🛡 The Sudebnik is satisfied',
     'Стражник выворачивает узел: чужое добро пойдёт по домам, вира уплачена ({0} д.). «Иди с миром — да больше такого не води!»\n\n(Репутация в деревне {1}. Поимка №{2}: следующая будет строже — ×{3}.)':
         'The guard turns the pack out: the stolen goods go back to their houses, the wergild is paid ({0} d.). "Go in peace — and do it no more!"\n\n(Village reputation {1}. Capture No.{2}: the next one will be harsher — ×{3}.)',
     'Денег на всю виру не хватило — стражник выгреб из мошны всё серебро до донца.':
         'There was not enough money for the full wergild — the guard raked all the silver out of your purse to the very bottom.',
     'Отойти от ворот': 'Step away from the gate',
     'Стражник у ворот изъял краденое ({0} шт.) и взял виры {1} д. (Судебник: продажа {2} д. + урок за сбытое {3} д., множитель ×{4}).':
-        'The guard at the gate confiscated the stolen goods ({0} pcs.) and took a wergild of {1} d. (Law Code: fine {2} d. + restitution for the sold {3} d., multiplier ×{4}).',
+        'The guard at the gate confiscated the stolen goods ({0} pcs.) and took a wergild of {1} d. (Sudebnik: fine {2} d. + restitution for the sold {3} d., multiplier ×{4}).',
     'ПОРАЖЕНИЕ: пойман за кражей в третий раз! По Судебнику — поток и разграбление: всё имущество отобрано, герой изгнан из деревни.':
-        'DEFEAT: caught stealing for the third time! By the Law Code — pillory and plunder: all property is taken, the hero is banished from the village.',
+        'DEFEAT: caught stealing for the third time! By the Sudebnik — pillory and plunder: all property is taken, the hero is banished from the village.',
     'Уличён в краже трижды: имущество отобрано, из деревни изгнан.':
         'Caught stealing three times: property taken, banished from the village.',
     'Стражник сводит тебя к старосте: сходка решает изгнать вора. Имущество отобрано до последнего узелка.':
@@ -2650,7 +2666,7 @@ const EN = {
     '⚔ За святыню! (принять задание)': '⚔ For the holy icon! (accept the quest)',
     // 6) п.7: Церковь не венчает до выполнения стартового задания (reputation.js)
     'Отец Савватий не венчает, пока не возвращена в храм украденная икона: сперва выполни стартовое задание — найди и поймай вора!':
-        'Father Savvatiy will not wed you until the stolen icon is returned to the church: first complete the starter quest — find and catch the thief!',
+        'Father Savvaty will not wed you until the stolen icon is returned to the church: first complete the starter quest — find and catch the thief!',
     // 7) п.6: подсказка туториала под новый старт (Tutorial.js)
     'Стартовое задание': 'Starter quest',
     'Вор украл икону из церкви! Расспроси селян да ищи следы за околицей.':
@@ -2897,7 +2913,8 @@ const EN_KEYS = {
     '🔒 {0} — {1} {2} {3}   ·   слава у кузнеца: {4}/{5}': '🔒 {0} — {1} {2} {3}   ·   smith\'s trust: {4}/{5}',
     'Кузнец прищурился: «Заказную вещь не всякому свяжу. Приди, когда будешь мне другом (слава у кузнеца +{0}, сейчас {1}).»': 'The smith squints: "I forge to-order wares not for every passerby. Come back when you are my friend (smith\'s trust +{0}, now {1})."',
     'Заказал «{0}» у кузнеца за {1} д. (заказная цена, слава у кузнеца {2}).': 'Ordered "{0}" from the smith for {1} d. (to-order price, smith\'s trust {2}).',
-    'По уложению Судебника товар тебе не продадут.': 'By the Sudebnik law this wares will not be sold to you.',
+    'По уложению Судебника товар тебе не продадут.': 'By the Sudebnik law these wares will not be sold to you.',
+    '{0} ({1} обаяние)': '{0} ({1} Charisma)',
     'Заработано: +{0} д.{1} Усталость: −3 здоровья.': 'Earned: +{0} d.{1} Fatigue: −3 health.',
     'защита 1': 'def 1',
     'защита 2': 'def 2',
@@ -3421,15 +3438,15 @@ const EN_KEYS = {
     'Краденое отобрано и вернётся по домам. Денег с тебя не взяли и поимкой не сочли — но стражник запомнил.': 'The stolen goods were taken and will return to their homes. No silver was taken, and it was not counted as a capture — but the guard remembers.',
     'Краденого в узле не нашлось.': 'No stolen goods were found in the bundle.',
     '⛪ Епитимья уже принята': '⛪ Penance already accepted',
-    'Отец Савватий качает головой: «Ты уже замаливал грехи в этот месяц. Молись тихо и дела добрые делай — молва сама смягчится».': 'Father Savvatiy shakes his head: "You have already made penance this month. Pray quietly and do good deeds — the rumor will soften on its own."',
+    'Отец Савватий качает головой: «Ты уже замаливал грехи в этот месяц. Молись тихо и дела добрые делай — молва сама смягчится».': 'Father Savvaty shakes his head: "You have already made penance this month. Pray quietly and do good deeds — the rumor will soften on its own."',
     'Поклониться иконам': 'Bow before the icons',
     '⛪ В мошне пусто': '⛪ The purse is empty',
     'Замолить грехи стоит {0} д. — на свечи, ладан и помин души. Пособи деревне или заработай в мастерской, потом приходи.': 'To make penance costs {0} d. — for candles, incense and the repose of souls. Help the village or earn at a workshop, then come back.',
     '⛪ Грехи замолены': '⛪ Sins absolved',
-    'Ты кладёшь на блюдо 50 денег. Отец Савватий читает над тобой разрешительную молитву: «Госпи, остави согрешения его, и молва людская смягчится».': 'You place 50 dengas on the dish. Father Savvatiy reads the prayer of absolution over you: "Lord, forgive him his sins, and let the rumor of men soften."',
+    'Ты кладёшь на блюдо 50 денег. Отец Савватий читает над тобой разрешительную молитву: «Госпи, остави согрешения его, и молва людская смягчится».': 'You place 50 dengas on the dish. Father Savvaty reads the prayer of absolution over you: "Lord, forgive him his sins, and let the rumor of men soften."',
     'Епитимья принята: репутация в деревне {0} → {1}. (Раз в месяц; личные обиды людей — не церковное дело.)': 'Penance accepted: village reputation {0} → {1}. (Once a month; personal grudges are not the Church\'s matter.)',
     '⛪ Душа перед людьми чиста': '⛪ Your soul is clean before the people',
-    'Отец Савватий улыбается: «Худой молвы за тобой не ведут — и замаливать нечего. Иди с миром».': 'Father Savvatiy smiles: "No ill rumor follows you — there is nothing to absolve. Go in peace."',
+    'Отец Савватий улыбается: «Худой молвы за тобой не ведут — и замаливать нечего. Иди с миром».': 'Father Savvaty smiles: "No ill rumor follows you — there is nothing to absolve. Go in peace."',
     '🤝 О слове': '🤝 A word of haggle',
     '🤝 О слове (Убеждение)': '🤝 Haggle the rate (Persuasion)',
     '⛪ Замолить грехи ({0} д.)': '⛪ Absolve sins ({0} d.)',
@@ -3478,7 +3495,7 @@ const EN_KEYS = {
     'Взял в долг у {0}: {1} — {2} д. (без лихвы, вернуть до {3}). Молва: деревня −{4}, у {0} −{5} (осталось {6}).': 'Took a loan from {0}: {1} — {2} d. (no usury, due {3}). The talk: village −{4}, with {0} −{5} (now {6}).',
     'Долг перед {0} возвращён в срок ({1} д.). Доверие подросло (репутация у {0} +{2}).': 'The debt to {0} is repaid on time ({1} d.). Trust has grown (reputation with {0} +{2}).',
     'Долг перед {0} возвращён с запозданием ({1} д.). {0} молчит, но помнит.': 'The debt to {0} is repaid late ({1} d.). {0} says nothing — but remembers.',
-    'Отдохнул в таверне ({0} ч) В ДОЛГ ({1} д. — записаны в столбец). {2}': 'Rested at the tavern ({0} h) ON CREDIT ({1} d. — marked on the tally). {2}',
+    'Отдохнул на постоялом дворе ({0} ч) В ДОЛГ ({1} д. — записаны в столбец). {2}': 'Rested at the tavern ({0} h) ON CREDIT ({1} d. — marked on the tally). {2}',
     '{0} согласился подождать до {1} (проверка {2}%: бросок {3}). Отсрочка №{4} — больше трёх не будет.': '{0} agreed to wait until {1} (check {2}%: roll {3}). Deferral №{4} — there will be no more than three.',
     '{0} не поверил обещаниям (проверка {1}%: бросок {2}). «Слов у тебя много, долгу — ни полушки». Репутация у него −{3}.': '{0} did not believe the promises (check {1}%: roll {2}). "Many words you have, and no coin for the debt." Reputation with him −{3}.',
     'Стражник у ворот описал добро должника: монет {0} д., имущество продано за {1} д. (50% цены) — в счёт долга перед {2}. {3}': 'The guard at the gate levied the debtor\'s goods: {0} d. in coin, property sold for {1} d. (50% of value) — toward the debt to {2}. {3}',
@@ -3491,7 +3508,7 @@ const EN_KEYS = {
     '«Не выйдет. Приходи, когда дело поправится».': '"It will not do. Come back when things mend."',
     '«Столбец-то чист: долгов за тобой нет». (Вернул в срок — и молодец: такому и в долг дадут.)': '"The tally is clean: no debts on you." (Repaid on time — well done: credit goes to the likes of you.)',
     '🛡 Стражник и долг': '🛡 The guard and the debt',
-    '«Стой! За тобой долг — трактирщик Фёдор бьёт челом: срок вышел, а серебра нет. Судебник велит должнику добро описать. Плати, что есть!»': '"Halt! You carry a debt — the innkeeper Fyodor pleads against you: the term is out and no silver seen. The Law Code bids a debtor\'s goods be inventoried. Pay with what you have!"',
+    '«Стой! За тобой долг — трактирщик Фёдор бьёт челом: срок вышел, а серебра нет. Судебник велит должнику добро описать. Плати, что есть!»': '"Halt! You carry a debt — the innkeeper Fyodor pleads against you: the term is out and no silver seen. The Sudebnik bids a debtor\'s goods be inventoried. Pay with what you have!"',
     'Имущество к описи (цена продажи — половина базовой):': 'Property to be inventoried (sold at half its base value):',
     'Помимо надетого — описывать нечего.': 'Beyond what you wear — there is nothing to inventory.',
     'Долг: {0} д. Монет в мошне: {1} д. Продаёмого имущества на {2} д.': 'Debt: {0} d. Coin in the purse: {1} d. Saleable goods worth {2} d.',
@@ -3616,6 +3633,14 @@ export const EN_MONTHS = [
     'May', 'June', 'July', 'August',
 ];
 export const EN_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+// 66.106 (С3: плюрализация) — RU-формы [один, мало(2–4), много]; EN — [1, прочие]
+export function plural(n, ruForms, enForms) {
+    const a = Math.abs(n) % 100, b = a % 10;
+    const ru = (a > 10 && a < 20) ? ruForms[2] : (b > 1 && b < 5) ? ruForms[1] : (b === 1) ? ruForms[0] : ruForms[2];
+    if (enForms) return isEn() ? ((Math.abs(n) === 1) ? enForms[0] : enForms[1]) : ru;
+    return ru;
+}
 
 export function t(ru) {
     if (!isEn()) return ru;

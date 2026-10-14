@@ -191,7 +191,7 @@ export const NPC_QUEST_POOLS = {
         quests: [QUEST_TYPES.DELIVER, QUEST_TYPES.FETCH, QUEST_TYPES.GATHER_HERBS, QUEST_TYPES.FIND_PERSON],
         rewardTypes: ['food', 'drink', 'money', 'herb'],
         rewardScale: 1.0,
-        description: 'тавернщик',
+        description: 'кабатчик',
     },
     blacksmith: {
         // Кузнец — ремесленные и боевые

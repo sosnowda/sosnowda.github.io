@@ -3,16 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Chronicles of Ruthenia — 15th-Century Rus' | AI-Narrative Text RPG</title>
+    <!-- Title kept within 60 chars: longer titles get cut in SERP -->
+    <title>The Chronicles of Ruthenia — 15th-century Rus' text RPG</title>
     <meta name="description" content="A narrative text RPG set in 15th-century Rus', featuring an LLM Narrator, a RAG base of historical data and the BRP d100 roleplaying system.">
     <meta name="author" content="sosnowda">
     <meta name="theme-color" content="#1A1410">
     <meta name="robots" content="index, follow">
-    <!-- 66.47 (audit #18): basic landing CSP. script-src keeps 'unsafe-inline' —
-         otherwise the inline Yandex.Metrika counter and JSON-LD break (66.70:
-         inline onclick removed from the landing, behaviour lives in js/modules);
-         the policy cuts object/frame/form-action/base-uri and foreign hosts -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://mc.yandex.ru; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://mc.yandex.ru https://*.mc.yandex.ru; media-src 'self'; connect-src 'self' https://mc.yandex.ru https://*.mc.yandex.ru wss://mc.yandex.ru wss://*.mc.yandex.ru; frame-src 'self' https://mc.yandex.ru; object-src 'none'; base-uri 'self'; form-action 'self' https://boosty.to https://yoomoney.ru https://vk.ru">
+    <!-- basic landing CSP. script-src keeps 'unsafe-inline' —
+ otherwise the inline Yandex.Metrika counter and JSON-LD break ;
+ the policy cuts object/frame/form-action/base-uri and foreign hosts -->
+    <!-- CSP of the landing. style-src 'unsafe-inline' is required by style.cssText
+         assignments in JS (gallery lightbox, copy toast build their styles in code);
+         form-action 'none' — the page has no forms (donations are plain links);
+         Google Fonts hosts left style-src/font-src — fonts are self-hosted -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://mc.yandex.ru; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://mc.yandex.ru https://*.mc.yandex.ru; media-src 'self'; connect-src 'self' https://mc.yandex.ru https://*.mc.yandex.ru wss://mc.yandex.ru wss://*.mc.yandex.ru; frame-src 'self' https://mc.yandex.ru; object-src 'none'; base-uri 'self'; form-action 'none'">
+    <!-- Explicit referrer policy — GH Pages sets no headers -->
+    <meta name="referrer" content="strict-origin-when-cross-origin">
 
     <!-- Favicon -->
     <link rel="icon" href="../favicon.ico" type="image/x-icon">
@@ -48,29 +54,29 @@
     <link rel="alternate" hreflang="x-default" href="https://sosnowda.github.io/">
 
     <!-- Critical resource preload -->
-    <!-- 66.90 (PF-2 audit 66.88): hero preload with imagesrcset for the new
-         480/960/1280w variants — otherwise the browser would fetch the href
-         file while <source> picks another (double download). href is the
-         fallback for browsers without imagesrcset (likeliest pick: 1280w) -->
+    <!-- hero preload with imagesrcset for the new
+ 480/960/1280w variants — otherwise the browser would fetch the href
+ file while <source> picks another (double download). href is the
+ fallback for browsers without imagesrcset (likeliest pick: 1280w) -->
     <link rel="preload" href="../assets/images/title-1280.webp" as="image" fetchpriority="high"
           imagesrcset="../assets/images/title-480.webp 480w, ../assets/images/title-960.webp 960w, ../assets/images/title-1280.webp 1280w, ../assets/images/title.webp 1920w"
           imagesizes="(max-width: 1180px) 100vw, 1180px">
-    <!-- 66.105 (К6, audit 66.104): "preload + loading=lazy" contradiction removed —
-         the first gallery screenshot (bottom of page, lazy) no longer competes
-         with the LCP hero for bandwidth on mobile; the SW cache provides
-         instant render on scroll -->
+    <!-- "preload + loading=lazy" contradiction removed —
+ the first gallery screenshot (bottom of page, lazy) no longer competes
+ with the LCP hero for bandwidth on mobile; the SW cache provides
+ instant render on scroll -->
     <link rel="preload" href="../styles.css" as="style">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- 66.91 (P3 audit): italic PT Serif (1,400) dropped — all landing italics
-         render a system font (.hero-subtitle — Georgia, .section-intro em — body);
-         PT Serif stays 400/700 (d100 dice face, pt-scale, d100-result) -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prata&family=PT+Sans:wght@400;700&family=PT+Serif:wght@400;700&display=swap">
-    <!-- 66.64 (audit 66.61, P3-5): PT Sans added to the webfont set (400/700,
-         Cyrillic+Latin via unicode-range) — it was declared in font-family
-         (.fund-bar/.btn-share/.copy-toast) but never loaded as a webfont -->
-    <!-- 66.64 (audit 66.61, P3-4): preconnect/dns-prefetch to the external CDN (jsdelivr)
-         removed — Phaser is self-hosted in /game/vendor/, no external scripts -->
+    <!-- LCP: the third-party render-blocking Google Fonts
+         stylesheet is gone — fonts are self-hosted (@font-face at the top of
+         styles.css, unicode-range + display:swap) -->
+    <!-- italic PT Serif (1,400) dropped — all landing italics
+ render a system font (.hero-subtitle — Georgia, .section-intro em — body);
+ PT Serif stays 400/700 (d100 dice face, pt-scale, d100-result) -->
+    <!-- PT Sans added to the webfont set (400/700,
+ Cyrillic+Latin via unicode-range) — it was declared in font-family
+ (.fund-bar/.btn-share/.copy-toast) but never loaded as a webfont -->
+    <!-- preconnect/dns-prefetch to the external CDN (jsdelivr)
+ removed — Phaser is self-hosted in /game/vendor/, no external scripts -->
     <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
 
     <!-- JSON-LD -->
@@ -82,18 +88,55 @@
 </head>
 <body>
 
-    <!-- Yandex.Metrika counter -->
+    <!-- Yandex.Metrika — deferred loading: the counter
+         starts after window.load inside requestIdleCallback, so the tag no longer
+         competes with the hero/fonts for the critical path. webvisor:false :
+         session recording is not the "bare minimum" of data -->
     <script type="text/javascript">
-    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();
-    for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}
-    k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-    (window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");
-    ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
+    (function () {
+        function initMetrika() {
+            (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();
+            for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}
+            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+            (window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");
+            ym(112435792,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:false});
+        }
+        var booted = false;
+        function go() {
+            if (booted) return;
+            booted = true;
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(initMetrika, { timeout: 4000 });
+            } else {
+                setTimeout(initMetrika, 0);
+            }
+        }
+        window.addEventListener('load', go, { once: true });
+    })();
     </script>
     <noscript><div><img src="https://mc.yandex.ru/watch/112435792" class="metric-pixel" alt=""/></div></noscript>
-    <!-- /Yandex.Metrika counter -->
+    <!-- /Yandex.Metrika -->
 
     <!-- Skip link for accessibility -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="svg-sprite" aria-hidden="true">
+        <symbol id="i-swords" viewBox="0 0 24 24"><path d="M4.5 4.5l10 10M4.5 4.5h3.2M4.5 4.5v3.2"/><path d="M15.5 15.5l4 4M18.2 18.2l1.8 1.8"/><path d="M19.5 4.5l-10 10M19.5 4.5h-3.2M19.5 4.5v3.2"/><path d="M8.5 15.5l-4 4M5.8 18.2L4 20"/></symbol>
+        <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M7.5 3.5H17a2 2 0 012 2V18a2.5 2.5 0 01-2.5 2.5H8A3 3 0 015 17.5V6a2.5 2.5 0 012.5-2.5z"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4.5"/></symbol>
+        <symbol id="i-count" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01M8.5 19h.01M12 19h.01M15.5 19h.01"/></symbol>
+        <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="10" y="10" width="4" height="4"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></symbol>
+        <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.7 2.6 2.7 14.4 0 17M12 3.5c-2.7 2.6-2.7 14.4 0 17"/></symbol>
+        <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v12c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8V6"/><path d="M4.5 12c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8"/></symbol>
+        <symbol id="i-link" viewBox="0 0 24 24"><path d="M10.5 13.5a3.5 3.5 0 005 0l3.2-3.2a3.5 3.5 0 00-5-5l-1.4 1.4"/><path d="M13.5 10.5a3.5 3.5 0 00-5 0l-3.2 3.2a3.5 3.5 0 105 5l1.4-1.4"/></symbol>
+        <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 7l-4.5 5L8 17M16 7l4.5 5L16 17"/><path d="M13.5 5l-3 14"/></symbol>
+        <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.5C10.3 5 8.1 4.4 5.4 4.4c-.8 0-1.4.6-1.4 1.4v10.9c0 .8.6 1.4 1.4 1.4 2.7 0 4.9.6 6.6 2 1.7-1.4 3.9-2 6.6-2 .8 0 1.4-.6 1.4-1.4V5.8c0-.8-.6-1.4-1.4-1.4-2.7 0-4.9.6-6.6 2.1z"/><path d="M12 6.5v13.6"/></symbol>
+        <symbol id="i-money" viewBox="0 0 24 24"><path d="M9.7 6.8h4.6L16.5 3h-9z"/><path d="M9.7 6.8C6.9 9.2 5.3 12 5.3 15a6.7 6.7 0 1013.4 0c0-3-1.6-5.8-4.4-8.2"/></symbol>
+        <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.6-3.1 2.8-5.2 5.5-5.2s4.9 2.1 5.5 5.2"/><path d="M15.4 5.7a3.2 3.2 0 010 5.6M17.4 14.6c1.7.8 2.8 2.5 3.1 4.9"/></symbol>
+        <symbol id="i-clip" viewBox="0 0 24 24"><rect x="5.5" y="4.5" width="13" height="17" rx="2"/><rect x="9" y="2.5" width="6" height="4" rx="1"/><path d="M9 11h6M9 14.5h6M9 18h3.5"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5"/></symbol>
+        <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21.5v-17"/><path d="M6 5c2-.9 4-.9 6 0s4 .9 6 0v9.5c-2 .9-4 .9-6 0s-4-.9-6 0z"/></symbol>
+        <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.5l9 4.8-9 4.8-9-4.8z"/><path d="M3.5 13.2l8.5 4.5 8.5-4.5"/><path d="M3.5 17l8.5 4.5 8.5-4.5"/></symbol>
+    </svg>
+
+    <!-- Skip-link -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <div class="bg-pattern">
@@ -102,19 +145,19 @@
     <!-- HEADER -->
 
 <!-- FUNDRAISING BAR -->
-<!-- 66.47 (audit #20): div → a real <button> — accessibility without role shims -->
+<!-- div → a real <button> — accessibility without role shims -->
 <button type="button" class="fund-bar" aria-haspopup="dialog" aria-controls="fundPopup">
-    <span aria-hidden="true">💰</span> Fundraising for the project — click to support!
+    <svg class="icon" aria-hidden="true"><use href="#i-money"/></svg> Fundraising for the project — click to support!
 </button>
-<!-- 66.63 (audit 66.61, P3-3): .fund-popup moved to the end of <body> (after
-     </footer>) — its h3 heading no longer precedes the sr-only h1 in the DOM
-     (heading order). .fund-popup is position:fixed and opened by id — no CSS/JS
-     coupling to its DOM position. -->
+<!-- .fund-popup moved to the end of <body> (after
+ </footer>) — its h3 heading no longer precedes the sr-only h1 in the DOM
+ (heading order). .fund-popup is position:fixed and opened by id — no CSS/JS
+ coupling to its DOM position. -->
 
 <header class="header">
         <div class="container header-inner">
             <a href="#" class="logo" aria-label="Chronicles of Ruthenia — to the main page">
-                <span class="logo-icon" aria-hidden="true">⚔️</span> Chronicles of Ruthenia
+                <span class="logo-icon" aria-hidden="true"><svg class="icon"><use href="#i-swords"/></svg></span> Chronicles of Ruthenia
             </a>
             <button class="mobile-menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="nav-menu">
                 <span class="hamburger" aria-hidden="true"></span>
@@ -130,8 +173,8 @@
                     <li><a href="#history">History</a></li>
                     <li><a href="#systems">Features</a></li>
                     <li><a href="#demo">Demo</a></li>
-                    <!-- 66.105 (К2): above-the-fold interactivity in the sticky header -->
-                    <li><a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer" class="nav-cta"><span aria-hidden="true">⚔️</span> Play</a></li>
+                    <!-- above-the-fold interactivity in the sticky header -->
+                    <li><a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer" class="nav-cta"><svg class="icon" aria-hidden="true"><use href="#i-swords"/></svg> Play</a></li>
                     <li class="lang-item">
                         <span class="lang-switch" role="group" aria-label="Language selection">
                             <a href="/" hreflang="ru" lang="ru" class="lang-link">RU</a>
@@ -148,26 +191,26 @@
     <!-- HERO -->
     <section class="hero">
         <h1 class="sr-only">The Chronicles of Ruthenia — a 15th-century Rus' RPG</h1>
-        <!-- 66.105 (К2, audit 66.104): the first screen did not sell the product —
-             claim and CTA were outside both the 1440×900 and 390×844 viewport,
-             the game button sat at 87% page depth. Value proposition + demo button
-             ABOVE the art: visible in the first screen on both viewports. -->
+        <!-- the first screen did not sell the product —
+ claim and CTA were outside both the 1440×900 and 390×844 viewport,
+ the game button sat at 87% page depth. Value proposition + demo button
+ ABOVE the art: visible in the first screen on both viewports. -->
         <div class="hero-claim">
             <p class="hero-claim-text">A historical roleplaying game set in 15th-century Rus': village survival, investigations and BRP d100 combat — right in your browser.</p>
             <a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer" class="btn-game-start">
-                <span aria-hidden="true">⚔️</span> Play in browser
+                <svg class="icon" aria-hidden="true"><use href="#i-swords"/></svg> Play in browser
             </a>
         </div>
         <div class="hero-image-wrap">
             <picture>
-                <!-- 66.90 (PF-2 audit 66.88): srcset 480/960/1280/1920w — a mobile
-                     (390px) viewport loaded the 1920px/193 KiB original; sizes:
-                     .hero-image-wrap is 100% wide up to max-width 1180px (styles.css) -->
+                <!-- srcset 480/960/1280/1920w — a mobile
+ (390px) viewport loaded the 1920px/193 KiB original; sizes:
+ .hero-image-wrap is 100% wide up to max-width 1180px (styles.css) -->
                 <source srcset="../assets/images/title-480.webp 480w, ../assets/images/title-960.webp 960w, ../assets/images/title-1280.webp 1280w, ../assets/images/title.webp 1920w"
                         sizes="(max-width: 1180px) 100vw, 1180px"
                         type="image/webp">
-                <!-- 66.91 (P3 audit): JPEG fallback slimmed 2MB → 137KB (title-1280.jpg,
-                     1280×731 q82) — same aspect ratio, CLS=0 invariant intact -->
+                <!-- JPEG fallback slimmed 2MB → 137KB (title-1280.jpg,
+ 1280×731 q82) — same aspect ratio, CLS=0 invariant intact -->
                 <img src="../assets/images/title-1280.jpg" alt="The Chronicles of Ruthenia — title art" class="hero-image" width="1920" height="1097" fetchpriority="high">
             </picture>
         </div>
@@ -175,7 +218,7 @@
 
 <!-- ALPHA NOTICE -->
 <div class="alpha-banner">
-    <span aria-hidden="true">⚔️</span> The game is in Alpha. Release date TBD.
+    <svg class="icon" aria-hidden="true"><use href="#i-swords"/></svg> The game is in Alpha. Release date TBD.
 </div>
 
     <!-- ABOUT -->
@@ -185,47 +228,47 @@
             <h2 id="about-heading">Where mathematics meets storytelling</h2>
             <div class="lead-block">
                 <p>
-                    <strong class="highlight">The Chronicles of Ruthenia</strong> is a unique project in which
+                    <strong class="highlight">The Chronicles of Ruthenia</strong> is a project in which
                     the <strong class="highlight">Godot game engine</strong> (desktop version) handles all the math:
                     dice rolls, damage calculation, hit chances, skill and survival checks.
                     Meanwhile an <strong class="highlight">AI Narrator</strong> (a local llama model or a cloud LLM)
-                    acts as an endlessly creative Game Master, describing the world, dialogue and consequences of your actions.
+                    runs the game as its Game Master: describing the world, the dialogue and the consequences of your actions.
                     The browser demo on this page is built with <strong class="highlight">Phaser 3</strong>.
                 </p>
                 <p>
                     But most importantly — <strong class="highlight">strict historical authenticity</strong>. A RAG knowledge base
-                    compiled from <strong class="highlight">hundreds of historical books and articles</strong> keeps the neural network
+                    compiled from <strong class="highlight">historical books and articles</strong> keeps the neural network
                     from hallucinating and inventing facts. Everything that happens in the game is checked for historical accuracy.
                 </p>
             </div>
             <div class="features-grid features-grid--push">
                 <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">📜</span>
+                    <span class="feature-icon" aria-hidden="true"><svg class="icon"><use href="#i-scroll"/></svg></span>
                     <h3>RAG Historical Knowledge Base</h3>
-                    <p>A multi-source Retrieval-Augmented Generation system filled with real historical sources on 15th-century Rus' and world history. The AI does not invent — it selects from verified facts.</p>
+                    <p>A multi-source Retrieval-Augmented Generation system filled with real historical sources on 15th-century Rus' and world history. Every claim the Narrator makes is checked against verified facts.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">🧮</span>
+                    <span class="feature-icon" aria-hidden="true"><svg class="icon"><use href="#i-count"/></svg></span>
                     <h3>BRP Universal Game Engine d100</h3>
                     <p>The mathematically rigorous Basic Roleplaying system, carefully adapted to the 15th-century Rus' setting, with realistic odds, skills and combat mechanics.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">🤖</span>
+                    <span class="feature-icon" aria-hidden="true"><svg class="icon"><use href="#i-chip"/></svg></span>
                     <h3>LLM Narrator</h3>
                     <p>A local neural network on llama.cpp server, or any cloud model via an OpenAI-compatible API. Narrative quality depends on the chosen model and its weights.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">⚔️</span>
+                    <span class="feature-icon" aria-hidden="true"><svg class="icon"><use href="#i-swords"/></svg></span>
                     <h3>Realistic Turn-Based Combat</h3>
                     <p>Graphical combat in 2.5D isometric view or a text mode. Historically accurate weapons, armour and clothing. You can die from a single well-placed blow to a vulnerable spot.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">🌍</span>
+                    <span class="feature-icon" aria-hidden="true"><svg class="icon"><use href="#i-globe"/></svg></span>
                     <h3>A Living Historical World</h3>
                     <p>Every world event is reflected in the game: rumours from merchants, news from foreign guests, political shifts. Day and night, seasons and weather change. Realistic roads and distances.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">💾</span>
+                    <span class="feature-icon" aria-hidden="true"><svg class="icon"><use href="#i-db"/></svg></span>
                     <h3>Smart Memory Management</h3>
                     <p>Rolling Summary + State Injection around the model's context window. No context overflow — the AI always remembers the key events of your story.</p>
                 </div>
@@ -264,8 +307,8 @@
                 <div class="chronicle-card" data-year="1440">
                     <div class="chronicle-year">1440</div>
                     <div class="chronicle-event">Ivan III is born</div>
-                    <!-- 66.105 (К4, audit 66.104): was "in the year the Byzantine emperors fall" —
-                         Constantinople fell in 1453; 1439 is the year of the Union of Florence. -->
+                    <!-- was "in the year the Byzantine emperors fall" —
+ Constantinople fell in 1453; 1439 is the year of the Union of Florence. -->
                     <div class="chronicle-text">The future &ldquo;Sovereign of All Rus'&rdquo; is born in the year of the Union of Florence &mdash; a church union that Rus' will soon reject.</div>
                 </div>
                 <div class="chronicle-card" data-year="1448">
@@ -316,8 +359,8 @@
                 The age of &ldquo;gathering of the Russian lands&rdquo; around the Principality of Moscow, of feudal wars
                 and of casting off the Horde yoke. Three grand princes define the epoch.
             </p>
-            <!-- 66.31 (item 8): interactive reigns timeline — clicking a segment
-                 highlights the reign, shows the prince's dossier and the chronicle events of those years -->
+            <!-- interactive reigns timeline — clicking a segment
+ highlights the reign, shows the prince's dossier and the chronicle events of those years -->
             <div class="princes-timeline" id="princesTimeline">
                 <div class="pt-scale" aria-hidden="true">
                     <span>1400</span><span>1425</span><span>1450</span><span>1475</span><span>1505</span>
@@ -373,7 +416,7 @@
 <section id="maps" class="maps-section">
     <div class="container container--maps">
         <h2 class="maps-title">Historical Maps of Rus'</h2>
-        <p class="section-intro section-intro--muted">The game uses realistic historical terrain maps of 14th–16th century Rus'. Below is a map of the village's game neighbourhood: click a marker to learn about the area.</p>
+        <p class="section-intro section-intro--muted">The game uses realistic historical terrain maps of 14th–16th century Rus'. The geography and place names of the village's game neighbourhood were verified against authentic maps of Muscovy.</p>
 
 
         <div class="maps-grid">
@@ -464,8 +507,8 @@
 <!-- Interactive d100 dice -->
 <div class="d100-block">
     <h3 class="d100-heading">Interactive d100 roll</h3>
-    <!-- 66.48 (audit #12): inline onclick/onkeydown removed — listeners
-         (click + Enter/Space keyboard) live in js/modules/ui.js; style → .d100-zone -->
+    <!-- inline onclick/onkeydown removed — listeners
+ (click + Enter/Space keyboard) live in js/modules/ui.js; style → .d100-zone -->
     <div id="d100Dice" role="button" tabindex="0"
          aria-label="Roll the d100 dice. Press Enter or Space to roll."
          class="d100-zone">
@@ -484,7 +527,7 @@
             <div class="section-label">Technical foundation</div>
             <h2>How it works</h2>
             <div class="tech-panel">
-                <h3><span aria-hidden="true">🏗️</span> Project architecture</h3>
+                <h3><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg> Project architecture</h3>
                 <ul>
                     <li>
 <strong>Godot game engine</strong> — manages the game environment, loads neural networks, performs all calculations and supervises the historical accuracy of prompts via the RAG base.</li>
@@ -493,7 +536,7 @@
                     <li>
 <strong>Cloud models</strong> — connect any model with your OpenAI-compatible API key by specifying the provider address and model name.</li>
                     <li>
-<strong>RAG knowledge base</strong> — compiled from several hundred historical books and articles. Verifies every prompt for historical accuracy before it reaches the neural network.</li>
+<strong>RAG knowledge base</strong> — compiled from historical books and articles. Verifies every prompt for historical accuracy before it reaches the neural network.</li>
                     <li>
 <strong>BRP d100</strong> — the Chaosium BRP Universal Game Engine SRD roleplaying system. All rolls, damage, skills and checks are computed by the engine.</li>
                     <li>
@@ -511,17 +554,17 @@
             </div>
             <div class="tech-cards-grid">
                 <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">🔗</span>
+                    <span class="feature-icon" aria-hidden="true"><svg class="icon"><use href="#i-link"/></svg></span>
                     <h3>Hugging Face</h3>
                     <p>The chosen local model is downloaded from an open repository on first launch.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">🌐</span>
+                    <span class="feature-icon" aria-hidden="true"><svg class="icon"><use href="#i-code"/></svg></span>
                     <h3>OpenAI-compatible API</h3>
                     <p>Connect any cloud models: OpenAI, Anthropic, Mistral, local servers and more.</p>
                 </div>
                 <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">📚</span>
+                    <span class="feature-icon" aria-hidden="true"><svg class="icon"><use href="#i-book"/></svg></span>
                     <h3>BRP SRD by Chaosium</h3>
                     <p>The official Basic Roleplaying system — a d100 roleplaying mechanic proven over decades.</p>
                 </div>
@@ -540,7 +583,7 @@
                 <div class="detailed-item">
                     <div class="detailed-number">1</div>
                     <div>
-<h3>Where math meets storytelling</h3>
+<h3>Engine and Narrator in tandem</h3>
 <p>Godot computes rolls and damage; the neural network describes events and carries dialogue.</p>
 </div>
                 </div>
@@ -548,7 +591,7 @@
                     <div class="detailed-number">2</div>
                     <div>
 <h3>Strict historical authenticity</h3>
-<p>The RAG base keeps the AI from inventing — only verified historical data.</p>
+<p>Only verified historical data: every fact is checked against the RAG base.</p>
 </div>
                 </div>
                 <div class="detailed-item">
@@ -568,7 +611,7 @@
                 <div class="detailed-item">
                     <div class="detailed-number">5</div>
                     <div>
-<h3>Smart memory management</h3>
+<h3>Story memory without overflow</h3>
 <p>Rolling Summary + State Injection around the context window.</p>
 </div>
                 </div>
@@ -582,7 +625,7 @@
                 <div class="detailed-item">
                     <div class="detailed-number">7</div>
                     <div>
-<h3>Turn-based combat</h3>
+<h3>Combat by hit locations</h3>
 <p>Real weapons and armour. Death from a single blow to a vulnerable spot.</p>
 </div>
                 </div>
@@ -596,7 +639,7 @@
                 <div class="detailed-item">
                     <div class="detailed-number">9</div>
                     <div>
-<h3>RAG from hundreds of books</h3>
+<h3>RAG on historical sources</h3>
 <p>The knowledge base is compiled from several hundred historical sources.</p>
 </div>
                 </div>
@@ -610,7 +653,7 @@
                 <div class="detailed-item">
                     <div class="detailed-number">11</div>
                     <div>
-<h3>World events</h3>
+<h3>The chronicle shapes the world</h3>
 <p>All major historical events are reflected in the game world.</p>
 </div>
                 </div>
@@ -653,7 +696,7 @@
                     <div class="detailed-number">17</div>
                     <div>
 <h3>Built-in encyclopedia</h3>
-<p>A kind of &ldquo;Rupedia&rdquo; — every milestone of 15th-century Russian and world history.</p>
+<p>A built-in encyclopedia of 15th-century Russian and world history milestones — always at hand.</p>
 </div>
                 </div>
                 <div class="detailed-item">
@@ -681,26 +724,7 @@
         </div>
     </section>
 
-<!-- FINAL CTA -->
-    <section class="cta-section">
-        <div class="container">
-            <h2>Ready to enter the chronicle?</h2>
-            <p>
-                15th-century Rus' awaits its hero. Whether you become a boyar, a warrior, a merchant or a wanderer —
-                the story is written by every decision you make.
-            </p>
-            <p class="cta-meta">
-                Available for PC • Local neural network or cloud API • BRP d100 • Godot Engine
-            </p>
-            <!-- 66.105 (К3, audit 66.104): the section had NO action element —
-                 momentum broke at the climax. Same semantics as the demo button. -->
-            <div class="game-start-wrap">
-                <a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer" class="btn-game-start">
-                    <span aria-hidden="true">⚔️</span> Launch the game
-                </a>
-            </div>
-        </div>
-    </section>
+<!-- FINAL CTA moved to the end of the page (was mid-DOM) -->
 
 <!-- VIDEO PRESENTATION -->
 <section class="section" id="trailer">
@@ -711,9 +735,9 @@
             A short promo video about The Chronicles of Ruthenia — concept, atmosphere, gameplay.
         </p>
         <div class="video-frame">
-            <!-- 66.92 (Lighthouse finding): video poster was 1920px title.webp
-                 (188 KiB, fetched on every view alongside the hero srcset —
-                 double hero download). Now title-1280.webp (82 KiB). -->
+            <!-- video poster was 1920px title.webp
+ (188 KiB, fetched on every view alongside the hero srcset —
+ double hero download). Now title-1280.webp (82 KiB). -->
             <video controls preload="none" poster="../assets/images/title-1280.webp" width="1920" height="1080">
                 <source src="../assets/video/promo.webm" type="video/webm">
                 <source src="../assets/video/promo.mp4" type="video/mp4">
@@ -729,7 +753,7 @@
         <div class="section-label">Gallery</div>
         <h2>Game screenshots</h2>
         <p class="section-intro">
-            Frames from the browser demo — the village, interiors, combat, character creation and locations of 15th-century Rus.
+            Frames from the browser demo — the village, interiors, combat, character creation and locations of 15th-century Rus'.
         </p>
         <div class="screenshots-grid">
             <div class="screenshot-card" data-src="../assets/screenshots/01-title.webp">
@@ -745,19 +769,19 @@
                 <div class="screenshot-caption">Hero appearance</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/04-village.webp">
-                <img src="../assets/screenshots/04-village.webp" alt="The village on a single screen behind the palisade — complete roofs, wooden smoke-hoods (dymnitsa) on the roofs instead of chimneys (66.86: black-soot cabins of 15th-century Rus), the church tent with a cross, sand paths leading to every door, dense tufted grass, trees no longer hide the facades; NO sun widget (66.46)" width="1280" height="720" loading="lazy">
+                <img src="../assets/screenshots/04-village.webp" alt="The village on a single screen behind the palisade — complete roofs, wooden smoke-hoods wooden smoke-hoods on the roofs, the church tent with a cross, sand paths leading to every door, dense grass; the time of day shows in the shadows of houses and trees" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">The village</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/05-map.webp">
-                <img src="../assets/screenshots/05-map.webp" alt="Area map — locations around the village, three-part forest with a ROUND Forest Glade at its center, mill next to the apiary, lake by the north tract (66.41)" width="1280" height="720" loading="lazy">
+                <img src="../assets/screenshots/05-map.webp" alt="Area map centred on the village — a highway from the north through the village and a bridge to the river in the south, pasture, field and churchyard to the right, chains of woods with a round clearing; a lake by the North Tract, a windmill beside the apiary" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Area map</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/06-elder-interior.webp">
-                <img src="../assets/screenshots/06-elder-interior.webp" alt="Inside the elder's house in the historical style of 15th-century Rus (66.85): a whitewashed clay stove with a live fire, pothook and damper, an open shelf with clay pots, an iron-bound chest, an icon case under an embroidered towel, a wooden tub, table and bed" width="1280" height="720" loading="lazy">
+                <img src="../assets/screenshots/06-elder-interior.webp" alt="Inside the elder's house in the historical style of 15th-century Rus: a whitewashed clay stove with a live fire, pothook and damper, an open shelf with clay pots, an iron-bound chest, an icon case under an embroidered towel, a wooden tub, table and bed" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Elder's house</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/07-priest-dialogue.webp">
-                <img src="../assets/screenshots/07-priest-dialogue.webp" alt="Dialogue with the priest about the stolen icon in the ENLARGED window (66.44: twice as wide, larger type) — the whole line is visible; the church holds an iconostasis, shrine, pews and candle stands with live flames" width="1280" height="720" loading="lazy">
+                <img src="../assets/screenshots/07-priest-dialogue.webp" alt="Dialogue with the priest about the stolen icon in an enlarged window — the line fits in full; inside the church: iconostasis, icon case, benches and candle stands with live fire" width="1280" height="720" loading="lazy">
                 <div class="screenshot-caption">Priest dialogue</div>
             </div>
             <div class="screenshot-card" data-src="../assets/screenshots/08-combat.webp">
@@ -779,27 +803,47 @@
         <h2>Browser demo</h2>
         <p class="section-intro">
             Try the BRP d100 combat system right in your browser! Guide a traveller through a village of 15th-century Rus',
-            talk to NPCs and face a bandit in combat.
+            talk to NPCs and face the thief in combat.
         </p>
         <p class="section-intro section-intro--small">
             <em>The browser demo is built on the <strong class="gold-bright">Phaser 3</strong> engine.
             The main game is developed on <strong class="gold-bright">Godot Engine</strong>.
             Note: demo text follows the site language — Russian on the RU page, English here.
-            <!-- 66.105 (К1+С4 аудита 66.104): прежний дисклеймер «in-game text is
-                 currently in Russian» устарел после закрытия EN-утечек (К1). --></em>
+            <!-- прежний дисклеймер «in-game text is
+ currently in Russian» устарел после закрытия EN-утечек --></em>
         </p>
 
         <!-- Game start button — opens a separate screen -->
         <div class="game-start-wrap">
-            <!-- 66.47 (audit #7): hover effect moved to CSS (.btn-game-start) -->
+            <!-- hover effect moved to CSS (.btn-game-start) -->
             <a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer"
                id="game-start-btn" class="btn-game-start">
-                <span aria-hidden="true">⚔️</span> Launch the game
+                <svg class="icon" aria-hidden="true"><use href="#i-swords"/></svg> Launch the game
             </a>
             <p class="game-start-note">
                 The game opens in a separate window. Controls: WASD/arrows — move, E — interact, ESC — exit.<br>
                 Size: 1280×720. Fullscreen mode (F11) recommended.
             </p>
+        </div>
+    </div>
+</section>
+
+<!-- FINAL CTA at the end of the page; concrete honest offer:
+     the eight demo heroes instead of rhetorical questions -->
+<section class="cta-section">
+    <div class="container">
+        <h2>The chronicle awaits a hero</h2>
+        <p>
+            15th-century Rus' is not a backdrop but a participant in events. Pick one of the eight ready-made
+            heroes of the browser demo and lead your own story: every decision stays in the village chronicle.
+        </p>
+        <p class="cta-meta">
+            Available for PC • Local neural network or cloud API • BRP d100 • Godot Engine
+        </p>
+        <div class="game-start-wrap">
+            <a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer" class="btn-game-start">
+                <svg class="icon" aria-hidden="true"><use href="#i-swords"/></svg> Launch the game
+            </a>
         </div>
     </div>
 </section>
@@ -814,13 +858,13 @@
         </p>
         <div class="support-row">
             <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--boosty">
-                <span aria-hidden="true">🚀</span> Boosty (subscription)
+                <svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg> Boosty (subscription)
             </a>
             <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--yoomoney">
-                <span aria-hidden="true">💰</span> YuMoney (transfer)
+                <svg class="icon" aria-hidden="true"><use href="#i-money"/></svg> YuMoney (transfer)
             </a>
             <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=support_section" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--vk">
-                <span aria-hidden="true">👥</span> VKontakte
+                <svg class="icon" aria-hidden="true"><use href="#i-users"/></svg> VKontakte
             </a>
         </div>
         <div class="share-block">
@@ -829,8 +873,8 @@
                 <a href="https://vk.ru/share.php?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--vk">VK</a>
                 <a href="https://t.me/share/url?url=https://sosnowda.github.io&text=The%20Chronicles%20of%20Ruthenia%20%E2%80%94%20AI-narrative%20RPG" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--tg">Telegram</a>
                 <a href="https://connect.ok.ru/offer?url=https://sosnowda.github.io" target="_blank" rel="noopener noreferrer" class="btn-share btn-share--ok">OK</a>
-                <!-- 66.47 (audit #4): alert() → site-styled toast + .catch with fallback (main.js) -->
-                <button type="button" class="btn-share btn-share--copy" data-url="https://sosnowda.github.io/en/" data-toast="Link copied!"><span aria-hidden="true">📋</span> Copy</button>
+                <!-- alert → site-styled toast + .catch with fallback (main.js) -->
+                <button type="button" class="btn-share btn-share--copy" data-url="https://sosnowda.github.io/en/" data-toast="Link copied!"><svg class="icon" aria-hidden="true"><use href="#i-clip"/></svg> Copy</button>
             </div>
         </div>
     </div>
@@ -850,10 +894,10 @@
                 <li><a href="#demo">Demo</a></li>
                 <li><a href="#brp">BRP d100</a></li>
                 <li><a href="#tech">Tech</a></li>
-                <li><a href="/">Русская версия</a></li>
+                <li><a href="/" hreflang="ru" lang="ru">Russian version</a></li>
             </ul>
             <p>
-                &copy; 2025–2026 The Chronicles of Ruthenia (Летописи Руси XV века).<br>
+                &copy; 2025–2026 The Chronicles of Ruthenia.<br>
                 All historical data is based on real sources. The BRP system — Chaosium Inc.
             </p>
             <p class="footer-meta">
@@ -867,7 +911,7 @@
             <a href="https://yoomoney.ru/to/4100119624440650?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--yoomoney">YuMoney</a>
             <a href="https://vk.ru/club241165941?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--vk">VK games</a>
             <a href="https://vk.ru/id521470239?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=footer" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--vkauthor">Author VK</a>
-            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=beta_access" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--beta"><span aria-hidden="true">🔒</span> Closed code — beta testers access</a>
+            <a href="https://boosty.to/deimosdi?utm_source=sosnowda_github&utm_medium=landing&utm_campaign=beta_access" target="_blank" rel="noopener noreferrer" class="btn-support btn-support--footer btn-support--beta"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg> Closed code — beta testers access</a>
         </div>
 
         <div class="footer-engine">
@@ -884,9 +928,9 @@
 </footer>
 
 
-<!-- 66.63 (audit 66.61, P3-3): support popup now lives at the end of <body>,
-     AFTER the sr-only h1. Markup, styles and behaviour unchanged
-     (position:fixed, aria-labelledby="fundPopupTitle"). -->
+<!-- support popup now lives at the end of <body>,
+ AFTER the sr-only h1. Markup, styles and behaviour unchanged
+ (position:fixed, aria-labelledby="fundPopupTitle"). -->
 <div class="fund-popup" id="fundPopup" role="dialog" aria-modal="true" aria-labelledby="fundPopupTitle">
     <div class="fund-popup-content">
         <button class="fund-popup-close" aria-label="Close support dialog">×</button>
@@ -902,8 +946,8 @@
 
 
 
-<!-- 66.48 (audit #12): the monolithic main.js is split into ES modules (js/modules/);
-     type="module" carries defer behaviour per spec -->
+<!-- the monolithic main.js is split into ES modules (js/modules/);
+ type="module" carries defer behaviour per spec -->
 <script type="module" src="../js/main.js"></script>
 </body>
 </html>

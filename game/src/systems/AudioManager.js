@@ -15,7 +15,6 @@ export default class AudioManager {
         this.events = new Phaser.Events.EventEmitter();
 
         this.music = {}; // объекты фоновой музыки
-        this.sounds = {}; // объекты звуковых эффектов
         this.realSounds = {}; // реальные SFX-файлы (key -> Phaser.Sound.BaseSound)
         this.currentMusic = null; // ключ текущей проигрываемой музыки
         this.ambient = null; // Раунд 24: текущий эмбиент-цикл
@@ -56,7 +55,8 @@ export default class AudioManager {
             try {
                 this.realSounds[key] = this.scene.sound.add(key);
             } catch (e) {
-                // ignore
+                // SFX-ключ отсутствует/битый — допустимая деградация:
+                // звук просто не попадает в пул, эффекты играют процедурным фолбэком
             }
         });
     }
@@ -245,9 +245,7 @@ export default class AudioManager {
         }
     }
 
-    stopAmbient() {
-        this.setAmbient(null);
-    }
+
 
     /**
      * Раунд 24: музыка интерьера (таверна/церковь). Трек мог быть ещё
@@ -351,31 +349,9 @@ export default class AudioManager {
     //  Управление звуковыми объектами Phaser
     // ==========================================
 
-    addMusic(key, assetKey, config = {}) {
-        const defaultConfig = {
-            loop: true,
-            volume: this.musicMuted ? 0 : this.musicVolume
-        };
-        this.music[key] = this.scene.sound.add(assetKey, { ...defaultConfig, ...config });
-    }
 
-    playMusic(key, restart = false) {
-        if (!this.music[key]) {
-            console.warn(`Music "${key}" not found`);
-            return;
-        }
 
-        if (this.currentMusic && this.currentMusic !== key) {
-            this.stopMusic(this.currentMusic);
-        }
 
-        const music = this.music[key];
-        if (!music.isPlaying || restart) {
-            music.play();
-            music.setVolume(this.musicMuted ? 0 : this.musicVolume);
-            this.currentMusic = key;
-        }
-    }
 
     stopMusic(key) {
         if (this.music[key]) {
@@ -386,27 +362,16 @@ export default class AudioManager {
         }
     }
 
-    pauseMusic(key) {
-        if (this.music[key]) {
-            this.music[key].pause();
-        }
-    }
 
-    resumeMusic(key) {
-        if (this.music[key]) {
-            this.music[key].resume();
-        }
-    }
 
-    addSound(key, assetKey) {
-        this.sounds[key] = this.scene.sound.add(assetKey);
-    }
+
+
+
 
     playSound(key, config = {}) {
-        // Раунд 12 ФИКС: реальные SFX загружаются в this.realSounds (_loadRealSounds),
-        // а this.sounds никто не наполняет (addSound никем не вызывается) —
-        // поэтому каждый playSound('sfx_*') падал в warn «not found» без звука.
-        const sound = this.sounds[key] || this.realSounds[key];
+        // Источник SFX — realSounds (_loadRealSounds); ключи играют с громкостью
+        // из настроек (мутированный/тихий режим учитывается в defaultConfig)
+        const sound = this.realSounds[key];
         if (!sound) {
             console.warn(`Sound "${key}" not found`);
             return;
@@ -423,23 +388,13 @@ export default class AudioManager {
     //  Аудио-настройки (запись через SettingsManager)
     // ==========================================
 
-    setMusicVolume(volume) {
-        const next = this._clamp01(volume, this.musicVolume);
-        this._setSetting('audio.musicVolume', next);
-    }
 
-    setSFXVolume(volume) {
-        const next = this._clamp01(volume, this.sfxVolume);
-        this._setSetting('audio.sfxVolume', next);
-    }
 
-    toggleMusicMute() {
-        this._setSetting('audio.musicMuted', !this.musicMuted);
-    }
 
-    toggleSFXMute() {
-        this._setSetting('audio.sfxMuted', !this.sfxMuted);
-    }
+
+
+
+
 
     /**
      * Патч 66.75 (приказы 5–6): НЕМЕДЛЕННАЯ синхронизация из settings.audio.*.
@@ -459,9 +414,7 @@ export default class AudioManager {
         }
     }
 
-    getMusicVolume() {
-        return this.musicVolume;
-    }
+
 
     getSFXVolume() {
         return this.sfxVolume;
@@ -489,9 +442,7 @@ export default class AudioManager {
         }
 
         Object.values(this.music).forEach((music) => music?.destroy?.());
-        Object.values(this.sounds).forEach((sound) => sound?.destroy?.());
         this.music = {};
-        this.sounds = {};
         this.currentMusic = null;
 
         // Раунд 24: остановить эмбиент
@@ -560,33 +511,17 @@ export default class AudioManager {
         this._playRealSfx('sfx_level_up', 'playLevelUp');
     }
 
-    playGameOver() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playGameOver();
-        }
-    }
 
-    playAchievement() {
-        this._playRealSfx('sfx_level_up', 'playAchievement');
-    }
 
-    playDoorOpen() {
-        this._playRealSfx('sfx_dialogue_open', 'playDoorOpen');
-    }
 
-    playDoorClose() {
-        this._playRealSfx('sfx_dialogue_close', 'playDoorClose');
-    }
 
-    playWarning() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playWarning();
-        }
-    }
 
-    playMagic() {
-        this._playRealSfx('sfx_heal', 'playMagic');
-    }
+
+
+
+
+
+
 
     playTypewriter() {
         this._playRealSfx('sfx_typewriter', 'playTypewriter', 0.4);
@@ -637,9 +572,5 @@ export default class AudioManager {
     playRealDoorOpen() { this._playRealSfx('sfx_door_open', null, 0.8); }
     playRealDoorClose() { this._playRealSfx('sfx_door_close', null, 0.8); }
 
-    playRandomEffect() {
-        if (this.audioEffects && !this.sfxMuted) {
-            this.audioEffects.playRandomEffect();
-        }
-    }
+
 }

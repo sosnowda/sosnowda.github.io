@@ -123,8 +123,8 @@ await page.evaluate(() => {
 });
 await sleep(2500);
 let texts = await interiorTexts();
-ok(texts && texts.some(t2 => t2.includes('Скоморошить (Скоморошество)')), 'таверна: кнопка «Скоморошить (Скоморошество)»');
-ok(texts && texts.some(t2 => t2.includes('Продать добычу')), 'таверна: кнопка «Продать добычу»');
+ok(texts && texts.some(t2 => t2.includes('Скоморошить (Скоморошество)')), 'постоялый двор: кнопка «Скоморошить (Скоморошество)»');
+ok(texts && texts.some(t2 => t2.includes('Продать добычу')), 'постоялый двор: кнопка «Продать добычу»');
 await page.screenshot({ path: `${OUT}/01_tavern.png` });
 // открыть скупку
 await clickText('Продать добычу');

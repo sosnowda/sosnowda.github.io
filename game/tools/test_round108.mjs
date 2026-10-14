@@ -58,14 +58,14 @@ const cspRu404 = (ru404.match(cspRe) || [])[1];
 const cspEn404 = (en404.match(cspRe) || [])[1];
 ok(!!cspLanding, 'index.html: CSP лендинга извлечён (эталон существует)');
 ok(cspRu404 === cspLanding, '404.html: CSP ПОБАЙТОВО равен лендинговому');
-ok(cspEn404 === cspLanding, 'en/404.html: CSP ПОБАЙТОВО равен лендинговому');
+ok(cspEn404 === cspLanding, '404/en-404: CSP равен лендинговому (66.106 В18: form-action none; шрифты самохост)');
 ok(cspRu404 && cspRu404.includes("script-src 'self' 'unsafe-inline'"), 'CSP: script-src unsafe-inline — inline-детект 66.53 продолжает работать');
 ok(cspRu404 && cspRu404.includes("object-src 'none'") && cspRu404.includes("base-uri 'self'"), 'CSP: hardening-директивы (object-src/base-uri) на месте');
 ok(ru404.indexOf('Content-Security-Policy') < ru404.indexOf('<style>'), '404.html: CSP объявлен до контента (в head)');
 ok(ru404.includes('<meta name="robots" content="noindex">') && en404.includes('<meta name="robots" content="noindex">'), '404-страницы: noindex сохранён на обеих');
 
 console.log('--- 3. P3-3: офлайн-фолбэк только для navigate ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 (актуализация 66.87) (игровые ассеты не менялись)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: субресурсы при офлайн-промахе — честный отказ (без HTML-фолбэка)');
 ok(sw.indexOf("event.request.mode !== 'navigate'") < sw.indexOf("const fb ="), 'sw.js: гейт navigate стоит ПЕРЕД фолбэк-цепочкой');

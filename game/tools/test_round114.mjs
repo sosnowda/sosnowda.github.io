@@ -63,14 +63,14 @@ ok(game.includes('sha256 397fc65bb751b2549b59c64647edf70300d604b742cd6be03d8298b
 console.log('--- 3. P3-4: лендинги без мёртвых хинтов на CDN ---');
 ok(!ru.includes('cdn.jsdelivr.net'), 'index.html: jsdelivr не упоминается (preconnect/dns-prefetch сняты)');
 ok(!en.includes('cdn.jsdelivr.net'), 'en/index.html: jsdelivr не упоминается (preconnect/dns-prefetch сняты)');
-ok(ru.includes('preconnect" href="https://fonts.googleapis.com') && ru.includes('preconnect" href="https://fonts.gstatic.com" crossorigin'), 'index.html: шрифтовые preconnect целы (снято только лишнее)');
+ok(!ru.includes('fonts.googleapis.com') && !ru.includes('fonts.gstatic.com'), 'index.html: 66.106 — хосты Google Fonts сняты (самохост)');
 
 console.log('--- 4. P3-5: PT Sans в css2-линке и styles.css ---');
-const ruFont = ru.match(/href="https:\/\/fonts\.googleapis\.com\/css2\?[^"]+"/) || [''];
-const enFont = en.match(/href="https:\/\/fonts\.googleapis\.com\/css2\?[^"]+"/) || [''];
-ok(ruFont[0].includes('family=PT+Sans:wght@400;700'), 'index.html: css2-линк несёт PT+Sans:wght@400;700');
-ok(enFont[0].includes('family=PT+Sans:wght@400;700'), 'en/index.html: css2-линк несёт PT+Sans:wght@400;700');
-ok(ruFont[0].includes('family=Prata') && ruFont[0].includes('family=PT+Serif'), 'index.html: Prata и PT Serif в линке не потеряны');
+// 66.106: css2-линк снят — шрифты самохостятся (@font-face в styles.css)
+ok(!ru.includes('fonts.googleapis.com') && !en.includes('fonts.googleapis.com'), 'RU/EN: css2-линк снят (самохост)');
+ok((styles.match(/@font-face/g) || []).length === 19, 'styles.css: 19 @font-face (Prata 400, PT Sans 400/700, PT Serif 400/700 ×подмножества)');
+ok(styles.includes("font-family: 'Prata'") && styles.includes("font-family: 'PT Sans'") && styles.includes("font-family: 'PT Serif'"), 'styles.css: все три семейства объявлены в @font-face');
+ok(styles.includes('font-display: swap'), 'styles.css: font-display swap (текст не блокируется)');
 ok((styles.match(/'PT Sans',sans-serif/g) || []).length === 3, 'styles.css: стек с PT Sans в 3 селекторах (.fund-bar/.btn-share/.copy-toast) не менялся');
 ok(styles.includes('66.64 (аудит 66.61, P3-5)'), 'styles.css: док-заметка 66.64 о загрузке PT Sans');
 ok(styles.includes("'PT Sans' вебфонтом НЕ загружен") || styles.includes("'PT Sans' вебфонтом не загружен"), 'styles.css: историческая справка 66.60 сохранена (причина line-height:1.2)');
@@ -79,7 +79,7 @@ const canonBlock = styles.slice(styles.indexOf('.fund-bar {') >= 0 ? styles.inde
 ok(canonBlock.includes('line-height:1.2'), 'styles.css: инвариант 66.60 line-height:1.2 в каноническом блоке цел');
 
 console.log('--- 5. SW: vendor в cache-first, v112 + game-assets-v44 ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 (новый бакет под новую ветку маршрута /game/vendor/)');
 ok(sw.includes("url.pathname.startsWith('/game/assets/') || url.pathname.startsWith('/game/vendor/')"), 'sw.js: /game/vendor/ в cache-first ветке ассетов (неизменяемая библиотека — как /game/assets/)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт офлайн-фолбэка цел (66.57 P3-3)');

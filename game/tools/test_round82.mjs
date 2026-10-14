@@ -129,7 +129,7 @@ console.log('\n— п.9–10: НОЧНОЙ ЗАПОР И СТУК В ДВЕРЬ 
     ok(!hasUrgentQuestBusiness(reg2, house), 'поручение от ДРУГОГО НПЦ — не повод будить старосту');
 }
 
-console.log('\n— п.11–12: РАСПОРЯДОК СВЯЩЕННИКА (обед/ужин в корчме, келья) —');
+console.log('\n— п.11–12: РАСПОРЯДОК СВЯЩЕННИКА (обед/ужин на постоялом дворе, келья) —');
 {
     const { getPresence } = await import(join(GAME, '../src/data/npcPresence.js'));
     const at = (hour) => {
@@ -138,9 +138,9 @@ console.log('\n— п.11–12: РАСПОРЯДОК СВЯЩЕННИКА (обе
         return getPresence(reg, 'priest');
     };
     ok(at(9).place === 'church' && at(9).activity.includes('службе'), 'утром батюшка при службе в церкви');
-    ok(at(12).place === 'tavern' && at(12).activity.includes('обедает'), '12:00–13:00 — обед в корчме (1 час)');
+    ok(at(12).place === 'tavern' && at(12).activity.includes('обедает'), '12:00–13:00 — обед на постоялом дворе (1 час)');
     ok(at(13).place === 'church', 'в 13:00 батюшка уже вернулся в церковь');
-    ok(at(19).place === 'tavern' && at(19).activity.includes('ужинает'), '19:00–20:00 — ужин в корчме (1 час)');
+    ok(at(19).place === 'tavern' && at(19).activity.includes('ужинает'), '19:00–20:00 — ужин на постоялом дворе (1 час)');
     ok(at(20).place === 'church', 'в 20:00 батюшка вернулся с ужина');
     ok(at(23).place === 'church' && at(23).activity.includes('келье'), 'ночью спит в келье при церкви');
     ok(at(15).place === 'church', 'после трапезы — снова в церкви');
@@ -421,7 +421,7 @@ console.log('\n— п.9/п.11: ЗАПОРЫ В СЦЕНАХ — ПРОВОДКА
     const vs = read('game/src/scenes/VillageScene.js');
     ok(vs.includes('isNightHour(hour, timeState)) return { night: true }'), 'жилые дома: ночью дверь заперта (ночь по сезону — 66.22)');
     ok(vs.includes("if (!isChurchOpen(hour)) return { church: true }"), 'церковь: вход по часам богослужений');
-    ok(vs.includes('interior.public) return null'), 'постоялый двор открыт всегда (тавернщик 24/7)');
+    ok(vs.includes('interior.public) return null'), 'постоялый двор открыт всегда (кабатчик 24/7)');
     ok(vs.includes('knockAtDoorLogic'), 'стук в дверь подключён к поп-апу запертого дома');
     ok(vs.includes("🚪 Постучать в дверь"), 'в поп-апе запертого дома есть кнопка стука');
     ok(vs.includes('this.scene.launch(\'Interior\', { interiorId, from: \'Village\' })'),

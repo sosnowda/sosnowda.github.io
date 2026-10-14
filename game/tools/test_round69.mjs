@@ -179,7 +179,7 @@ console.log('\n[4] СЛУХИ-НАВОДКИ В ТАВЕРНЕ (п.4)');
     const withThief = collectRumors(regThief).find(r => r.ru.includes('вора'));
     ok(!!withThief, 'есть наводка про вора, пока охота идёт');
     const line = tavernRumorLine(regThief);
-    ok(line.includes('слыхал') || line.includes('Фёдор'), 'реплика корчмаря оформлена от Фёдора');
+    ok(line.includes('слыхал') || line.includes('Фёдор'), 'реплика постоялый дворря оформлена от Фёдора');
     // вор пойман — наводок про вора нет
     const regDone = mockRegistry({
         gameTime: { yearFromChrist: 1452, month: 6, day: 10, hour: 14, minute: 0 },
@@ -258,7 +258,7 @@ console.log('\n[7] АУДИТ ЦЕЛОСТНОСТИ 66.6 (п.7 + регресс
     const sw = read('../sw.js');
     // 66.47: записи журнала живут в docs/SW_CHANGELOG.md
     const swlog = read('../docs/SW_CHANGELOG.md');
-    ok(sw.includes("chronicles-ruthenia-v134"), 'SW: версия сайта актуальна (66.95 актуализация)');
+    ok(sw.includes("chronicles-ruthenia-v135"), 'SW: версия сайта актуальна (66.95 актуализация)');
     ok(sw.includes("game-assets-v45"), 'SW: кеш ассетов актуален');
     ok(swlog.includes('v65 — раунд 66.6'), 'SW: описан патч 66.6');
     // i18n: новые EN-ключи

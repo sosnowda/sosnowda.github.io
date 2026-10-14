@@ -41,7 +41,7 @@ ok(/^a\.btn-support--boosty\{background:#ff8a00;color:#1a1005\}$/m.test(styles),
 ok(/^a\.btn-support--yoomoney\{background:#8b3dff\}$/m.test(styles) &&
    /^a\.btn-support--vk\{background:#0062cc\}$/m.test(styles) &&
    /^a\.btn-support--vkauthor\{background:#4a76a8\}$/m.test(styles), 'модификаторы yoomoney/vk/vkauthor: фирменные фоны не тронуты');
-ok(/^a\.btn-support--beta\{background:#333;color:#C9A961;border:1px solid #C9A961\}$/m.test(styles), 'a.btn-support--beta: #333/#C9A961/рамка целы');
+ok(/^a\.btn-support--beta\{background:#333;color:var\(--gold\);border:1px solid var\(--gold\)\}$/m.test(styles), 'a.btn-support--beta: #333/рамка целы (66.106 В10: #C9A961→var(--gold))');
 ok(/^a\.btn-support--block\{display:block;padding:0\.8rem\}$/m.test(styles) &&
    /^a\.btn-support--footer\{padding:0\.6rem 1\.5rem;font-size:0\.9rem\}$/m.test(styles), 'геометрия --block/--footer не тронута');
 const comment = styles.slice(styles.lastIndexOf('/*', styles.indexOf('a.btn-support{')), styles.indexOf('a.btn-support{'));
@@ -96,7 +96,7 @@ for (const [fg, bg, expect, name] of before) {
 }
 
 console.log('--- 5. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (правка цвета не трогала SW-логику)');
 ok(swlog.includes('- v109 — итерация 66.67'), 'SW_CHANGELOG: запись v109 добавлена');

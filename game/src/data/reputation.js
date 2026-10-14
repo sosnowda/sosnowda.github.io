@@ -418,7 +418,7 @@ export function applyTreatEveryoneBonus(registry) {
         changeNpcRep(registry, npc.id, 2, 'угостил выпивкой');
         totalBonus += 2;
     });
-    changeVillageRep(registry, 3, 'угостил всех в таверне');
+    changeVillageRep(registry, 3, 'угостил всех на постоялом дворе');
     return totalBonus;
 }
 
@@ -923,7 +923,7 @@ export function payViraToElder(registry, npcId) {
     return {
         success: true,
         vira,
-        message: tf(t('Староста принимает виру — {0} д. ({1}) — и жмёт руку {2}: «Обида смыта серебром, по Судебнику быть миру!»\n\nРепутация {3} к тебе теперь +30.'), vira.total, vira.breakdown, npcName, npcName),
+        message: tf(t('Староста принимает виру — {0} д. ({1}) — и жмёт руку {2}: «Обида смыта серебром, по Судебнику быть миру!»\n\n{3} прячет серебро за пазуху и кивает: обида снята, он больше не враждует с тобой.'), vira.total, vira.breakdown, npcName, npcName),
     };
 }
 
@@ -1083,17 +1083,17 @@ export function canMarry(registry, npcId, player) {
 
     // Проверка личной репутации
     if (npcRep < MARRIAGE_NPC_REP) {
-        return { canMarry: false, reason: tf(t('Недостаточно личной репутации (нужно +{0}, у вас {1})'), MARRIAGE_NPC_REP, npcRep) };
+        return { canMarry: false, reason: tf(t('Недостаточно личной репутации (нужно +{0}, у тебя {1})'), MARRIAGE_NPC_REP, npcRep) };
     }
     
     // Проверка деревенской репутации
     if (villageRep < MARRIAGE_VILLAGE_REP) {
-        return { canMarry: false, reason: tf(t('Недостаточно деревенской репутации (нужно +{0}, у вас {1})'), MARRIAGE_VILLAGE_REP, villageRep) };
+        return { canMarry: false, reason: tf(t('Недостаточно деревенской репутации (нужно +{0}, у тебя {1})'), MARRIAGE_VILLAGE_REP, villageRep) };
     }
     
     // Проверка денег
     if ((player.dengas || 0) < MARRIAGE_COST) {
-        return { canMarry: false, reason: tf(t('Недостаточно денег на свадебное торжество (нужно {0} д., у вас {1} д.)'), MARRIAGE_COST, player.dengas || 0) };
+        return { canMarry: false, reason: tf(t('Недостаточно денег на свадебное торжество (нужно {0} д., у тебя {1} д.)'), MARRIAGE_COST, player.dengas || 0) };
     }
     
     // Проверка, не состоит ли NPC в браке.

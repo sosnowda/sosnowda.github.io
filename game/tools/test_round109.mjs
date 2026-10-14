@@ -37,7 +37,7 @@ const hover = styles.indexOf('.fund-bar:hover{');
 ok(base !== -1 && hover > base, 'styles.css: hover ПОСЛЕ канонического блока');
 const block = styles.slice(base, styles.indexOf('}', base) + 1);
 ok(block.includes('background:linear-gradient(90deg, #6B1F15, #8B2C1A, #6B1F15) !important;'), 'канонический блок: тематический фон «выгравированный камень» (!important — как у победителя каскада)');
-ok(block.includes('border-bottom:1px solid rgba(201,169,97,0.2) !important;'), 'канонический блок: border-bottom с !important (иначе button.fund-bar{border:none} (0,1,1) его перебьёт)');
+ok(block.includes('border-bottom:1px solid rgba(201, 162, 39,0.2) !important;'), 'канонический блок: border-bottom с !important (иначе button.fund-bar{border:none} (0,1,1) его перебьёт)');
 ok(block.includes('text-shadow:0 1px 1px rgba(0,0,0,0.5) !important;'), 'канонический блок: text-shadow с !important (как у победителя каскада)');
 // актуализация 66.62: color #C9A961→#E8D5A3 (контраст полоски, P3-1 аудита 66.61 — детали в r112)
 ok(block.includes("color:#E8D5A3") && block.includes('font-family:\'PT Sans\',sans-serif'), 'канонический блок: color 66.62 (#E8D5A3) и font-family из 657 сохранены');
@@ -53,10 +53,10 @@ ok(styles.includes('/* Плашка альфа-версии — выгравир
 ok(styles.includes('Консолидация 66.58') && styles.includes('button.fund-bar{border:none}'), 'комментарий канонического блока документирует консолидацию и конкурента button.fund-bar');
 ok(styles.includes('font-size:0.72rem') && styles.includes('text-overflow: ellipsis'), 'media query 480px (однострочность на узких экранах) не тронут');
 ok(styles.includes('button.fund-bar{display:block;width:100%;border:none;appearance:none;-webkit-appearance:none}'), 'button.fund-bar — сброс браузерного оформления не тронут (аудит №20)');
-ok(styles.includes('.fund-bar:focus-visible{outline:2px solid #C9A961;outline-offset:2px}'), '.fund-bar:focus-visible не тронут');
+ok(styles.includes('.fund-bar:focus-visible{outline:2px solid var(--gold);outline-offset:2px}'), '.fund-bar:focus-visible цел (66.106 В10: #C9A961→var(--gold), семантика та же)');
 
 console.log('--- 4. SW: бамп по §4 (styles.css изменён), механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: site-cache v130 (актуализация 66.95) (актуализация 66.70 — аудит владельца 66.70: onclick сняты, keywords снят, fetchpriority="low" снят, webvitals.js; HTML/CSS → бамп)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 без изменений (ассеты не тронуты)');
 ok(sw.includes("if (event.request.mode !== 'navigate') return cached;"), 'sw.js: navigate-гейт 66.57 цел (консолидация CSS не трогала SW-логику)');
 ok(swlog.includes('- v103 — итерация 66.58'), 'SW_CHANGELOG: запись v103 добавлена');

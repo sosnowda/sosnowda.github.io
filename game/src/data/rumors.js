@@ -32,15 +32,17 @@ import { getHuntState } from './thief.js';
 export const RUMORS_PER_DAY = 3;
 
 // Вести хроники XV века — «с обозом привезли» (историзм, раздел «Хроника»).
+// 66.106 (В16): у каждой вести — год события; слух не может прийти раньше,
+// чем событие случилось (пул фильтруется по году мира).
 const CHRONICLE_RUMORS = [
-    { ru: 'Говорят, в 1408-м Едигей с ордой пришёл — земли на север разорил, а Москву взять не смог: кремль отстроили крепкий.', en: 'They say back in 1408 Edigu came with the horde — laid waste to the northern lands, but failed to take Moscow: the kremlin walls were rebuilt strong.' },
-    { ru: 'Слыхал? Под Грюнвальдом поляки с литвинами Тевтонский орден на голову разбили — вся Европа гудит.', en: 'Heard it? At Grunwald the Poles and Lithuanians smashed the Teutonic Order outright — all of Europe is abuzz.' },
-    { ru: 'Великий князь Василий Дмитриевич помер, а брат его Юрий со Звенигорода на Москву поглядывает — междоусобица чуется.', en: 'Grand Prince Vasily Dmitrievich has died, and his brother Yuri glances at Moscow from Zvenigorod — strife is brewing.' },
-    { ru: 'В Царьграде турки под стенами стоят. Говорят, последняя держава крестовая падёт — а Русь остаётся.', en: 'The Turks are standing under the walls of Constantinople. They say the last crusader realm will fall — while Rus remains.' },
-    { ru: 'Иван Государь третьим землю собирает: Новгород пал на Шелони, а Орду на Угре станом встретили — и ушла ни с чем.', en: 'Sovereign Ivan is gathering the lands together: Novgorod fell on the Shelon, and the Horde was met with an armed camp on the Ugra — and turned away empty-handed.' },
-    { ru: 'Судебник государев вышел: крестьянину выход Юрьевым днём указан, а вольному человеку за старое пожилое платить надобно.', en: 'The sovereign’s Law Code is out: a peasant may leave only on St. George’s Day, and a freeman may not wander without a hire.' },
-    { ru: 'Говорят, грек митрополит больше не ставится от Царьграда — Русская церковь сама епископов собирает.', en: 'They say the metropolitan is no longer set from Constantinople — the Russian church gathers its own bishops now.' },
-    { ru: 'Возят вести: Ивана третьего на велиское княжение народ и бояре звали, и он на престоле с 1462 года сидит крепко.', en: 'Word is brought: the people and the boyars called Ivan the Third to the grand princedom, and he has sat firm on the throne since 1462.' },
+    { year: 1408, ru: 'Говорят, в 1408-м Едигей с ордой пришёл — земли на север разорил, а Москву взять не смог: кремль отстроили крепкий.', en: 'They say back in 1408 Edigu came with the horde — laid waste to the northern lands, but failed to take Moscow: the kremlin walls were rebuilt strong.' },
+    { year: 1410, ru: 'Слыхал? Под Грюнвальдом поляки с литвинами Тевтонский орден на голову разбили — вся Европа гудит.', en: 'Heard it? At Grunwald the Poles and Lithuanians smashed the Teutonic Order outright — all of Europe is abuzz.' },
+    { year: 1425, ru: 'Великий князь Василий Дмитриевич помер, а брат его Юрий со Звенигорода на Москву поглядывает — междоусобица чуется.', en: 'Grand Prince Vasily Dmitrievich has died, and his brother Yuri glances at Moscow from Zvenigorod — strife is brewing.' },
+    { year: 1453, ru: 'В Царьграде турки под стенами стоят. Говорят, последняя держава крестовая падёт — а Русь остаётся.', en: 'The Turks are standing under the walls of Constantinople. They say the last crusader realm will fall — while Rus remains.' },
+    { year: 1480, ru: 'Иван Государь третьим землю собирает: Новгород пал на Шелони, а Орду на Угре станом встретили — и ушла ни с чем.', en: 'Sovereign Ivan is gathering the lands together: Novgorod fell on the Shelon, and the Horde was met with an armed camp on the Ugra — and turned away empty-handed.' },
+    { year: 1497, ru: 'Судебник государев вышел: крестьянину выход Юрьевым днём указан, а вольному человеку за старое пожилое платить надобно.', en: 'The sovereign’s Law Code is out: a peasant may leave only on St. George’s Day, and a freeman may not wander without a hire.' },
+    { year: 1448, ru: 'Говорят, грек митрополит больше не ставится от Царьграда — Русская церковь сама епископов собирает.', en: 'They say the metropolitan is no longer set from Constantinople — the Russian church gathers its own bishops now.' },
+    { year: 1462, ru: 'Возят вести: Ивана третьего на велиское княжение народ и бояре звали, и он на престоле с 1462 года сидит крепко.', en: 'Word is brought: the people and the boyars called Ivan the Third to the grand princedom, and he has sat firm on the throne since 1462.' },
 ];
 
 // Простой бытовой ряд (без привязки к состоянию мира).
@@ -136,7 +138,11 @@ export function collectRumors(registry) {
     } catch (e) { /* ок */ }
 
     // --- бытовые + хроника (по 1-2 за раз) ---
-    const pool = [...EVERYDAY_RUMORS, ...CHRONICLE_RUMORS];
+    // 66.106 (В16): хроникальная весть не «свежее» события — слух не приходит
+    // раньше самого события (год мира: getTime(registry).yearFromChrist)
+    let yearNow = 1400;
+    try { yearNow = getTime(registry).yearFromChrist || 1400; } catch (e) { /* без времени мира — только бытовые */ }
+    const pool = [...EVERYDAY_RUMORS, ...CHRONICLE_RUMORS.filter((r) => !r.year || r.year <= yearNow)];
     const n = Math.random() < 0.3 ? 2 : 1;
     for (let i = 0; i < n && pool.length; i++) {
         const idx = Math.floor(Math.random() * pool.length);

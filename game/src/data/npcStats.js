@@ -151,7 +151,7 @@ export const NPC_STAT_BLOCKS = {
 
     // === ХОЗЯЕВА И ХОЗЯЙКИ ===
     tavernkeeper: {
-        name: 'Тавернщик',
+        name: 'Кабатчик',
         stats: S(55, 55, 50, 45, 55),
         skills: { persuade: 45, fast_talk: 40, brawl: 40, spot: 35, listen: 35 },
     },

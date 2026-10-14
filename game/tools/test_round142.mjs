@@ -40,15 +40,14 @@ const enBody = en.replace(/<!--[\s\S]*?-->/g, '');
 // ============================================================
 console.log('--- 1. К2а: height:900px перекрыт height:auto ---');
 {
+    // 66.106 (С2): legacy-слой удалён ЦЕЛИКОМ — остаётся единственное правило
     const legacy = css.match(/\.hero-image-wrap\s*\{[^}]*height:\s*900px[^}]*\}/);
-    ok(!!legacy, 'legacy-правило с height:900px существует (история каскада)');
+    ok(!legacy, '66.106 С2: height:900px не существует нигде в styles.css');
     const consolidated = css.match(/\.hero-image-wrap\{[^}]*\}/g) || [];
     const real = consolidated.find(m => m.includes('max-width:1180px'));
     ok(!!real, 'консолидированное правило :759 найдено');
     ok(!!real && real.includes('height:auto'), 'консолидированное правило задаёт height:auto (мёртвая зона устранена)');
-    ok(!!real && real.indexOf('.hero-image-wrap{') === 0 && css.indexOf(real) > css.indexOf(legacy[0]),
-        'консолидированное правило ПОЗЖЕ legacy в файле (побеждает по каскаду)');
-    ok(!!real && !real.includes('transform:none'), 'центрирование left:50%+translateX не тронуто');
+    ok(!!real && real.indexOf('.hero-image-wrap{') === 0, 'единственный блок .hero-image-wrap — консолидированный');
 }
 
 // ============================================================

@@ -40,7 +40,7 @@ const interiors = read('data/interiors.js');
 const hasChestDecor = Object.values(INTERIORS).some(i => i && Array.isArray(i.decor) && i.decor.includes('chest'));
 ok(!hasChestDecor, "interiors: 'chest' убран из decor всех домов");
 const i18n = read('systems/i18n.js');
-ok(!i18n.includes('Сундук у таверны') && !i18n.includes('Тюк у колодца') && !i18n.includes('Позолоченный ларец'), 'i18n: метки сундуков/тюков удалены');
+ok(!i18n.includes('Сундук у постоялого двора') && !i18n.includes('Тюк у колодца') && !i18n.includes('Позолоченный ларец'), 'i18n: метки сундуков/тюков удалены');
 ok(!i18n.includes('🎒 Мой тюк') && !i18n.includes('🎒 Мой узел'), 'i18n: кнопки тайников удалены');
 ok(!i18n.includes('Сундуки и тайники открываются'), 'i18n: строка справки про сундуки удалена');
 ok(!i18n.includes('Яблоко: +2 ❤') && !i18n.includes('Медная иконка: +1 ⭐'), 'i18n: ключи лута удалены');

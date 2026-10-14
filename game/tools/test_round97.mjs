@@ -139,8 +139,8 @@ for (const [name, html, pre] of [['RU', ru, 'assets/screenshots/01-title.webp'],
         `${name}: preload ленивого скриншота снят (66.105 К6а: «preload+lazy» противоречие)`);
     ok(html.includes('rel="preload"'), `${name}: preload присутствует`);
 }
-ok(/05-map\.webp" alt="[^"]*КРУГЛАЯ[^"]*"/.test(ru), 'RU: alt карты про КРУГЛУЮ поляну');
-ok(/05-map\.webp" alt="[^"]*ROUND[^"]*"/.test(en), 'EN: alt карты про ROUND glade');
+ok(/05-map\.webp" alt="[^"]*круглой поляной[^"]*"/.test(ru), 'RU: alt карты — круглая поляна (66.106 С5: альт переписан)');
+ok(/05-map\.webp" alt="[^"]*round clearing[^"]*"/.test(en), 'EN: alt карты — round clearing (66.106 С5)');
 ok(/og:image" content="https:\/\/sosnowda\.github\.io\/assets\/images\/og-image\.jpg"/.test(ru)
    && /og:image" content="https:\/\/sosnowda\.github\.io\/assets\/images\/og-image\.jpg"/.test(en),
    'OG:image — абсолютный URL в RU и EN');
@@ -168,7 +168,7 @@ for (const f of actual) {
 console.log('— 10. SW v92 + аудио lazy-cache —');
 const sw = read('sw.js');
 const swlog = read('docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'SW: site-cache v130 (актуализация 66.95)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'SW: site-cache v130 (актуализация 66.95)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45');
 ok(swlog.includes('66.41'), 'SW-журнал: запись 66.41 есть');
 ok(!sw.includes('addAll'), 'SW: precache-списка нет (аудио кэшируется лениво по запросу)');

@@ -9,7 +9,7 @@
 //      webp-srcset/preload 66.90 не тронуты.
 //   3) JSON-LD RU: + "inLanguage":["ru","en"] (EN/игра уже имели).
 //   4) CSS2-ЛИНК RU+EN: курсивный PT Serif (1,400) снят — курсив лендинга рендерит
-//      системный шрифт; PT Serif 400/700 цел, PT Sans 66.64 цел.
+//      системный шрифт; PT Serif 400/700 цел (66.106: @font-face styles.css), PT Sans 66.64 цел.
 //   5) ARIA-HIDDEN EMOJI: декоративные emoji RU+EN (fund-bar, альфа-баннер,
 //      feature-icon ×9, 🏗️ в h3, кнопки запуска/поддержки/копирования/беты)
 //      обёрнуты в <span aria-hidden="true"> — скринридер не озвучивает глифы.
@@ -76,29 +76,30 @@ ok(gameHtml.includes('"inLanguage":["ru","en"]'), 'game: JSON-LD inLanguage це
 console.log('--- 4. CSS2-линк без курсивного PT Serif (RU+EN) ---');
 for (const [html, locale] of [[indexRu, 'RU'], [indexEn, 'EN']]) {
     ok(!html.includes('PT+Serif:ital'), `${locale}: ital-ось PT Serif снята с css2-линка`);
-    ok(html.includes('family=PT+Serif:wght@400;700'), `${locale}: PT Serif 400/700 цел`);
-    ok(html.includes('family=PT+Sans:wght@400;700'), `${locale}: PT Sans 66.64 цел (регресса нет)`);
+    ok(!html.includes('fonts.googleapis.com'), `${locale}: css2-линк снят (PT Serif 400/700 в @font-face styles.css)`);
+    ok(html.includes('href="styles.css"') || html.includes('href="../styles.css"'), `${locale}: локальный styles.css подключён (PT Sans в @font-face)`);
 }
 ok(read('styles.css').includes("font-family:'PT Serif',serif"), 'styles.css: потребители PT Serif на месте');
 
 console.log('--- 5. Декоративные emoji под aria-hidden (RU+EN ×2 локали) ---');
 for (const [html, locale, texts] of [
-    [indexRu, 'RU', { fund: '<span aria-hidden="true">💰</span> Сбор средств', alpha: '<span aria-hidden="true">⚔️</span> Игра находится',
-        h3: '<h3><span aria-hidden="true">🏗️</span> Архитектура', start: '<span aria-hidden="true">⚔️</span> Запустить игру',
-        boosty: '<span aria-hidden="true">🚀</span> Boosty', yoomoney: '<span aria-hidden="true">💰</span> ЮMoney',
-        vk: '<span aria-hidden="true">👥</span> ВКонтакте', copy: '<span aria-hidden="true">📋</span> Копировать',
-        beta: '<span aria-hidden="true">🔒</span> Код закрыт' }],
-    [indexEn, 'EN', { fund: '<span aria-hidden="true">💰</span> Fundraising', alpha: '<span aria-hidden="true">⚔️</span> The game is in Alpha',
-        h3: '<h3><span aria-hidden="true">🏗️</span> Project architecture', start: '<span aria-hidden="true">⚔️</span> Launch the game',
-        boosty: '<span aria-hidden="true">🚀</span> Boosty', yoomoney: '<span aria-hidden="true">💰</span> YuMoney',
-        vk: '<span aria-hidden="true">👥</span> VKontakte', copy: '<span aria-hidden="true">📋</span> Copy',
-        beta: '<span aria-hidden="true">🔒</span> Closed code' }],
+    // 66.106 (В6): эмодзи заменены SVG-иконками спрайта — проверки на иконки
+    [indexRu, 'RU', { fund: '<svg class="icon" aria-hidden="true"><use href="#i-money"/></svg> Сбор средств', alpha: '<svg class="icon" aria-hidden="true"><use href="#i-swords"/></svg> Игра находится',
+        start: '<svg class="icon" aria-hidden="true"><use href="#i-swords"/></svg> Запустить игру',
+        boosty: '<svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg> Boosty', yoomoney: '<svg class="icon" aria-hidden="true"><use href="#i-money"/></svg> ЮMoney',
+        vk: '<svg class="icon" aria-hidden="true"><use href="#i-users"/></svg> ВКонтакте', copy: '<svg class="icon" aria-hidden="true"><use href="#i-clip"/></svg> Копировать',
+        beta: '<svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg> Код закрыт' }],
+    [indexEn, 'EN', { fund: '<svg class="icon" aria-hidden="true"><use href="#i-money"/></svg> Fundraising', alpha: '<svg class="icon" aria-hidden="true"><use href="#i-swords"/></svg> The game is in Alpha',
+        start: '<svg class="icon" aria-hidden="true"><use href="#i-swords"/></svg> Launch the game',
+        boosty: '<svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg> Boosty', yoomoney: '<svg class="icon" aria-hidden="true"><use href="#i-money"/></svg> YuMoney',
+        vk: '<svg class="icon" aria-hidden="true"><use href="#i-users"/></svg> VKontakte', copy: '<svg class="icon" aria-hidden="true"><use href="#i-clip"/></svg> Copy',
+        beta: '<svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg> Closed code' }],
 ]) {
-    ok(html.includes(texts.fund), `${locale}: 💰 полоски сбора под aria-hidden`);
+    ok(html.includes(texts.fund), `${locale}: иконка полоски сбора под aria-hidden (66.106 В6: svg вместо эмодзи)`);
     ok(html.includes(texts.alpha), `${locale}: ⚔️ альфа-баннера под aria-hidden`);
     ok((html.match(/class="feature-icon">/g) || []).length === 0, `${locale}: feature-icon без aria-hidden — ноль`);
     ok((html.match(/class="feature-icon" aria-hidden="true">/g) || []).length === 9, `${locale}: feature-icon ×9 под aria-hidden`);
-    ok(html.includes(texts.h3), `${locale}: 🏗️ в h3 под aria-hidden`);
+    ok(html.includes('<svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg> Архитектура') || html.includes('<svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg> Project architecture'), `${locale}: архитектурная иконка h3 — svg спрайта (66.106 В6)`);
     ok(html.includes(texts.start), `${locale}: ⚔️ кнопки запуска под aria-hidden`);
     ok(html.includes(texts.boosty) && html.includes(texts.yoomoney) && html.includes(texts.vk),
         `${locale}: 🚀/💰/👥 кнопок поддержки под aria-hidden`);
@@ -115,7 +116,7 @@ ok(indexRu.includes('aria-label="Открыть меню"') && indexEn.includes(
    'RU+EN: статичная разметка-фолбэк целa (no-JS)');
 
 console.log('--- 7. SW v124 + доки + sitemap ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: site-cache v130 (66.95 актуализация)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v135';"), 'sw.js: site-cache v130 (66.95 актуализация)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: game-assets-v45 цел (ассеты игры не тронуты)');
 ok(swlog.includes('- v124 —'), 'SW_CHANGELOG: запись v124 добавлена');
 ok(changes.includes('## Патч 66.91'), 'CHANGES.md: секция патча 66.91 добавлена');
