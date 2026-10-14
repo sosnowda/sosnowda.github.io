@@ -677,6 +677,11 @@ export function initThiefHunt(registry) {
     // обычные локации 2–5 ч, лесные (Опушка/Поляна/Густой лес) 4–7 ч.
     const stays = route.map((id) => randomStayHoursFor(id));
 
+    // Раунд 50 (п.7 заявки): пол вора выбирается СЛУЧАЙНО в начале игры —
+    // от него зависят фигурка (Townfolk Skulker / Beggar) и слово «вор/воровка».
+    // Патч 66.105 (К5 аудита 66.104): у антагониста появляется ИМЯ —
+    // вор больше не безымянный «тёмный плащ» (имя живёт в сейве).
+    const thiefGender66105 = Math.random() < 0.5 ? 'male' : 'female';
     quest.chase = {
         route,
         phase: 'travel',       // 'travel' (в пути) | 'stay' (сидит на локации)
@@ -689,10 +694,11 @@ export function initThiefHunt(registry) {
         hintLockHours: 0,      // раунд 32 (п.4): «заморозка» на 2/5 часов (сводная)
         hintLockFlee: false,   // раунд 32 (п.10): уйти ли принудительно по истечении
         npcLockHours: 0,       // раунд 35: заморозка наводки НПЦ (уход по истечении)
-        traceLockHours: 0,     // раунд 35: заморозка прочитанного следа
-        // Раунд 50 (п.7 заявки): пол вора выбирается СЛУЧАЙНО в начале игры —
-        // от него зависят фигурка (Townfolk Skulker / Beggar) и слово «вор/воровка»
-        gender: Math.random() < 0.5 ? 'male' : 'female',
+        traceLockHours: 0,     // раунд 35: заморозки прочитанного следа
+        gender: thiefGender66105,
+        // К5 (66.105): имя антагониста (исторические имена, НЕ пересекаются
+        // с пулами жителей — вор не совпадает с живым селянином)
+        thiefName: pickThiefName(thiefGender66105),
     };
     // Раунд 31 (п.1): в лес — строго последовательно: Опушка → Поляна → Чаща
     // (раунд 39: маршрут уже строится цепочкой — перестановка идемпотентна)
@@ -1489,9 +1495,12 @@ export function presentThiefEncounter(scene, locationId, opts = {}) {
 
     const noun = thiefNounInstr(registry);
     const female = getThiefGender(registry) === 'female';
+    // Патч 66.105 (К5): во встрече названо имя антагониста (было «Вор/Воровка
+    // в тёмном плаще»); реплика переведена в словарь (К1).
+    const name66105 = getThiefName(registry);
     const intro = female
-        ? 'Воровка в тёмном плаще сжимает краденую икону. Она тебя заметила!'
-        : 'Вор в тёмном плаще сжимает краденую икону. Он тебя заметил!';
+        ? tf(t('{0} в тёмном плаще сжимает краденую икону. Она тебя заметила!'), name66105)
+        : tf(t('{0} в тёмном плаще сжимает краденую икону. Он тебя заметил!'), name66105);
     createDialog(scene, tf(t('😱 Встреча с {0}!'), noun),
         intro + t(' Можно напасть, убедить отдать краденое (проверка Убеждения), подкрасться и оглушить (проверка Драки) — или затаиться (Скрадывание).'),
         [
@@ -1556,10 +1565,17 @@ export function persuadeThief(registry) {
 
     if (res.result === 'critical' || res.result === 'success') {
         recoverStolenItem(registry, 'convinced', res);
+        // Патч 66.105 (К5 аудита 66.104): иконокрад больше не «благословляет»
+        // героя («Ладно! Пронеси тебя Бог, молодец!») — он выдаёт мотив:
+        // наёмник, которого подослали за святыней (имя вора в реплике).
+        const nameC = getThiefName(registry);
+        const femaleC = getThiefGender(registry) === 'female';
         return {
             success: true,
-            message: t('Вор, помявшись, опускает икону в траву: «Ладно! Пронеси тебя Бог, молодец!» — и растворяется в чаще. Икона цела! Отнеси её старосте или батюшке.') +
-                ` (${checkLine})`,
+            message: (femaleC
+                ? tf(t('{0} помялась и опустила икону в траву: «Пропадай серебро! Я нанялась святыню вынести, а заказчика и в глаза не видывала. Пронеси тебя Бог, молодец!» — и растворилась в чаще. Икона цела! Отнеси её старосте или батюшке.'), nameC)
+                : tf(t('{0} помялся и опустил икону в траву: «Пропадай серебро! Я нанялся святыню вынести, а заказчика и в глаза не видывал. Пронеси тебя Бог, молодец!» — и растворился в чаще. Икона цела! Отнеси её старосте или батюшке.'), nameC))
+                + ` (${checkLine})`,
             thiefEscaped: false,
         };
     }
@@ -1816,6 +1832,7 @@ export function surrenderStolenItem(registry, npcId) {
 
     let rewardText;
     let bountyNote = '';
+    let trialNote = '';
     if (npcId === 'priest') {
         const amount = 20 + Math.floor(Math.random() * 11);
         player.dengas = (player.dengas || 0) + amount;
@@ -1830,10 +1847,18 @@ export function surrenderStolenItem(registry, npcId) {
     }
     // Патч 66.80 (п.12-д): ПРЕМИЯ СТАРОСТЫ ЗА ПОИМКУ ВОРА — довёл охоту
     // до конца и сдал лиходея ЖИВЬЁМ (оглушён и взят в плен) — премия 20 д.
+    // Патч 66.105 (К5 аудита 66.104): судьба пленника ОТЫГРЫВАЕТСЯ — суд
+    // старосты с именем вора (К5: имя) и мотивом найма (К5: мотив);
+    // историческая рамка — Судебник 1497 (тать сдаётся княжьему наместнику).
     if (npcId === 'elder' && q.thiefDefeated === 'captured') {
         player.dengas += 20;
         bountyNote = ' ' + t('«И за то, что не убил, а привёл живьём на суд — премия от старосты: 20 д.»');
         ActionLog.add(registry, t('Премия старосты за поимку вора живьём: +20 д.'));
+        const nameT = getThiefName(registry);
+        trialNote = ' ' + (getThiefGender(registry) === 'female'
+            ? tf(t('Воровка {0} на суде покаялась: нанялась вынести святыню за серебро, заказчика же не выдала. Лихого человека сдали княжьему наместнику по Судебнику.'), nameT)
+            : tf(t('Вор {0} на суде покаялся: нанялся вынести святыню за серебро, заказчика же не выдал. Лихого человека сдали княжьему наместнику по Судебнику.'), nameT));
+        ActionLog.add(registry, trialNote.trim());
     }
     changeVillageRep(registry, 10, t('Вернул украденную икону'));
 
@@ -1855,7 +1880,7 @@ export function surrenderStolenItem(registry, npcId) {
     registry.set('player', player);
     registry.set('quest', q);
 
-    return { success: true, rewardText: rewardText + bountyNote };
+    return { success: true, rewardText: rewardText + bountyNote, trialNote };
 }
 
 // ============================================================
@@ -1918,6 +1943,34 @@ export function getHuntState(registry) {
 export function getThiefGender(registry) {
     const q = registry.get('quest') || {};
     return (q.chase && q.chase.gender) || 'male';
+}
+
+// ===== Патч 66.105 (К5 аудита 66.104): ИМЯ АНТАГОНИСТА =====
+// Вор — наёмник (класс заложен в противостоянии «Болтовни вора», раунд 47).
+// Имена — исторические и НАМЕРЕННО не из пулов жителей (npcNames.js):
+// антагонист не должен совпадать с живым селянином.
+const THIEF_NAMES = {
+    male: [
+        { ru: 'Онисим', en: 'Onisim' },
+        { ru: 'Олеша', en: 'Olesha' },
+        { ru: 'Шестач', en: 'Shestach' },
+    ],
+    female: [
+        { ru: 'Ждана', en: 'Zhdana' },
+        { ru: 'Милорода', en: 'Miloroda' },
+    ],
+};
+
+function pickThiefName(gender) {
+    const pool = THIEF_NAMES[gender] || THIEF_NAMES.male;
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/** Имя вора (К5; старые сейвы без thiefName — дефолт «Онисим»). */
+export function getThiefName(registry) {
+    const q = registry.get('quest') || {};
+    const nm = (q.chase && q.chase.thiefName) || THIEF_NAMES.male[0];
+    return isEn() ? nm.en : nm.ru;
 }
 
 /** Спрайт-лист вора по полу (4×4 @64px, анимации в BootScene). */

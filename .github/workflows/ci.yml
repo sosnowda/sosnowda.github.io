@@ -11,17 +11,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Serve site
-        run: python3 -m http.server 8000 &
+      # 66.105 (К6 аудита 66.104): гейт был фиктивным — Lighthouse мерил
+      # localhost с continue-on-error:true, результаты ни на что не влияли.
+      # Теперь: (1) на push ждём пересборку GitHub Pages (по смене ETag
+      # главной), чтобы мерить именно новый код; (2) меряем ПРОД;
+      # (3) шаг без continue-on-error — провал ассертов валит CI.
+      - name: Wait for GitHub Pages deploy (ETag poll)
+        if: github.event_name == 'push'
+        run: |
+          OLD_ETAG=$(curl -sI https://sosnowda.github.io/ | tr -d '\r' | awk 'tolower($1)=="etag:"{print $2}')
+          echo "Old ETag: ${OLD_ETAG:-none}"
+          for i in $(seq 1 60); do
+            sleep 15
+            NEW_ETAG=$(curl -sI https://sosnowda.github.io/ | tr -d '\r' | awk 'tolower($1)=="etag:"{print $2}')
+            if [ -n "$NEW_ETAG" ] && [ "$NEW_ETAG" != "$OLD_ETAG" ]; then
+              echo "GitHub Pages rebuilt: $NEW_ETAG"
+              exit 0
+            fi
+          done
+          echo "::warning::ETag did not change in 15 min — measuring current prod"
+          exit 0
 
-      - name: Lighthouse CI (лендинг)
+      - name: Lighthouse CI (prod gate — RU/EN landing)
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: |
-            http://localhost:8000/
-          temporaryPublicStorage: true
-        continue-on-error: true
+            https://sosnowda.github.io/
+            https://sosnowda.github.io/en/
+          configFilePath: ./lighthouserc.json
 
+      # Ссылки — вспомогательная проверка (не гейт): офлайн-чекер по локальным
+      # файлам; внешние ссылки им недоступны по определению.
       - name: Проверка внутренних ссылок (lychee, offline)
         uses: lycheeverse/lychee-action@v2
         with:

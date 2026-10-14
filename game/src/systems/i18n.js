@@ -2671,6 +2671,182 @@ const EN = {
         'The herd was driven {0} today — the shepherds scout where the grass is juiciest.',
     'The whole village is out in the fields today: {0}. Miss the season and the whole year is lost.':
         'The whole village is out in the fields today: {0}. Miss the season and the whole year is lost.',
+
+    // ===== Патч 66.105 (К1 аудита 66.104): закрытие EN-утечек источника №1 —
+    // доска поручений (questGenerator.js: title/objective/descriptions),
+    // №2 — сырые реплики Ерёмы/Февроньи (dialogue.js), №3 — глаголы свадьбы
+    // (reputation.js), №4 — навыки/характеристики (npcStats.js), №5 —
+    // роли в поручениях и профессии (questGenerator pools / npcNames).
+    // Слепое пятно сканера r141 (литерал t()) закрывается тестом 145 —
+    // резолв данных проверяется в рантайме по источникам. =====
+
+    // --- Поручения: заголовки (иконокрад/икона и травы уже были в словаре) ---
+    'Лихие люди на большой дороге': 'Outlaws on the High Road',
+    'Волк задрал скот': 'A Wolf Has Killed the Cattle',
+    'Стоять на страже': 'Stand the Watch',
+    'Доставить послание': 'Deliver a Message',
+    'Принести нужное': 'Fetch What Is Needed',
+    'Собрать лекарственные травы': 'Gather Healing Herbs',
+    'Заготовить дрова': 'Stockpile Firewood',
+    'Наловить рыбы': 'Catch Fish',
+    'Найти пропавшего': 'Find the Missing One',
+    'Сопроводить путника': 'Escort a Traveller',
+    'Помирить соседей': 'Make Peace Between the Neighbours',
+    'Принести воск для свечей': 'Bring Wax for Candles',
+    'Помолиться за больного': 'Pray for the Sick',
+    'Поймать вора-иконокрада': 'Catch the Icon Thief',
+    'Вернуть украденную икону': 'Return the Stolen Icon',
+
+    // --- Поручения: цели ---
+    'Избить лихих людей на большой дороге': 'Drive the outlaws off the high road',
+    'Убить волка в лесу': 'Kill the wolf in the forest',
+    'Отстоять на страже у ворот': 'Keep the watch at the gates',
+    'Доставить послание адресату': 'Deliver the message to the addressee',
+    'Принести требуемое из леса': 'Fetch the needed goods from the forest',
+    'Заготовить дрова в лесу': 'Stockpile firewood in the forest',
+    'Наловить рыбы на реке': 'Catch fish in the river',
+    'Найти пропавшего человека': 'Find the missing person',
+    'Сопроводить путника по большой дороге': 'Escort the traveller along the high road',
+    'Помирить поссорившихся соседей': 'Reconcile the quarrelling neighbours',
+    'Принести воск для церковных свечей': 'Bring wax for the church candles',
+    'Помолиться в церкви за больного': 'Pray in the church for the sick one',
+    'Найти и поймать вора': 'Find and catch the thief',
+    'Найти вора и вернуть икону': 'Find the thief and return the icon',
+
+    // --- Поручения: описания ---
+    'Вор украл чудотворную икону из церкви! Найди его следы и верни святыню.':
+        'A thief has stolen the wonderworking icon from the church! Follow his tracks and bring the holy treasure back.',
+    'Ночью вор забрался в церковь и украл чудотворную икону Богородицы. Это наша главная святыня! Найди вора и верни икону.':
+        'In the night a thief crept into the church and stole the wonderworking icon of the Mother of God. It is our chief holy treasure! Find the thief and bring the icon back.',
+    'На большой дороге засели лихие люди, грабят купцов. Прогони их, путник!':
+        'Outlaws have settled on the high road and rob merchants. Drive them off, traveller!',
+    'Лихие люди обложили дорогу данью. Купцы боятся возить товар. Разберись с ними!':
+        'Outlaws have laid the road under tribute. Merchants fear to carry goods. Deal with them!',
+    'Разбойничья ватага облюбовала лес у большой дороги. Уже три воза разграбили. Избей их!':
+        'A robber band has made its den in the woods by the high road. Three carts plundered already. Beat them!',
+    'Волк-людоед завёлся в лесу, задрал уже двух телят. Убей его, пока не добрался до детей!':
+        'A man-eating wolf has settled in the forest — two calves killed already. Slay it before it comes for the children!',
+    'Серый хищник таскает кур и ягнят. Крестьяне боятся в поле выходить. Избавь нас от него!':
+        'The grey beast snatches hens and lambs. The peasants fear to go out to the fields. Rid us of it!',
+    'Стая волков обнаглела — ходят у самых дворов. Прогони их от дворов и из леса!':
+        'A wolf pack has grown bold — it prowls right by the farmsteads. Drive it from the yards and out of the forest!',
+    'Ночью у ворот неспокойно. Постой на страже, присмотри за околицей.':
+        'It is restless by the gates at night. Stand the watch and keep an eye on the outskirts.',
+    // «Слышно, лихие люди…» — УЖЕ в словаре (раунд 61, :1502) — дубль снят (r116/r120/r132)
+    'Отнеси грамоту старосте соседнего села. Срочно нужно передать весточку!':
+        'Carry the letter to the elder of the neighbouring village. The news must go quickly!',
+    'Передай свёрток кузнецу в соседнюю деревню. Там его ждут.':
+        'Take the bundle to the smith in the neighbouring village. He is waiting for it.',
+    'Сходи в лес за грибами, да побольше — зима длинная будет!':
+        'Go to the forest for mushrooms — and plenty, for the winter will be long!',
+    'Принеси дров из лесу — печь топить нечем стало.':
+        'Bring firewood from the forest — there is nothing left to feed the stove.',
+    'Нужны сухие ветки да хворост. Загляни в лес, пока не стемнело.':
+        'We need dry branches and brushwood. Look in the forest before it grows dark.',
+    'Знахарке нужны травы: череда, зверобой, полынь. Собери их в лесу.':
+        'The healer needs herbs: bur-marigold, St. John\'s wort and wormwood. Gather them in the forest.',
+    'Больная у меня корова — нужны лечебные травы. Поищи зверобой в лесу.':
+        'My cow has sickened — I need healing herbs. Look for St. John\'s wort in the forest.',
+    'На зиму травы запасти нужно. Собери в лесу полынь да ромашку.':
+        'Herbs must be laid in for the winter. Gather wormwood and chamomile in the forest.',
+    'Зима близко, а дров мало. Наруби в лесу сухих дров и принеси.':
+        'Winter is near and firewood is scarce. Chop dry wood in the forest and bring it.',
+    'Кузнице нужны дрова для горна. Сходи в лес, набери сухостоя.':
+        'The forge needs wood for the furnace. Go to the forest and gather dead standing timber.',
+    'К столу нужна рыба. Порыбачь на реке — щуку или карасей.':
+        'The table needs fish. Fish the river — pike or crucians.',
+    'Постный день скоро, а рыбы нет. Налови на реке, да побольше.':
+        'A fast day draws near and there is no fish. Catch plenty in the river.',
+    'Сын мой ушёл утром в лес и не вернулся. Найди его, прошу!':
+        'My son went to the forest in the morning and has not returned. Find him, I beg you!',
+    'Родич мой пошёл за дровами и пропал. Поищи его в лесу да по большой дороге.':
+        'My kinsman went for firewood and vanished. Search the forest and the high road for him.',
+    'Подросток пропал — видели его последний раз у реки. Найди его!':
+        'A youth has gone missing — he was last seen by the river. Find him!',
+    'Купцу нужно дойти до соседнего села. Проводи его по большой дороге, там неспокойно.':
+        'A merchant must reach the neighbouring village. See him down the high road — it is not quiet there.',
+    'Крестьяне поругались из-за покоса. Уговори их поделить луг по-братски.':
+        'The peasants quarrelled over a hay meadow. Talk them into dividing the grass like brothers.',
+    'Свечи в церкви заканчиваются. Принеси воск с пасеки — там держат ульи.':
+        'The church candles are running out. Bring wax from the apiary — the hives are kept there.',
+    'Для всенощной нужно много свечей. Сходи на пасеку, попроси воска.':
+        'The vigil needs many candles. Go to the apiary and ask for wax.',
+    'Дитя занемогло. Пойди в церковь, поставь свечу за здравие раба Божьего.':
+        'A child has fallen ill. Go to the church and set a candle for the health of God\'s servant.',
+    'Муж болеет тяжко. Помолись за него в церкви, испроси у Господа исцеления.':
+        'My husband lies gravely ill. Pray for him in the church — ask the Lord for healing.',
+
+    // --- Роли в поручениях (pool.description) — стиль согласован с 'хозяйка': goodwife ---
+    'батюшка': 'father',
+    'гончар': 'potter',
+    'знахарка': 'healer woman',
+    'крестьянин': 'peasant',
+    'пастушок': 'shepherd boy',
+
+    // --- Свадьба (reputation.js): глагол по полу → в EN один для обоих ---
+    'женился на': 'married',
+    'вышла замуж за': 'married',
+
+    // --- Ерёма (копчёная рыба) и Февронья (лечение) — сырые реплики 66.104 К1 ---
+    'Купил копчёной рыбы у Ерёмы: −2 д., +1 HP, час времени.':
+        'Bought smoked fish from Yeryoma: −2 d., +1 HP, an hour of time.',
+    'Лещ копчёный, дымом пахнет — как в детстве. Ешь, не жалей.\n\n−2 д. · +1 здоровья · час времени.':
+        'Smoked bream, smells of wood smoke — just like in childhood. Eat, and don\'t stint.\n\n−2 d. · +1 health · an hour of time.',
+    'Февронья полечила раны: −3 д., +{0} HP.':
+        'Fevronia has dressed the wounds: −3 d., +{0} HP.',
+    'Приложила подорожник, напоила отваром — кровь остановить, боль унять. К утру затянется.\n\n−3 д. · +{0} здоровья.':
+        'She applied a plantain poultice and gave a decoction — to stop the blood and still the pain. By morning it will close.\n\n−3 d. · +{0} health.',
+
+    // --- Навыки (npcStats.js SKILL_RU; 13 без ключей) ---
+    'Рыболовство': 'Fishing',
+    'Бортничество': 'Beekeeping',
+    'Грамота': 'Literacy',
+    'Следопытство': 'Tracking',
+    'Сметка': 'Commerce',
+    'Скоморошество': 'Performance',
+    'Ремесло': 'Craft',
+    'Кузнечное дело': 'Smithing',
+    'Взлом': 'Lockpicking',
+    'Стрельба из самострела': 'Crossbow',
+    'Мельничное дело': 'Milling',
+    'Ткачество': 'Weaving',
+    'Плотницкое дело': 'Carpentry',
+
+    // --- Характеристики: краткие (formatNpcStatsLine) и полные (противостояния) ---
+    'МОЩ': 'POW',
+    'ХАР': 'CHA',
+    'Сила': 'Strength',
+    'Телосложение': 'Constitution',
+    'Мощь': 'Power',
+    'Ловкость': 'Dexterity',
+    'Харизма': 'Charisma',
+
+    // --- Профессии без ключей (снедник/мясник/сапожник/дровосек/ремесленник/ученик) ---
+    'ученик кузнеца': 'blacksmith\'s apprentice',
+    'снедник': 'food seller',
+    'снедница': 'food seller woman',
+    'мясник': 'butcher',
+    'мясница': 'butcher woman',
+    'сапожник': 'shoemaker',
+    'сапожница': 'shoemaker woman',
+    'дровосек': 'woodcutter',
+    'дровосечка': 'woodcutter woman',
+    'ремесленник': 'craftsman',
+    'ремесленница': 'craftswoman',
+
+    // --- Встреча с вором, убеждение и суд пленника (thief.js; К1+К5 66.105) ---
+    '{0} в тёмном плаще сжимает краденую икону. Она тебя заметила!':
+        '{0} clutches the stolen icon under a dark cloak. She has spotted you!',
+    '{0} в тёмном плаще сжимает краденую икону. Он тебя заметил!':
+        '{0} clutches the stolen icon under a dark cloak. He has spotted you!',
+    '{0} помялась и опустила икону в траву: «Пропадай серебро! Я нанялась святыню вынести, а заказчика и в глаза не видывала. Пронеси тебя Бог, молодец!» — и растворилась в чаще. Икона цела! Отнеси её старосте или батюшке.':
+        '{0} hesitated and lowered the icon into the grass: "Hang the silver! I was hired to carry off the holy thing, and I never laid eyes on my hirer. God keep you, good lad!" — and melted into the thicket. The icon is safe! Bring it to the elder or the father.',
+    '{0} помялся и опустил икону в траву: «Пропадай серебро! Я нанялся святыню вынести, а заказчика и в глаза не видывал. Пронеси тебя Бог, молодец!» — и растворился в чаще. Икона цела! Отнеси её старосте или батюшке.':
+        '{0} hesitated and lowered the icon into the grass: "Hang the silver! I was hired to carry off the holy thing, and I never laid eyes on my hirer. God keep you, good lad!" — and melted into the thicket. The icon is safe! Bring it to the elder or the father.',
+    'Воровка {0} на суде покаялась: нанялась вынести святыню за серебро, заказчика же не выдала. Лихого человека сдали княжьему наместнику по Судебнику.':
+        'At the elder\'s trial the thief {0} confessed: she had been hired to carry off the holy icon for silver, but never named her hirer. The felon was handed over to the prince\'s namestnik, as the Sudebnik prescribes.',
+    'Вор {0} на суде покаялся: нанялся вынести святыню за серебро, заказчика же не выдал. Лихого человека сдали княжьему наместнику по Судебнику.':
+        'At the elder\'s trial the thief {0} confessed: he had been hired to carry off the holy icon for silver, but never named his hirer. The felon was handed over to the prince\'s namestnik, as the Sudebnik prescribes.',
 };
 
 // ----- Шаблоны с семантическими ключами (большие тексты) -----

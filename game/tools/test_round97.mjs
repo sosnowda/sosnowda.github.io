@@ -6,7 +6,7 @@
 //   2) ЧИСТКА РЕПО (приказ 12): ScoreManager.js / game/public/ /
 //      assets/video/intro.* / icons.svg / _config.yml / effects/fire_1..3 /
 //      старые QA-кадры game/docs — удалены; MD-отчёты game/docs сохранены;
-//   3) ЛЕНДИНГ: preload первого скриншота (01-title.webp, fetchpriority=low)
+//   3) ЛЕНДИНГ: preload первого скриншота — СНЯТ в 66.105 (К6а: preload+lazy)
 //      в RU и EN; alt-тексты карты про круглую поляну; OG — абсолютные URL;
 //   4) СЕЙВЫ (приказ «СЕЙВЫ НЕ НУЖНЫ»): SaveManager — заглушка без записи,
 //      писателя gameScoreData больше нет в game/src;
@@ -133,8 +133,10 @@ ok(!allSrc.some(f => f.endsWith('ScoreManager.js')), 'импортов ScoreMana
 console.log('— 8. Лендинг: preload + alt + OG —');
 const ru = read('index.html'), en = read('en/index.html');
 for (const [name, html, pre] of [['RU', ru, 'assets/screenshots/01-title.webp'], ['EN', en, '../assets/screenshots/01-title.webp']]) {
-    ok(html.includes(`rel="preload" href="${pre}" as="image"`),
-        `${name}: preload первого скриншота (66.70: fetchpriority="low" снят)`);
+    // 66.105 (К6а аудита 66.104): преплоад ленивого скриншота УДАЛЁН —
+    // он конкурировал с LCP-героем за полосу на мобильном (preload+lazy)
+    ok(!html.includes(`rel="preload" href="${pre}" as="image"`),
+        `${name}: preload ленивого скриншота снят (66.105 К6а: «preload+lazy» противоречие)`);
     ok(html.includes('rel="preload"'), `${name}: preload присутствует`);
 }
 ok(/05-map\.webp" alt="[^"]*КРУГЛАЯ[^"]*"/.test(ru), 'RU: alt карты про КРУГЛУЮ поляну');
@@ -166,7 +168,7 @@ for (const f of actual) {
 console.log('— 10. SW v92 + аудио lazy-cache —');
 const sw = read('sw.js');
 const swlog = read('docs/SW_CHANGELOG.md'); // 66.47: журнал переехал
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v133';"), 'SW: site-cache v130 (актуализация 66.95)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'SW: site-cache v130 (актуализация 66.95)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'SW: game-assets-v45');
 ok(swlog.includes('66.41'), 'SW-журнал: запись 66.41 есть');
 ok(!sw.includes('addAll'), 'SW: precache-списка нет (аудио кэшируется лениво по запросу)');

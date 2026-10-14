@@ -5,7 +5,7 @@
 //      открытие + keydown + aria-expanded, закрытие по ×, клик мимо окна, Esc,
 //      фокус-трап); CSP не тронута ('unsafe-inline' — счётчик Метрики + JSON-LD).
 //   2) META KEYWORDS снят (RU+EN) — устаревший тег; description/OG не тронуты.
-//   3) FETCHPRIORITY="LOW" снят с preload первого скриншота (противоречивая
+//   3) preload первого скриншота снят в 66.105 (К6а); ранее (66.70) с него сняли
 //      комбинация; preload сохранён); hero preload остаётся fetchpriority="high".
 //   4) НОВЫЙ js/modules/webvitals.js — LCP/FID/CLS → цели Метрики
 //      (webvitals_lcp/webvitals_fid/webvitals_cls), нативные PerformanceObserver,
@@ -60,11 +60,13 @@ ok(!indexRu.includes('name="keywords"') && !indexEn.includes('name="keywords"'),
 ok(indexRu.includes('<meta name="description"') && indexEn.includes('<meta name="description"'),
     'description RU+EN целы (SEO не пострадал)');
 
-console.log('--- 3. preload первого скриншота: fetchpriority="low" снят, preload цел ---');
-ok(indexRu.includes('<link rel="preload" href="assets/screenshots/01-title.webp" as="image">'),
-    'RU: preload 01-title.webp БЕЗ fetchpriority (противоречивая комбинация снята)');
-ok(indexEn.includes('<link rel="preload" href="../assets/screenshots/01-title.webp" as="image">'),
-    'EN: preload 01-title.webp БЕЗ fetchpriority');
+console.log('--- 3. preload первого скриншота: снят (66.105 К6а), fetchpriority="low" нет ---');
+// 66.105 (К6а аудита 66.104): преплоад ленивого скриншота УДАЛЁН —
+// конкурировал с LCP-героем за полосу на мобильном (preload+lazy)
+ok(!indexRu.includes('<link rel="preload" href="assets/screenshots/01-title.webp" as="image">'),
+    'RU: preload 01-title.webp снят (66.105 К6а: конкурировал с LCP-героем)');
+ok(!indexEn.includes('<link rel="preload" href="../assets/screenshots/01-title.webp" as="image">'),
+    'EN: preload 01-title.webp снят (66.105 К6а)');
 ok(!/rel="preload"[^>]*fetchpriority="low"/.test(indexRu) && !/rel="preload"[^>]*fetchpriority="low"/.test(indexEn),
     'RU+EN: ни одного preload с fetchpriority="low" больше нет');
 ok(indexRu.includes('<link rel="preload" href="assets/images/title-1280.webp" as="image" fetchpriority="high"') &&
@@ -107,7 +109,7 @@ ok(indexEn.includes('<link rel="manifest" href="/en/manifest.json">'),
     'en/index.html: link rel="manifest" ведёт на существующий /en/manifest.json (404 невозможен)');
 
 console.log('--- 6. SW: v112, v42 цел, механика не тронута ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v133';"),
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"),
     'sw.js: const CACHE_NAME v130 (66.95 актуализация; ранее — HTML RU+EN лендингов + webvitals.js → бамп §4)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"),
     'sw.js: const GAME_ASSETS_CACHE v42 (ассеты/vendor не тронуты)');

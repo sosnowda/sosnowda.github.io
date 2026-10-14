@@ -164,10 +164,13 @@ for (const k of ['Ударное оружие', 'Мощь', 'Харизма', '�
     'Отказался от задания: «{0}». Личная репутация у НПЦ −{1}.', 'Помолился в церкви — на душе стало спокойно.']) {
     ok(i18n.includes(`'${k}'`), `i18n: «${k.slice(0, 44)}…»`);
 }
-for (const k of ["'Красноречие':", "'Верховая езда':", "'Следопытство':", "'Исследование':",
+for (const k of ["'Красноречие':", "'Верховая езда':", "'Исследование':",
     "'Интеллект':", "'Сила воли':", "'Внешность':"]) {
     ok(!i18n.includes(k), `i18n: мёртвый ключ ${k} удалён`);
 }
+// 66.105 (актуализация): «Следопытство» снова ЖИВОЙ ключ — SKILL_RU.track
+// обёрнут в t() патчем К1 (резолв проверяет r145)
+ok(i18n.includes("'Следопытство': 'Tracking'"), 'i18n: «Следопытство» — живой ключ (66.105 К1: навыки npcStats)');
 // 66.89 (актуализация): «Размер» снова ЖИВОЙ ключ — SIZ возвращён приказом владельца
 ok(i18n.includes("'Размер': 'Size'"), 'i18n: «Размер» — живой ключ (66.89: SIZ возвращён)');
 // no-dupe-keys покрывает r116 (объект-осознанный статический парсер);
@@ -244,7 +247,7 @@ for (const f of files) {
 ok(syntaxFail === 0, `node --check ×${files.length} — все зелёные`);
 
 console.log('--- 12. SW v113 / game-assets-v44 / доки ---');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v133';") && sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"),
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';") && sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"),
     'sw.js: v130 + game-assets-v45 (66.95 актуализация; ранее — иконки 66.71)');
 ok(/66\.71/.test(swlog) && /v113/.test(swlog), 'SW_CHANGELOG: запись 66.71/v113');
 ok(/66\.71/.test(changes), 'CHANGES.md: запись 66.71');

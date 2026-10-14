@@ -61,7 +61,7 @@ ok(styles.indexOf('clip-path: inset(50%)') > styles.indexOf('.sr-only {') &&
 
 console.log('--- 2. P4-2: sw.js — var→const ×5, v112, механика не тронута ---');
 ok((sw.match(/\bvar\s+[A-Za-z_$]/gm) || []).length === 0, 'sw.js: объявлений var — ноль (no-var §9.2)');
-ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v133';"), 'sw.js: const CACHE_NAME v130 (HTML/CSS менялись → бамп §4)');
+ok(sw.includes("const CACHE_NAME = 'chronicles-ruthenia-v134';"), 'sw.js: const CACHE_NAME v130 (HTML/CSS менялись → бамп §4)');
 ok(sw.includes("const GAME_ASSETS_CACHE = 'game-assets-v45';"), 'sw.js: const GAME_ASSETS_CACHE v45 (ассеты/vendor не тронуты)');
 ok(sw.includes("const url = new URL(event.request.url);") &&
    sw.includes("const clone = response.clone();") &&
@@ -135,7 +135,10 @@ for (const [html, locale, base, preLow] of [
     const candidates = `${base}/title-480.webp 480w, ${base}/title-960.webp 960w, ${base}/title-1280.webp 1280w, ${base}/title.webp 1920w`;
     ok(html.includes(`rel="preload" href="${base}/title-1280.webp" as="image" fetchpriority="high"`),
         `${locale}: preload hero (href=title-1280.webp — вероятнейший кандидат и фолбэк для UA без imagesrcset, fetchpriority=high) на месте`);
-    ok(html.includes(preLow), `${locale}: preload карточки меню на месте (66.70: fetchpriority="low" снят)`);
+    // 66.105 (К6а аудита 66.104): преплоад ленивого скриншота УДАЛЁН —
+    // конкурировал с LCP-героем за полосу на мобильном (preload+lazy)
+    ok(!html.includes(preLow), `${locale}: preload ленивого скриншота снят (66.105 К6а)`);
+    // герой-преплоад на месте (66.105 не трогал его — imagesrcset инвариант цел)
     const srcset = (html.match(/<source srcset="([^"]+)"/) || [])[1];
     const isrcset = (html.match(/imagesrcset="([^"]+)"/) || [])[1];
     ok(!!srcset && srcset === candidates, `${locale}: <source srcset> = 480/960/1280/1920w (66.90: PF-2 аудита 66.88 закрыт)`);

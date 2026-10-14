@@ -333,7 +333,9 @@ export const NPC_QUEST_POOLS = {
 };
 
 // === ОПИСАНИЯ ЗАДАНИЙ (исторически достоверные) ===
-const QUEST_TEMPLATES = {
+// 66.105 (К1): экспорт для теста 145 — рантайм-проверка EN-резолва
+// title/objective/descriptions (слепое пятно литерального сканера r141).
+export const QUEST_TEMPLATES = {
     [QUEST_TYPES.BANDIT]: {
         title: 'Лихие люди на большой дороге',
         descriptions: [

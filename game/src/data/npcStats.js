@@ -375,6 +375,9 @@ const SKILL_RU = {
 const RU_STAT_FULL = {
     STR: 'Сила', CON: 'Телосложение', POW: 'Мощь', DEX: 'Ловкость', CHA: 'Харизма',
 };
+// Патч 66.105 (К1 аудита 66.104): экспорт для теста 145 — рантайм-проверка
+// EN-резолва меток характеристик/навыков (слепое пятно литерального сканера r141).
+export { STAT_SHORT, SKILL_RU, RU_STAT_FULL };
 
 /** Русское название навыка (для бою: «Рукопашная — 40»). */
 export function ruSkillName(key) { return SKILL_RU[key] || key; }
@@ -426,13 +429,15 @@ export function formatNpcStatsLine(npc) {
     const block = (npc && NPC_STAT_BLOCKS[npc.id]) || null;
     if (!block) return '';
     const stats = getNpcResolvedStats(npc);
+    // Патч 66.105 (К1 аудита 66.104): метки характеристик и имена навыков
+    // шли сырым RU («roll 45: Сметка 30» в EN) — теперь через словарь.
     const statsText = Object.keys(STAT_SHORT)
-        .map(k => `${STAT_SHORT[k]} ${stats[k]}`)
+        .map(k => `${t(STAT_SHORT[k])} ${stats[k]}`)
         .join(' · ');
     const age = npcAgeOf(npc);
     const skills = Object.entries(block.skills)
-        .map(([k, v]) => `${SKILL_RU[k] || k} ${Math.max(1, Math.min(99, v + ageSkillMod(k, age)))}`)
+        .map(([k, v]) => `${t(SKILL_RU[k] || k)} ${Math.max(1, Math.min(99, v + ageSkillMod(k, age)))}`)
         .join(', ');
     const hp = Math.ceil((stats.CON + stats.STR) / 10);
-    return `❤${hp} ${statsText}\nНавыки: ${skills}`;
+    return `❤${hp} ${statsText}\n${t('Навыки:')} ${skills}`;
 }

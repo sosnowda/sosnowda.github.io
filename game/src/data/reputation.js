@@ -23,7 +23,7 @@ import { t, tf } from '../systems/i18n.js';
 
 import { ActionLog } from './actionLog.js';
 // Раунд 46 (п.1): ученик кузнеца встаёт к горну после гибели кузнеца
-import { getNpcs, findNpc, spawnBlacksmithApprentice, BLACKSMITH_APPRENTICE_ID } from './npcNames.js';
+import { getNpcs, findNpc, spawnBlacksmithApprentice, enName, BLACKSMITH_APPRENTICE_ID } from './npcNames.js';
 import { getTimeOfDay, getTime } from '../systems/TimeSystem.js';
 // §12.3 (66.96): единый игровой календарь — одна формула дня на всю игру
 import { absDay } from '../systems/gameCalendar.js';
@@ -1144,10 +1144,12 @@ export function marry(registry, npcId, player) {
     changeVillageRep(registry, 20, 'свадьба с жителем деревни');
     changeNpcRep(registry, npcId, 10, 'брак');
     
-    // Раунд 44: гендерно-согласованная формулировка летописи свадьбы
-    const marriedVerb = player.gender === 'female' ? 'вышла замуж за' : 'женился на';
+    // Раунд 44: гендерно-согласованная формулировка летописи свадьбы.
+    // Патч 66.105 (К1 аудита 66.104): глагол просачивался в EN сырым RU
+    // («married» теперь из словаря); имя НПЦ — через enName() (транслит).
+    const marriedVerb = player.gender === 'female' ? t('вышла замуж за') : t('женился на');
     ActionLog.add(registry, tf(t('СВАДЬБА: {0} {1} {2} ({3}). Свадебное торжество обошлось в {4} д. Деревенская репутация выросла.'),
-        player.name, marriedVerb, npc.name, npc.profession.name, MARRIAGE_COST)
+        player.name, marriedVerb, enName(npc.name), npc.profession.name, MARRIAGE_COST)
     );
 
     // Раунд 66.11 (приказ владельца): свадьба — ВЫИГРЫШ и конец игры.

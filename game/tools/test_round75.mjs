@@ -151,7 +151,9 @@ console.log('— п.3: имена персонажей и топонимы —')
         const re = new RegExp(`id: '${id}'[^}]*name: '${name}'`);
         ok(re.test(nn), `${id} → ${name} закреплён`);
     }
-    ok((nn.match(/'Кузьма'/g) || []).length === 1, 'пул имён: дубль «Кузьма» удалён');
+    // 66.105 (К1): 'Кузьма' теперь и ключ NAME_EN-транслита — в пуле один, в карте один
+    ok((nn.match(/'Кузьма',/g) || []).length === 1 && (nn.match(/'Кузьма':/g) || []).length === 1,
+        'пул имён: «Кузьма» один в пуле + один ключ в NAME_EN (66.105 К1)');
     ok(!nn.includes('Творимир') && !nn.includes('Забава') && !nn.includes('Гостомысл'),
         'сомнительные имена заменены (Твердислав/Милуша/Путята)');
     const ml = stripComments(read('game/src/data/mapLocations.js'));

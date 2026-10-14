@@ -55,11 +55,10 @@
     <link rel="preload" href="../assets/images/title-1280.webp" as="image" fetchpriority="high"
           imagesrcset="../assets/images/title-480.webp 480w, ../assets/images/title-960.webp 960w, ../assets/images/title-1280.webp 1280w, ../assets/images/title.webp 1920w"
           imagesizes="(max-width: 1180px) 100vw, 1180px">
-    <!-- 66.41 (audit 66.40 §3): first gallery screenshot — instant render on scroll.
-         66.70 (owner's audit): fetchpriority="low" removed — contradictory combo
-         (preload means “needed early”, low means “not important”); the preload
-         stays without priority demotion -->
-    <link rel="preload" href="../assets/screenshots/01-title.webp" as="image">
+    <!-- 66.105 (К6, audit 66.104): "preload + loading=lazy" contradiction removed —
+         the first gallery screenshot (bottom of page, lazy) no longer competes
+         with the LCP hero for bandwidth on mobile; the SW cache provides
+         instant render on scroll -->
     <link rel="preload" href="../styles.css" as="style">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -131,6 +130,8 @@
                     <li><a href="#history">History</a></li>
                     <li><a href="#systems">Features</a></li>
                     <li><a href="#demo">Demo</a></li>
+                    <!-- 66.105 (К2): above-the-fold interactivity in the sticky header -->
+                    <li><a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer" class="nav-cta"><span aria-hidden="true">⚔️</span> Play</a></li>
                     <li class="lang-item">
                         <span class="lang-switch" role="group" aria-label="Language selection">
                             <a href="/" hreflang="ru" lang="ru" class="lang-link">RU</a>
@@ -147,6 +148,16 @@
     <!-- HERO -->
     <section class="hero">
         <h1 class="sr-only">The Chronicles of Ruthenia — a 15th-century Rus' RPG</h1>
+        <!-- 66.105 (К2, audit 66.104): the first screen did not sell the product —
+             claim and CTA were outside both the 1440×900 and 390×844 viewport,
+             the game button sat at 87% page depth. Value proposition + demo button
+             ABOVE the art: visible in the first screen on both viewports. -->
+        <div class="hero-claim">
+            <p class="hero-claim-text">A historical roleplaying game set in 15th-century Rus': village survival, investigations and BRP d100 combat — right in your browser.</p>
+            <a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer" class="btn-game-start">
+                <span aria-hidden="true">⚔️</span> Play in browser
+            </a>
+        </div>
         <div class="hero-image-wrap">
             <picture>
                 <!-- 66.90 (PF-2 audit 66.88): srcset 480/960/1280/1920w — a mobile
@@ -253,7 +264,9 @@
                 <div class="chronicle-card" data-year="1440">
                     <div class="chronicle-year">1440</div>
                     <div class="chronicle-event">Ivan III is born</div>
-                    <div class="chronicle-text">The future &ldquo;Sovereign of All Rus'&rdquo; is born in the year the Byzantine emperors fall.</div>
+                    <!-- 66.105 (К4, audit 66.104): was "in the year the Byzantine emperors fall" —
+                         Constantinople fell in 1453; 1439 is the year of the Union of Florence. -->
+                    <div class="chronicle-text">The future &ldquo;Sovereign of All Rus'&rdquo; is born in the year of the Union of Florence &mdash; a church union that Rus' will soon reject.</div>
                 </div>
                 <div class="chronicle-card" data-year="1448">
                     <div class="chronicle-year">1448</div>
@@ -679,6 +692,13 @@
             <p class="cta-meta">
                 Available for PC • Local neural network or cloud API • BRP d100 • Godot Engine
             </p>
+            <!-- 66.105 (К3, audit 66.104): the section had NO action element —
+                 momentum broke at the climax. Same semantics as the demo button. -->
+            <div class="game-start-wrap">
+                <a href="../game/index.html?lang=en" target="_blank" rel="noopener noreferrer" class="btn-game-start">
+                    <span aria-hidden="true">⚔️</span> Launch the game
+                </a>
+            </div>
         </div>
     </section>
 
@@ -764,7 +784,9 @@
         <p class="section-intro section-intro--small">
             <em>The browser demo is built on the <strong class="gold-bright">Phaser 3</strong> engine.
             The main game is developed on <strong class="gold-bright">Godot Engine</strong>.
-            Note: in-game text is currently in Russian; full English localization is planned.</em>
+            Note: demo text follows the site language — Russian on the RU page, English here.
+            <!-- 66.105 (К1+С4 аудита 66.104): прежний дисклеймер «in-game text is
+                 currently in Russian» устарел после закрытия EN-утечек (К1). --></em>
         </p>
 
         <!-- Game start button — opens a separate screen -->

@@ -756,8 +756,30 @@ html,body{overflow-x:hidden;overflow-x:clip} /* раунд 20: карусель 
 /* HERO — титульная картинка (66.49, аудит 2.4: три дубля .hero* консолидированы
    в один блок; значения = итог прежнего каскада, рендер не изменён) */
 .hero{padding:0;margin:0;background:none;overflow:visible}
-.hero-image-wrap{width:100%;max-width:1180px;margin:0;padding:0;position:relative;z-index:1;overflow:hidden}
+/* 66.105 (К2 аудита 66.104): legacy-правило :217 задаёт .hero-image-wrap
+   height:900px (остаток декоративного слоя) и НЕ перекрывалось здесь —
+   computed 900px при картинке ~223px @390w = мёртвая зона ~677px на мобильном.
+   height:auto — обёртка равна высоте картинки; left:50%+translateX — механика
+   центрирования, не трогается. CLS=0: у img есть width/height-атрибуты. */
+.hero-image-wrap{width:100%;max-width:1180px;margin:0;padding:0;position:relative;z-index:1;overflow:hidden;height:auto}
 .hero-image{width:100%;height:auto;display:block;border-radius:0;box-shadow:0 4px 24px rgba(0,0,0,0.4);position:relative;z-index:1;will-change:transform;transition:transform 0.1s linear}
+
+/* 66.105 (К2 аудита 66.104): value proposition + CTA выше фолда — первый экран
+   продаёт продукт (claim + кнопка ВЫШЕ арта, видны на 1440×900 и 390×844) */
+.hero-claim{padding:1.75rem 24px 1.5rem;text-align:center;position:relative;z-index:1}
+.hero-claim-text{max-width:720px;margin:0 auto 1.25rem;color:var(--text-dim);font-size:1.08rem;line-height:1.55}
+.hero-claim .btn-game-start{padding:1.1rem 2.6rem;font-size:1.2rem}
+@media (max-width:768px){
+  .hero-claim{padding:1.25rem 16px 1rem}
+  .hero-claim-text{font-size:0.98rem;margin-bottom:1rem}
+  .hero-claim .btn-game-start{padding:0.95rem 2rem;font-size:1.08rem}
+}
+
+/* 66.105 (К2): компактная кнопка игры в шапке (sticky — интерактив всегда
+   доступен; единственный интерактив выше фолда больше не только fund-bar) */
+.nav-links a.nav-cta{color:#1A1410;background:linear-gradient(135deg,#E0C078,#C9A961);border:1px solid #5A4015;border-radius:8px;padding:0.45rem 1.05rem;font-weight:700;letter-spacing:0.03em}
+.nav-links a.nav-cta:hover{color:#1A1410;filter:brightness(1.06)}
+.nav-links a.nav-cta::after{display:none}
 
 /* ===================== СРЕДНЕВЕКОВЫЙ СТИЛЬ ===================== */
 

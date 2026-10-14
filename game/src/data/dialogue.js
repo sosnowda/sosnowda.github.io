@@ -9,6 +9,8 @@
 //   постоялый двор — 2 деньги с человека за ночь.
 
 import { askNPC, askElderAdvance, askMoneyForHelp, surrenderStolenItem, chaseTicksLeft, inheritThiefKnowledge } from './thief.js';
+// Патч 66.105 (К5 аудита 66.104): суд пленника называет имя вора (пол — из погони)
+import { getThiefGender, getThiefName } from './thief.js';
 // Патч 66.84: имя деревни для текстов нового старта (elder_intro/priest_intro)
 import { getVillageName } from './world.js';
 // Раунд 66.6: слухи-наводки на постоялом дворе (приказ владельца)
@@ -413,17 +415,28 @@ export const DIALOGUES = {
                     { text: t('Понятно.'), end: true },
                 ],
             },
-            // Раунд 21: возврат иконы старосте — награда и победа, игра продолжается
+            // Раунд 21: возврат иконы старосте — награда и победа, игра продолжается.
+            // Патч 66.105 (К5 аудита 66.104): финал снова ПЛАТИТ ЗАВЯЗКЕ —
+            // при успехе дальше идёт узел d (пир в честь героя, полное лечение),
+            // и только оттуда — victory_continue (итоги/продолжение).
+            // При провале сдачи (иконы нет/уже возвращена) — прежний выход.
+            // Суд пленника (thiefDefeated === 'captured') отыгрывается записью
+            // из surrenderStolenItem.trialNote — имя вора, мотив, судьба.
             return_icon: {
                 speaker: 'Староста Мирослав',
                 text: '...',
                 action: (scene) => {
                     const r = surrenderStolenItem(scene.registry, 'elder');
+                    const parts = [];
+                    if (r.success) parts.push(t('Староста бережно принимает икону и осеняет себя крестом.'));
+                    if (r.success && r.trialNote) parts.push(r.trialNote);
                     scene._lastAskResult = {
                         message: r.success
-                            ? `${t('Староста бережно принимает икону и осеняет себя крестом.')}\n${t('Награда')}: ${r.rewardText}`
+                            ? `${parts.join('\n')}\n${t('Награда')}: ${r.rewardText}`
                             : r.message,
                     };
+                    const node = DIALOGUES.elder_quest.nodes.return_icon;
+                    node.choices = [{ text: t('(дальше)'), next: r.success ? 'd' : 'victory_continue' }];
                 },
                 choices: [{ text: t('(дальше)'), next: 'victory_continue' }],
             },
@@ -468,7 +481,9 @@ export const DIALOGUES = {
                     // Раунд 43 (п.2): квест окончен — баннер цели гаснет.
                     q.currentObjective = '';
                 },
-                choices: [{ text: t('Слава Богу.'), end: true }],
+                // Патч 66.105 (К5 аудита 66.104): после пира — итоги похода,
+                // а не немой конец диалога (узел d больше не тупиковый).
+                choices: [{ text: t('Слава Богу.'), next: 'victory_continue' }],
             },
         },
     },
@@ -2244,8 +2259,10 @@ export const DIALOGUES = {
                     tickTime(scene.registry, MEAL_DURATION_MIN);
                     scene.registry.set('player', player);
                     if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
-                    ActionLog.add(scene.registry, 'Купил копчёной рыбы у Ерёмы: −2 д., +1 HP, час времени.');
-                    scene._lastAskResult = { message: `Лещ копчёный, дымом пахнет — как в детстве. Ешь, не жалей.\n\n−2 д. · +1 здоровья · час времени.` };
+                    // Патч 66.105 (К1 аудита 66.104): реплики были сырыми
+                    // template-литералами мимо t() — в EN-режиме просачивался RU.
+                    ActionLog.add(scene.registry, t('Купил копчёной рыбы у Ерёмы: −2 д., +1 HP, час времени.'));
+                    scene._lastAskResult = { message: t('Лещ копчёный, дымом пахнет — как в детстве. Ешь, не жалей.\n\n−2 д. · +1 здоровья · час времени.') };
                 },
                 choices: [
                     { text: t('(продолжить)'), next: 'ask_result' },
@@ -2329,8 +2346,9 @@ export const DIALOGUES = {
                     player.HP = Math.min(player.HPmax || player.HP + heal, player.HP + heal);
                     scene.registry.set('player', player);
                     if (scene.audioManager && scene.audioManager.playGoldSpend) scene.audioManager.playGoldSpend();
-                    ActionLog.add(scene.registry, `Февронья полечила раны: −3 д., +${heal} HP.`);
-                    scene._lastAskResult = { message: `Приложила подорожник, напоила отваром — кровь остановить, боль унять. К утру затянется.\n\n−3 д. · +${heal} здоровья.` };
+                    // Патч 66.105 (К1): tf(t-шаблон, heal) — было raw-интерполяцией
+                    ActionLog.add(scene.registry, tf(t('Февронья полечила раны: −3 д., +{0} HP.'), heal));
+                    scene._lastAskResult = { message: tf(t('Приложила подорожник, напоила отваром — кровь остановить, боль унять. К утру затянется.\n\n−3 д. · +{0} здоровья.'), heal) };
                 },
                 choices: [
                     { text: t('(продолжить)'), next: 'ask_result' },

@@ -39,6 +39,50 @@ export const HISTORICAL_FEMALE_NAMES = [
     'Стефанида', 'Мелания', 'Варвара', 'Мстислава', 'Сосипатра',
 ];
 
+// Патч 66.105 (К1 аудита 66.104): имена НПЦ просачивались в EN-режим
+// кириллицей (97 из 106 имён пулов без ключей). Транслитерация —
+// академическая схема, согласована с уже устоявшимися формами словаря
+// ('Fevronia', 'Yeryoma', 'Fyodor', 'Miroslav' в DNT-списках 66.101).
+// В карту включены и жёстко закреплённые имена initNpcNames, которых
+// нет в случайных пулах (Данила, Илья, Ерёма, Микула, Игнат, Дунька,
+// Ивашка, Потап, Аверьян, Нефёд, Горазд, Арина).
+const NAME_EN = {
+    // Мужские пулы
+    'Мирослав': 'Miroslav', 'Ярополк': 'Yaropolk', 'Святополк': 'Svyatopolk', 'Вячеслав': 'Vyacheslav', 'Ростислав': 'Rostislav',
+    'Ярослав': 'Yaroslav', 'Всеволод': 'Vsevolod', 'Святослав': 'Svyatoslav', 'Изяслав': 'Izyaslav', 'Мстислав': 'Mstislav',
+    'Глеб': 'Gleb', 'Борис': 'Boris', 'Давыд': 'David', 'Роман': 'Roman', 'Василько': 'Vasilko',
+    'Добрыня': 'Dobrynya', 'Ратибор': 'Ratibor', 'Гаврила': 'Gavrila', 'Данило': 'Danilo',
+    'Степан': 'Stepan', 'Фёдор': 'Fyodor', 'Иван': 'Ivan', 'Михайло': 'Mikhailo', 'Григорий': 'Grigory',
+    'Кузьма': 'Kuzma', 'Клим': 'Klim', 'Авдей': 'Avdey', 'Тихон': 'Tikhon', 'Лука': 'Luka',
+    'Матвей': 'Matvey', 'Прохор': 'Prokhor', 'Сила': 'Sila', 'Твердислав': 'Tverdislav', 'Боян': 'Boyan',
+    'Ставр': 'Stavr', 'Ждан': 'Zhdan', 'Милонег': 'Miloneg', 'Путята': 'Putyata', 'Турай': 'Turay',
+    'Вышата': 'Vyshata', 'Янь': 'Yan', 'Чюдин': 'Chyudin', 'Миронег': 'Mironeg', 'Гюрята': 'Gyuryata',
+    'Савватий': 'Savvaty', 'Сергий': 'Sergiy', 'Варлаам': 'Varlaam', 'Зосима': 'Zosima', 'Савва': 'Savva',
+    'Иларион': 'Ilarion', 'Никита': 'Nikita', 'Кирилл': 'Kirill', 'Алексий': 'Alexy', 'Пимен': 'Pimen',
+    'Демид': 'Demid', 'Прокоп': 'Prokop', 'Ермил': 'Yermil', 'Фрол': 'Frol',
+    'Нестор': 'Nestor', 'Ларион': 'Larion', 'Назар': 'Nazar', 'Тарас': 'Taras', 'Фока': 'Foka',
+    // Женские пулы
+    'Предслава': 'Predslava', 'Рогнеда': 'Rogneda', 'Милуша': 'Milusha', 'Любава': 'Lyubava', 'Неслава': 'Neslava',
+    'Горислава': 'Gorislava', 'Вера': 'Vera', 'Надежда': 'Nadezhda', 'Любовь': 'Lyubov', 'Малуша': 'Malusha',
+    'Годислава': 'Godislava', 'Жизномира': 'Zhiznomira', 'Настасья': 'Nastasya', 'Милонега': 'Milonega',
+    'Марфа': 'Marfa', 'Гликерия': 'Glikerya', 'Матрёна': 'Matryona', 'Акулина': 'Akulina', 'Василиса': 'Vasilisa',
+    'Фёкла': 'Fyokla', 'Прасковья': 'Praskovya', 'Ульяна': 'Ulyana', 'Евдокия': 'Yevdokiya', 'Анна': 'Anna',
+    'Мария': 'Maria', 'Ирина': 'Irina', 'Агафья': 'Agafya', 'Феодосия': 'Feodosiya', 'Пелагея': 'Pelegeya',
+    'Домна': 'Domna', 'Мавра': 'Mavra', 'Ксения': 'Ksenia', 'Татьяна': 'Tatyana',
+    'Овдотья': 'Ovdotya', 'Олимпиада': 'Olimpiada', 'Анфиса': 'Anfisa', 'Капитолина': 'Kapitolina', 'Ефросинья': 'Yefrosinya',
+    'Стефанида': 'Stefanida', 'Мелания': 'Melania', 'Варвара': 'Varvara', 'Мстислава': 'Mstislava', 'Сосипатра': 'Sosipatra',
+    // Жёстко закреплённые имена вне случайных пулов (initNpcNames)
+    'Данила': 'Danila', 'Илья': 'Ilya', 'Ерёма': 'Yeryoma', 'Февронья': 'Fevronia',
+    'Микула': 'Mikula', 'Игнат': 'Ignat', 'Дунька': 'Dunka', 'Ивашка': 'Ivashka',
+    'Потап': 'Potap', 'Аверьян': 'Averyan', 'Нефёд': 'Nefyod', 'Горазд': 'Gorazd', 'Арина': 'Arina',
+};
+
+/** EN-форма личного имени (транслит; в RU-режиме — исходник). */
+export function enName(ruName) {
+    if (!isEn()) return ruName;
+    return NAME_EN[ruName] || ruName;
+}
+
 // Возрастные группы (п.2)
 export const AGE_GROUPS = {
     INFANT:  { id: 'infant',  name: 'младенец',    minAge: 0,  maxAge: 3,  gender: 'neutral' },
@@ -172,18 +216,21 @@ export function getStrangerDescription(age, gender, profession) {
  * Формат: «Отец Савватий (священник)», «Марфа (вдова)».
  */
 export function getKnownDescription(name, profession, gender) {
+    // Патч 66.105 (К1): имя в EN-режиме — транслит (enName), иначе
+    // кириллица просачивалась в плашки/диалоги/летопись.
+    const shown = enName(name);
     const profName = gender === 'female' ? profession.femaleName || profession.name : profession.name;
 
     // Для священников добавляем «Отец»
     if (profession.id === 'priest') {
-        return isEn() ? `Father ${name} (${t(profName)})` : `Отец ${name} (${profName})`;
+        return isEn() ? `Father ${shown} (${t(profName)})` : `Отец ${name} (${profName})`;
     }
     // Для иноков — «Брат»
     if (profession.id === 'monk') {
-        return isEn() ? `Brother ${name} (${t(profName)})` : `Брат ${name} (${profName})`;
+        return isEn() ? `Brother ${shown} (${t(profName)})` : `Брат ${name} (${profName})`;
     }
 
-    return isEn() ? `${name} (${t(profName)})` : `${name} (${profName})`;
+    return isEn() ? `${shown} (${t(profName)})` : `${name} (${profName})`;
 }
 
 /**
@@ -407,8 +454,9 @@ export function getNpcFallbackName(npcId) {
         ...(PROFESSIONS_BY_GENDER.male || []),
         ...(PROFESSIONS_BY_GENDER.female || []),
     ];
+    // Патч 66.105 (К1): профессия-фолбэк шла в плашку сырым RU-полем.
     const p = profs.find(x => x.id === npcId);
-    return p ? p.name : npcId;
+    return p ? t(p.name) : npcId;
 }
 
 /**
@@ -457,10 +505,11 @@ export function getNpcShortName(registry, npcId) {
     const npc = findNpc(registry, npcId);
     if (!npc) return t('незнакомец');
     if (npc.met) {
-        // Раунд 46 (п.5): у вдовы/вдовца статус виден и в коротком имени
+        // Раунд 46 (п.5): у вдовы/вдовца статус виден и в коротком имени.
+        // Патч 66.105 (К1): имя и статус — через словарь (EN без кириллицы).
         return npc.widowed
-            ? `${npc.name} (${npc.gender === 'female' ? 'вдова' : 'вдовец'})`
-            : npc.name;
+            ? `${enName(npc.name)} (${npc.gender === 'female' ? t('вдова') : t('вдовец')})`
+            : enName(npc.name);
     }
     return npc.strangerDescription;
 }
